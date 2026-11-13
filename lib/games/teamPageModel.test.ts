@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   answeredYes,
   freeSlotCount,
+  hasTeamPage,
   memberState,
   menuActions,
   orderedMembers,
@@ -56,5 +57,23 @@ describe('teamPageModel', () => {
     [{ status: 'withdrawn', isGuest: false }, []],
   ] as const)('menu for %j is %j', (member, actions) => {
     expect(menuActions(member)).toEqual(actions);
+  });
+
+  // The way to the team page after signing up (#2840 del 5): the captain, and a
+  // teammate who has not said no. The app's «Se laget» uses the same rule.
+  it.each([
+    [{ status: 'approved', is_team_captain: true, team_request_id: null }, true],
+    [{ status: 'pending', is_team_captain: true, team_request_id: null }, true],
+    [{ status: 'approved', is_team_captain: false, team_request_id: 'cap' }, true],
+    [{ status: 'pending', is_team_captain: false, team_request_id: 'cap' }, true],
+    [{ status: 'rejected', is_team_captain: false, team_request_id: 'cap' }, false],
+    [{ status: 'withdrawn', is_team_captain: true, team_request_id: null }, false],
+    [{ status: 'approved', is_team_captain: false, team_request_id: null }, false],
+  ] as const)('hasTeamPage(%o) is %s', (row, expected) => {
+    expect(hasTeamPage(row)).toBe(expected);
+  });
+
+  it('has no team page without a request row', () => {
+    expect(hasTeamPage(null)).toBe(false);
   });
 });

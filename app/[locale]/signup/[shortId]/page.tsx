@@ -19,6 +19,8 @@ import { signupView, type SignupView } from '@/lib/games/signupOffer';
 import { isMatchplayMode, countSidePlayers } from '@/lib/games/matchplaySides';
 import { pendingRequestView, type PendingRequestRow } from './pendingRequestView';
 import { shouldShowTeamInvitePointer } from './teamInvitePointer';
+import { AlreadyRegisteredView, TeamAwaitingApprovalView } from './RegisteredViews';
+import { hasTeamPage } from '@/lib/games/teamPageModel';
 import {
   loadInviterTeams,
   resolveCertainTeamInvitation,
@@ -228,10 +230,10 @@ export default async function PåmeldingPage({
   // selv-sendt forespørsel — to helt ulike situasjoner i samme `pending`-status.
   const { data: existingRequest } = await admin
     .from('game_registration_requests')
-    .select('id, status, team_request_id')
+    .select('id, status, team_request_id, is_team_captain, team_name')
     .eq('game_id', game.id)
     .eq('user_id', user.id)
-    .maybeSingle<PendingRequestRow & { id: string }>();
+    .maybeSingle<PendingRequestRow & { id: string; is_team_captain: boolean; team_name: string | null }>();
 
   if (existingPlayer == null && existingRequest) {
     existingRequest.captain_status = await loadCaptainStatus(admin, existingRequest);
@@ -308,6 +310,9 @@ export default async function PåmeldingPage({
 
   const gameLocked = game.status === 'active' || game.status === 'finished';
   const isAlreadyRegistered = existingPlayer != null;
+  // #2840 del 5: after a team signup the page renders again without the form's
+  // receipt, so it carries the way to the team page itself.
+  const ownTeam = existingRequest && hasTeamPage(existingRequest) ? { name: existingRequest.team_name } : null;
   const requestView = pendingRequestView(existingRequest);
   // #2837: a full round asks instead, on the count the seat claim uses.
   const { isFull, seats } = await readSeatFacts(game);
@@ -458,6 +463,7 @@ export default async function PåmeldingPage({
               isFull,
             }),
             hasCertainTeamInvitation,
+            ownTeam,
             teamForm,
             matchplaySideData,
             src: srcRaw,
@@ -509,6 +515,7 @@ function renderBody({
   game,
   view,
   hasCertainTeamInvitation,
+  ownTeam,
   teamForm,
   matchplaySideData,
   src,
@@ -519,6 +526,8 @@ function renderBody({
   /** Which branch: the rule's one home is `lib/games/signupOffer.ts` (#2748). */
   view: SignupView;
   hasCertainTeamInvitation: boolean;
+  /** Your team in the round when you have a team page (`hasTeamPage`), else null. */
+  ownTeam: { name: string | null } | null;
   /** Null when the team form is not rendered (`willRenderTeamForm`). */
   teamForm: TeamFormProps | null;
   matchplaySideData: MatchplaySideData | null;
@@ -526,16 +535,7 @@ function renderBody({
 }) {
   switch (view) {
     case 'already_registered':
-      return (
-        <div className="space-y-4">
-          <Banner tone="success">{t('alreadyRegisteredBanner')}</Banner>
-          {/* #2562: «Hent appen» under kvitteringen; ingenting før appen er ute. */}
-          <GetTheApp />
-          <LinkButton href={`/games/${game.id}`} full>
-            {t('goToGameButton')}
-          </LinkButton>
-        </div>
-      );
+      return <AlreadyRegisteredView shortId={game.short_id} gameId={game.id} team={ownTeam} />;
 
     // #1422: en kaptein som har satt deg på laget sitt lager en child-rad med
     // samme `pending`-status som en selv-sendt forespørsel. «Forespørsel sendt»
@@ -565,14 +565,7 @@ function renderBody({
     // #2061: du har sagt ja til laget, og laget venter på arrangøren. Samme
     // beskjed som en sendt forespørsel — ikke påmeldingsskjemaet igjen.
     case 'team_awaiting_approval':
-      return (
-        <>
-          <Banner tone="info" testId="team-awaiting-approval">
-            {t('pendingRequestBanner')}
-          </Banner>
-          <GetTheApp className="mt-4" />
-        </>
-      );
+      return <TeamAwaitingApprovalView shortId={game.short_id} />;
 
     case 'locked':
       return (

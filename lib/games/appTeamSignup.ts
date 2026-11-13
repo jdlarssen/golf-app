@@ -6,6 +6,7 @@ import { TEAM_NAME_MAX, TEAM_NAME_MIN } from '@/lib/games/registration';
 import { teamSignupFor, type SignupView } from '@/lib/games/signupOffer';
 import { loadTeamDashboard } from '@/lib/games/teamDashboardCore';
 import { suggestTeamName } from '@/lib/games/teamName';
+import { hasTeamPage } from '@/lib/games/teamPageModel';
 import { resolveTeamSize } from '@/lib/games/teamRegistrationCore';
 import { getAdminClient } from '@/lib/supabase/admin';
 
@@ -53,8 +54,7 @@ async function readHasTeamPage(gameId: string, userId: string): Promise<boolean>
     .eq('user_id', userId)
     .maybeSingle<OwnRequestRow>();
   if (error) throw error;
-  if (!data || (data.status !== 'pending' && data.status !== 'approved')) return false;
-  return data.is_team_captain || data.team_request_id != null;
+  return hasTeamPage(data);
 }
 
 async function loadForm(
