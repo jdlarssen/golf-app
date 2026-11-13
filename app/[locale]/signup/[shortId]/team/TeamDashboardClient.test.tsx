@@ -34,7 +34,7 @@ const INGRID: TeamPickerFriend = {
   unavailable: false,
 };
 
-function renderTeam(mode: 'captain' | 'member', myRowId = 'cap-1') {
+function renderTeam(mode: 'captain' | 'member', myRowId = 'cap-1', signupsClosed = false) {
   return render(
     <TeamDashboardClient
       mode={mode}
@@ -45,7 +45,7 @@ function renderTeam(mode: 'captain' | 'member', myRowId = 'cap-1') {
       teamName="Birdie-jegerne"
       gameName="Onsdagsgolfen"
       teamSize={5}
-      signupsClosed={false}
+      signupsClosed={signupsClosed}
       picker={mode === 'captain' ? { friends: [INGRID], friendLinkPath: null } : null}
       captain={{ requestId: 'cap-1', userId: 'u-cap', displayName: 'Martin Berg', status: 'approved' }}
       members={[
@@ -95,6 +95,31 @@ describe('TeamDashboardClient — the captain (#2840 del 5)', () => {
 
     fireEvent.click(screen.getByTestId('team-confirm-button'));
     await vi.waitFor(() => expect(removeTeamMemberMock).toHaveBeenCalledWith('req-kari', SHORT_ID));
+  });
+
+  it('#2840: «Send på nytt» resends at once, without a confirmation', async () => {
+    renderTeam('captain');
+    fireEvent.click(openMenu('req-kari').getByText('Send på nytt'));
+    await vi.waitFor(() => expect(resendTeamInviteMock).toHaveBeenCalledWith('req-kari', SHORT_ID));
+    expect(screen.queryByTestId('team-confirm-button')).toBeNull();
+  });
+
+  it('#2840: with signups closed the captain sees the team but cannot change it', () => {
+    renderTeam('captain', 'cap-1', true);
+    expect(screen.getByTestId('team-rows')).toBeInTheDocument();
+    expect(screen.queryByTestId('team-row-menu')).toBeNull();
+    expect(screen.queryByTestId('team-swap')).toBeNull();
+    expect(screen.queryByTestId('team-pick-friend')).toBeNull();
+  });
+
+  it('#2840: a new screen moves focus to its heading, and back again on «Avbryt»', async () => {
+    renderTeam('captain');
+    fireEvent.click(openMenu('req-kari').getByText('Fjern fra laget'));
+    await vi.waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Fjerne Kari Nord fra laget?' })),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Avbryt' }));
+    await vi.waitFor(() => expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Birdie-jegerne' })));
   });
 
   it('«Avbryt» on the confirmation changes nothing', () => {

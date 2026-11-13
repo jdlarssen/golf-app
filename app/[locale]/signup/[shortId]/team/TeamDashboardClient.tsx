@@ -264,6 +264,16 @@ function TeamView({
   const tt = useTranslations('signup.teamPage');
   const tp = useTranslations('signup.friendPicker');
   const [screen, setScreen] = useState<Screen>({ kind: 'team' });
+  // #2840: the screens replace each other in place, so the button that had focus
+  // unmounts. Focus moves to the new screen's heading (not on the first render).
+  const firstScreen = useRef(true);
+  useEffect(() => {
+    if (firstScreen.current) {
+      firstScreen.current = false;
+      return;
+    }
+    document.querySelector<HTMLElement>('[data-team-screen-heading]')?.focus();
+  }, [screen.kind]);
   const [menuFor, setMenuFor] = useState<string | null>(null);
 
   const isCaptain = props.mode === 'captain';
@@ -370,7 +380,11 @@ function TeamView({
     <div className="space-y-4">
       <header className="px-1">
         <Kicker>{tt('kicker', { gameName: props.gameName })}</Kicker>
-        <h1 className="mt-1 font-serif text-[28px] leading-snug font-medium tracking-[-0.015em] text-text">
+        <h1
+          tabIndex={-1}
+          data-team-screen-heading
+          className="mt-1 font-serif text-[28px] leading-snug font-medium tracking-[-0.015em] text-text outline-none"
+        >
           {props.teamName}
         </h1>
         <p className="mt-0.5 text-[13px] text-muted tabular-nums">{meta}</p>
@@ -689,7 +703,11 @@ function ConfirmScreen({
     <div className="space-y-4" data-testid={`team-confirm-${action}`}>
       <div className="px-1 pt-2">
         <Disc initials={nameInitials(member.displayName)} size="lg" captain={!remove} ringOn="bg" />
-        <h1 className="mt-3 font-serif text-[26px] leading-snug font-medium text-text">
+        <h1
+          tabIndex={-1}
+          data-team-screen-heading
+          className="mt-3 font-serif text-[26px] leading-snug font-medium text-text outline-none"
+        >
           {remove
             ? tt('removeTitle', { name: member.displayName })
             : tt('transferTitle', { name: member.displayName })}
@@ -769,7 +787,9 @@ function PickScreen({
   return (
     <div className="space-y-4" data-testid="team-picker">
       <header className="px-1">
-        <h1 className="font-serif text-[28px] leading-snug font-medium text-text">{tt('pickerTitle')}</h1>
+        <h1 tabIndex={-1} data-team-screen-heading className="font-serif text-[28px] leading-snug font-medium text-text outline-none">
+          {tt('pickerTitle')}
+        </h1>
         <p className="mt-0.5 text-[13px] text-muted tabular-nums">
           {replace
             ? tt('pickerSwapMeta', { teamName, name: replace.displayName })
