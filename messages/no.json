@@ -5048,6 +5048,20 @@
       "joinLinkHeading": "Del klubb-lenke",
       "joinLinkDescription": "Del denne lenken. Den som åpner den kan be om å bli med, og du godkjenner eller avslår.",
       "leaveLink": "Forlat klubb",
+      "kicker": "Klubb",
+      "backToClubs": "Tilbake til klubbene",
+      "memberLine": "{count, plural, one {# medlem} other {# medlemmer}} · {role, select, owner {du er eier} admin {du er admin} other {du er medlem}}",
+      "manageDoor": "Administrer klubben",
+      "manageWaiting": "{count, plural, one {# forespørsel venter} other {# forespørsler venter}}",
+      "roundsHeading": "Neste runder i klubben",
+      "roundsEmpty": "Ingen runder satt opp i klubben ennå.",
+      "roundsMore": "Vis {count} til",
+      "roundsFewer": "Vis færre",
+      "membersSection": "Medlemmer · {count}",
+      "membersSectionWithCap": "Medlemmer · {count} av {cap}",
+      "seeAllMembers": "Se alle",
+      "seeAllMembersLabel": "Se alle medlemmene",
+      "membersPageTitle": "Medlemmer",
       "approveButton": "Godkjenn",
       "approvePending": "Godkjenner …",
       "rejectButton": "Avslå",
@@ -6376,7 +6390,9 @@
       "createOwn": "Fant du ikke noe? Lag din egen runde",
       "emptyWeekend": "Ingen runder denne helga.",
       "emptyClub": "Ingen kommende runder i klubben din.",
-      "showAll": "Vis alle"
+      "showAll": "Vis alle",
+      "mineJoined": "Du er med",
+      "mineOrganizer": "Du arrangerer"
     }
   },
   "invitationCard": {

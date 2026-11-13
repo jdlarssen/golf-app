@@ -5048,6 +5048,20 @@
       "joinLinkHeading": "Share club link",
       "joinLinkDescription": "Share this link. Anyone who opens it can request to join, and you approve or decline.",
       "leaveLink": "Leave club",
+      "kicker": "Club",
+      "backToClubs": "Back to your clubs",
+      "memberLine": "{count, plural, one {# member} other {# members}} · {role, select, owner {you're the owner} admin {you're an admin} other {you're a member}}",
+      "manageDoor": "Manage the club",
+      "manageWaiting": "{count, plural, one {# request waiting} other {# requests waiting}}",
+      "roundsHeading": "Next rounds in the club",
+      "roundsEmpty": "No rounds set up in the club yet.",
+      "roundsMore": "Show {count} more",
+      "roundsFewer": "Show fewer",
+      "membersSection": "Members · {count}",
+      "membersSectionWithCap": "Members · {count} of {cap}",
+      "seeAllMembers": "See all",
+      "seeAllMembersLabel": "See all members",
+      "membersPageTitle": "Members",
       "approveButton": "Approve",
       "approvePending": "Approving…",
       "rejectButton": "Decline",
@@ -6376,7 +6390,9 @@
       "createOwn": "Nothing for you? Set up your own round",
       "emptyWeekend": "No rounds this weekend.",
       "emptyClub": "No upcoming rounds in your club.",
-      "showAll": "Show all"
+      "showAll": "Show all",
+      "mineJoined": "You're in",
+      "mineOrganizer": "You're organising"
     }
   },
   "invitationCard": {

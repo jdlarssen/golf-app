@@ -83,9 +83,14 @@ klubber — `/klubber` viser en kontakt-vei (klubb@tornygolf.no), og hoved-admin
 Sekretariatet (`/admin/klubber/ny`, `admin_create_club`-RPC), velger eier (som blir **eneeier**) og
 setter avtale-rammer: et **medlemstak** (`member_cap`) og en **varighet** (`valid_until` — uendelig
 eller en sluttdato, redigerbar i `/admin/klubber/[id]`). Klubbene dine bor under Klubbhuset
-(`/klubber`); klubb-siden (`/klubber/[id]`) viser medlemmer, lar eier/admin legge til på e-post eller
-dele en bli-med-lenke (`/klubber/bli-med/[shortId]` → forespørsel → eier godkjenner), og har en «Sett
-opp en runde for klubben»-dør. **Eieren delegerer** (#50): via `/klubber/[id]/rolle/[userId]` gjør
+(`/klubber`). Klubbsiden (`/klubber/[id]`, #2326) har et grønt hode med klubbnavnet og «32 medlemmer ·
+du er eier». Under det står «Neste runder i klubben» med klubbens planlagte runder, «Meld på» eller
+«Du er med»/«Du arrangerer» på hver rad, og de fem første medlemmene med «Se alle». Hele lista med
+«Endre rolle» og «Fjern» står på `/klubber/[id]/medlemmer`. Så følger ligaene, cupene og døra «Sett opp
+en runde for klubben». Eier og admin får én dør til, «Administrer klubben» (`/klubber/[id]/administrer`).
+Der legger de til medlemmer på e-post, deler bli-med-lenka (`/klubber/bli-med/[shortId]` → forespørsel
+→ eier godkjenner), avgjør forespørsler og trekker tilbake invitasjoner. Varselet om en ny forespørsel
+åpner den siden. **Eieren delegerer** (#50): via `/klubber/[id]/rolle/[userId]` gjør
 eieren medlemmer til admin eller eier (flere likestilte), eller setter dem ned (`set_club_member_role`
 — siste eier kan ikke degraderes; den berørte varsles). Når et spill opprettes for en klubb
 («Klubb-turnering» i veiviseren, `games.group_id`), ser **alle klubbens medlemmer** runden i «Finn

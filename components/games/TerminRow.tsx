@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { formatTeeOffTimeLocale } from '@/lib/i18n/format';
+import { formatDateBlockOsloLocale, formatTeeOffTimeLocale } from '@/lib/i18n/format';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
 import { registrationSeatTeamSize } from '@/lib/games/teamFormatLimits';
@@ -13,6 +13,8 @@ import type { AppLocale } from '@/i18n/routing';
 import { ChevronRightIcon } from '@/components/icons';
 
 const ROW = 'flex items-center gap-3 px-[14px] py-3';
+/** The club page's row (#2326): 10 px top and bottom and CSS `normal` line height, as drawn. */
+const DATE_ROW = 'flex items-center gap-3 px-[14px] py-2.5 leading-[normal]';
 
 /**
  * One round in the terminliste (#2258): the time block, the name, «Bane ·
@@ -26,28 +28,71 @@ const ROW = 'flex items-center gap-3 px-[14px] py-3';
  * `anon`: the whole row links to the poster with an arrow. Only the capacity
  * line is shown — it is a number, never a name (#1193).
  *
+ * `lead="date"` is the club page's row (#2326, artboard «Forslag: klubbens
+ * side»): a date block («Ons» over «8.10») instead of the clock, and «17:30 ·
+ * Format · lag på N» under the name, without the course. With `mine` set the
+ * line under the name says «Du er med» / «Du arrangerer», there is no button,
+ * and the whole row links to the round with an arrow.
+ *
  * The row fetches nothing; seats and social proof come from the caller.
  */
 export function TerminRow({
   entry,
   variant,
   socialProof,
+  lead = 'time',
+  mine = null,
 }: {
   entry: TerminEntry;
   variant: 'player' | 'anon';
   socialProof?: GameSocialProof;
+  lead?: 'time' | 'date';
+  mine?: 'joined' | 'organizer' | null;
 }) {
   const t = useTranslations('discover');
   const locale = useLocale() as AppLocale;
   const name = localizeGameName(entry.name, entry.course_name, locale);
   const href = `/signup/${entry.short_id}`;
+  const row = lead === 'date' ? DATE_ROW : ROW;
+
+  if (lead === 'date' && mine !== null) {
+    return (
+      <li>
+        <SmartLink
+          href={`/games/${entry.id}`}
+          className={`${row} text-text transition-colors hover:bg-surface-2`}
+          data-testid="club-round-mine"
+        >
+          <DateBlock entry={entry} locale={locale} />
+          <span className="block min-w-0 grow">
+            <span className="block text-[15px] font-semibold">{name}</span>
+            <span className="block text-[12px] font-semibold text-round-mine">
+              {mine === 'joined' ? t('termin.mineJoined') : t('termin.mineOrganizer')}
+            </span>
+          </span>
+          {/* Inter has no «→»; the artboard's falls back to the system font. */}
+          <span aria-hidden className="shrink-0 font-[system-ui] text-primary">
+            →
+          </span>
+        </SmartLink>
+      </li>
+    );
+  }
 
   const body = (
     <>
-      <TimeBlock entry={entry} locale={locale} />
+      {lead === 'date' ? (
+        <DateBlock entry={entry} locale={locale} />
+      ) : (
+        <TimeBlock entry={entry} locale={locale} />
+      )}
       <span className="block min-w-0 grow">
         <span className="block text-[15px] font-semibold text-text">{name}</span>
-        <CourseFormatLine entry={entry} />
+        {lead === 'date' ? (
+          <TimeFormatLine entry={entry} locale={locale} />
+        ) : (
+          <CourseFormatLine entry={entry} />
+        )}
         <ThirdLine
           entry={entry}
           socialProof={variant === 'player' ? socialProof : undefined}
@@ -74,7 +119,7 @@ export function TerminRow({
   if (entry.full) {
     return (
       <li>
-        <SmartLink href={href} className={`${ROW} transition-colors hover:bg-surface-2`}>
+        <SmartLink href={href} className={`${row} transition-colors hover:bg-surface-2`}>
           {body}
         </SmartLink>
       </li>
@@ -82,7 +127,7 @@ export function TerminRow({
   }
 
   return (
-    <li className={ROW}>
+    <li className={row}>
       {body}
       {entry.cta === 'direct' ? (
         <LinkButton
@@ -143,9 +188,44 @@ function TimeBlock({ entry, locale }: { entry: TerminEntry; locale: AppLocale })
   );
 }
 
-function CourseFormatLine({ entry }: { entry: TerminEntry }) {
-  const t = useTranslations('discover');
-  const tModes = useTranslations('modes');
+/**
+ * The club page's date block (#2326): weekday over «8.10», 44 px of content
+ * plus the 8 px gap and the 1 px divider (content-box, as drawn). A round
+ * without a date shows «–»; the line beside it says «Dato ikke satt».
+ */
+function DateBlock({ entry, locale }: { entry: TerminEntry; locale: AppLocale }) {
+  const teeOff = validTeeOff(entry);
+  const block = teeOff ? formatDateBlockOsloLocale(teeOff, locale) : null;
+  return (
+    <span className="box-content block w-11 shrink-0 border-r border-row-divider-warm pr-2 text-center">
+      {block ? (
+        <>
+          <span className="block text-xs font-semibold text-muted">{block.weekday}</span>
+          <span className="block font-serif text-[20px] font-semibold text-text">
+            {block.dayMonth}
+          </span>
+        </>
+      ) : (
+        <span aria-hidden className="block font-serif text-[20px] font-semibold text-muted">
+          –
+        </span>
+      )}
+    </span>
+  );
+}
+
+function validTeeOff(entry: TerminEntry): Date | null {
+  if (!entry.scheduled_tee_off_at) return null;
+  const teeOff = new Date(entry.scheduled_tee_off_at);
+  return Number.isNaN(teeOff.getTime()) ? null : teeOff;
+}
+
+/** «Format · lag på N» — the course, or not, in front. */
+function formatParts(
+  entry: TerminEntry,
+  t: ReturnType<typeof useTranslations<'discover'>>,
+  tModes: ReturnType<typeof useTranslations<'modes'>>,
+): string[] {
   const format = tModes(
     formatDisplayLabelKey(entry.game_mode, entry.mode_config) as Parameters<typeof tModes>[0],
   );
@@ -153,9 +233,26 @@ function CourseFormatLine({ entry }: { entry: TerminEntry }) {
     entry.game_mode,
     (entry.mode_config as { team_size?: number } | null)?.team_size,
   );
-  const parts = [entry.course_name ?? t('courseNotSet'), format];
-  if (teamSize > 1) parts.push(t('termin.teamOf', { size: teamSize }));
+  return teamSize > 1 ? [format, t('termin.teamOf', { size: teamSize })] : [format];
+}
+
+function CourseFormatLine({ entry }: { entry: TerminEntry }) {
+  const t = useTranslations('discover');
+  const tModes = useTranslations('modes');
+  const parts = [entry.course_name ?? t('courseNotSet'), ...formatParts(entry, t, tModes)];
   return <span className="mt-0.5 block text-[12px] text-muted">{parts.join(' · ')}</span>;
+}
+
+/** The club page's line (#2326): «17:30 · Stableford · lag på 4», no course. */
+function TimeFormatLine({ entry, locale }: { entry: TerminEntry; locale: AppLocale }) {
+  const t = useTranslations('discover');
+  const tModes = useTranslations('modes');
+  const teeOff = validTeeOff(entry);
+  const when = teeOff ? formatTeeOffTimeLocale(teeOff, locale) : t('termin.undated');
+  const parts = [when, ...formatParts(entry, t, tModes)];
+  return (
+    <span className="block text-[12px] text-muted">{parts.join(' · ')}</span>
+  );
 }
 
 /** Capacity bar, «Fullt», the friends who joined, the count — or nothing. */

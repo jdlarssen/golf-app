@@ -68,6 +68,22 @@ function pickGame(game: TerminGame): TerminGame {
   };
 }
 
+/** A row's capacity line and «Fullt», from the seats the caller read. */
+function seatFields(
+  id: string,
+  seats: ReadonlyMap<string, GameSeats>,
+): Pick<TerminEntry, 'capacity' | 'full'> {
+  const s = seats.get(id);
+  const capacity = s?.kind === 'capped' ? { cap: s.cap, held: s.held } : null;
+  const full =
+    s?.kind === 'capped'
+      ? capacityState(s).free === 0
+      : s?.kind === 'matchplay'
+        ? s.full
+        : false;
+  return { capacity, full };
+}
+
 /**
  * One row per game, with its source, its button and its seats.
  *
@@ -93,15 +109,7 @@ export function buildTerminEntries(
   const push = (game: TerminGame, source: TerminSource, cta: TerminCta) => {
     if (seen.has(game.id)) return;
     seen.add(game.id);
-    const s = seats.get(game.id);
-    const capacity = s?.kind === 'capped' ? { cap: s.cap, held: s.held } : null;
-    const full =
-      s?.kind === 'capped'
-        ? capacityState(s).free === 0
-        : s?.kind === 'matchplay'
-          ? s.full
-          : false;
-    entries.push({ ...pickGame(game), source, cta, capacity, full });
+    entries.push({ ...pickGame(game), source, cta, ...seatFields(game.id, seats) });
   };
 
   for (const g of data.clubGames ?? []) push(g, 'club', 'direct');
@@ -110,6 +118,71 @@ export function buildTerminEntries(
     push(g, 'open', g.registration_mode === 'manual_approval' ? 'request' : 'direct');
   }
   return entries;
+}
+
+/** A round on the club page with what it has to do with you (#2326). */
+export type ClubRoundEntry = TerminEntry & {
+  /** «Du er med» / «Du arrangerer»; the row then has no button. */
+  mine: 'joined' | 'organizer' | null;
+};
+
+export type ClubRoundGame = TerminGame & {
+  created_by: string | null;
+  signups_closed_at: string | null;
+};
+
+/**
+ * The club page's «Neste runder i klubben» (#2326): the club's scheduled
+ * rounds, earliest tee-off first and undated last (name breaks a tie, as in
+ * `groupTerminByDate`).
+ *
+ * `mine` is `'joined'` when you are on the round, else `'organizer'` when you
+ * set it up, else `null` — so a round you set up and play says «Du er med».
+ * The button is always direct: membership is the invitation (#442).
+ *
+ * Dropped: a round dated before today's Oslo date (still `scheduled` after
+ * its day, so it is stuck), and a round whose signups the organiser closed
+ * when it is not yours — its button would lead to a closed signup.
+ */
+export function buildClubRoundEntries(
+  games: readonly ClubRoundGame[],
+  opts: {
+    joinedIds: ReadonlySet<string>;
+    userId: string;
+    seats: ReadonlyMap<string, GameSeats>;
+    now: Date;
+  },
+): ClubRoundEntry[] {
+  const today = osloDateKey(opts.now);
+  const byName = (a: TerminEntry, b: TerminEntry) => a.name.localeCompare(b.name, 'nb');
+  const mineOf = (game: ClubRoundGame): ClubRoundEntry['mine'] =>
+    opts.joinedIds.has(game.id)
+      ? 'joined'
+      : game.created_by !== null && game.created_by === opts.userId
+        ? 'organizer'
+        : null;
+
+  const rows: ClubRoundEntry[] = [];
+  for (const game of games) {
+    const mine = mineOf(game);
+    if (mine === null && game.signups_closed_at !== null) continue;
+    const entry: ClubRoundEntry = {
+      ...pickGame(game),
+      source: 'club',
+      cta: 'direct',
+      ...seatFields(game.id, opts.seats),
+      mine,
+    };
+    const time = teeOffTime(entry);
+    if (time !== null && osloDateKey(new Date(time)) < today) continue;
+    rows.push(entry);
+  }
+
+  const dated = rows
+    .filter((e) => teeOffTime(e) !== null)
+    .sort((a, b) => (teeOffTime(a) as number) - (teeOffTime(b) as number) || byName(a, b));
+  const undated = rows.filter((e) => teeOffTime(e) === null).sort(byName);
+  return [...dated, ...undated];
 }
 
 /** «i dag», «i morgen», «om N dager» — or none on a day that has passed. */

@@ -155,6 +155,16 @@ describe('notificationDestination', () => {
           requester_name: 'Per',
         }),
       ),
+    ).toBe(`/klubber/${GROUP}/administrer`);
+    // #2326: a role change still opens the club page itself.
+    expect(
+      notificationDestination(
+        n('club_role_changed', {
+          group_id: GROUP,
+          group_name: 'K',
+          new_role: 'admin',
+        }),
+      ),
     ).toBe(`/klubber/${GROUP}`);
   });
 

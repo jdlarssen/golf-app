@@ -35,6 +35,7 @@ const SURFACE_ROUTE: Record<VisitSurface, RegExp> = {
   cupResults: /^\/cup\/[^/]+\/resultater$/,
   cupParticipants: /^\/(klubber\/[^/]+\/cup|admin\/cup)\/[^/]+\/spillere$/,
   club: /^\/klubber\/[^/]+$/,
+  clubManage: /^\/klubber\/[^/]+\/administrer$/,
   friends: /^\/profile\/venner$/,
   history: /^\/profile\/historikk$/,
   league: /^\/liga\/[^/]+$/,
@@ -134,6 +135,7 @@ const CALLERS: Record<
     routes: ['/admin/cup/t1/spillere', '/klubber/g1/cup/t1/spillere'],
   },
   club: { file: 'app/[locale]/klubber/[id]/page.tsx', entity: 'id' },
+  clubManage: { file: 'app/[locale]/klubber/[id]/administrer/page.tsx', entity: 'id' },
   friends: { file: 'app/[locale]/profile/venner/page.tsx', entity: null },
   history: { file: 'app/[locale]/profile/historikk/page.tsx', entity: null },
   league: { file: 'app/[locale]/liga/[id]/page.tsx', entity: 'leagueId' },
@@ -256,6 +258,16 @@ describe('NOT_WAITING_FILTER agrees with isWaitingRow', () => {
 describe('visitCanMarkRead', () => {
   it('the pages whose every kind waits send no UPDATE, the hole page among them', () => {
     const silent = surfaces.filter((s) => !visitCanMarkRead(s));
-    expect(silent.sort()).toEqual(['gameApprove', 'gameFinish', 'gameHole', 'league', 'leagueMarker', 'leagueRoundStart']);
+    // #2326: /administrer clears only `club_join_request`, which waits until
+    // decided (the inbox reads that from the request itself).
+    expect(silent.sort()).toEqual([
+      'clubManage',
+      'gameApprove',
+      'gameFinish',
+      'gameHole',
+      'league',
+      'leagueMarker',
+      'leagueRoundStart',
+    ]);
   });
 });

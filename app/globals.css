@@ -253,6 +253,10 @@
   --receipt-rule: var(--slot-dashed);
   --receipt-plus: #1f6b3a;
   --receipt-minus: #a33a2f;
+  /* The club page (#2326): «Du er med» / «Du arrangerer» on a round row,
+   * the artboard «Forslag: klubbens side». Light only on the artboard; the
+   * night takes the success text. */
+  --round-mine: #1f6b3a;
 
   /* Destructive CTAer — slett-spill, slett-konto, trekk-tilbake-invitasjon.
    * Deeper than --danger so it reads as a "no going back"-button against
@@ -468,6 +472,7 @@
      * success and danger text. */
     --receipt-plus: var(--success-text);
     --receipt-minus: var(--danger);
+    --round-mine: var(--success-text);
 
     /* Destructive CTAer — lighter brick so it reads as "alarm" against the
      * dark forest bg, not as a black smudge. */
@@ -605,6 +610,7 @@
   --invitation-avatar-3: #94bf96;
   --receipt-plus: var(--success-text);
   --receipt-minus: var(--danger);
+  --round-mine: var(--success-text);
   --danger-deep: #c46868;
   --surface-strong: #1f3b2c;
   --leaderboard-backdrop-opacity: 0.10;
@@ -688,6 +694,7 @@
   --color-live-dot-on-strong: var(--live-dot-on-strong);
   --color-on-accent: var(--on-accent);
   --color-score-under-ring: var(--score-under-ring);
+  --color-round-mine: var(--round-mine);
   --color-score-over1-ring: var(--score-over1-ring);
   --color-rank-up: var(--rank-up);
   --color-danger-deep: var(--danger-deep);

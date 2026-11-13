@@ -44,7 +44,7 @@ export async function removeMember(formData: FormData) {
 
   const callerRole = callerRow?.role;
   if (callerRole !== 'owner' && callerRole !== 'admin') {
-    redirect({ href: `/klubber/${groupId}`, locale });
+    redirect({ href: `/klubber/${groupId}/medlemmer`, locale });
   }
 
   // Last-owner guard: check if target is the sole owner.
@@ -86,5 +86,6 @@ export async function removeMember(formData: FormData) {
   }
 
   revalidatePath(`/klubber/${groupId}`);
-  redirect({ href: `/klubber/${groupId}`, locale });
+  revalidatePath(`/klubber/${groupId}/medlemmer`);
+  redirect({ href: `/klubber/${groupId}/medlemmer`, locale });
 }
