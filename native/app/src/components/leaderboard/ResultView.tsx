@@ -54,6 +54,7 @@ export function ResultView({
   teamBoard = null,
   patsomeBoard = null,
   resultInSentence = false,
+  viewerUserId = null,
 }: {
   result: ModeResult;
   status: string;
@@ -78,6 +79,8 @@ export function ResultView({
   patsomeBoard?: PatsomeBoardModel | null;
   /** Resultatets setning (#2756) sier utfallet i matchplay. */
   resultInSentence?: boolean;
+  /** Seeren: egen rad i Skins-stillingen heter «Deg» (#2317). */
+  viewerUserId?: string | null;
 }) {
   switch (result.kind) {
     case 'solo_strokeplay': {
@@ -337,7 +340,13 @@ export function ResultView({
 
     case 'skins':
       return (
-        <SkinsView result={result} status={status} settlement={settlement} nameOf={nameOf} />
+        <SkinsView
+          result={result}
+          status={status}
+          settlement={settlement}
+          nameOf={nameOf}
+          viewerUserId={viewerUserId}
+        />
       );
 
     case 'nassau':

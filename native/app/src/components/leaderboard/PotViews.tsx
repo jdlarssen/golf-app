@@ -25,12 +25,15 @@ export function SkinsView({
   status,
   settlement,
   nameOf,
+  viewerUserId = null,
 }: {
   result: SkinsResult;
   status: string;
   /** Pengeoppgjøret (#2221), eller null når spillet ikke har kroner per skin. */
   settlement: Settlement | null;
   nameOf: (userId: string) => string;
+  /** Seeren: egen rad i stillingen heter «Deg», som på tegningen. */
+  viewerUserId?: string | null;
 }) {
   const { ui } = useTheme();
   const finished = status === 'finished';
@@ -46,7 +49,7 @@ export function SkinsView({
         currentHoleNumber={!finished && pot.kind === 'pending' ? pot.holeNumber : null}
         nameOf={nameOf}
       />
-      <SkinsStanding players={result.players} nameOf={nameOf} />
+      <SkinsStanding players={result.players} nameOf={nameOf} viewerUserId={viewerUserId} />
       {/* Luft mellom stillingskortet og linjene under. */}
       <View style={{ marginTop: 12, gap: 8 }}>
         {potLine ? (
