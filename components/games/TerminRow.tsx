@@ -50,6 +50,9 @@ export function TerminRow({
   mine?: 'joined' | 'organizer' | null;
 }) {
   const t = useTranslations('discover');
+  // The marks live with the club page, the only list that shows them; the
+  // native app mirrors `discover.termin` key for key.
+  const tClub = useTranslations('klubb.room');
   const locale = useLocale() as AppLocale;
   const name = localizeGameName(entry.name, entry.course_name, locale);
   const href = `/signup/${entry.short_id}`;
@@ -68,7 +71,7 @@ export function TerminRow({
           <span className="block min-w-0 grow">
             <span className="block text-[15px] font-semibold">{name}</span>
             <span className="block text-[12px] font-semibold text-round-mine">
-              {mine === 'joined' ? t('termin.mineJoined') : t('termin.mineOrganizer')}
+              {mine === 'joined' ? tClub('mineJoined') : tClub('mineOrganizer')}
             </span>
           </span>
           {/* Inter has no «→»; the artboard's falls back to the system font. */}
