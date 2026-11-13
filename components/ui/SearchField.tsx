@@ -69,7 +69,9 @@ export function SearchField({
         autoComplete="off"
         className={`${
           tone === 'filled'
-            ? 'h-12 rounded-[14px] border border-transparent bg-surface-2 pl-[40px]'
+            ? // #2840: no browser clear button. Chromium keeps ~25 px for it even when it is
+              // hidden, which cut «Søk i vennene» beside «+ Legg til venn» on a phone.
+              'h-12 rounded-[14px] border border-transparent bg-surface-2 pl-[40px] [&::-webkit-search-cancel-button]:appearance-none'
             : `${size === 'large' ? 'h-[52px] pl-[38px]' : 'h-[50px] pl-[40px]'} rounded-xl border border-field-border bg-surface`
         } w-full ${tone === 'filled' ? 'pr-2' : 'pr-3'} font-sans text-base text-text placeholder:text-muted`}
       />
