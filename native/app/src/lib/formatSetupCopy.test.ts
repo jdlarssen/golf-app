@@ -1,6 +1,7 @@
 // #2753 D3: oppsettet for de nye formatene sier det samme som nettet.
 import source from '../../../../messages/no.json';
 import {
+  NASSAU_SETUP_TEXT,
   PATSOME_TEXT,
   SHAMBLE_TEXT,
   TEAM_HANDICAP_TEXT,
@@ -29,6 +30,12 @@ describe('Patsome-oppsettet er nettets', () => {
       format: web[`segment${n}Format`],
       body: web[`segment${n}Body`],
     });
+  });
+});
+
+describe('Nassau-oppsettet er nettets (#2755)', () => {
+  it('alle seks strengene er wizard.sections.nassau, tegn for tegn', () => {
+    expect(NASSAU_SETUP_TEXT).toStrictEqual(source.wizard.sections.nassau);
   });
 });
 

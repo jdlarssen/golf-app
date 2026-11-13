@@ -35,7 +35,7 @@ import type { AppGameMode } from './appFormats';
  *  - singles_matchplay: nøyaktig 2 ved publisering.
  *  - best_ball: fulle par opp til taket, 20 par à nøyaktig 2 (#2148).
  *  - greensome_matchplay: 2v2, nøyaktig 4.
- *  - wolf / skins / bingo_bango_bongo: øvre grense i `START_COUNT_RANGES`, som
+ *  - wolf / skins / nassau / bingo_bango_bongo: øvre grense i `START_COUNT_RANGES`, som
  *    publiseringen og startvakta også leser (#2222).
  */
 export const MAX_PLAYERS_BY_MODE: Record<AppGameMode, number> = {
@@ -47,6 +47,7 @@ export const MAX_PLAYERS_BY_MODE: Record<AppGameMode, number> = {
   wolf: START_COUNT_RANGES.wolf.max,
   bingo_bango_bongo: START_COUNT_RANGES.bingo_bango_bongo.max,
   skins: START_COUNT_RANGES.skins.max,
+  nassau: START_COUNT_RANGES.nassau.max,
   // #2753 D3: slagspill har spillertaket på 40, Patsome fulle par opp til taket.
   solo_strokeplay: TEAM_FORMAT_PLAYER_CAP,
   patsome: teamModePlayerCap('patsome', 2) ?? TEAM_FORMAT_PLAYER_CAP,

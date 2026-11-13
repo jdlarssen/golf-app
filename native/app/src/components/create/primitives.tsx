@@ -184,6 +184,7 @@ export function ChoiceCards<T extends string | number>({
   bleed = 0,
   paddingX = 12,
   testID,
+  accessibilityLabel,
 }: {
   options: readonly ChoiceCardOption<T>[];
   value: T;
@@ -202,12 +203,16 @@ export function ChoiceCards<T extends string | number>({
    */
   paddingX?: 10 | 12;
   testID?: string;
+  /** Gruppens navn for skjermleseren, som webbens `aria-label` på valgkortene (#2755). */
+  accessibilityLabel?: string;
 }) {
   const { colors } = useTheme();
   const gap = 8;
   return (
     <View
       testID={testID}
+      accessibilityRole={accessibilityLabel ? 'radiogroup' : undefined}
+      accessibilityLabel={accessibilityLabel}
       style={[styles.cards, { marginHorizontal: -bleed - gap / 2, rowGap: gap }]}
     >
       {options.map((option) => {

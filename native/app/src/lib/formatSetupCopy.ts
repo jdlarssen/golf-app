@@ -32,6 +32,17 @@ export const PATSOME_TEXT = {
   grossDesc: 'Rå slag',
 } as const;
 
+/** `wizard.sections.nassau` (#2755). */
+export const NASSAU_SETUP_TEXT = {
+  legend: 'Nassau-oppsett',
+  scoringLabel: 'Scoring',
+  scoringDescription:
+    'Nassau er tre konkurranser i én — front 9, back 9, og totalt 18. Velger om handicap eller brutto avgjør hver del.',
+  scoringNet: 'Med handicap (netto)',
+  scoringGross: 'Brutto',
+  scoringAriaLabel: 'Nassau-scoring',
+} as const;
+
 /** `wizard.teamSize`: kortene for lagstørrelsen i scramble-familien. */
 export const TEAM_SIZE_TEXT = {
   legend: 'Velg lagstørrelse',

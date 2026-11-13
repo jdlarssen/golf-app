@@ -343,6 +343,34 @@ describe('publishGame', () => {
       });
     });
 
+    // #2755: nettets veiviser lagrer Nassau med `ranking: 'net_to_par'` på nye spill.
+    it.each(['net', 'gross'] as const)('stempler net_to_par på et nytt nassau-spill (%s)', async (scoring) => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const gameInsert = queryStub(GAME_ROW);
+      routeFrom({
+        formats: [queryStub({ data: { slug: 'nassau' }, error: null })],
+        games: [gameInsert],
+        game_players: [queryStub({ data: [{ user_id: 'a' }], error: null })],
+      });
+
+      await publish(
+        draft({
+          gameMode: 'nassau',
+          setup: { nassauScoring: scoring },
+          players: [
+            { userId: 'a', teeGender: 'M', teamNumber: null },
+            { userId: 'b', teeGender: 'M', teamNumber: null },
+          ],
+        }),
+      );
+
+      const row = stepArgs(gameInsert, 'insert')[0]![0] as Record<string, unknown>;
+      expect(row).toMatchObject({
+        game_mode: 'nassau',
+        mode_config: { kind: 'nassau', team_size: 1, nassau_scoring: scoring, ranking: 'net_to_par' },
+      });
+    });
+
     it('skriver sideturneringens slots når bryteren står på', async () => {
       const { queryStub, routeFrom, stepArgs } = mocks();
       const gameInsert = queryStub(GAME_ROW);
@@ -460,7 +488,7 @@ describe('publishGame', () => {
       // assertionen trenger nå et format som fortsatt mangler dem.
       expect(
         await publish(
-          draft({ gameMode: 'nassau' as GameDraft['gameMode'] }),
+          draft({ gameMode: 'nines' as GameDraft['gameMode'] }),
         ),
       ).toEqual({ ok: false, error: 'unsupported_mode' });
     });

@@ -286,6 +286,8 @@ flowchart LR
 
 **Resultatet etter runden i appen (#2756):** et avsluttet spill sier hvem som vant øverst på tavla, med samme setning som bildet som deles («Marte vant med 38 poeng»), og de tre første har medaljer. «Del resultat» åpner delingsarket med resultatkortet, tegnet på telefonen, så det virker uten nett. Matchplay har setningen uten medaljer, en ligarunde spilt alene sier «Godkjent». Toppen følger samme porter som tavla (`boardView` i `Leaderboard.tsx`), og tallet kommer fra samme sted som raden (`lib/leaderboard/podium.ts`).
 
+**Nassau i appen (#2755):** arrangøren velger Nassau i veiviseren (for kompisrunder, 2–16 spillere), velger netto eller brutto i «Nassau-oppsett» og publiserer. Spillet som lagres er det samme som nettets veiviser lager. Kroner settes på nettet (#2561).
+
 **Heiagjengen (#2286):** på live-lenka (spectate) er skiltene følg-lenker. Trykk på et navn gir `?folg=<user_id>` og følg-siden (`FollowView`): plass og total, de fem siste hullene, flighten og tavla. Valget huskes per spill på telefonen (`FollowMemory`, nøkkel `torny:folg:<token>`).
 
 **Hent appen på live-lenka (#2562):** med appen ute står en rolig linje med butikkmerkene under tavla, over «Lag din egen turnering». Følg-siden skjuler den sammen med CTA-en, og storskjermen (`/tv`) og innbyggingen (`/embed`) får den ikke.

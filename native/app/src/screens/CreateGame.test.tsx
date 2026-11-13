@@ -1080,4 +1080,37 @@ describe('summaryLines — kontingent og premiebord', () => {
     expect(found.map((l) => l.key)).not.toContain('fee');
     expect(found.map((l) => l.key)).not.toContain('prizes');
   });
+
+  // #2755: Nassau-oppsettet, `Nyttspill-2-nassau`: ett kort med scoring, netto valgt fra start.
+  it('Nassau viser oppsettet med netto valgt, tar brutto, og har ikke noe kronefelt', async () => {
+    (fetchFormatCatalog as jest.Mock).mockResolvedValueOnce([
+      { slug: 'nassau', label: 'Nassau', iconKey: 'nassau', isPrimary: false, sortOrder: 60 },
+    ]);
+    publishGameMock.mockResolvedValueOnce({ ok: true, gameId: 'nassau-game' });
+    await renderWizard();
+    await fireEvent.press(await screen.findByTestId('create-format-nassau'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+
+    expect(screen.getByText('Nassau-oppsett')).toBeTruthy();
+    expect(screen.getByText('Scoring')).toBeTruthy();
+    expect(screen.getByLabelText('Nassau-scoring')).toBeTruthy();
+    expect(screen.getByTestId('create-nassau-net').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId('create-nassau-gross').props.accessibilityState).toMatchObject({ selected: false });
+    expect(screen.queryByTestId('create-kr-per-unit')).toBeNull();
+    await fireEvent.press(screen.getByTestId('create-nassau-gross'));
+    expect(screen.getByTestId('create-nassau-gross').props.accessibilityState).toMatchObject({ selected: true });
+
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(await screen.findByTestId('create-course-course-1'));
+    await fireEvent.press(screen.getByTestId('create-tee-tee-1'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(await screen.findByTestId('create-player-p2'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(screen.getByTestId('create-publish'));
+
+    const [draft] = publishGameMock.mock.calls.at(-1)!;
+    expect(draft.gameMode).toBe('nassau');
+    expect(draft.setup).toMatchObject({ nassauScoring: 'gross' });
+    publishGameMock.mockClear();
+  });
 });

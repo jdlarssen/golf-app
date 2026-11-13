@@ -22,6 +22,7 @@ import {
 } from '../../lib/allowanceCopy';
 import type { AppGameMode } from '../../lib/appFormats';
 import {
+  NASSAU_SETUP_TEXT,
   PATSOME_TEXT,
   SHAMBLE_TEXT,
   TEAM_HANDICAP_TEXT,
@@ -371,6 +372,28 @@ export function SetupStep({
               { value: 'gross' as const, title: PATSOME_TEXT.gross, hint: PATSOME_TEXT.grossDesc, testID: 'create-patsome-gross' },
             ]}
           />
+          </View>
+        </Field>
+      ) : null}
+
+      {/* #2755: Nassau, som `Nyttspill-2-nassau`: ett kort med scoring. Kroner settes på nettet (#2561). */}
+      {mode === 'nassau' ? (
+        <Field label={NASSAU_SETUP_TEXT.legend}>
+          <View style={[styles.setupCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.cardLabel, { color: colors.text }]}>{NASSAU_SETUP_TEXT.scoringLabel}</Text>
+            <Text style={ui.muted}>{NASSAU_SETUP_TEXT.scoringDescription}</Text>
+            <ChoiceCards
+              columns={2}
+              minHeight={60}
+              titleSize={15}
+              accessibilityLabel={NASSAU_SETUP_TEXT.scoringAriaLabel}
+              value={setup.nassauScoring ?? 'net'}
+              onChange={(nassauScoring) => onSetup({ nassauScoring })}
+              options={[
+                { value: 'net' as const, title: NASSAU_SETUP_TEXT.scoringNet, testID: 'create-nassau-net' },
+                { value: 'gross' as const, title: NASSAU_SETUP_TEXT.scoringGross, testID: 'create-nassau-gross' },
+              ]}
+            />
           </View>
         </Field>
       ) : null}

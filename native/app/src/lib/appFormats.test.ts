@@ -29,6 +29,7 @@ describe('APP_SUPPORTED_MODES', () => {
       'wolf',
       'bingo_bango_bongo',
       'skins',
+      'nassau',
       'solo_strokeplay',
       'patsome',
       'texas_scramble',
@@ -47,7 +48,7 @@ describe('APP_SUPPORTED_MODES', () => {
       expect(isAppSupportedMode(mode)).toBe(true);
     }
     // Aktive formater på web som appen bevisst IKKE tilbyr.
-    for (const mode of ['nassau', 'nines', 'round_robin', 'acey_deucey', '']) {
+    for (const mode of ['nines', 'round_robin', 'acey_deucey', '']) {
       expect(isAppSupportedMode(mode)).toBe(false);
     }
   });
@@ -82,7 +83,7 @@ describe('usesTeamAssignment', () => {
 
   // #969: wolf-slottene trekkes ved START, ikke ved publisering. En veiviser
   // som tildelte lag her ville vist et tall som blir overskrevet.
-  it.each(['wolf', 'stableford', 'modified_stableford', 'skins', 'bingo_bango_bongo', 'solo_strokeplay'] as const)(
+  it.each(['wolf', 'stableford', 'modified_stableford', 'skins', 'nassau', 'bingo_bango_bongo', 'solo_strokeplay'] as const)(
     '%s har ingen lag-tildeling i veiviseren',
     (mode) => {
       expect(usesTeamAssignment(mode)).toBe(false);
