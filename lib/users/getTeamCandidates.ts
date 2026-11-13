@@ -31,9 +31,8 @@ type CandidateRow = {
  * «eksisterende spiller».
  *
  * **Personvern:** vi eksponerer ALDRI alle brukere her — bare kapteinens
- * eget nettverk. En fri-tekst e-post-modus dekker folk utenfor lista.
- * Adressen går maskert til nettleseren (#2207); et valg sendes tilbake som
- * id, og `getTeamCandidateEmails` gjør den om til adressen på serveren.
+ * eget nettverk. Adressen går maskert til nettleseren (#2207); et valg sendes
+ * tilbake som id.
  *
  * Kilden er nå unionen av venner og co-players (#408):
  *
@@ -45,21 +44,6 @@ export async function getTeamCandidates(
   userId: string,
 ): Promise<TeamCandidate[]> {
   return shapeCandidates(await loadCandidateRows(userId));
-}
-
-/**
- * The full addresses behind candidate ids a captain picked (#2207), for the
- * server-side team registration. Only ids that really are in `userId`'s
- * candidate set come back; any other id is simply missing from the map.
- */
-export async function getTeamCandidateEmails(
-  userId: string,
-  ids: readonly string[],
-): Promise<Map<string, string>> {
-  if (ids.length === 0) return new Map();
-  const wanted = new Set(ids);
-  const rows = await loadCandidateRows(userId);
-  return new Map(rows.filter((r) => wanted.has(r.id)).map((r) => [r.id, r.email]));
 }
 
 /**
