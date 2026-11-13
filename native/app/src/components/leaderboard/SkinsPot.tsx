@@ -24,6 +24,7 @@ import {
   skinsHolesWon,
   skinsPotLines,
 } from '../../lib/leaderboardModel';
+import { BOARD_TEAM_TEXT } from '../../lib/boardCopy';
 import { FONTS, fraunces, interLine, useTheme, withAlpha } from '../../theme';
 
 /**
@@ -208,13 +209,18 @@ function Coin({
   );
 }
 
-/** «Stillingen»: navn, hull vunnet og skins, uten plass, medaljer og reaksjoner. */
+/**
+ * «Stillingen»: navn, hull vunnet og skins, uten plass, medaljer og reaksjoner.
+ * Seerens egen rad heter «Deg», med lagtavlas tekst, som på tegningen og nettet.
+ */
 export function SkinsStanding({
   players,
   nameOf,
+  viewerUserId = null,
 }: {
   players: SkinsPlayerLine[];
   nameOf: (userId: string) => string;
+  viewerUserId?: string | null;
 }) {
   const { colors } = useTheme();
   return (
@@ -228,7 +234,10 @@ export function SkinsStanding({
       >
         {players.map((player, i) => {
           const holes = skinsHolesWon(player.holesWon);
-          const name = nameOf(player.userId);
+          const name =
+            viewerUserId != null && player.userId === viewerUserId
+              ? BOARD_TEAM_TEXT.you
+              : nameOf(player.userId);
           const skins = skinsCount(player.totalSkins);
           return (
             <View

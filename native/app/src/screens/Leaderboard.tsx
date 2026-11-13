@@ -876,6 +876,7 @@ export function LeaderboardBody({
         teamBoard={teamBoard}
         patsomeBoard={patsomeBoard}
         resultInSentence={resultHero?.hero.resultInSentence ?? false}
+        viewerUserId={userId}
       />
       {/* #1954 A3: «Trukne spillere» rett under hovedresultatet, som på
           nettsiden, med samme sidemarg som sideturneringen. */}

@@ -4,6 +4,7 @@
 // Type A i `lib/leaderboard/skinsPot.test.ts` og `leaderboardModel.test.ts`.
 import { render, screen } from '@testing-library/react-native';
 import type { SkinsHoleRow, SkinsResult } from '../../../../../lib/scoring/modes/types';
+import { BOARD_TEAM_TEXT } from '../../lib/boardCopy';
 import { SkinsView } from './PotViews';
 
 function hole(holeNumber: number, fields: Partial<SkinsHoleRow>): SkinsHoleRow {
@@ -59,6 +60,15 @@ describe('SkinsView (#2317)', () => {
     expect(screen.queryAllByRole('button')).toHaveLength(0);
     // Linja om potten står i kortet mens runden pågår.
     expect(screen.queryByTestId('skins-pot')).toBeNull();
+  });
+
+  it('seerens egen rad heter «Deg», som på tegningen og lagtavla', async () => {
+    await render(
+      <SkinsView result={RESULT} status="active" settlement={null} nameOf={nameOf} viewerUserId="j" />,
+    );
+    expect(screen.getByTestId('skins-standing-j')).toHaveTextContent(new RegExp(`^${BOARD_TEAM_TEXT.you}`));
+    expect(screen.queryByText('Jonas Berg')).toBeNull();
+    expect(screen.getByTestId('skins-standing-m')).toHaveTextContent(/^Marte Lie/);
   });
 
   it('skjermleseren får én setning per mynt', async () => {
