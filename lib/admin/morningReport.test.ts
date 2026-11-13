@@ -178,6 +178,16 @@ describe('lastDayEntries', () => {
     ]);
   });
 
+  // Staging holds a seeded game with ended_at weeks ahead; it sorted first
+  // and read «i går» (#2345 staging run).
+  it('drops events stamped after now', () => {
+    expect(
+      lastDayEntries([entry('2026-12-01T12:00:00Z'), entry('2026-11-13T23:10:00Z')], now).map(
+        (r) => r.entry.ts,
+      ),
+    ).toEqual(['2026-11-13T23:10:00Z']);
+  });
+
   it('drops events older than 24 hours', () => {
     expect(lastDayEntries([entry('2026-11-12T23:19:00Z')], now)).toEqual([]);
   });
