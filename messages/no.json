@@ -7331,7 +7331,21 @@
     "liveStatus": "Direkte",
     "resultStatus": "Sluttresultat",
     "seasonRunning": "Sesongen er i gang",
-    "seasonDone": "Sesongen er ferdig"
+    "seasonDone": "Sesongen er ferdig",
+    "board": {
+      "formatLine": "{format} · {unit} · {players}",
+      "unit": {
+        "points": "poeng",
+        "net": "netto",
+        "toPar": "netto mot par"
+      },
+      "showAll": "Vis alle {count} →",
+      "fullResult": "Se hele resultatet →",
+      "autoUpdates": "Oppdateres av seg selv",
+      "liveFrom": "Live fra <brand>Tørny</brand>",
+      "from": "Fra <brand>Tørny</brand>",
+      "hidden": "Plasseringene vises når spillet er ferdig"
+    }
   },
   "landing": {
     "metaTitle": "Tørny — arranger golfturnering gratis i nettleseren",

@@ -107,11 +107,16 @@ function rowSrPartText(t: BoardT, tc: BoardCommonT, part: BoardRowSrPart): strin
   }
 }
 
-/** The screen-reader line for one board row. */
+/** The screen-reader line for one board row (also the embed card's, #2330, which has no movement or dots). */
 export function boardRowSr(
   t: BoardT,
   tc: BoardCommonT,
-  opts: { row: LiveBoardRow; unit: LiveBoardUnit; showRank: boolean; isYou: boolean },
+  opts: {
+    row: Pick<LiveBoardRow, 'rank' | 'tied' | 'total' | 'holesPlayed' | 'movement' | 'recent'>;
+    unit: LiveBoardUnit;
+    showRank: boolean;
+    isYou: boolean;
+  },
 ): string {
   return boardRowSrParts(opts)
     .map((part) => rowSrPartText(t, tc, part))

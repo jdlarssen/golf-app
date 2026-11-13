@@ -140,6 +140,10 @@
   /* The new-game wizard's field outline (#2426): the artboards' --input, a
    * step darker than --border so a text field reads as a field on the card. */
   --field-border:             #cfc7b3;
+  /* The embed card on a club's website (#2330), with the artboard's values:
+   * the card's outline a step darker than --border, and its footer strip. */
+  --embed-card-border:        #d9d2c2;
+  --embed-foot:               #efe9da;
 
   /* The green top of the logged-out front page (#2261), with the artboard's
    * values: linen text and gold «par» on --surface-strong, the LIVE dot and
@@ -403,6 +407,10 @@
     --stamp-fill:               rgba(212, 184, 112, 0.70);
     --row-divider-warm:         #2f3f34;
     --field-border:             #3d4f43;
+    /* Embed card (#2330) — see :root. One step up from --border, and the
+     * --surface-2 night value for the footer. */
+    --embed-card-border:        #3d4f43;
+    --embed-foot:               #243429;
 
     /* Front page green top (#2261) — see :root. */
     --on-strong: #ece5d2;
@@ -574,6 +582,8 @@
   --stamp-fill:               rgba(212, 184, 112, 0.70);
   --row-divider-warm:         #2f3f34;
   --field-border:             #3d4f43;
+  --embed-card-border:        #3d4f43;
+  --embed-foot:               #243429;
   --on-strong: #ece5d2;
   --accent-on-strong: #d4b870;
   --live-dot: #7daa8a;
@@ -678,6 +688,8 @@
   --color-admin-bg: var(--admin-bg);
   --color-row-divider-warm: var(--row-divider-warm);
   --color-field-border: var(--field-border);
+  --color-embed-card-border: var(--embed-card-border);
+  --color-embed-foot: var(--embed-foot);
   --color-disabled-bg: var(--disabled-bg);
   --color-disabled-fg: var(--disabled-fg);
   --color-otp-divider: var(--otp-divider);
