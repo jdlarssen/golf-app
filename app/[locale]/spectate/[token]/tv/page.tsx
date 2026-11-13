@@ -6,18 +6,11 @@ import QRCode from 'qrcode';
 import { getGameBySpectateToken } from '@/lib/games/spectate';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
-import {
-  COURSE_HOLES_SELECT,
-  SCORES_SELECT,
-  type CourseHoleRow,
-} from '@/lib/supabase/queryFragments';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
-import { holeNumbersForSegment } from '@/lib/games/holeScope';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { computeLiveBoard, type LiveBoard } from '@/lib/leaderboard/liveBoard';
-import { buildTvFeed, type TvFeedEvent, type TvFeedScore } from '@/lib/leaderboard/tvBoard';
+import { buildTvFeed, type TvFeedEvent } from '@/lib/leaderboard/tvBoard';
 import { canonicalPath } from '@/lib/seo/canonical';
 import { requestOrigin } from '@/lib/url/requestOrigin';
 import type { AppLocale } from '@/i18n/routing';
@@ -31,6 +24,7 @@ import { CeremonyPoller } from './CeremonyPoller';
 import { CEREMONY_MAX_STEP, ceremonyAvailable } from '@/lib/games/ceremony';
 import { leagueFlightHasNoPlace } from '@/lib/games/finishedResultBadge';
 import { loadCeremonyData } from '@/app/[locale]/games/[id]/premieutdeling/ceremonyData';
+import { readBoardRows, readCourseName } from '../boardRows';
 
 type Params = Promise<{ token: string }>;
 type SearchParams = Promise<{ vist?: string | string[] }>;
@@ -198,34 +192,8 @@ export default async function SpectateTvPage({
     return scene({ holesPlayed: null, main: <TvMessage>{t('hiddenBody')}</TvMessage> });
   }
 
-  // A derived game owns no scores; it reads the host game's (#1441).
-  const scoresGameId = game.source_game_id ?? found.id;
-  const [holesRes, scoresRes] = await Promise.all([
-    admin
-      .from('course_holes')
-      .select(COURSE_HOLES_SELECT)
-      .eq('course_id', game.course_id)
-      .order('hole_number', { ascending: true })
-      .returns<CourseHoleRow[]>(),
-    selectAllRowsResult(
-      (from, to) =>
-        admin
-          .from('scores')
-          .select(`${SCORES_SELECT}, updated_at`)
-          .eq('game_id', scoresGameId)
-          .order('id')
-          .range(from, to)
-          .returns<TvFeedScore[]>(),
-      'spectate tv scores',
-    ),
-  ]);
   // Thrown on purpose: tv/error.tsx retries by itself.
-  if (holesRes.error) throw holesRes.error;
-  if (scoresRes.data === null) throw scoresRes.error;
-
-  const inSegment = new Set(holeNumbersForSegment(game.hole_segment));
-  const holesRows = (holesRes.data ?? []).filter((h) => inSegment.has(h.hole_number));
-  const scoresRows = scoresRes.data.filter((s) => inSegment.has(s.hole_number));
+  const { holesRows, scoresRows } = await readBoardRows(admin, game, found.id);
 
   const board = computeLiveBoard({ gameId: found.id, game, players, holesRows, scoresRows });
   if (!board) {
@@ -238,24 +206,6 @@ export default async function SpectateTvPage({
     main: <TvBoard board={board} />,
     feed: { events, board },
   });
-}
-
-/** The course's name for the title line; a missing course or a failed read is no name, never an error. */
-async function readCourseName(
-  admin: ReturnType<typeof getAdminClient>,
-  courseId: string | null,
-): Promise<string | null> {
-  if (!courseId) return null;
-  try {
-    const { data } = await admin
-      .from('courses')
-      .select('name')
-      .eq('id', courseId)
-      .maybeSingle<{ name: string }>();
-    return data?.name ?? null;
-  } catch {
-    return null;
-  }
 }
 
 /**
