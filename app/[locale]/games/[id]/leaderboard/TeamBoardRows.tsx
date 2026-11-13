@@ -13,13 +13,13 @@ import {
 import type { LiveBoardStripAction, LiveBoardUnit } from '@/lib/leaderboard/liveBoard';
 import type { TeamDisplayUnit } from '@/lib/leaderboard/teamLiveBoard';
 import type { ScoreTone } from '@/lib/scoring/scoreTone';
-import { BoardHeader, BoardLegend, DOT, Movement, StripFrame } from './boardParts';
+import { BoardHeader, DOT, Movement, StripFrame } from './boardParts';
 import { rowSrPartText, type BoardCommonT, type BoardT } from './boardText';
 import { TeamHoleCard, type TeamHoleCardData } from './TeamHoleCard';
 
 // The team board (#2316): scramble (texas, ambrose, florida), team stableford,
 // shamble and best ball, after `Lagtavle-forslag` and `Lagtavle-bestball-forslag`
-// on the design canvas. Same header, legend and strip as the solo board
+// on the design canvas. Same header and strip as the solo board
 // (`LiveBoard`), with a card per team instead of a plate per player.
 //
 // Every number is fed in ready (`teamLiveBoard` + the engine, computed on the
@@ -173,8 +173,6 @@ export function TeamBoard({
               ),
             )}
           </ol>
-
-          {!firstHalf && <BoardLegend />}
 
           {canCollapse && (
             <button
