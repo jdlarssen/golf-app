@@ -4146,6 +4146,8 @@
         "needsYouAllDelivered": "Everyone has handed in. Waiting for your approval.",
         "needsYouPendingApproval": "{n, plural, one {# scorecard waiting for your approval} other {# scorecards waiting for your approval}}",
         "needsYouIdeas": "{n, plural, one {# new idea from the players} other {# new ideas from the players}}",
+        "needsYouMore": "Show {count} more",
+        "needsYouFewer": "Show fewer",
         "todayHeading": "Today",
         "todayLive": "Live",
         "todayPlaying": "{count, plural, one {# player} other {# players}} · hole {hole}",
