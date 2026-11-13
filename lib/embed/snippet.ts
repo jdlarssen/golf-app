@@ -48,10 +48,10 @@ function nameWidth(name: string): number {
 /**
  * The frame the compact card needs: the card with five rows, «Vis alle» and
  * the footer, plus the sponsor strip for these logos and names at the
- * narrowest width (320 px). A card that is shorter (fewer players, a reveal
- * game, wider frames with more logos per row) ends where its content ends
- * and the rest of the frame is transparent. Sponsors added after the code
- * was copied need a new copy.
+ * narrowest width (320 px). A card that is shorter (fewer players, wider
+ * frames with more logos per row) ends where its content ends and the rest
+ * of the frame is transparent; the reveal card fills the frame instead.
+ * Sponsors added after the code was copied need a new copy.
  */
 export function compactEmbedHeight(sponsors: { logos: number; names: readonly string[] }): number {
   const { logos, names } = sponsors;
