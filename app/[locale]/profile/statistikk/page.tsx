@@ -5,7 +5,7 @@ import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { nameInitials } from '@/lib/names/initials';
-import { getClubStatsAggregate } from '@/lib/stats/getFinishedGameWins';
+import { getFinishedGameWins } from '@/lib/stats/getFinishedGameWins';
 
 type PlayerStat = {
   userId: string;
@@ -27,7 +27,7 @@ export default async function StatistikkPage() {
     winnerCounts,
     participationCounts,
     userNames: userNamesRaw,
-  } = await getClubStatsAggregate();
+  } = await getFinishedGameWins();
 
   if (!hasGames) {
     return <EmptyStateView />;

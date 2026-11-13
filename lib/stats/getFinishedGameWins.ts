@@ -2,6 +2,7 @@ import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { selectAllRows } from '@/lib/supabase/selectAllRows';
+import { osloYearWindow } from '@/lib/format/osloCalendar';
 import { buildModeResultForGame } from '@/lib/scoring/buildModeResultForGame';
 import {
   computeResultSummaries,
@@ -97,24 +98,41 @@ export type ClubStatsAggregate = {
  * it's not a live scoreboard. The `club-statistikk` tag is declared so a
  * future cross-file `revalidateTag('club-statistikk')` can invalidate on
  * demand if we later decide the lag matters.
+ *
+ * ## Scoped boards (#2326)
+ *
+ * `groupId` counts only the games of one club; `seasonYear` only games that
+ * ended (`ended_at`, the one field a finished game always has) within that
+ * Oslo calendar year. Both are optional: the toppliste passes neither.
+ * `unstable_cache` keys on its arguments, so every scope is cached on its own
+ * under the same tag. A club board reads finished club games with the service
+ * role: the caller is the gate and passes a club id only after checking the
+ * viewer's membership (`getClubDetail`).
  */
-export const getClubStatsAggregate = unstable_cache(
-  async (): Promise<ClubStatsAggregate> => {
+export const getFinishedGameWins = unstable_cache(
+  async (
+    opts: { groupId?: string; seasonYear?: number } = {},
+  ): Promise<ClubStatsAggregate> => {
     const supabase = getAdminClient();
+    const season =
+      opts.seasonYear === undefined
+        ? null
+        : osloYearWindow(new Date(Date.UTC(opts.seasonYear, 6, 1)));
 
     // Round-trip 1: all finished games + mode + course (mode/config feed the
     // rare fallback path that re-derives the result for null-summary games).
     // Both reads grow with every finished game in the app, so they are paged
     // past PostgREST's 1 000-row cap (#2227).
     const games = await selectAllRows(
-      (from, to) =>
-        supabase
+      (from, to) => {
+        let query = supabase
           .from('games')
           .select('id, course_id, game_mode, mode_config, hole_segment, source_game_id, league_round_id')
-          .eq('status', 'finished')
-          .order('id')
-          .range(from, to)
-          .returns<GameRow[]>(),
+          .eq('status', 'finished');
+        if (opts.groupId) query = query.eq('group_id', opts.groupId);
+        if (season) query = query.gte('ended_at', season.startIso).lt('ended_at', season.endIso);
+        return query.order('id').range(from, to).returns<GameRow[]>();
+      },
       'club stats games',
     );
 
