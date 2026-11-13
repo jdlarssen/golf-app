@@ -62,6 +62,7 @@ export function TerminRow({
           href={`/games/${entry.id}`}
           className={`${row} text-text transition-colors hover:bg-surface-2`}
           data-testid="club-round-mine"
+          data-mine={mine}
         >
           <DateBlock entry={entry} locale={locale} />
           <span className="block min-w-0 grow">

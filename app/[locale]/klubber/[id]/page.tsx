@@ -223,6 +223,7 @@ export default async function KlubbDetailPage({
           <SmartLink
             href={`/klubber/${club.id}/administrer`}
             data-testid="club-manage-door"
+            data-waiting={pendingRequests.length}
             className="flex min-h-11 items-center gap-3 rounded-2xl border border-border bg-surface px-[14px] py-3 leading-[normal] text-text transition-colors hover:bg-surface-2"
           >
             <span className="block min-w-0 grow">
