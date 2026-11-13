@@ -82,7 +82,7 @@ export function totalSr(t: BoardT, unit: LiveBoardUnit, total: number | null): s
 }
 
 /** One part of a row's spoken line in the web's words; the order is `boardRowSrParts`. */
-function rowSrPartText(t: BoardT, tc: BoardCommonT, part: BoardRowSrPart): string | null {
+export function rowSrPartText(t: BoardT, tc: BoardCommonT, part: BoardRowSrPart): string | null {
   switch (part.key) {
     case 'place':
       return part.tied ? t('srTiedPlace', { rank: part.rank }) : t('srPlace', { rank: part.rank });

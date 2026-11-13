@@ -175,27 +175,36 @@ export function ShambleView({
         })}
       </ul>
 
-      {/* Per-hull-rutenett — sekundær drilldown for per-hull lag-scorer. */}
-      <section className="px-3.5 pt-2 pb-3.5">
-        <Kicker tone="muted" className="px-1 pb-2">
-          {t('common.perHullKicker')}
-        </Kicker>
-        <ul
-          data-testid="shamble-hole-list"
-          className="flex flex-col gap-2 list-none"
-        >
-          {result.holes.map((hole) => (
-            <HoleRow
-              key={hole.holeNumber}
-              hole={hole}
-              playersById={playersById}
-            />
-          ))}
-        </ul>
-      </section>
+      <ShambleHoleList result={result} playersById={playersById} />
 
       <LeaderboardFooter gameStatus={gameStatus} className="px-6 pt-1 pb-4" />
     </LeaderboardShell>
+  );
+}
+
+/**
+ * Per-hull-rutenett: sekundær drilldown for per-hull lag-scorer (✓ for dem som
+ * teller). Under tavla på den levende lagtavla (#2316) og under tabellen her.
+ */
+export function ShambleHoleList({
+  result,
+  playersById,
+}: {
+  result: ShambleResult;
+  playersById: Map<string, ShamblePlayerInfo>;
+}): JSX.Element {
+  const t = useTranslations('leaderboard');
+  return (
+    <section className="px-3.5 pt-2 pb-3.5">
+      <Kicker tone="muted" className="px-1 pb-2">
+        {t('common.perHullKicker')}
+      </Kicker>
+      <ul data-testid="shamble-hole-list" className="flex flex-col gap-2 list-none">
+        {result.holes.map((hole) => (
+          <HoleRow key={hole.holeNumber} hole={hole} playersById={playersById} />
+        ))}
+      </ul>
+    </section>
   );
 }
 

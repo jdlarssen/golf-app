@@ -22,7 +22,17 @@ import {
   type PodiumSlot,
 } from './podiumPresentation';
 import { ConfettiBurst } from './ConfettiBurst';
-import type { TexasScramblePlayerInfo } from './TexasScrambleView';
+
+/**
+ * Spillerinfo for podiet. En map fra userId → navn + kallenavn. Caller
+ * (formats/texasScramble.tsx) bygger map-en fra game_players-joinen og sender
+ * den inn slik at podiet kan rendre menneske-lesbare navn der scoring-laget
+ * kun har userId-er.
+ */
+export interface TexasScramblePlayerInfo {
+  name: string;
+  nickname: string | null;
+}
 
 // Distinkt sessionStorage-prefix fra andre podium-er — verifiseres via
 // dedikert test slik at konfetti ikke trigges på feil mode.
