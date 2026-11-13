@@ -69,7 +69,9 @@ export function WeekCardView({ summary }: { summary: WeekSummary }) {
         className="-mb-3 inline-flex min-h-[44px] items-center gap-1.5 self-start text-[13px] font-semibold text-on-strong"
       >
         {t('allMetrics')}
-        <span aria-hidden>→</span>
+        <span aria-hidden className="font-[system-ui]">
+          →
+        </span>
       </SmartLink>
     </section>
   );
