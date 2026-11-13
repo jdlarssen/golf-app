@@ -5056,6 +5056,7 @@
       "boardYou": "You: {place, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} place",
       "boardNoWins": "No wins yet in {year}.",
       "boardSeeAll": "See the whole board",
+      "boardNoWinsInline": "No wins yet in {year}",
       "mineJoined": "You're in",
       "mineOrganizer": "You're organising",
       "backToClubs": "Back to your clubs",

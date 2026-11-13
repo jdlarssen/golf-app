@@ -5056,6 +5056,7 @@
       "boardYou": "Du: {place}. plass",
       "boardNoWins": "Ingen seire ennå i {year}.",
       "boardSeeAll": "Se hele brettet",
+      "boardNoWinsInline": "Ingen seire ennå i {year}",
       "mineJoined": "Du er med",
       "mineOrganizer": "Du arrangerer",
       "backToClubs": "Tilbake til klubbene",

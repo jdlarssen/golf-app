@@ -40,6 +40,8 @@ export function ClubBoardSection({
   // The year as text: ICU would group 2026 as «2 026».
   const yearText = String(year);
   const mine = me ? t('boardYou', { place: me.place }) : t('boardNoWins', { year: yearText });
+  // In the fold's line the no-wins sentence runs on into «· Se hele brettet».
+  const mineInline = me ? mine : t('boardNoWinsInline', { year: yearText });
 
   return (
     <section aria-labelledby={headingId} data-testid="club-board">
@@ -60,15 +62,17 @@ export function ClubBoardSection({
         </ol>
         {rest.length > 0 ? (
           <details className="group" data-testid="club-board-more">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center border-t border-on-strong/20 text-[12px] text-on-strong/85 [&::-webkit-details-marker]:hidden">
+            {/* The text sits 8 px under the rule, as drawn; the 44 px tap area
+                reaches into the card's bottom padding. */}
+            <summary className="-mb-3 flex min-h-11 cursor-pointer list-none items-start border-t border-on-strong/20 pt-2 text-[12px] text-on-strong/85 [&::-webkit-details-marker]:hidden">
               <span>
-                <span data-testid="club-board-me">{mine}</span> · {t('boardSeeAll')}{' '}
+                <span data-testid="club-board-me">{mineInline}</span> · {t('boardSeeAll')}{' '}
                 <span aria-hidden className="font-[system-ui]">
                   →
                 </span>
               </span>
             </summary>
-            <ol className="flex list-none flex-col gap-2 p-0 pt-2">
+            <ol className="flex list-none flex-col gap-2 p-0 pt-3">
               {rest.map((row) => (
                 <BoardRow key={row.userId} row={row} />
               ))}
