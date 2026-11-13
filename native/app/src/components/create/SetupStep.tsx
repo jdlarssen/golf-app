@@ -385,7 +385,7 @@ export function SetupStep({
             <ChoiceCards
               columns={2}
               minHeight={60}
-              titleSize={15}
+              wrapTitle
               accessibilityLabel={NASSAU_SETUP_TEXT.scoringAriaLabel}
               value={setup.nassauScoring ?? 'net'}
               onChange={(nassauScoring) => onSetup({ nassauScoring })}
