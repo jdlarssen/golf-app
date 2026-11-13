@@ -10,7 +10,6 @@ describe('gameHasReactions', () => {
     'solo_strokeplay',
     'wolf',
     'nassau',
-    'skins',
     'bingo_bango_bongo',
     'nines',
     'round_robin',
@@ -34,6 +33,11 @@ describe('gameHasReactions', () => {
     'patsome',
   ] as const)('%s har ingen reaksjoner (#977)', (mode) => {
     expect(gameHasReactions(game(mode))).toBe(false);
+  });
+
+  // #2317: Skins-stillingen er en slank liste uten reaksjoner, som tegningen.
+  it('skins har ingen reaksjoner (#2317)', () => {
+    expect(gameHasReactions(game('skins'))).toBe(false);
   });
 });
 

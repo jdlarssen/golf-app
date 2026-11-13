@@ -1,5 +1,6 @@
 // #2754 (Type C): de enkle formatene har reaksjonene på stillingen, én gang per
-// spiller. Lag og matchplay går ikke gjennom disse radene (#977).
+// spiller. Lag og matchplay går ikke gjennom disse radene (#977), og Skins har
+// en slank stilling uten reaksjoner (#2317).
 import { render, screen } from '@testing-library/react-native';
 import type { ModeResult } from '../../../../../lib/scoring/modes/types';
 import { ReactionsContext, type ReactionsContextValue } from './ReactionsProvider';
@@ -26,7 +27,6 @@ const players = (fields: object) =>
 const SECTION = { name: 'front9', winnerUserIds: [], isPending: true };
 
 const RESULTS: [string, object, string][] = [
-  ['skins', { kind: 'skins', scoring: 'net', carriedPot: 0, players: players({ totalSkins: 0, holesWon: 0 }) }, 'leaderboard-table-row'],
   [
     'nassau',
     {
