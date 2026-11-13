@@ -5051,6 +5051,8 @@
       "joinLinkDescription": "Share this link. Anyone who opens it can request to join, and you approve or decline.",
       "leaveLink": "Leave club",
       "kicker": "Club",
+      "mineJoined": "You're in",
+      "mineOrganizer": "You're organising",
       "backToClubs": "Back to your clubs",
       "memberLine": "{count, plural, one {# member} other {# members}} · {role, select, owner {you're the owner} admin {you're an admin} other {you're a member}}",
       "manageDoor": "Manage the club",
@@ -6392,9 +6394,7 @@
       "createOwn": "Nothing for you? Set up your own round",
       "emptyWeekend": "No rounds this weekend.",
       "emptyClub": "No upcoming rounds in your club.",
-      "showAll": "Show all",
-      "mineJoined": "You're in",
-      "mineOrganizer": "You're organising"
+      "showAll": "Show all"
     }
   },
   "invitationCard": {
