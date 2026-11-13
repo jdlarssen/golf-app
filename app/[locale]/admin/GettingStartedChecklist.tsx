@@ -9,11 +9,11 @@ import { ChevronRightIcon } from '@/components/icons';
 // zero — «Konto opprettet» is pre-checked — so the very first screen shows
 // progress instead of a blank slate.
 //
-// Presentational and admin-only by construction: mounted only inside TilesGrid,
-// which the page reaches only after branching non-admins to PlayerKlubbhus
-// (#392). State is derived — no dismiss, no persistence: once the three real
-// steps are done the whole card returns null and never reappears (the
-// ActionItemsStripe «quiet days stay quiet» pattern).
+// Presentational and admin-only by construction: mounted only inside
+// GettingStartedSection on the morning report (#2345), which the page reaches
+// only after branching non-admins to PlayerKlubbhus (#392). State is derived —
+// no dismiss, no persistence: once the three real steps are done the whole
+// card returns null and never reappears («quiet days stay quiet»).
 
 type Step = {
   key: string;

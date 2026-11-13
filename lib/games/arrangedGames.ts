@@ -22,8 +22,8 @@ export function onlyStandaloneGames<
  * count on the link that opens it (#2269). Owner's answer 05.10 (O6, PR
  * #2537): drafts and the Resultatprotokoll show standalone games only. Cup
  * matches and league flights stand on their cup's and league's pages. «I gang
- * nå» (`active`) keeps every game: `ActionItemsStripe` counts them all and
- * links there (O5).
+ * nå» (`active`) keeps every game, as the morning report's «Trenger deg» and
+ * «I dag» do (O5, #2345).
  */
 export function adminLedgerScope<
   Q extends { is(column: string, value: boolean | null): Q },

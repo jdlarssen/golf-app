@@ -71,9 +71,9 @@ type GameRow = {
  * Which list the page shows (#2269). The default is «Rundene dine» grouped by
  * what happens next; the other three are the ledger, scoped by
  * `adminLedgerScope`: drafts and the Resultatprotokoll hold standalone games
- * only (owner's answer 05.10, O6), and the games in progress (where
- * `ActionItemsStripe` sends its «n spill» rows) include cup matches and league
- * flights (O5).
+ * only (owner's answer 05.10, O6), and the games in progress include cup
+ * matches and league flights (O5), as the morning report's «Trenger deg» and
+ * «I dag» do (#2345).
  */
 type GamesView = 'default' | 'draft' | 'active' | 'finished';
 type LedgerView = Exclude<GamesView, 'default'>;
@@ -195,9 +195,9 @@ export default async function GamesPage({
  * A ledger view: the games with that status, newest first, scoped by
  * `adminLedgerScope` (drafts and the protocol without cup matches and league
  * flights; «I gang nå» with them). Drafts and the protocol show the 40 newest.
- * «I gang nå» shows every active game: it is where `ActionItemsStripe` sends
- * its «n spill» rows, and the stripe counts every active game, so a capped
- * list could leave out the very game it counted. Cached per request, so the
+ * «I gang nå» shows every active game: the morning report's «Trenger deg» and
+ * «I dag» list every active game (#2345), so a capped list could leave out the
+ * very game they showed. Cached per request, so the
  * subtitle and the list share one read.
  */
 const fetchLedgerGames = cache(async (view: LedgerView) => {

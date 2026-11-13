@@ -4,14 +4,16 @@ import { TopBar } from '@/components/ui/TopBar';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { getRole } from './_dashboardContext';
 import { LoadingTone } from './LoadingTone';
-import { DenseTileListSkeleton } from './TilesGrid';
+import { DenseTileListSkeleton } from './TilesView';
 import { NewRoundCardSkeleton } from './PlayerKlubbhusViews';
+import { MorningSkeleton, WeekCardSkeleton } from './_morgen/MorningSkeleton';
 
 // Route-loading skeleton for /admin and every page under it without its own
-// loading.tsx. Its layout follows the player room (#2493), which most people
-// see: the tab's TopBar without an arrow, the greeting as one heading line
-// with no card, the «Lag en ny runde» card as a block, and `DenseTileList`
-// rows below.
+// loading.tsx. For a player it follows the player room (#2493), which most
+// people see: the tab's TopBar without an arrow, the greeting as one heading
+// line with no card, the «Lag en ny runde» card as a block, and
+// `DenseTileList` rows below. For an admin it follows the morning report
+// (#2345): no top bar, the header's two lines, the week card and two lists.
 //
 // Its page colour is the one the page will have (owner's answer 05.10): the
 // player's room on the app's background, everything else on Klubbhuset's
@@ -20,6 +22,28 @@ import { NewRoundCardSkeleton } from './PlayerKlubbhusViews';
 // of making its own.
 export default async function AdminLoading() {
   const [tNav, role] = await Promise.all([getTranslations('admin.nav'), getRole()]);
+  if (role.isAdmin) {
+    return (
+      <LoadingTone isPlayer={false}>
+        <AdminShell tone="none">
+          <div className="-mt-3.5">
+            <SkeletonLine
+              className="font-sans text-xs font-semibold"
+              barClassName="h-3 w-40"
+            />
+            <SkeletonLine
+              className="mt-1.5 font-serif text-[28px] font-medium leading-[normal]"
+              barClassName="h-6 w-3/5"
+              delay={60}
+            />
+          </div>
+          <WeekCardSkeleton />
+          <MorningSkeleton rows={2} />
+          <MorningSkeleton rows={3} plain />
+        </AdminShell>
+      </LoadingTone>
+    );
+  }
   return (
     <LoadingTone isPlayer={!role.isAdmin}>
       <AdminShell tone="none">

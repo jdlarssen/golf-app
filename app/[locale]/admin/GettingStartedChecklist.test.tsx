@@ -4,8 +4,8 @@ import { GettingStartedChecklist } from './GettingStartedChecklist';
 
 // One render test (Type C) for the «kom i gang»-checklist (#1177). Data injected
 // as props into the presentational component; asserts on data-testid / data-done
-// / href only, never on Norwegian copy. No Supabase mock — TilesGrid owns the
-// derivation.
+// / href only, never on Norwegian copy. No Supabase mock — GettingStartedSection
+// owns the derivation.
 
 describe('GettingStartedChecklist (#1177)', () => {
   it('fresh admin (nothing done): 4 steps, only «account» checked, 3 doors to setup', () => {
