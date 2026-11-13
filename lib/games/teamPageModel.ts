@@ -80,3 +80,15 @@ export function menuActions(
       return [];
   }
 }
+
+/**
+ * You have a team page in the round (#2840): you are the captain, or a teammate
+ * who has not said no. The web's signup page links to it («Gå til laget»), and
+ * the app's «Se laget» reads the same rule (`hasTeamPage` in the round view).
+ */
+export function hasTeamPage(
+  row: { status: TeamRequestStatus; is_team_captain: boolean; team_request_id: string | null } | null,
+): boolean {
+  if (!row || (row.status !== 'pending' && row.status !== 'approved')) return false;
+  return row.is_team_captain || row.team_request_id != null;
+}

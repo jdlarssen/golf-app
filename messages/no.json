@@ -6471,6 +6471,7 @@
     "metaTitle": "Påmelding",
     "kicker": "Påmelding",
     "alreadyRegisteredBanner": "Du er allerede påmeldt dette spillet.",
+    "teamRegisteredBanner": "{teamName} er påmeldt.",
     "goToGameButton": "Gå til spillet",
     "findMoreButton": "Finn flere turneringer",
     "pendingRequestBanner": "Forespørsel sendt — du får varsel når arrangøren har bestemt seg.",

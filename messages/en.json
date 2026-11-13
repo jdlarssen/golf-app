@@ -6471,6 +6471,7 @@
     "metaTitle": "Sign up",
     "kicker": "Sign up",
     "alreadyRegisteredBanner": "You're already signed up for this game.",
+    "teamRegisteredBanner": "{teamName} is signed up.",
     "goToGameButton": "Go to the game",
     "findMoreButton": "Find more tournaments",
     "pendingRequestBanner": "Request sent — you'll be notified once the organiser has decided.",
