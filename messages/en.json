@@ -3147,7 +3147,6 @@
       "teeKicker": "Tee",
       "goodLuck": "Good luck.",
       "tiedWith": "Tied for {rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} with {teams}",
-      "missingHoles": "{count} holes missing",
       "unknownPlayerFull": "(unknown player)",
       "noPlayersToShow": "No players to show.",
       "slagLabel": "strokes",

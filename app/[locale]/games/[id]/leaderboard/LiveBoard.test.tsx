@@ -225,6 +225,9 @@ describe('LiveBoard — team board (#2316)', () => {
     expect(within(second).getByText('Deg og Marte')).toBeInTheDocument();
     // Only the leader and the viewer's team carry the arrow and the dots.
     expect(within(second).getByTestId('board-movement')).toHaveAttribute('data-movement', '1');
+    // The leader has not moved: no dash is drawn, the screen reader still hears it.
+    expect(within(first).queryByTestId('board-movement')).not.toBeInTheDocument();
+    expect(first.querySelector('.sr-only')?.textContent).toContain('Uendret siden forrige hull');
     expect(within(third).queryByTestId('board-dot')).not.toBeInTheDocument();
     expect(within(third).getByText('hull 10')).toBeInTheDocument();
   });

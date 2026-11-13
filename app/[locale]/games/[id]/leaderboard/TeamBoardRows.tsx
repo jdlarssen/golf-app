@@ -239,6 +239,8 @@ function TeamRow({
   // app's rule); best ball draws the dots on every team and has no arrow.
   const marked = (leader || you) && row.holesPlayed > 0;
   const movement = !firstHalf && marked ? row.movement : null;
+  // Unchanged is spoken, not drawn: the artboard and the app show no mark at 0.
+  const drawnMovement = movement === 0 ? null : movement;
   const recent = firstHalf || marked ? row.recent : [];
   const dots = firstHalf ? row.tones : marked ? row.recent : null;
 
@@ -354,10 +356,10 @@ function TeamRow({
               ) : (
                 <span className="ml-1 inline-flex items-center gap-1 text-[11px] tabular-nums text-muted">
                   {holesText}
-                  {movement !== null && (
+                  {drawnMovement !== null && (
                     <>
                       <span aria-hidden>·</span>
-                      <Movement movement={movement} />
+                      <Movement movement={drawnMovement} />
                     </>
                   )}
                 </span>
