@@ -31,6 +31,10 @@ function entry(over: Partial<ClubRoundEntry> = {}): ClubRoundEntry {
   };
 }
 
+/** The meta line, read as one string: its parts are separate no-wrap spans. */
+const line = (text: string) => (_: string, el: Element | null) =>
+  el?.tagName === 'SPAN' && el.children.length > 1 && el.textContent === text;
+
 describe('ClubRoundsSection (#2326)', () => {
   it('shows a round with its date block, time and format line and a «Meld på» to the signup', () => {
     render(<ClubRoundsSection entries={[entry()]} socialProof={{}} />);
@@ -40,7 +44,7 @@ describe('ClubRoundsSection (#2326)', () => {
     expect(within(row).getByText('7.10')).toBeInTheDocument();
     expect(within(row).getByText('Onsdagsgolfen')).toBeInTheDocument();
     // The club page's line leaves out the course, as drawn.
-    expect(within(row).getByText('17:30 · Stableford')).toBeInTheDocument();
+    expect(within(row).getByText(line('17:30 · Stableford'))).toBeInTheDocument();
     expect(within(row).getByRole('link', { name: 'Meld meg på Onsdagsgolfen' })).toHaveAttribute(
       'href',
       '/signup/rnd00001',
@@ -64,7 +68,27 @@ describe('ClubRoundsSection (#2326)', () => {
     render(
       <ClubRoundsSection entries={[entry({ scheduled_tee_off_at: null })]} socialProof={{}} />,
     );
-    expect(screen.getByText('Dato ikke satt · Stableford')).toBeInTheDocument();
+    expect(screen.getByText(line('Dato ikke satt · Stableford'))).toBeInTheDocument();
+  });
+
+  it('never breaks «lag på 4», and keeps the capacity label on one line', () => {
+    render(
+      <ClubRoundsSection
+        entries={[
+          entry({
+            name: 'Texas-runden',
+            game_mode: 'texas_scramble',
+            mode_config: { kind: 'texas_scramble', team_size: 4, teams_count: 2, team_handicap_pct: 25 },
+            capacity: { cap: 40, held: 0 },
+          }),
+        ]}
+        socialProof={{}}
+      />,
+    );
+    const team = screen.getByText('lag på 4');
+    expect(team).toHaveClass('whitespace-nowrap');
+    expect(screen.getByText('Texas scramble ·')).toHaveClass('whitespace-nowrap');
+    expect(screen.getByText('40 av 40 plasser ledige')).toHaveClass('whitespace-nowrap');
   });
 
   it('shows the friends who joined under the line', () => {
