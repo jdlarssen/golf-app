@@ -177,9 +177,11 @@ export function SkinsView({
           <SkinsPotHero gameName={gameName} scoring={result.scoring} pot={pot} />
         )}
 
+        {/* A game finished before every hole was played has no pot on any
+            hole: its unplayed holes are empty discs, not «på spill nå». */}
         <SkinsCoinGrid
           holes={result.holes}
-          currentHoleNumber={pot.kind === 'pending' ? pot.holeNumber : null}
+          currentHoleNumber={!isFinished && pot.kind === 'pending' ? pot.holeNumber : null}
           playersById={playersById}
         />
 

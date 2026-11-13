@@ -132,6 +132,8 @@ describe('SkinsView', () => {
     const coins = screen.getByTestId('skins-coins');
     expect(within(coins).getAllByRole('listitem')).toHaveLength(3);
     expect(within(coins).getAllByRole('list')).toHaveLength(1);
+    // Avsluttet før hull 3 ble spilt: ingen pott står på spill lenger.
+    expect(coins.querySelector('[data-coin="current"]')).toBeNull();
 
     // «Stillingen» (h2) står over lista, én rad per spiller i rank-rekkefølge.
     const leaderboard = screen.getByTestId('skins-leaderboard');
