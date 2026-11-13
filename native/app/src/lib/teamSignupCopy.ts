@@ -48,11 +48,11 @@ export const TEAM_SIGNUP_TEXT = {
   duplicateMembers: 'Du har valgt samme venn to ganger.',
   teamFull: 'Laget er fullt.',
   gameFull: 'Spillet er fullt — alle plassene er tatt.',
-  teamNameInvalid: 'Lag-navnet må være 3–40 tegn.',
+  teamNameInvalid: 'Lagnavnet må være 3–40 tegn.',
   slotsCountWrong: 'Feil antall medspillere. Fyll inn alle plassene.',
   selfInSlots: 'Du kan ikke legge til deg selv som medspiller.',
   alreadyRegistered: 'Du er allerede påmeldt dette spillet.',
-  wrongType: 'Dette spillet tar ikke imot lag-påmelding.',
+  wrongType: 'Dette spillet tar ikke imot lagpåmelding.',
   modeNoTeams: 'Spillmodusen støtter ikke lag. Be arrangøren bytte påmeldingen til «Individuelt».',
 
   // --- Appens egne ----------------------------------------------------------------
