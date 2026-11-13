@@ -44,7 +44,8 @@ export function RowCard({ children }: { children: ReactNode }) {
 /**
  * One row: the name on top, a 12 px line under it, an optional lead (the
  * dot) and trail (arrow, «Live», a clock). The space between the two lines
- * keeps them apart in the link's accessible name.
+ * keeps them apart in the link's accessible name. Both lines use the normal
+ * line height the artboard draws with, so a row is 56 px as drawn.
  */
 export function MorningRow({
   href,
@@ -72,11 +73,11 @@ export function MorningRow({
       >
         {lead}
         <span className="min-w-0 flex-grow">
-          <span className="block text-[15px] font-semibold">{name}</span>
+          <span className="block text-[15px] font-semibold leading-[normal]">{name}</span>
           {line != null && (
             <>
               {' '}
-              <span className="block text-xs text-muted">{line}</span>
+              <span className="block text-xs leading-[normal] text-muted">{line}</span>
             </>
           )}
         </span>
@@ -86,10 +87,15 @@ export function MorningRow({
   );
 }
 
-/** The row's arrow, as drawn: a plain «→» in the primary green. */
+/**
+ * The row's arrow, as drawn: a plain «→» in the primary green. The app's
+ * Inter subsets (latin, latin-ext) have no U+2192, so the glyph comes from
+ * `system-ui` as on the artboard (`Inter, system-ui`), not the next
+ * fallback in the app's stack.
+ */
 export function RowArrow() {
   return (
-    <span aria-hidden className="shrink-0 text-primary">
+    <span aria-hidden className="shrink-0 font-[system-ui] text-primary">
       →
     </span>
   );
