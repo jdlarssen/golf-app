@@ -47,17 +47,20 @@ export function SkinsView({
         nameOf={nameOf}
       />
       <SkinsStanding players={result.players} nameOf={nameOf} />
-      {potLine ? (
-        <Text style={ui.muted} testID="skins-pot">
-          {potLine}
-        </Text>
-      ) : null}
-      {settlement ? <SettlementCard settlement={settlement} nameOf={nameOf} /> : null}
-      {finished ? (
-        <Text style={ui.muted}>
-          {result.scoring === 'net' ? 'Spilles på netto.' : 'Spilles på brutto.'}
-        </Text>
-      ) : null}
+      {/* Luft mellom stillingskortet og linjene under. */}
+      <View style={{ marginTop: 12, gap: 8 }}>
+        {potLine ? (
+          <Text style={ui.muted} testID="skins-pot">
+            {potLine}
+          </Text>
+        ) : null}
+        {settlement ? <SettlementCard settlement={settlement} nameOf={nameOf} /> : null}
+        {finished ? (
+          <Text style={ui.muted}>
+            {result.scoring === 'net' ? 'Spilles på netto.' : 'Spilles på brutto.'}
+          </Text>
+        ) : null}
+      </View>
     </View>
   );
 }
