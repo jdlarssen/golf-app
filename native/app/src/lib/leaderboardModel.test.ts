@@ -321,6 +321,8 @@ describe('potter', () => {
     expect(carriedPotLine(3, 'active')).toBe('3 skins står i potten til neste hull.');
     // Motoren kjenner ikke status og gir bare tallet — labelen avgjøres her.
     expect(carriedPotLine(3, 'finished')).toBe('3 skins ble aldri vunnet.');
+    // #2317: ett skin er entall («1 skins» sto på skjermen).
+    expect(carriedPotLine(1, 'finished')).toBe('1 skin ble aldri vunnet.');
   });
 
   it('sier at en delt Nassau-seksjon IKKE gir poeng', () => {

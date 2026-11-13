@@ -256,8 +256,8 @@ export function carriedPotLine(
 ): string | null {
   if (carriedPot <= 0) return null;
   return status === 'finished'
-    ? `${carriedPot} skins ble aldri vunnet.`
-    : `${carriedPot} skins står i potten til neste hull.`;
+    ? `${skinsCount(carriedPot)} ble aldri vunnet.`
+    : `${skinsCount(carriedPot)} står i potten til neste hull.`;
 }
 
 /**
