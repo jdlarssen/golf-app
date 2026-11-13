@@ -62,10 +62,25 @@ describe('compactEmbedHeight (#2330) — the frame the compact card needs', () =
     expect(long).toBeGreaterThan(one);
   });
 
-  it('capitals are wider: three names in capitals need 407 px at 320 px (measured, round 2)', () => {
-    expect(
-      compactEmbedHeight({ logos: 0, names: ['WILHELMSEN HAMAR TANNLEGESENTER', 'INTERIØR', 'BYNESET REGNSKAP'] }),
-    ).toBeGreaterThanOrEqual(407);
+  // Name sets that measured taller than an earlier rule at 320 px (rounds 2
+  // and 3 of #2330, Chromium and WebKit). They stay as fixed cases so the
+  // rule cannot slide back.
+  it.each<[string[], number]>([
+    [['WILHELMSEN HAMAR TANNLEGESENTER', 'INTERIØR', 'BYNESET REGNSKAP'], 407],
+    [['BLOMSTER', 'BEGRAVELSESBYRÅ WILLUMSEN HOTELL TRANSPORT'], 407],
+    [
+      ['GOLFSHOP MEGA KIWI', 'ØDEGAARD GRUPPEN', 'LYNGHAUG EIENDOM', 'BYGGMAKKER TANNLEGESENTER BEGRAVELSESBYRÅ', 'SPORT MX WÆRSTAD NØKKEL'],
+      435,
+    ],
+    [['NORDEA', 'OPTIKK MØBELVAREHUS LYNGHAUG MARINE', 'LYNGHAUG'], 407],
+  ])('names in capitals %j need at least %i px at 320 px', (names, measured) => {
+    expect(compactEmbedHeight({ logos: 0, names })).toBeGreaterThanOrEqual(measured);
+  });
+
+  it('names without a logo get one line of margin on top of the estimate', () => {
+    // «Premier sponset av Baren» is one line (measured 379 px); the rule gives a line more.
+    expect(compactEmbedHeight({ logos: 0, names: ['Baren'] })).toBe(379 + 14);
+    expect(compactEmbedHeight({ logos: 2, names: ['Baren'] })).toBe(393 + 6 + 14 + 14);
   });
 });
 

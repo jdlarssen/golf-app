@@ -26,13 +26,17 @@ const NAME_LINE_PX = 14;
 const NAME_GAP_PX = 6;
 /**
  * «Premier sponset av …» at 320 px: about 286 px of text width, ~6.5 px per
- * character, counted high. A capital counts 1.2 (Inter's capitals are wider:
- * three all-caps names needed a third line, round 2 of #2330).
+ * character, counted high. A capital counts 1.3: Inter's capitals are wider,
+ * and name sets in capitals measured a whole line taller than 1.0 and 1.2
+ * (rounds 2 and 3 of #2330). The line height has no slack of its own, so the
+ * names get one line of margin on top (owner's rule: never scroll comes
+ * before 14 px of air).
  */
 const NAME_LINE_CHARS = 44;
 const NAME_PREFIX_CHARS = 20;
 const NAME_SEPARATOR_CHARS = 4;
-const CAPITAL_CHARS = 1.2;
+const CAPITAL_CHARS = 1.3;
+const NAME_MARGIN_LINES = 1;
 
 /** A name's width in average characters. */
 function nameWidth(name: string): number {
@@ -57,7 +61,7 @@ export function compactEmbedHeight(sponsors: { logos: number; names: readonly st
   const nameChars = names.length === 0
     ? 0
     : NAME_PREFIX_CHARS + names.reduce((sum, n) => sum + nameWidth(n), 0) + (names.length - 1) * NAME_SEPARATOR_CHARS;
-  const nameLines = Math.ceil(nameChars / NAME_LINE_CHARS);
+  const nameLines = nameChars === 0 ? 0 : Math.ceil(nameChars / NAME_LINE_CHARS) + NAME_MARGIN_LINES;
   const namePx = nameLines === 0 ? 0 : (rows === 0 ? 0 : NAME_GAP_PX) + nameLines * NAME_LINE_PX;
   return CARD_PX + STRIP_PAD_PX + logoPx + namePx;
 }
