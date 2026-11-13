@@ -5,7 +5,6 @@ import { HeadToHeadResult, type StripCell } from '../HeadToHeadResult';
 import type { SoloStablefordPlayerInfo } from '../SoloStablefordView';
 import { SoloStablefordPodium } from '../SoloStablefordPodium';
 import { LeagueFlightResult } from '../LeagueFlightResult';
-import { TeamStablefordView } from '../TeamStablefordView';
 import { TeamStablefordPodium } from '../TeamStablefordPodium';
 import {
   WithdrawnPlayersSection,
@@ -24,6 +23,7 @@ import { pointsHeadline } from '@/lib/leaderboard/vsPar';
 import { leagueFlightPlayers } from '@/lib/games/finishedResultBadge';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { renderLiveBoard, type LiveBoardFollowOpts } from './liveBoard';
+import { renderTeamLiveBoard } from './teamLiveBoard';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
 
@@ -39,7 +39,7 @@ import type { TeeGender } from '@/lib/games/teeRating';
  *     1.-plass og resten av rangeringen collapsed under.
  *   - alt annet (active/scheduled, live-visibility) → Tavla (#2253): den
  *     live tavla med plassendring, siste fem hull og «Din runde»-stripen.
- *     Lagvarianten beholder TeamStablefordView.
+ *     Lagvarianten får lagtavla (#2316, `renderTeamLiveBoard`).
  *
  * For best-ball reuser vi state #3/#3.5-grenene fordi de avhenger av flight-
  * og lag-strukturen. Solo-stableford trenger ingen «venterom»-stat ennå
@@ -283,17 +283,17 @@ export async function renderStableford(opts: {
         teamGrouping: 'byTeamNumber',
       });
     }
-    return (
-      <TeamStablefordView
-        gameId={gameId}
-        gameName={game.name}
-        result={result}
-        playersById={playersById}
-        holesPlayed={holesPlayed}
-        backHref={backHref}
-        footerSlot={wdSection}
-      />
-    );
+    return renderTeamLiveBoard({
+      gameId,
+      game,
+      players: gwp.players,
+      holesRows: rawHolesRows,
+      scoresRows: rawScoresRows,
+      backHref,
+      footerSlot: wdSection,
+      viewerUserId,
+      publicView,
+    });
   }
 
   // Finished → reveal-podium (fase 6). Active/scheduled → flat live-view.

@@ -2,8 +2,6 @@
 
 import { useState, type JSX } from 'react';
 import { useTranslations } from 'next-intl';
-import { LeaderboardBackLink } from '@/components/ui/LeaderboardBackLink';
-import { SmartLink } from '@/components/ui/SmartLink';
 import {
   viewerStanding,
   type LiveBoard as LiveBoardData,
@@ -12,9 +10,10 @@ import {
   type LiveBoardUnit,
   type ViewerStanding,
 } from '@/lib/leaderboard/liveBoard';
-import type { ScoreTone } from '@/lib/scoring/scoreTone';
 import { followHref } from '@/lib/leaderboard/followPlayer';
 import { BoardPlayerPlate } from './BoardRowReactions';
+import { BoardHeader, BoardLegend, DOT, LEADER_PLATE_SHADOW, Movement, PLATE_SHADOW, StripFrame } from './boardParts';
+import { TeamBoard, type TeamBoardProps } from './TeamBoardRows';
 import {
   boardShowsPlace,
   isBoardLeader,
@@ -35,28 +34,9 @@ import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 /** PLASS · SPILLER · HULL · POENG — one grid for the headings and every row. */
 const COLUMNS = 'grid grid-cols-[44px_minmax(0,1fr)_46px_58px] gap-1.5';
 
-/** A white plate on the board, pressed in at the bottom. */
-const PLATE_SHADOW = 'shadow-[inset_0_-2px_0_rgba(0,0,0,0.08)]';
-/** The leader's SPILLER plate: the same, plus a gold hairline. */
-const LEADER_PLATE_SHADOW =
-  'shadow-[inset_0_-2px_0_rgba(0,0,0,0.08),inset_0_0_0_1px_var(--accent)]';
-
-const DOT: Record<ScoreTone, string> = {
-  under: 'bg-score-under-fg',
-  par: 'bg-score-par-fg',
-  over1: 'bg-score-over1-fg',
-  over2: 'bg-score-over2-fg',
-  unset: 'bg-border',
-};
-
-const LEGEND: { tone: ScoreTone; key: 'legendUnder' | 'legendPar' | 'legendBogey' | 'legendDouble' }[] = [
-  { tone: 'under', key: 'legendUnder' },
-  { tone: 'par', key: 'legendPar' },
-  { tone: 'over1', key: 'legendBogey' },
-  { tone: 'over2', key: 'legendDouble' },
-];
-
-export interface LiveBoardProps {
+export interface SoloBoardProps {
+  /** Solo is the default; `kind: 'team'` is the team board (#2316). */
+  kind?: 'solo';
   gameName: string;
   status: 'scheduled' | 'active';
   /** Server-translated status name, shown in the pill of a scheduled game. */
@@ -82,6 +62,17 @@ export interface LiveBoardProps {
 }
 
 /**
+ * The live board. Solo (stableford and strokeplay, #2253) is the default; the
+ * team formats (scramble, team stableford, shamble, best ball; #2316) pass
+ * `kind: 'team'` and get `TeamBoard`'s rows under the same header and strip.
+ */
+export type LiveBoardProps = SoloBoardProps | TeamBoardProps;
+
+export function LiveBoard(props: LiveBoardProps): JSX.Element {
+  return props.kind === 'team' ? <TeamBoard {...props} /> : <SoloBoard {...props} />;
+}
+
+/**
  * Tavla (#2253): the live board for solo stableford and solo strokeplay — a
  * deep-forest header, a dark board with white plates in four columns, the
  * viewer's own row marked «DU», and a strip at the bottom with the viewer's
@@ -91,7 +82,7 @@ export interface LiveBoardProps {
  * out. Local state (show all, the open reaction row) has no `key` tied to the
  * data, so it survives the realtime `router.refresh()`.
  */
-export function LiveBoard({
+function SoloBoard({
   gameName,
   status,
   statusLabel,
@@ -103,7 +94,7 @@ export function LiveBoard({
   backHref,
   testId,
   followToken,
-}: LiveBoardProps): JSX.Element {
+}: SoloBoardProps): JSX.Element {
   const t = useTranslations('leaderboard.board');
   const tc = useTranslations('leaderboard.common');
   const tf = useTranslations('spectate.follow');
@@ -134,32 +125,14 @@ export function LiveBoard({
           <p className="mt-0.5 text-[13px] text-muted">{tf('pickBody')}</p>
         </div>
       )}
-      <header
-        data-focus-surface="strong"
-        className="rounded-2xl bg-surface-strong px-2 pt-2 pb-5 text-bg-tint"
-      >
-        <div className="flex items-center justify-between gap-3">
-          <LeaderboardBackLink href={backHref} label={tc('backAriaLabel')} tone="onStrong" />
-          <span
-            data-testid="board-pill"
-            className="mr-2 inline-flex items-center gap-1.5 rounded-full border border-bg-tint/35 px-3 py-1.5 text-xs font-semibold tabular-nums"
-          >
-            {status === 'active' && (
-              <span aria-hidden className="h-2 w-2 rounded-full bg-success" />
-            )}
-            {pill}
-          </span>
-        </div>
-        <div className="px-3">
-          <p className="truncate text-xs font-semibold text-bg-tint/80">
-            {gameName}
-          </p>
-          <h1 className="mt-1 font-serif text-[40px] font-semibold leading-[1.05]">
-            {t('title')}
-          </h1>
-          <p className="mt-0.5 text-[13px] tabular-nums text-bg-tint/85">{formatLine}</p>
-        </div>
-      </header>
+      <BoardHeader
+        backHref={backHref}
+        live={status === 'active'}
+        pill={pill}
+        gameName={gameName}
+        title={t('title')}
+        formatLine={formatLine}
+      />
 
       {rows.length === 0 ? (
         <p className="mt-12 text-center text-sm text-muted">{tc('noPlayersToShow')}</p>
@@ -208,17 +181,7 @@ export function LiveBoard({
             </ol>
           </div>
 
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-1 text-[11px] text-muted">
-            <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-              {LEGEND.map(({ tone, key }) => (
-                <span key={tone} className="inline-flex items-center gap-1">
-                  <span aria-hidden className={`h-2 w-2 rounded-full ${DOT[tone]}`} />
-                  {t(key)}
-                </span>
-              ))}
-            </span>
-            <span>{t('legendRecent')}</span>
-          </div>
+          <BoardLegend />
 
           {canCollapse && (
             <button
@@ -362,44 +325,6 @@ function BoardRow({
   );
 }
 
-function Movement({ movement }: { movement: number | null }) {
-  if (movement === null) return null;
-  if (movement > 0) {
-    return (
-      <span
-        aria-hidden
-        data-testid="board-movement"
-        data-movement={movement}
-        className="shrink-0 text-[11px] font-semibold tabular-nums text-success-text"
-      >
-        ▲{movement}
-      </span>
-    );
-  }
-  if (movement < 0) {
-    return (
-      <span
-        aria-hidden
-        data-testid="board-movement"
-        data-movement={movement}
-        className="shrink-0 text-[11px] font-semibold tabular-nums text-score-over2-fg"
-      >
-        ▼{-movement}
-      </span>
-    );
-  }
-  return (
-    <span
-      aria-hidden
-      data-testid="board-movement"
-      data-movement={0}
-      className="shrink-0 text-[11px] text-muted"
-    >
-      –
-    </span>
-  );
-}
-
 function Strip({
   strip,
   standing,
@@ -424,34 +349,12 @@ function Strip({
   const behind = behindLeaderText(t, standing, unit, rows, displayName);
 
   return (
-    <div
-      data-testid="board-strip"
-      data-rank={standing.rank}
-      data-gap={standing.gap ?? undefined}
-      className="sticky bottom-[calc(65px+env(safe-area-inset-bottom,0px))] z-20 mt-4"
-    >
-      <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface px-3.5 py-3 shadow-[0_6px_20px_rgba(26,46,31,0.10)]">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold text-muted">
-            {t('stripKicker')}
-          </p>
-          <p className="mt-0.5 truncate font-serif text-[18px] font-medium tabular-nums text-text">
-            {leagueFlight ? totalSr(t, unit, standing.total) : [place, behind].filter(Boolean).join(' · ')}
-          </p>
-        </div>
-        {strip.kind !== 'none' && (
-          <SmartLink
-            data-testid="board-strip-action"
-            data-kind={strip.kind}
-            href={strip.href}
-            className="inline-flex h-11 shrink-0 items-center rounded-full bg-primary px-4 text-[14px] font-semibold text-white hover:bg-primary-hover dark:text-bg"
-          >
-            {strip.kind === 'hole'
-              ? t('stripHole', { hole: strip.holeNumber })
-              : t('stripSubmit')}
-          </SmartLink>
-        )}
-      </div>
-    </div>
+    <StripFrame
+      kicker={t('stripKicker')}
+      text={leagueFlight ? totalSr(t, unit, standing.total) : [place, behind].filter(Boolean).join(' · ')}
+      action={strip}
+      rank={standing.rank}
+      gap={standing.gap}
+    />
   );
 }

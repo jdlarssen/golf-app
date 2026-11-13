@@ -3251,7 +3251,6 @@
       "startlistKicker": "Start list"
     },
     "state35": {
-      "front9Label": "Front 9",
       "segmentHalfLabel": "Holes {from}–{to}",
       "lockedHeading": "See you at hole {last}",
       "lockedSub": "Holes {from}–{to} are revealed when the organizer ends the game."
@@ -3392,7 +3391,29 @@
       "behindPointsLead": "{gap, plural, one {# point} other {# points}} behind the lead",
       "behindStrokesLead": "{gap, plural, one {# stroke} other {# strokes}} behind the lead",
       "stripHole": "Hole {hole}",
-      "stripSubmit": "Submit scorecard"
+      "stripSubmit": "Submit scorecard",
+      "team": {
+        "title": "Team board",
+        "teams": "{count} teams",
+        "teamsOfSize": "{count} teams of {size}",
+        "unitNet": "net",
+        "unitGross": "gross",
+        "you": "You",
+        "youInSentence": "you",
+        "yourTeam": "Your team",
+        "stripKicker": "Your team",
+        "holes": "hole {holes}",
+        "ofHoles": "{played} of {total}",
+        "stripOfHoles": "{played} of {total} holes",
+        "holeCardHeading": "Your team on hole {hole}",
+        "scrambleScore": "{strokes, plural, one {# stroke} other {# strokes}}, {term}",
+        "bestBallBall": "The ball of <b>{names}</b> counted",
+        "bestBallScore": "net {net}, {term}",
+        "hiddenHalf": "Holes {from}–{to} are hidden",
+        "srGross": "{total} strokes gross",
+        "srYourTeam": "This is your team",
+        "showAll": "Show all {count} teams"
+      }
     },
     "soloStrokeplay": {
       "grossHolesRow": "{gross} gross · {holes} holes played",
@@ -3405,11 +3426,9 @@
       "podiumSubtitle": "Stableford · After {holes} holes"
     },
     "teamStableford": {
-      "subtitle": "After {holes} holes · Par Stableford · Points",
       "podiumSubtitle": "Par Stableford · After {holes} holes"
     },
     "texasScramble": {
-      "subtitle": "After {holes} holes · {format} · Sorted by lowest team net",
       "podiumSubtitle": "{format} · After {holes} holes"
     },
     "shamble": {

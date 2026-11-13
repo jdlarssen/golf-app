@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
-import { ShambleView, type ShamblePlayerInfo } from '../ShambleView';
+import { ShambleHoleList, ShambleView, type ShamblePlayerInfo } from '../ShambleView';
+import { renderTeamLiveBoard } from './teamLiveBoard';
 import { ShamblePodium } from '../ShamblePodium';
 import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
 import { buildUniformContext } from '@/lib/scoring/context/buildUniformContext';
@@ -18,9 +19,9 @@ import type { TeeGender } from '@/lib/games/teeRating';
  *
  *   - `finished` → ShamblePodium på toppen + ShambleView under (chromeless): feirings-
  *     podium med vinner-laget + per-hull-rutenett under.
- *   - alt annet (active/scheduled) → ShambleView alene: lag-rangering + per-hull-
- *     tabell live. View-en håndterer reveal-modus internt basert på
- *     `scoreVisibility` + `gameStatus` props.
+ *   - alt annet (active/scheduled) → lagtavla (#2316, `renderTeamLiveBoard`)
+ *     med «Per hull»-lista under. I reveal-modus er det fortsatt ShambleView,
+ *     som håndterer reveal internt basert på `scoreVisibility` + `gameStatus`.
  *
  * Shamble bruker team_number (validatoren håndhever ≥ 1 per spiller) — vi
  * videresender reell `p.team_number` til scoring-laget, nøyaktig som Texas.
@@ -39,6 +40,10 @@ export async function renderShamble(opts: {
       course_handicap: number | null;
       tee_gender: TeeGender;
       withdrawn_at: string | null;
+      /** #2316: the live board's strip reads these. */
+      flight_number?: number | null;
+      submitted_at?: string | null;
+      approved_at?: string | null;
     }[];
   };
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
@@ -46,9 +51,13 @@ export async function renderShamble(opts: {
   backHref: string;
   /** #1051/#1119: Premieutdeling-kortet, rendret under podiet i finished-footeren. */
   prizeAwardsNode?: ReactNode;
+  /** #2316: whose team is «Ditt lag» and whose strip the live board shows. */
+  viewerUserId?: string;
+  /** #2316: spectate/embed — no strip, no «Ditt lag». */
+  publicView?: boolean;
 }) {
   const tc = await getTranslations('leaderboard.common');
-  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, prizeAwardsNode } = opts;
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, prizeAwardsNode, viewerUserId, publicView } = opts;
 
   // #1958: the shared builder drops withdrawn players and their scores, the
   // same rule the result summary applies, so the live board agrees with it.
@@ -150,6 +159,22 @@ export async function renderShamble(opts: {
       });
     }
     return finishedView(false, <>{prizeAwardsNode}{reportSection}</>);
+  }
+
+  // #2316: the live board with «Per hull» under it. A blind round keeps
+  // ShambleView, which hides the totals and the holes until the game ends.
+  if (scoreVisibility === 'live') {
+    return renderTeamLiveBoard({
+      gameId,
+      game,
+      players: gwp.players,
+      holesRows: rawHolesRows,
+      scoresRows: rawScoresRows,
+      backHref,
+      footerSlot: <ShambleHoleList result={result} playersById={playersById} />,
+      viewerUserId,
+      publicView,
+    });
   }
 
   return (

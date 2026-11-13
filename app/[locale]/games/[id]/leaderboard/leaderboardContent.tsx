@@ -64,7 +64,8 @@ import { renderRoundRobin } from './formats/roundRobin';
 import { renderAceyDeucey } from './formats/aceyDeucey';
 import { renderShamble } from './formats/shamble';
 import { renderPatsome } from './formats/patsome';
-import { renderState3, renderState35 } from './formats/state3';
+import { renderState3 } from './formats/state3';
+import { renderTeamLiveBoard } from './formats/teamLiveBoard';
 import type {
   SideWinnerRow,
   CourseHoleRow,
@@ -346,6 +347,8 @@ export async function renderLeaderboardContent({
       backHref,
       prizeAwardsNode,
       formatLabel: MODE_LABELS[game.game_mode],
+      viewerUserId,
+      publicView,
     });
   }
 
@@ -450,6 +453,8 @@ export async function renderLeaderboardContent({
       rawScoresRows: scopedScoresRows,
       backHref,
       prizeAwardsNode,
+      viewerUserId,
+      publicView,
     });
   }
 
@@ -542,18 +547,21 @@ export async function renderLeaderboardContent({
     });
   }
 
+  // #2316: best ball's first half is the team board, computed over the open
+  // half's holes and strokes only (#1978: nothing from the back nine is read
+  // into it). The viewer's strip still reads the whole card.
   if (view === 'state3.5') {
-    return renderState35({
+    return renderTeamLiveBoard({
       gameId,
-      mode,
-      players,
-      holes,
-      scores,
+      game,
+      players: gwp.players,
+      holesRows: scopedHolesRows,
+      scoresRows: scopedScoresRows,
       backHref,
-      holeSegment: game.hole_segment,
-      navContext,
+      footerSlot: <WithdrawnPlayersSection players={bestBallWithdrawn} />,
+      viewerUserId,
       publicView,
-      ranking,
+      scope: 'first-half',
     });
   }
 

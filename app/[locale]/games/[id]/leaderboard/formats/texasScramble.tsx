@@ -1,11 +1,8 @@
 import type { ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
-import {
-  TexasScrambleView,
-  type TexasScramblePlayerInfo,
-} from '../TexasScrambleView';
-import { TexasScramblePodium } from '../TexasScramblePodium';
+import { TexasScramblePodium, type TexasScramblePlayerInfo } from '../TexasScramblePodium';
+import { renderTeamLiveBoard } from './teamLiveBoard';
 import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
 import { buildUniformContext } from '@/lib/scoring/context/buildUniformContext';
 import { foldTeamScoreRows } from '@/lib/scoring/context/foldTeamRows';
@@ -30,8 +27,9 @@ import type { TeeGender } from '@/lib/games/teeRating';
  *     admin avslutter spillet (issue #801).
  *   - `finished` → TexasScramblePodium: topp 3 lag på podiet med konfetti
  *     på 1.-plass og resten av rangeringen collapsed under.
- *   - alt annet (active/scheduled, live-visibility) → TexasScrambleView: flat
- *     liste sortert på laveste lag-netto.
+ *   - alt annet (active/scheduled, live-visibility) → lagtavla (#2316,
+ *     `renderTeamLiveBoard`): plass, «Lag N», initialer, plassendring, de fem
+ *     siste hullene og stripa «Laget ditt».
  *
  * Speilet `renderSoloStrokeplay`-pattern for konsistens. Texas har
  * `team_size: 2 | 3 | 4` i mode_config og `team_number` per spiller — vi
@@ -55,6 +53,10 @@ export async function renderTexasScramble(opts: {
       course_handicap: number | null;
       tee_gender: TeeGender;
       withdrawn_at: string | null;
+      /** #2316: the live board's strip reads these. */
+      flight_number?: number | null;
+      submitted_at?: string | null;
+      approved_at?: string | null;
     }[];
   };
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
@@ -64,9 +66,24 @@ export async function renderTexasScramble(opts: {
   formatLabel?: string;
   /** #1051/#1119: Premieutdeling-kortet, rendret under podiet i finished-footeren. */
   prizeAwardsNode?: ReactNode;
+  /** #2316: whose team is «Ditt lag» and whose strip the live board shows. */
+  viewerUserId?: string;
+  /** #2316: spectate/embed — no strip, no «Ditt lag». */
+  publicView?: boolean;
 }) {
   const tc = await getTranslations('leaderboard.common');
-  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, formatLabel, prizeAwardsNode } = opts;
+  const {
+    gameId,
+    game,
+    gwp,
+    rawHolesRows,
+    rawScoresRows,
+    backHref,
+    formatLabel,
+    prizeAwardsNode,
+    viewerUserId,
+    publicView,
+  } = opts;
 
   // Reveal-modus (issue #801): mens spillet er aktivt og score_visibility='reveal'
   // skjules netto-rangeringen — kun brutto-slag per lag vises. Texas scramble
@@ -141,6 +158,21 @@ export async function renderTexasScramble(opts: {
     );
   }
 
+  // #2316: active and scheduled games get the team board; it builds its own
+  // context. Finished games go on to the podium below.
+  if (game.status !== 'finished') {
+    return renderTeamLiveBoard({
+      gameId,
+      game,
+      players: gwp.players,
+      holesRows: rawHolesRows,
+      scoresRows: rawScoresRows,
+      backHref,
+      viewerUserId,
+      publicView,
+    });
+  }
+
   // #1958: the shared builder drops withdrawn players and their scores, the
   // same rule the result summary applies, so the live board agrees with it.
   const ctx = buildUniformContext({
@@ -185,42 +217,14 @@ export async function renderTexasScramble(opts: {
   // Finished → TexasScramblePodium. Med sideturnering (#576): podiet pakkes
   // som chromeless mainContent i en LeaderboardTabs-veksler med side-fanen.
   // Lag-format → 'byTeamNumber' så lag-aggregerte sidekategorier gjelder.
-  if (game.status === 'finished') {
-    // #1008: AI-rundereferat, komponert i footerSlot (ingen wdSection her —
-    // Texas scramble sporer ikke trukne spillere separat i denne grenen).
-    const reportSection = game.round_report ? (
-      <RoundReportCard text={game.round_report} />
-    ) : null;
-    const podium = (chromeless: boolean) => (
-      <TexasScramblePodium
-        gameId={gameId}
-        gameName={game.name}
-        result={result}
-        playersById={playersById}
-        holesPlayed={holesPlayed}
-        backHref={backHref}
-        formatLabel={formatLabel}
-        chromeless={chromeless}
-        footerSlot={<>{prizeAwardsNode}{reportSection}</>}
-      />
-    );
-    if (game.side_tournament_enabled) {
-      return renderSideTournamentTabs({
-        gameId,
-        game,
-        gwp,
-        rawHolesRows,
-        rawScoresRows,
-        backHref,
-        mainContent: podium(true),
-        teamGrouping: 'byTeamNumber',
-      });
-    }
-    return podium(false);
-  }
-
-  return (
-    <TexasScrambleView
+  // Finished (every other status returned the team board above).
+  // #1008: AI-rundereferat, komponert i footerSlot (ingen wdSection her —
+  // Texas scramble sporer ikke trukne spillere separat i denne grenen).
+  const reportSection = game.round_report ? (
+    <RoundReportCard text={game.round_report} />
+  ) : null;
+  const podium = (chromeless: boolean) => (
+    <TexasScramblePodium
       gameId={gameId}
       gameName={game.name}
       result={result}
@@ -228,6 +232,21 @@ export async function renderTexasScramble(opts: {
       holesPlayed={holesPlayed}
       backHref={backHref}
       formatLabel={formatLabel}
+      chromeless={chromeless}
+      footerSlot={<>{prizeAwardsNode}{reportSection}</>}
     />
   );
+  if (game.side_tournament_enabled) {
+    return renderSideTournamentTabs({
+      gameId,
+      game,
+      gwp,
+      rawHolesRows,
+      rawScoresRows,
+      backHref,
+      mainContent: podium(true),
+      teamGrouping: 'byTeamNumber',
+    });
+  }
+  return podium(false);
 }

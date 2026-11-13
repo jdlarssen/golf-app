@@ -3251,7 +3251,6 @@
       "startlistKicker": "Startliste"
     },
     "state35": {
-      "front9Label": "Front 9",
       "segmentHalfLabel": "Hull {from}–{to}",
       "lockedHeading": "Vi sees ved hull {last}",
       "lockedSub": "Hull {from}–{to} vises når arrangøren avslutter spillet."
@@ -3392,7 +3391,29 @@
       "behindPointsLead": "{gap} poeng bak ledelsen",
       "behindStrokesLead": "{gap} slag bak ledelsen",
       "stripHole": "Hull {hole}",
-      "stripSubmit": "Lever scorekort"
+      "stripSubmit": "Lever scorekort",
+      "team": {
+        "title": "Lagtavla",
+        "teams": "{count} lag",
+        "teamsOfSize": "{count} lag à {size}",
+        "unitNet": "netto",
+        "unitGross": "brutto",
+        "you": "Deg",
+        "youInSentence": "deg",
+        "yourTeam": "Ditt lag",
+        "stripKicker": "Laget ditt",
+        "holes": "hull {holes}",
+        "ofHoles": "{played} av {total}",
+        "stripOfHoles": "{played} av {total} hull",
+        "holeCardHeading": "Ditt lag på hull {hole}",
+        "scrambleScore": "{strokes} slag, {term}",
+        "bestBallBall": "Ballen til <b>{names}</b> talte",
+        "bestBallScore": "netto {net}, {term}",
+        "hiddenHalf": "Hull {from}–{to} er skjult",
+        "srGross": "{total} slag brutto",
+        "srYourTeam": "Dette er laget ditt",
+        "showAll": "Vis alle {count} lag"
+      }
     },
     "soloStrokeplay": {
       "grossHolesRow": "{gross} brutto · {holes} hull spilt",
@@ -3405,11 +3426,9 @@
       "podiumSubtitle": "Stableford · Etter {holes} hull"
     },
     "teamStableford": {
-      "subtitle": "Etter {holes} hull · Par-stableford · Poeng",
       "podiumSubtitle": "Par-stableford · Etter {holes} hull"
     },
     "texasScramble": {
-      "subtitle": "Etter {holes} hull · {format} · Sortert på laveste lag-netto",
       "podiumSubtitle": "{format} · Etter {holes} hull"
     },
     "shamble": {
