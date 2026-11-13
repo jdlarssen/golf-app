@@ -23,7 +23,12 @@ import {
   loadInviterTeams,
   resolveCertainTeamInvitation,
 } from './team/captainLookup';
-import { getTeamFriendCandidates, type TeamCandidate } from '@/lib/users/getTeamCandidates';
+import { loadTeamFriendPicker, type TeamFriendPickerData } from '@/lib/games/teamFriendPicker';
+import { suggestTeamName } from '@/lib/games/teamName';
+import type { GameSeats } from '@/lib/games/seatCapacity';
+import { firstName } from '@/lib/firstName';
+import { nameInitials } from '@/lib/names/initials';
+import { formatDate, formatShortDayMonthLocale, formatTeeOffTimeLocale } from '@/lib/i18n/format';
 import {
   isPubliclyViewable,
   signupSourceFromParam,
@@ -204,9 +209,9 @@ export default async function PåmeldingPage({
   // beholder sin egen profil-gate, siden en påmelding eksponerer navnet ditt.
   const { data: profile, error: profileError } = await admin
     .from('users')
-    .select('profile_completed_at, email')
+    .select('profile_completed_at, email, name')
     .eq('id', user.id)
-    .maybeSingle<{ profile_completed_at: string | null; email: string }>();
+    .maybeSingle<{ profile_completed_at: string | null; email: string; name: string | null }>();
   // A failed read must surface as the PostgREST error, not as a null TypeError
   // further down (#2224).
   if (profileError) throw profileError;
@@ -305,7 +310,7 @@ export default async function PåmeldingPage({
   const isAlreadyRegistered = existingPlayer != null;
   const requestView = pendingRequestView(existingRequest);
   // #2837: a full round asks instead, on the count the seat claim uses.
-  const { isFull } = await readSeatFacts(game);
+  const { isFull, seats } = await readSeatFacts(game);
 
   // #369: er brukeren en akseptert venn av spill-eieren? Brukes til å vise
   // «Meld meg på» i stedet for «Be om å bli med» for manual_approval-spill
@@ -320,17 +325,30 @@ export default async function PåmeldingPage({
     viewerIsFriend = friendIds.includes(game.created_by);
   }
 
-  // Kandidatene i lag-formen (#362): #2840 bare vennene dine. Hentes bare
-  // når lag-formen faktisk skal rendres — ellers er det en unødig query.
+  // Vennene i lagskjemaet (#362): #2840 bare vennene dine, med dem som alt er
+  // i runden og lenken din til «Legg til venn». Hentes bare når lagskjemaet
+  // faktisk skal rendres — ellers er det unødige spørringer.
   const willRenderTeamForm =
     (game.registration_type === 'team' || game.registration_type === 'both') &&
     game.registration_mode !== 'invite_only' &&
     !isAlreadyRegistered &&
     !gameLocked &&
     gameModeSupportsTeams(game.game_mode);
-  const teamCandidates: TeamCandidate[] = willRenderTeamForm
-    ? await getTeamFriendCandidates(user.id)
-    : [];
+  const teamPicker: TeamFriendPickerData | null = willRenderTeamForm
+    ? await loadTeamFriendPicker(user.id, game.id)
+    : null;
+  const teamForm: TeamFormProps | null = teamPicker
+    ? {
+        picker: teamPicker,
+        suggestedName: suggestTeamName(firstName(profile.name) ?? ''),
+        ownInitials: nameInitials(profile.name),
+        meta: teamFormMeta(t, locale as AppLocale, {
+          teeOffAt: game.scheduled_tee_off_at,
+          courseName: game.courses?.name ?? null,
+          seats,
+        }),
+      }
+    : null;
 
   // #544: side-velger for åpne matchplay-spill. Henter en slank roster
   // (team_number + bruker-navn) slik at velgeren kan vise hvem som allerede
@@ -440,7 +458,7 @@ export default async function PåmeldingPage({
               isFull,
             }),
             hasCertainTeamInvitation,
-            teamCandidates,
+            teamForm,
             matchplaySideData,
             src: srcRaw,
           })}
@@ -450,23 +468,59 @@ export default async function PåmeldingPage({
   );
 }
 
+type TeamFormProps = {
+  picker: TeamFriendPickerData;
+  suggestedName: string;
+  ownInitials: string;
+  meta: string | null;
+};
+
+type SignupT = ReturnType<typeof getTranslations<'signup'>> extends Promise<infer R> ? R : never;
+
+/**
+ * The line under the team name (#2840 del 5): «Ons 19. nov kl. 17:30 ·
+ * Byneset North · 8 av 12 plasser». Parts that are not there stay out.
+ */
+function teamFormMeta(
+  t: SignupT,
+  locale: AppLocale,
+  { teeOffAt, courseName, seats }: { teeOffAt: string | null; courseName: string | null; seats: GameSeats | null },
+): string | null {
+  const parts: string[] = [];
+  const d = teeOffAt ? new Date(teeOffAt) : null;
+  if (d && !Number.isNaN(d.getTime())) {
+    const weekday = formatDate(d, locale, { timeZone: 'Europe/Oslo', weekday: 'short' }).replace(/\.$/, '');
+    parts.push(
+      t('teamForm.when', {
+        weekday: weekday.charAt(0).toUpperCase() + weekday.slice(1),
+        date: formatShortDayMonthLocale(d, locale),
+        time: formatTeeOffTimeLocale(d, locale),
+      }),
+    );
+  }
+  if (courseName) parts.push(courseName);
+  if (seats?.kind === 'capped') parts.push(t('teamForm.seats', { held: seats.held, cap: seats.cap }));
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
 function renderBody({
   t,
   tModes,
   game,
   view,
   hasCertainTeamInvitation,
-  teamCandidates,
+  teamForm,
   matchplaySideData,
   src,
 }: {
-  t: ReturnType<typeof getTranslations<'signup'>> extends Promise<infer R> ? R : never;
+  t: SignupT;
   tModes: ReturnType<typeof getTranslations<'modes'>> extends Promise<infer R> ? R : never;
   game: NonNullable<Awaited<ReturnType<typeof getGameByShortId>>>;
   /** Which branch: the rule's one home is `lib/games/signupOffer.ts` (#2748). */
   view: SignupView;
   hasCertainTeamInvitation: boolean;
-  teamCandidates: TeamCandidate[];
+  /** Null when the team form is not rendered (`willRenderTeamForm`). */
+  teamForm: TeamFormProps | null;
   matchplaySideData: MatchplaySideData | null;
   src: string | null;
 }) {
@@ -655,14 +709,17 @@ function renderBody({
               </LinkButton>
             </div>
           )}
-          <p className="font-sans text-sm leading-relaxed text-text">
-            {t('teamFormIntro')}
-          </p>
-          <TeamRegistrationForm
-            shortId={game.short_id}
-            teamSize={teamSize}
-            candidates={teamCandidates}
-          />
+          {teamForm && (
+            <TeamRegistrationForm
+              shortId={game.short_id}
+              teamSize={teamSize}
+              friends={teamForm.picker.friends}
+              friendLinkPath={teamForm.picker.friendLinkPath}
+              suggestedName={teamForm.suggestedName}
+              ownInitials={teamForm.ownInitials}
+              meta={teamForm.meta}
+            />
+          )}
         </div>
       );
     }

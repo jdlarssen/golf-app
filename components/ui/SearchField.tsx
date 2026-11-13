@@ -14,7 +14,8 @@ import type { KeyboardEvent } from 'react';
  * `name`, so it never posts.
  *
  * `default` is 50 px and `large` 52 px: the artboards' 48 / 50 px boxes draw
- * their 1 px border outside the number.
+ * their 1 px border outside the number. `filled` is the team friend picker's
+ * field (#2840): 48 px, no frame, filled with `surface-2`.
  */
 export function SearchField({
   id,
@@ -23,6 +24,7 @@ export function SearchField({
   onChange,
   placeholder,
   size = 'default',
+  tone = 'outlined',
   className = '',
 }: {
   id: string;
@@ -32,6 +34,7 @@ export function SearchField({
   onChange: (value: string) => void;
   placeholder: string;
   size?: 'default' | 'large';
+  tone?: 'outlined' | 'filled';
   className?: string;
 }) {
   function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
@@ -64,7 +67,11 @@ export function SearchField({
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         autoComplete="off"
-        className={`${size === 'large' ? 'h-[52px] pl-[38px]' : 'h-[50px] pl-[40px]'} w-full rounded-xl border border-field-border bg-surface pr-3 font-sans text-base text-text placeholder:text-muted`}
+        className={`${
+          tone === 'filled'
+            ? 'h-12 rounded-[14px] border border-transparent bg-surface-2 pl-[40px]'
+            : `${size === 'large' ? 'h-[52px] pl-[38px]' : 'h-[50px] pl-[40px]'} rounded-xl border border-field-border bg-surface`
+        } w-full pr-3 font-sans text-base text-text placeholder:text-muted`}
       />
     </div>
   );
