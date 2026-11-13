@@ -55,6 +55,11 @@ export type ThemeColors = {
    */
   warning: string;
   /**
+   * #2755: «Avgjort» på Nassau-kortene, suksess som tekst. Webbens
+   * `--success-text`; `--success` er dekor og for svak som tekst.
+   */
+  successText: string;
+  /**
    * #2750: kanten på et valg i et ark. Webbens `--field-border`, tegningenes
    * `--input`, et hakk mørkere enn `border`.
    */
@@ -207,6 +212,7 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     warningText: '#7A5410',
     warningSoft: '#FBEED6',
     warning: '#D89B3A',
+    successText: '#2F5A3C',
     fieldBorder: '#CFC7B3',
     primarySoft: '#E8EFE8',
     scoreUnderFg: '#2F5A3C',
@@ -257,6 +263,7 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     warningText: '#E5B26F',
     warningSoft: '#2E2A1C',
     warning: '#E5B26F',
+    successText: '#7DAA8A',
     fieldBorder: '#3D4F43',
     primarySoft: '#1F2C24',
     scoreUnderFg: '#7DAA8A',
@@ -562,6 +569,8 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   warningSoft: '#FFFFFF',
   // Flightraden (#2750). Hullsiden tegner den ikke: rav uten tone, svart kant.
   warning: '#7A5410',
+  // #2755: som `scoreUnderFg` her, den mørke suksessgrønnen.
+  successText: '#2F5A3C',
   fieldBorder: '#000000',
   primarySoft: '#FFFFFF',
   scoreUnderFg: '#2F5A3C',

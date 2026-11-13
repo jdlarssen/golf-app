@@ -2,6 +2,7 @@
 // spiller. Lag og matchplay går ikke gjennom disse radene (#977), og Skins har
 // en slank stilling uten reaksjoner (#2317).
 import { render, screen } from '@testing-library/react-native';
+import { fours, nassauResult } from '../../../../../lib/leaderboard/__fixtures__/nassauResult';
 import type { ModeResult } from '../../../../../lib/scoring/modes/types';
 import { ReactionsContext, type ReactionsContextValue } from './ReactionsProvider';
 import { ResultView } from './ResultView';
@@ -24,23 +25,9 @@ const value: ReactionsContextValue = {
 const players = (fields: object) =>
   PLAYERS.map((userId, index) => ({ userId, rank: index + 1, tiedWith: [], ...fields }));
 
-const SECTION = { name: 'front9', winnerUserIds: [], isPending: true };
-
 const RESULTS: [string, object, string][] = [
-  [
-    'nassau',
-    {
-      kind: 'nassau',
-      scoring: 'net',
-      players: players({ units: 0 }),
-      sections: {
-        front9: SECTION,
-        back9: { ...SECTION, name: 'back9' },
-        total18: { ...SECTION, name: 'total18' },
-      },
-    },
-    'leaderboard-table-row',
-  ],
+  // #2755: Nassau har egen tavla; resultatet kommer fra den ekte motoren.
+  ['nassau', nassauResult({ a: fours(3), b: fours(3), c: fours(3) }), 'nassau-row'],
   ['nines', { kind: 'nines', players: players({ totalPoints: 0, holesScored: 3 }) }, 'leaderboard-table-row'],
   ['round_robin', { kind: 'round_robin', players: players({ totalHoleWins: 0, totalHolesLost: 0 }) }, 'leaderboard-table-row'],
   ['acey_deucey', { kind: 'acey_deucey', players: players({ total: 0, aces: 0 }) }, 'leaderboard-table-row'],

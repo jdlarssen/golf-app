@@ -34,6 +34,8 @@ import {
 } from '../../../../lib/wolf/holeLabels';
 import type { LocalScore } from '../data/db';
 import type { BundlePlayer, GameBundle } from '../data/gameBundle';
+import { playerShortName } from '../../../../lib/names/playerName';
+import { BOARD_COMMON_TEXT } from './boardCopy';
 import { displayName, formatNameList } from './display';
 import { gameSegment } from './segmentRound';
 
@@ -80,6 +82,20 @@ export function nameLookup(
   return (userId) => {
     const player = byId.get(userId);
     return player ? displayName(player) : 'Ukjent spiller';
+  };
+}
+
+/**
+ * Fornavnet, eller fullt navn når en annen i spillet heter det samme (#2813,
+ * `playerShortName`). Ukjent id gir «(ukjent)», som webbens `unknownPlayer`.
+ */
+export function shortNameLookup(
+  players: readonly BundlePlayer[],
+): (userId: string) => string {
+  return (userId) => {
+    const player = players.find((p) => p.userId === userId);
+    const others = players.filter((p) => p.userId !== userId).map((p) => p.name);
+    return playerShortName(player, others) ?? BOARD_COMMON_TEXT.unknownPlayer;
   };
 }
 
@@ -259,30 +275,6 @@ export function carriedPotLine(
     ? `${skinsCount(carriedPot)} ble aldri vunnet.`
     : `${skinsCount(carriedPot)} står i potten til neste hull.`;
 }
-
-/**
- * Status for én Nassau-seksjon (front 9 / back 9 / hele runden).
- * Delt seksjon deler ikke ut poeng — det er hele poenget med push-regelen, så
- * teksten sier det i stedet for å liste to «vinnere».
- */
-export function nassauSectionLine(
-  section: { winnerUserIds: string[]; isPending: boolean },
-  nameOf: (userId: string) => string,
-): string {
-  if (section.isPending) return 'Ikke avgjort ennå';
-  if (section.winnerUserIds.length === 0) return 'Ikke avgjort ennå';
-  if (section.winnerUserIds.length > 1) return 'Delt — ingen poeng';
-  return `Vinner: ${nameOf(section.winnerUserIds[0]!)}`;
-}
-
-export const NASSAU_SECTION_LABELS: Record<
-  'front9' | 'back9' | 'total18',
-  string
-> = {
-  front9: 'Første ni',
-  back9: 'Siste ni',
-  total18: 'Hele runden',
-};
 
 // ---------------------------------------------------------------------------
 // Første halvdel av runden (#1978)

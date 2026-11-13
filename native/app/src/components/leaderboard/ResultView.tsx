@@ -17,7 +17,8 @@ import type { TeamBoardModel } from '../../lib/teamBoard';
 import { BingoBangoBongoView } from './BingoBangoBongoView';
 import { MatchView } from './MatchView';
 import { PatsomeView } from './PatsomeView';
-import { NassauView, SkinsView } from './PotViews';
+import { NassauBoard } from './NassauBoard';
+import { SkinsView } from './PotViews';
 import { SettlementCard } from './SettlementCard';
 import { SoloBoard } from './SoloBoard';
 import { TeamBoard } from './TeamBoard';
@@ -55,6 +56,7 @@ export function ResultView({
   patsomeBoard = null,
   resultInSentence = false,
   viewerUserId = null,
+  shortNameOf,
 }: {
   result: ModeResult;
   status: string;
@@ -79,8 +81,10 @@ export function ResultView({
   patsomeBoard?: PatsomeBoardModel | null;
   /** Resultatets setning (#2756) sier utfallet i matchplay. */
   resultInSentence?: boolean;
-  /** Seeren: egen rad i Skins-stillingen heter «Deg» (#2317). */
+  /** Seeren: egen rad i Skins-stillingen heter «Deg» (#2317), og Nassau-kortene sier «Deg» (#2755). */
   viewerUserId?: string | null;
+  /** Fornavnet på Nassau-kortene (#2813). Uten den står fullt navn. */
+  shortNameOf?: (userId: string) => string;
 }) {
   switch (result.kind) {
     case 'solo_strokeplay': {
@@ -350,7 +354,16 @@ export function ResultView({
       );
 
     case 'nassau':
-      return <NassauView result={result} settlement={settlement} nameOf={nameOf} />;
+      return (
+        <NassauBoard
+          result={result}
+          status={status}
+          settlement={settlement}
+          viewerUserId={viewerUserId}
+          nameOf={nameOf}
+          shortNameOf={shortNameOf ?? nameOf}
+        />
+      );
 
     case 'singles_matchplay':
       return (

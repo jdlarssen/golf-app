@@ -2267,7 +2267,8 @@ som ikon (lerretet har ingen tegning av den flisa). Tavla er fortsatt ett trykk 
   `mode_config` slik webbens side gjør, pluss appens egen liste over formatene skjermen er
   bygget for. PR 3a: solo stableford, modifisert stableford og solo slagspill. PR 3b: Wolf.
   PR 3c: Nines, Round Robin, Acey Deucey og Bingo Bango Bongo. PR 3d: best ball.
-  Skins og Nassau bygges etter sine egne tegninger (#2317, #2327) og står som «Tavla» til da.
+  Skins og Nassau har fått tavla etter sine egne tegninger i appen (#2317, #2755). «Hull for hull»
+  for dem bygges etter en egen tegning (Nassau venter på en ny, #2755) og flisa står som «Tavla» til da.
 - **Wolf** (PR 3b): kortene per hull kommer fra `lib/leaderboard/wolfHoles.ts`, som webbens
   `WolfHolesView` også tegner. Motoren trenger valgene (`wolf_hole_choices`), som skjermen
   henter med `useGameChoices` som tavla. Runden er avsluttet, så hooken prøver igjen bare til
