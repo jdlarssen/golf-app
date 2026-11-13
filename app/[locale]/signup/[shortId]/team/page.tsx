@@ -15,6 +15,7 @@ import { LinkButton } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import { TeamDashboardClient } from './TeamDashboardClient';
 import { loadTeamDashboard } from '@/lib/games/teamDashboardCore';
+import { loadTeamFriendPicker } from '@/lib/games/teamFriendPicker';
 
 type Params = Promise<{ shortId: string; locale: string }>;
 
@@ -28,8 +29,9 @@ export async function generateMetadata({ params }: { params: Params }) {
  * Lag-oversikt for kapteinen og medspillerne (#199 chunks 8+9).
  *
  * To roller bruker samme side:
- *   - Kaptein: ser alle medspillere med status. Kan re-sende invitasjon
- *     til pending eller fjerne medspiller.
+ *   - Kaptein: ser alle medspillere med status. Kan sende invitasjonen på
+ *     nytt, fjerne en medspiller, gi bort kapteinsrollen og fylle en ledig
+ *     plass eller bytte ut en som takket nei med en venn (#2840).
  *   - Medspiller: ser laget + kaptein, med aksepter/avslå-knapper hvis
  *     egen rad er pending.
  *
@@ -168,51 +170,40 @@ export default async function TeamDashboardPage({
   }
 
   const teamName = view.teamName ?? gameName;
+  // #2840 del 5: the captain's friends for «Velg en venn» and «Bytt med en
+  // venn», only while the captain can still change the team.
+  const picker =
+    view.kind === 'captain' && !view.game.signupsClosed
+      ? await loadTeamFriendPicker(user.id, view.game.id)
+      : null;
 
   return (
     <AppShell>
       <TopBar backHref={`/signup/${shortId}`} back="history" kicker={t('teamDashKicker')} />
-
-      <div className="space-y-5">
-        <header className="px-1">
-          <p className="font-sans text-sm font-medium text-muted">
-            {gameName}
-          </p>
-          <h1 className="mt-1 font-serif text-[28px] font-medium leading-snug tracking-[-0.015em] text-text">
-            {teamName}
-          </h1>
-        </header>
-
-        {/* #543: stengt påmelding — aksept-handlinger avvises server-side
-            med signup_closed; banneret forklarer hvorfor på forhånd. */}
-        {view.game.signupsClosed && (
-          <Banner tone="info">
-            {t('teamDashSignupsClosedBanner')}
-          </Banner>
-        )}
-
-        <Card>
-          <TeamDashboardClient
-            mode={view.kind}
-            shortId={shortId}
-            myRowId={view.myRowId}
-            myStatus={view.myStatus}
-            joinEffect={view.game.joinEffect}
-            captain={
-              view.captain
-                ? {
-                    ...view.captain,
-                    displayName: view.captain.displayName ?? t('teamDashCaptainLabel'),
-                  }
-                : null
-            }
-            members={view.members.map((m) => ({
-              ...m,
-              displayName: m.displayName ?? t('teamDashMemberLabel'),
-            }))}
-          />
-        </Card>
-      </div>
+      <TeamDashboardClient
+        mode={view.kind}
+        shortId={shortId}
+        myRowId={view.myRowId}
+        myStatus={view.myStatus}
+        joinEffect={view.game.joinEffect}
+        teamName={teamName}
+        gameName={gameName}
+        teamSize={view.game.teamSize}
+        signupsClosed={view.game.signupsClosed}
+        picker={picker}
+        captain={
+          view.captain
+            ? {
+                ...view.captain,
+                displayName: view.captain.displayName ?? t('teamDashCaptainLabel'),
+              }
+            : null
+        }
+        members={view.members.map((m) => ({
+          ...m,
+          displayName: m.displayName ?? t('teamDashMemberLabel'),
+        }))}
+      />
     </AppShell>
   );
 }

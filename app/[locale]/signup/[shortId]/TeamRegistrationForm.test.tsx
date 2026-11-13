@@ -1,204 +1,169 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { TeamRegistrationForm } from './TeamRegistrationForm';
-import type { TeamCandidate } from '@/lib/users/getTeamCandidates';
+import type { TeamPickerFriend } from '@/lib/games/teamFriendPicker';
 
 const submitTeamRegistrationMock = vi.fn();
 vi.mock('./teamActions', () => ({
-  submitTeamRegistration: (...args: unknown[]) =>
-    submitTeamRegistrationMock(...args),
+  submitTeamRegistration: (...args: unknown[]) => submitTeamRegistrationMock(...args),
 }));
 
 const SHORT_ID = 'abc12345';
 
-// #2840: the candidates are the captain's friends. #2207: masked addresses only.
-const FRIENDS: TeamCandidate[] = [
-  { id: 'u1', name: 'Kari Nordmann', nickname: 'Birdie', maskedEmail: 'ka•••@example.com' },
-  { id: 'u2', name: 'Ola Hansen', nickname: null, maskedEmail: 'ol•••@example.com' },
-  { id: 'u3', name: 'Kristin Berg', nickname: null, maskedEmail: 'kr•••@example.com' },
+function friend(id: string, label: string, extra: Partial<TeamPickerFriend> = {}): TeamPickerFriend {
+  const [first, last] = label.split(' ');
+  return {
+    id,
+    label,
+    shortName: first,
+    initials: `${first[0]}${last?.[0] ?? ''}`,
+    isGuest: false,
+    hcp: 12.4,
+    stats: { roundsTogether: 4, lastPlayedAt: null, lastGameName: null },
+    unavailable: false,
+    ...extra,
+  };
+}
+
+// #2840 del 5: the captain's friends, one of them in the round already.
+const FRIENDS: TeamPickerFriend[] = [
+  friend('u1', 'Ola Kompis'),
+  friend('u2', 'Kari Nord'),
+  friend('u3', 'Per Hansen'),
+  friend('u4', 'Eirik Dahl', { unavailable: true }),
 ];
 
-function renderForm(teamSize: number, candidates: TeamCandidate[] = FRIENDS) {
+function renderForm(teamSize: number, friends: TeamPickerFriend[] = FRIENDS) {
   return render(
-    <TeamRegistrationForm shortId={SHORT_ID} teamSize={teamSize} candidates={candidates} />,
+    <TeamRegistrationForm
+      shortId={SHORT_ID}
+      teamSize={teamSize}
+      friends={friends}
+      friendLinkPath="/venner/legg-til/ABC123"
+      suggestedName="Martins lag"
+      ownInitials="MB"
+      meta="Ons 19. nov kl. 17:30 · Byneset North · 8 av 12 plasser"
+    />,
   );
 }
 
-/** Types into seat `n` and picks the suggestion that matches `name`. */
-async function pickFriend(n: number, query: string, name: RegExp) {
-  const slot = screen.getByLabelText(`Medspiller ${n}`);
-  fireEvent.focus(slot);
-  fireEvent.change(slot, { target: { value: query } });
-  fireEvent.mouseDown(await screen.findByText(name));
-}
-
-function nameTeam(value = 'Birdie-jegerne') {
-  fireEvent.change(screen.getByPlaceholderText(/Birdie/), { target: { value } });
-}
+const row = (id: string) => screen.getByTestId(`friend-row-${id}`);
+const submitButton = () => screen.getByTestId('team-submit');
+const lineup = () => within(screen.getByRole('list', { name: 'Laget' }));
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('TeamRegistrationForm — rendering', () => {
-  it('rendrer team_size−1 plasser (texas scramble 4-mannslag = 3 plasser)', () => {
+describe('TeamRegistrationForm (#2840 del 5)', () => {
+  it('fills the lineup from the list and empties it from the lineup', () => {
     renderForm(4);
-    expect(screen.getAllByRole('textbox', { name: /Medspiller/i })).toHaveLength(3);
+    expect(lineup().getAllByText('Ledig')).toHaveLength(3);
+    expect(submitButton()).toHaveTextContent('Velg 3 til');
+    expect(submitButton()).toBeDisabled();
+
+    fireEvent.click(row('u2'));
+    expect(row('u2')).toHaveAttribute('aria-pressed', 'true');
+    expect(lineup().getAllByText('Ledig')).toHaveLength(2);
+    expect(submitButton()).toHaveTextContent('Velg 2 til');
+
+    fireEvent.click(lineup().getByRole('button', { name: 'Ta Kari ut av laget' }));
+    expect(row('u2')).toHaveAttribute('aria-pressed', 'false');
+    expect(lineup().getAllByText('Ledig')).toHaveLength(3);
   });
 
-  it('rendrer 1 plass for par-spill (team_size=2)', () => {
+  it('greys out a friend in the round already, and the rest once the team is full', () => {
     renderForm(2);
-    expect(screen.getAllByRole('textbox', { name: /Medspiller/i })).toHaveLength(1);
+    expect(row('u4')).toBeDisabled();
+    expect(within(row('u4')).getByText('Alt påmeldt i runden')).toBeInTheDocument();
+
+    fireEvent.click(row('u1'));
+    expect(row('u2')).toBeDisabled();
+    expect(row('u1')).toBeEnabled();
+    expect(submitButton()).toHaveTextContent('Meld på Martins lag');
+    expect(submitButton()).toBeEnabled();
   });
 
-  it('viser lag-navn-input, submit-knapp og søk i vennene', () => {
+  it('keeps «Legg til venn» beside the search: at start, with a full team and with no hits', () => {
     renderForm(2);
-    expect(screen.getByPlaceholderText(/Birdie/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Meld på laget/i })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Søk i vennene dine')).toBeInTheDocument();
+    expect(screen.getByTestId('add-friend')).toBeInTheDocument();
+    fireEvent.click(row('u1'));
+    expect(screen.getByTestId('add-friend')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Søk i vennene' }), {
+      target: { value: 'Jonas' },
+    });
+    expect(screen.getByTestId('friend-no-hit')).toHaveTextContent('Ingen av vennene dine heter «Jonas».');
+    expect(screen.getByTestId('add-friend')).toBeInTheDocument();
   });
 
-  it('#2840: ingen valg mellom eksisterende spiller og e-post, og ingen e-postfelt', () => {
+  it('opens the sheet with «Kopier lenken din» and «Gå til Venner»', () => {
     renderForm(2);
-    expect(screen.queryByText(/Eksisterende spiller/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Inviter via e-post/)).not.toBeInTheDocument();
-    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
-    expect(document.querySelector('input[type="email"]')).toBeNull();
+    fireEvent.click(screen.getByTestId('add-friend'));
+    const sheet = within(screen.getByRole('dialog', { name: 'Legg til en venn' }));
+    expect(sheet.getByTestId('copy-friend-link')).toHaveTextContent('Kopier lenken din');
+    expect(sheet.getByRole('link', { name: 'Gå til Venner' })).toHaveAttribute('href', '/profile/venner');
   });
 
-  it('#2840: uten venner står beskjeden og lenka til Venner, ikke skjemaet', () => {
-    renderForm(2, []);
-    expect(
-      screen.getByText('Du har ingen venner på Tørny ennå. Bare venner kan være på laget ditt.'),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Gå til Venner' })).toHaveAttribute(
-      'href',
-      '/profile/venner',
+  it('without friends: the note and a whole «Legg til en venn»', () => {
+    renderForm(4, []);
+    expect(screen.getByTestId('team-no-friends')).toHaveTextContent(
+      'Du har ingen venner på Tørny ennå. Bare venner kan være på laget ditt.',
     );
-    expect(screen.queryByRole('button', { name: /Meld på laget/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('add-first-friend'));
+    expect(screen.getByRole('dialog', { name: 'Legg til en venn' })).toBeInTheDocument();
   });
-});
 
-describe('TeamRegistrationForm — submit', () => {
-  it('sender de valgte vennene som id-er (#2207), aldri en adresse', async () => {
+  it('renames in place: counter, the error under the field, and «Ferdig» off', () => {
+    renderForm(2);
+    fireEvent.click(screen.getByTestId('team-name-heading'));
+    const field = screen.getByRole('textbox', { name: 'Lagnavn (3–40 tegn)' });
+    fireEvent.change(field, { target: { value: 'Bi' } });
+
+    expect(screen.getByText('2/40')).toBeInTheDocument();
+    expect(screen.getByText('Lagnavnet må ha minst 3 tegn.')).toBeInTheDocument();
+    expect(field).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('button', { name: 'Ferdig' })).toBeDisabled();
+
+    fireEvent.change(field, { target: { value: 'Birdie-jegerne' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Ferdig' }));
+    expect(screen.getByTestId('team-name-heading')).toHaveTextContent('Birdie-jegerne');
+  });
+
+  it('sends the picked friends as ids with the team name (#2207)', async () => {
     submitTeamRegistrationMock.mockResolvedValue({
       ok: true,
       captainRequestId: 'cap-1',
-      slotResults: [{ ok: true, outcome: 'known_added', userId: 'u1' }],
+      slotResults: [
+        { ok: true, outcome: 'known_added', userId: 'u2' },
+        { ok: false, userId: 'u1', reason: 'alreadyRegistered' },
+      ],
     });
-    renderForm(2);
+    renderForm(3);
+    fireEvent.click(row('u2'));
+    fireEvent.click(row('u1'));
+    fireEvent.click(submitButton());
 
-    await pickFriend(1, 'kari', /Kari Nordmann/);
-    // The pick shows as a chip with the masked address; nothing in a field.
-    expect(screen.getByLabelText(/Fjern Kari Nordmann/)).toBeInTheDocument();
-    nameTeam();
-    fireEvent.click(screen.getByRole('button', { name: /Meld på laget/i }));
-
-    await waitFor(() => {
+    await waitFor(() =>
       expect(submitTeamRegistrationMock).toHaveBeenCalledWith({
         shortId: SHORT_ID,
-        teamName: 'Birdie-jegerne',
-        memberIds: ['u1'],
+        teamName: 'Martins lag',
+        memberIds: ['u2', 'u1'],
         website: '',
-      });
-    });
+      }),
+    );
+    expect(await screen.findByTestId('team-registration-success')).toBeInTheDocument();
+    expect(screen.getByText(/Ola Kompis — Allerede påmeldt/)).toBeInTheDocument();
   });
 
-  it('en venn som er valgt på én plass, foreslås ikke på en annen', async () => {
-    renderForm(3);
-    await pickFriend(1, 'k', /Kari Nordmann/);
-
-    const second = screen.getByLabelText('Medspiller 2');
-    fireEvent.focus(second);
-    fireEvent.change(second, { target: { value: 'k' } });
-
-    expect(await screen.findByText('Kristin Berg')).toBeInTheDocument();
-    expect(screen.queryAllByText(/Kari Nordmann/)).toHaveLength(1); // the chip only
-  });
-
-  it('en tom plass blokkerer submit med egen feil', async () => {
+  it('shows the server error', async () => {
+    submitTeamRegistrationMock.mockResolvedValue({ ok: false, error: 'teammate_not_friend' });
     renderForm(2);
-    nameTeam();
-    fireEvent.click(screen.getByRole('button', { name: /Meld på laget/i }));
-
-    expect(await screen.findByText('Velg en venn til denne plassen.')).toBeInTheDocument();
-    expect(submitTeamRegistrationMock).not.toHaveBeenCalled();
-  });
-
-  it('fritekst uten valgt venn sendes ikke', async () => {
-    renderForm(2);
-    nameTeam();
-    fireEvent.change(screen.getByLabelText('Medspiller 1'), { target: { value: 'kompis@example.com' } });
-    fireEvent.click(screen.getByRole('button', { name: /Meld på laget/i }));
-
-    expect(await screen.findByText('Velg en venn til denne plassen.')).toBeInTheDocument();
-    expect(submitTeamRegistrationMock).not.toHaveBeenCalled();
-  });
-
-  it('blokkerer submit og viser inline-feil ved for kort lag-navn', async () => {
-    renderForm(2);
-    await pickFriend(1, 'kari', /Kari Nordmann/);
-    nameTeam('AB');
-    fireEvent.click(screen.getByRole('button', { name: /Meld på laget/i }));
-
-    expect(await screen.findByText(/minst 3 tegn/)).toBeInTheDocument();
-    expect(submitTeamRegistrationMock).not.toHaveBeenCalled();
-  });
-
-  it('viser suksess-banner og hvor mange som er lagt til', async () => {
-    submitTeamRegistrationMock.mockResolvedValue({
-      ok: true,
-      captainRequestId: 'cap-1',
-      slotResults: [
-        { ok: true, outcome: 'known_added', userId: 'u1' },
-        { ok: true, outcome: 'known_added', userId: 'u2' },
-      ],
-    });
-    renderForm(3);
-    await pickFriend(1, 'kari', /Kari Nordmann/);
-    await pickFriend(2, 'ola', /Ola Hansen/);
-    nameTeam();
-    fireEvent.click(screen.getByRole('button', { name: /Meld på laget/i }));
-
-    expect(await screen.findByText(/Laget er opprettet/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        (_, element) =>
-          element?.tagName === 'P' &&
-          element.textContent === '2 medspillere er lagt til og får varsel.',
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it('viser de plassene som ikke kom gjennom, med vennens navn', async () => {
-    submitTeamRegistrationMock.mockResolvedValue({
-      ok: true,
-      captainRequestId: 'cap-1',
-      slotResults: [
-        { ok: true, outcome: 'known_added', userId: 'u1' },
-        { ok: false, userId: 'u2', reason: 'alreadyRegistered' },
-      ],
-    });
-    renderForm(3);
-    await pickFriend(1, 'kari', /Kari Nordmann/);
-    await pickFriend(2, 'ola', /Ola Hansen/);
-    nameTeam('Lag B');
-    fireEvent.click(screen.getByRole('button', { name: /Meld på laget/i }));
-
-    expect(await screen.findByText(/Disse plassene kom ikke gjennom/i)).toBeInTheDocument();
-    expect(screen.getByText(/Ola Hansen — Allerede påmeldt/)).toBeInTheDocument();
-  });
-
-  it.each([
-    ['teammate_not_friend', 'Du kan bare melde på venner. Legg dem til som venner først.'],
-    ['duplicate_members', 'Du har valgt samme venn to ganger.'],
-  ])('serverens %s vises som egen tekst', async (code, text) => {
-    submitTeamRegistrationMock.mockResolvedValue({ ok: false, error: code });
-    renderForm(2);
-    await pickFriend(1, 'kari', /Kari Nordmann/);
-    nameTeam();
-    fireEvent.click(screen.getByRole('button', { name: /Meld på laget/i }));
-
-    expect(await screen.findByText(text)).toBeInTheDocument();
+    fireEvent.click(row('u1'));
+    fireEvent.click(submitButton());
+    expect(await screen.findByTestId('signup-error')).toHaveAttribute(
+      'data-error-code',
+      'teammate_not_friend',
+    );
   });
 });

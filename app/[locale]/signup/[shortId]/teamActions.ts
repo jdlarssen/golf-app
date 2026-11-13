@@ -242,7 +242,8 @@ export async function transferCaptaincy(
 
 /**
  * #2840: the captain fills a free seat with a friend, or swaps a teammate who
- * said no (`replaceRequestId`). No web UI calls it yet.
+ * said no (`replaceRequestId`), from «Velg en venn» and «Bytt med en venn» on
+ * the team page.
  */
 export async function addTeamMember(
   shortId: string,
