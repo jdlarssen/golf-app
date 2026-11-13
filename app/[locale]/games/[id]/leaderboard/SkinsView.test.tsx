@@ -177,6 +177,19 @@ describe('SkinsView', () => {
     expect(states).toEqual(['carried', 'potWon', 'current']);
   });
 
+  it('seerens egen rad i stillingen heter «Deg», som på tegningen', () => {
+    // Kontroll: uten seer (spectate/embed) står kallenavnet.
+    const { unmount } = render(<SkinsView {...defaultProps({ gameStatus: 'active' })} />);
+    expect(within(screen.getByTestId('skins-leaderboard')).getAllByRole('listitem')[1].textContent).toContain('Bjørnen');
+    unmount();
+
+    render(<SkinsView {...defaultProps({ gameStatus: 'active', viewerUserId: 'u2' })} />);
+    const rows = within(screen.getByTestId('skins-leaderboard')).getAllByRole('listitem');
+    expect(rows[1].textContent).toContain('Deg');
+    expect(rows[1].textContent).not.toContain('Bjørnen');
+    expect(rows[0].textContent).toContain('Alice Andersen');
+  });
+
   it('lenka til oppgjøret finnes bare med oppgjør, og peker på det', () => {
     const settlement = computeSettlement({
       units: [
