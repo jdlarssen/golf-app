@@ -86,7 +86,7 @@ export default async function KlubbMedlemmerPage({
                   {myRole === 'owner' && member.userId !== user.id && (
                     <SmartLink
                       href={`/klubber/${club.id}/rolle/${member.userId}`}
-                      className="min-h-[44px] flex items-center font-sans text-xs text-primary hover:underline"
+                      className="min-h-[44px] min-w-11 flex items-center justify-center font-sans text-xs text-primary hover:underline"
                     >
                       {t('changeRoleLink')}
                     </SmartLink>
@@ -94,7 +94,7 @@ export default async function KlubbMedlemmerPage({
                   {isAdmin && member.userId !== user.id && (
                     <SmartLink
                       href={`/klubber/${club.id}/fjern/${member.userId}`}
-                      className="min-h-[44px] flex items-center font-sans text-xs text-danger hover:underline"
+                      className="min-h-[44px] min-w-11 flex items-center justify-center font-sans text-xs text-danger hover:underline"
                     >
                       {t('removeLink')}
                     </SmartLink>
