@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
@@ -100,6 +100,7 @@ export function TerminRow({
         <ThirdLine
           entry={entry}
           socialProof={variant === 'player' ? socialProof : undefined}
+          tight={lead === 'date'}
         />
       </span>
     </>
@@ -247,7 +248,11 @@ function CourseFormatLine({ entry }: { entry: TerminEntry }) {
   return <span className="mt-0.5 block text-[12px] text-muted">{parts.join(' · ')}</span>;
 }
 
-/** The club page's line (#2326): «17:30 · Stableford · lag på 4», no course. */
+/**
+ * The club page's line (#2326): «17:30 · Stableford · lag på 4», no course.
+ * A part never breaks inside itself («lag på» / «4»); a narrow row wraps
+ * after a «·».
+ */
 function TimeFormatLine({ entry, locale }: { entry: TerminEntry; locale: AppLocale }) {
   const t = useTranslations('discover');
   const tModes = useTranslations('modes');
@@ -255,7 +260,17 @@ function TimeFormatLine({ entry, locale }: { entry: TerminEntry; locale: AppLoca
   const when = teeOff ? formatTeeOffTimeLocale(teeOff, locale) : t('termin.undated');
   const parts = [when, ...formatParts(entry, t, tModes)];
   return (
-    <span className="block text-[12px] text-muted">{parts.join(' · ')}</span>
+    <span className="block text-[12px] text-muted">
+      {parts.map((part, i) => (
+        <Fragment key={i}>
+          {/* The space stays outside the no-wrap part: it is where the line may break. */}
+          {i > 0 ? ' ' : null}
+          <span className="whitespace-nowrap">
+            {i < parts.length - 1 ? `${part} ·` : part}
+          </span>
+        </Fragment>
+      ))}
+    </span>
   );
 }
 
@@ -263,9 +278,16 @@ function TimeFormatLine({ entry, locale }: { entry: TerminEntry; locale: AppLoca
 function ThirdLine({
   entry,
   socialProof,
+  tight = false,
 }: {
   entry: TerminEntry;
   socialProof?: GameSocialProof;
+  /**
+   * The club page's row (#2326) is narrower, since the date block takes room.
+   * The capacity label then stays on one line and the track gives way, down
+   * to 24 px, instead of the label wrapping beside a narrow track.
+   */
+  tight?: boolean;
 }) {
   const t = useTranslations('discover');
   const tProof = useTranslations('socialProof');
@@ -278,7 +300,7 @@ function ThirdLine({
         {/* No shrink-0: the design's 64 px track gives way when the label wraps. */}
         <span
           aria-hidden
-          className="block h-1.5 w-16 overflow-hidden rounded-full bg-meter-track"
+          className={`block h-1.5 w-16 overflow-hidden rounded-full bg-meter-track${tight ? ' min-w-6' : ''}`}
         >
           <span
             className={`block h-1.5 ${warn ? 'bg-warning' : 'bg-primary'}`}
@@ -286,9 +308,9 @@ function ThirdLine({
           />
         </span>
         <span
-          className={
+          className={`${
             warn ? 'text-[11px] font-semibold text-warning-text' : 'text-[11px] text-muted'
-          }
+          }${tight ? ' whitespace-nowrap' : ''}`}
         >
           {tone === 'full'
             ? t('termin.full')
