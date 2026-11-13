@@ -401,6 +401,11 @@ export type LiveBoardStripAction =
  * next-hole rule (`nextUnfilledHole`), so the two cannot send a player to
  * different places. `viewerScores` are the viewer's own rows in the game's
  * segment; only rows with strokes count as filled.
+ *
+ * #2316: a team board passes `filledHoles` instead, the holes the viewer's
+ * card has (`scoredHoleNumbers`, the Home card's rule). In the scramble family
+ * the captain owns the team's rows, so a teammate's own rows would send them
+ * to hole 1 all round.
  */
 export function liveBoardStripAction(opts: {
   gameId: string;
@@ -413,8 +418,9 @@ export function liveBoardStripAction(opts: {
     | { submitted_at: string | null; approved_at: string | null; withdrawn_at: string | null }
     | undefined;
   viewerScores: ReadonlyArray<{ hole_number: number; strokes: number | null }>;
+  filledHoles?: readonly number[];
 }): LiveBoardStripAction | null {
-  const { gameId, status, holeSegment, startType, requirePeerApproval, viewer, viewerScores } = opts;
+  const { gameId, status, holeSegment, startType, requirePeerApproval, viewer, viewerScores, filledHoles } = opts;
   if (status !== 'active' || !viewer) return null;
   const state = resolveActiveCardState({
     ...viewer,
@@ -423,7 +429,7 @@ export function liveBoardStripAction(opts: {
   if (state === 'withdrawn') return null;
   if (state !== 'continue') return { kind: 'none' };
   const filled = new Set(
-    viewerScores.filter((s) => s.strokes != null).map((s) => s.hole_number),
+    filledHoles ?? viewerScores.filter((s) => s.strokes != null).map((s) => s.hole_number),
   );
   const next = nextUnfilledHole(holeSegment, filled, startType);
   return next === null
