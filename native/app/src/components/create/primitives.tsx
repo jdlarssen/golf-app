@@ -185,6 +185,7 @@ export function ChoiceCards<T extends string | number>({
   paddingX = 12,
   testID,
   accessibilityLabel,
+  wrapTitle = false,
 }: {
   options: readonly ChoiceCardOption<T>[];
   value: T;
@@ -205,6 +206,11 @@ export function ChoiceCards<T extends string | number>({
   testID?: string;
   /** Gruppens navn for skjermleseren, som webbens `aria-label` på valgkortene (#2755). */
   accessibilityLabel?: string;
+  /**
+   * Tittelen får brekke over to linjer i stedet for å krympe (`Nyttspill-2-nassau`:
+   * «Med handicap (netto)» står i 17 pt og brekker, som i nettleseren).
+   */
+  wrapTitle?: boolean;
 }) {
   const { colors } = useTheme();
   const gap = 8;
@@ -236,9 +242,9 @@ export function ChoiceCards<T extends string | number>({
                   Fraunces litt bredere enn nettleseren, så tittelen krymper
                   heller litt når den ellers ikke får plass. */}
               <Text
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.85}
+                numberOfLines={wrapTitle ? undefined : 1}
+                adjustsFontSizeToFit={!wrapTitle}
+                minimumFontScale={wrapTitle ? undefined : 0.85}
                 style={[fraunces(600, titleSize), { color: colors.text }]}
               >
                 {option.title}
