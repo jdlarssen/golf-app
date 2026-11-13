@@ -44,12 +44,17 @@ export async function renderSkins(opts: {
   backHref: string;
   /** #1051/#1119: Premieutdeling-kortet, rendret under podiet i finished-footeren. */
   prizeAwardsNode?: ReactNode;
+  /** #2317: seerens egen rad i stillingen heter «Deg», som på tegningen. */
+  viewerUserId?: string;
+  /** Spectate og embed har ingen seer, så ingen rad heter «Deg» der. */
+  publicView?: boolean;
 }) {
   const tc = await getTranslations('leaderboard.common');
   const tsk = await getTranslations('leaderboard.skins');
   const th2h = await getTranslations('leaderboard.h2h');
   const tSettle = await getTranslations('leaderboard.common.settlement');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, prizeAwardsNode } = opts;
+  const viewerUserId = opts.publicView ? '' : (opts.viewerUserId ?? '');
 
   // Delt context-bygging (epic #496) — samme kilde som «Hull for hull»-flaten
   // (SkinsHolesBody), så map-logikken ikke dupliseres.
@@ -197,6 +202,7 @@ export async function renderSkins(opts: {
             chromeless
             settlement={settlement}
             footerSlot={footerSlot}
+            viewerUserId={viewerUserId}
           />
         </>
       );
@@ -233,6 +239,7 @@ export async function renderSkins(opts: {
       gameStatus={game.status}
       backHref={backHref}
       settlement={settlement}
+      viewerUserId={viewerUserId}
     />
   );
 }

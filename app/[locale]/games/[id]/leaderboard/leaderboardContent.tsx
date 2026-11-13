@@ -388,6 +388,8 @@ export async function renderLeaderboardContent({
       rawScoresRows: scopedScoresRows,
       backHref,
       prizeAwardsNode,
+      viewerUserId,
+      publicView,
     }));
   }
 

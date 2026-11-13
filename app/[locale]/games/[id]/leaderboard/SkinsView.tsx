@@ -62,6 +62,11 @@ export interface SkinsViewProps {
    * referatet til.
    */
   footerSlot?: ReactNode;
+  /**
+   * Seeren (#2317): egen rad i stillingen heter «Deg», som på tegningen og
+   * lagtavla (`leaderboard.teamBoard.you`). Tom på spectate og embed.
+   */
+  viewerUserId?: string;
 }
 
 /**
@@ -97,6 +102,7 @@ export function SkinsView({
   chromeless = false,
   settlement,
   footerSlot,
+  viewerUserId = '',
 }: SkinsViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
@@ -195,9 +201,12 @@ export function SkinsView({
           >
             {result.players.map((player) => {
               const info = playersById.get(player.userId);
-              const displayName = info
-                ? formatRevealName(info.name, info.nickname)
-                : tc('unknownPlayerFull');
+              const displayName =
+                viewerUserId !== '' && player.userId === viewerUserId
+                  ? t('teamBoard.you')
+                  : info
+                    ? formatRevealName(info.name, info.nickname)
+                    : tc('unknownPlayerFull');
               return (
                 <li
                   key={player.userId}
