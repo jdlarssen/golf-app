@@ -10,7 +10,9 @@ import {
   boardUnit,
   comparableGap,
   computeLiveBoard,
+  liveBoardCovers,
   liveBoardStripAction,
+  soloResult,
   viewerStanding,
   withoutLatestHolePerPlayer,
   type LiveBoard,
@@ -324,6 +326,69 @@ describe('computeLiveBoard — no board', () => {
     ['a scheduled reveal game', { score_visibility: 'reveal', status: 'scheduled' }],
   ])('%s → null', (_label, overrides) => {
     expect(computeLiveBoard({ ...base, game: game(overrides) })).toBeNull();
+  });
+});
+
+describe('liveBoardCovers (#2330) — the formats with a live board', () => {
+  it.each<[string, Pick<LiveBoardGame, 'game_mode' | 'mode_config'>, boolean]>([
+    ['solo strokeplay', { game_mode: 'solo_strokeplay', mode_config: STROKEPLAY }, true],
+    ['solo stableford', { game_mode: 'stableford', mode_config: STABLEFORD }, true],
+    [
+      'solo modified stableford',
+      {
+        game_mode: 'modified_stableford',
+        mode_config: { kind: 'modified_stableford', team_size: 1, points_table: 'modified' },
+      },
+      true,
+    ],
+    [
+      'pair stableford',
+      { game_mode: 'stableford', mode_config: { kind: 'stableford', team_size: 2, points_table: 'standard' } },
+      false,
+    ],
+    [
+      'texas scramble',
+      { game_mode: 'texas_scramble', mode_config: { kind: 'texas_scramble', team_size: 2 } as GameModeConfig },
+      false,
+    ],
+    [
+      'singles matchplay',
+      { game_mode: 'singles_matchplay', mode_config: { kind: 'singles_matchplay', team_size: 1, teams_count: 2 } },
+      false,
+    ],
+    ['wolf', { game_mode: 'wolf', mode_config: { kind: 'wolf', team_size: 1 } as GameModeConfig }, false],
+  ])('%s → %s', (_label, g, covered) => {
+    expect(liveBoardCovers(g)).toBe(covered);
+  });
+});
+
+describe('soloResult (#2330) — the engine result behind the board', () => {
+  const opts = { gameId: 'g1', players: climb.players, holesRows: HOLES, scoresRows: climb.scores };
+
+  it('ranks the same as the live board for the same strokes', () => {
+    const live = board(climb);
+    const result = soloResult({ ...opts, game: game() });
+    expect(result?.players.map((p) => [p.userId, p.rank])).toEqual(
+      live.rows.map((r) => [r.userId, r.rank]),
+    );
+  });
+
+  it('a finished game still has a result (the board says null)', () => {
+    const finished = game({ status: 'finished' });
+    expect(computeLiveBoard({ ...opts, game: finished })).toBeNull();
+    const result = soloResult({ ...opts, game: finished });
+    expect(result?.kind).toBe('stableford');
+    expect(result?.players[0]).toMatchObject({ userId: 'b', rank: 1 });
+  });
+
+  it('solo strokeplay gives the strokeplay result', () => {
+    const result = soloResult({ ...opts, game: game({ game_mode: 'solo_strokeplay', mode_config: STROKEPLAY }) });
+    expect(result?.kind).toBe('solo_strokeplay');
+  });
+
+  it('a format without a live board has none', () => {
+    const team = game({ mode_config: { kind: 'stableford', team_size: 2, points_table: 'standard' } });
+    expect(soloResult({ ...opts, game: team })).toBeNull();
   });
 });
 
