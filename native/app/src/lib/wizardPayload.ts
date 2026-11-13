@@ -75,6 +75,8 @@ export interface ModeSetup {
   wolfScoring?: 'gross' | 'net';
   /** skins: teller brutto eller netto. Default `'net'`. */
   skinsScoring?: 'gross' | 'net';
+  /** nassau (#2755): teller brutto eller netto. Default `'net'`, som på nettet. */
+  nassauScoring?: 'gross' | 'net';
   /** wolf / skins / bingo_bango_bongo: kroner per enhet i oppgjøret. */
   krPerUnit?: number;
   /** patsome (#2753): poeng fra netto eller brutto. Default `'net'`, som på nettet. */
@@ -406,6 +408,7 @@ export function draftToFormData(draft: GameDraft): WizardFormData {
   );
   form.set('wolf_scoring', setup.wolfScoring ?? null);
   form.set('skins_scoring', setup.skinsScoring ?? null);
+  form.set('nassau_scoring', setup.nassauScoring ?? null);
   form.set('kr_per_unit', setup.krPerUnit ?? null);
   form.set('patsome_scoring', setup.patsomeScoring ?? null);
   // #2753 D3b: scramble-familien og shamble, med nettets standarder der

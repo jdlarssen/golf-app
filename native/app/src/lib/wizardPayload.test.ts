@@ -175,6 +175,33 @@ const CASES: {
       { user_id: 'c', team_number: null, flight_number: null },
     ],
   },
+  // #2755: Nassau, netto som standard og brutto når arrangøren velger det.
+  {
+    mode: 'nassau',
+    draft: draft({ gameMode: 'nassau', players: solo('a', 'b', 'c', 'd') }),
+    modeConfig: { kind: 'nassau', team_size: 1, nassau_scoring: 'net' },
+    players: [
+      { user_id: 'a', team_number: null, flight_number: null },
+      { user_id: 'b', team_number: null, flight_number: null },
+      { user_id: 'c', team_number: null, flight_number: null },
+      { user_id: 'd', team_number: null, flight_number: null },
+    ],
+  },
+  {
+    mode: 'nassau',
+    draft: draft({
+      gameMode: 'nassau',
+      players: solo('a', 'b', 'c', 'd'),
+      setup: { nassauScoring: 'gross' },
+    }),
+    modeConfig: { kind: 'nassau', team_size: 1, nassau_scoring: 'gross' },
+    players: [
+      { user_id: 'a', team_number: null, flight_number: null },
+      { user_id: 'b', team_number: null, flight_number: null },
+      { user_id: 'c', team_number: null, flight_number: null },
+      { user_id: 'd', team_number: null, flight_number: null },
+    ],
+  },
   // #2753 D3: samme mode_config som nettets egne tester (`strokeplayFd` og
   // `patsomeFd` i lib/games/gamePayload.test.ts).
   {
@@ -365,6 +392,26 @@ describe('de nye formatene i D3 (#2753)', () => {
     expect(buildDraftPayload(input).payload.errorCode).toBe('min_players_for_mode');
   });
 
+  // #2755: spillergrensene er nettets (`START_COUNT_RANGES.nassau`, 2–16).
+  it('Nassau med én spiller gir nettets min_players_for_mode', () => {
+    expect(
+      buildDraftPayload(draft({ gameMode: 'nassau', players: solo('a') })).payload.errorCode,
+    ).toBe('min_players_for_mode');
+  });
+
+  it('Nassau med 17 spillere gir nettets too_many_players_for_mode', () => {
+    const ids = Array.from({ length: 17 }, (_, i) => `p${i}`);
+    expect(
+      buildDraftPayload(draft({ gameMode: 'nassau', players: solo(...ids) })).payload.errorCode,
+    ).toBe('too_many_players_for_mode');
+  });
+
+  it('Nassau med 2 og 16 spillere publiserer uten feilkode', () => {
+    const ids = Array.from({ length: 16 }, (_, i) => `p${i}`);
+    expect(buildDraftPayload(draft({ gameMode: 'nassau', players: solo('a', 'b') })).payload.errorCode).toBeUndefined();
+    expect(buildDraftPayload(draft({ gameMode: 'nassau', players: solo(...ids) })).payload.errorCode).toBeUndefined();
+  });
+
   it('slagspill uten spillere gir nettets min_players_for_mode', () => {
     expect(buildDraftPayload(draft({ gameMode: 'solo_strokeplay', players: [] })).payload.errorCode).toBe(
       'min_players_for_mode',
@@ -379,7 +426,7 @@ describe('de nye formatene i D3 (#2753)', () => {
 
 describe('payload-paritet for alle modiene appen lager', () => {
   it('dekker nøyaktig APP_SUPPORTED_MODES', () => {
-    expect(CASES.map((c) => c.mode).sort()).toEqual([...APP_SUPPORTED_MODES].sort());
+    expect([...new Set(CASES.map((c) => c.mode))].sort()).toEqual([...APP_SUPPORTED_MODES].sort());
   });
 
   it.each(CASES)('$mode publiserer uten feilkode', ({ draft: input }) => {

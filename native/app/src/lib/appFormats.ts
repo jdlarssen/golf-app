@@ -31,6 +31,8 @@ export const APP_SUPPORTED_MODES = [
   'wolf',
   'bingo_bango_bongo',
   'skins',
+  // #2755: Nassau, tre kamper i én, som kompis-format.
+  'nassau',
   // #2753 D3: slagspill og Patsome er synlige for både kompis og klubb.
   'solo_strokeplay',
   'patsome',
@@ -53,6 +55,7 @@ export const APP_MODE_LABELS: Record<AppGameMode, string> = {
   wolf: 'Wolf',
   bingo_bango_bongo: 'Bingo Bango Bongo',
   skins: 'Skins',
+  nassau: 'Nassau',
   solo_strokeplay: 'Slagspill',
   patsome: 'Patsome',
   texas_scramble: 'Texas scramble',
@@ -76,7 +79,7 @@ export function isAppSupportedMode(slug: string): slug is AppGameMode {
  * publiseres med `team_number: null` på hver rad. Setter veiviseren en verdi
  * her, blir den overskrevet ved start — og fram til da lyver skjermen.
  *
- * De øvrige fire (stableford, modified_stableford, skins, bingo_bango_bongo)
+ * De øvrige (stableford, modified_stableford, skins, nassau, bingo_bango_bongo)
  * er solo-formater uten lag-begrep i det hele tatt.
  */
 export const MODES_WITH_TEAM_ASSIGNMENT: readonly AppGameMode[] = [

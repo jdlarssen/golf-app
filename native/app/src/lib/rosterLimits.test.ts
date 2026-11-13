@@ -69,6 +69,7 @@ const CASES: [label: string, mode: AppGameMode, setup: ModeSetup][] = [
   ['greensome_matchplay', 'greensome_matchplay', {}],
   ['wolf', 'wolf', {}],
   ['skins', 'skins', {}],
+  ['nassau', 'nassau', {}],
   ['bingo_bango_bongo', 'bingo_bango_bongo', {}],
   // #2753 D3: de seks nye formatene, med hver lagstørrelse som gir et annet tak.
   ['solo_strokeplay', 'solo_strokeplay', {}],
