@@ -6,7 +6,7 @@ import { LeaderboardBackLink } from '@/components/ui/LeaderboardBackLink';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { LeaderboardFooter } from './LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
-import { firstName } from '@/lib/firstName';
+import { playerShortName } from '@/lib/names/playerName';
 import { headlineUnit, teamHeadline } from '@/lib/leaderboard/vsPar';
 import {
   NASSAU_SECTION_KEYS,
@@ -156,11 +156,14 @@ export function NassauView({
   const board = summarizeNassau(result, { finished: gameStatus === 'finished', viewerUserId: viewer });
   const viewerPlays = viewer !== null && result.players.some((p) => p.userId === viewer);
 
-  // The cards and the sweep line name players short: the nickname, else the
-  // first name. The list keeps the full name (`formatRevealName`).
+  // The cards and the sweep line name players short: the first name, or the
+  // full name when two in the game share it (#2813, `playerShortName`). The
+  // list keeps the full name (`formatRevealName`).
+  const fullNames = result.players.map((p) => playersById.get(p.userId)?.name);
   const shortName = (userId: string): string => {
     const info = playersById.get(userId);
-    return info?.nickname || firstName(info?.name) || tc('unknownPlayer');
+    const others = fullNames.filter((_, i) => result.players[i].userId !== userId);
+    return playerShortName(info, others) ?? tc('unknownPlayer');
   };
 
   const kicker: Record<NassauSectionKey, string> = {
