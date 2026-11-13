@@ -16,8 +16,12 @@ export type KeyMetrics = {
   gjengerGe2: number;
   /** Signups attributed to a public surface (landing page / poster) — #1022. */
   publicSignups: number;
-  /** Finished games per Oslo week, oldest first, current week last. */
-  weeks: { weekStart: string; finished: number }[];
+  /**
+   * Finished games per Oslo week, oldest first, current week last. `byOthers`
+   * (not created by an admin) and `publicSignups` (accepted via a public page
+   * that week) come with migration 0235 (#2345) and are absent before it.
+   */
+  weeks: { weekStart: string; finished: number; byOthers?: number; publicSignups?: number }[];
   /**
    * Onboarding funnel (#1192): distinct invited emails per step, all-time.
    * Steps 4–5 match invitees to active non-guest users by email, so they are

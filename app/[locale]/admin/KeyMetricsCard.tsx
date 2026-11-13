@@ -64,7 +64,14 @@ export function parseMetrics(data: unknown): KeyMetrics | null {
     if (typeof w.week_start !== 'string' || typeof w.finished !== 'number') {
       return null;
     }
-    weeks.push({ weekStart: w.week_start, finished: w.finished });
+    // #2345 (0235): optional, so the code may ship before the migration. A
+    // missing field drops only its part of the week card's sentence.
+    weeks.push({
+      weekStart: w.week_start,
+      finished: w.finished,
+      ...(typeof w.by_others === 'number' && { byOthers: w.by_others }),
+      ...(typeof w.public_signups === 'number' && { publicSignups: w.public_signups }),
+    });
   }
   if (typeof d.funnel !== 'object' || d.funnel === null || Array.isArray(d.funnel)) {
     return null;
