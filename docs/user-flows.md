@@ -85,7 +85,7 @@ setter avtale-rammer: et **medlemstak** (`member_cap`) og en **varighet** (`vali
 eller en sluttdato, redigerbar i `/admin/klubber/[id]`). Klubbene dine bor under Klubbhuset
 (`/klubber`). Klubbsiden (`/klubber/[id]`, #2326) har et grønt hode med klubbnavnet og «32 medlemmer ·
 du er eier». Under det står «Neste runder i klubben» med klubbens planlagte runder, «Meld på» eller
-«Du er med»/«Du arrangerer» på hver rad, og de fem første medlemmene med «Se alle». Hele lista med
+«Du er med»/«Du arrangerer» på hver rad, «Klubbens æresbrett» (seire i klubbens ferdige runder i år, bare nåværende medlemmer, skjult til sesongen har en ferdig runde) og de fem første medlemmene med «Se alle». Hele lista med
 «Endre rolle» og «Fjern» står på `/klubber/[id]/medlemmer`. Så følger ligaene, cupene og døra «Sett opp
 en runde for klubben». Eier og admin får én dør til, «Administrer klubben» (`/klubber/[id]/administrer`).
 Der legger de til medlemmer på e-post, deler bli-med-lenka (`/klubber/bli-med/[shortId]` → forespørsel

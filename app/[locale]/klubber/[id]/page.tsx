@@ -9,6 +9,10 @@ import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getClubDetail } from '@/lib/clubs/getClubDetail';
 import { getClubRounds } from '@/lib/clubs/getClubRounds';
+import type { ClubMember } from '@/lib/clubs/getClubDetail';
+import { getFinishedGameWins } from '@/lib/stats/getFinishedGameWins';
+import { rankBoard } from '@/lib/stats/aeresbrett';
+import { osloParts } from '@/lib/format/teeOff';
 import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { nameInitials } from '@/lib/names/initials';
 import { AppShell } from '@/components/ui/AppShell';
@@ -20,6 +24,7 @@ import { ChevronRightIcon } from '@/components/icons';
 import { ClubLeaguesSection } from './ClubLeaguesSection';
 import { ClubCupsSection } from './ClubCupsSection';
 import { ClubRoundsSection, ClubRoundsSkeleton } from './ClubRoundsSection';
+import { ClubBoardSection } from './ClubBoardSection';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
 
 type Params = Promise<{ id: string }>;
@@ -37,7 +42,7 @@ const INITIALS_SHOWN = 3;
 /**
  * /klubber/[id] — the club's page for its members (#2326, artboard «Forslag:
  * klubbens side»): the green head with the name, a row of initials and «32
- * medlemmer · du er eier», the club's next rounds, the first five members,
+ * medlemmer · du er eier», the club's next rounds, its honour board, the first five members,
  * the club's leagues and cups, «Sett opp en runde for klubben» and «Forlat
  * klubb» (hidden for the only owner, whose confirm page would block them).
  *
@@ -246,6 +251,11 @@ export default async function KlubbDetailPage({
         </Suspense>
       )}
 
+      {/* «Klubbens æresbrett» (#2326 PR2) — hidden until the season has a finished round. */}
+      <Suspense fallback={null}>
+        <BoardSection clubId={club.id} userId={user.id} members={members} />
+      </Suspense>
+
       {/* The first five members; the whole list is on /medlemmer. */}
       <section aria-labelledby="club-members-heading" data-testid="club-members">
         <div className="flex items-baseline justify-between px-5 pt-[18px] pb-2 leading-[normal]">
@@ -361,4 +371,63 @@ async function RoundsSection({ clubId, userId }: { clubId: string; userId: strin
     );
   }
   return <ClubRoundsSection entries={read.entries} socialProof={read.socialProof} />;
+}
+
+/**
+ * The honour board (#2326 PR2): wins in the club's finished rounds this Oslo
+ * year, or last year while this year has none, current members only. Hidden
+ * while neither year has a finished club round. The page has confirmed the
+ * membership with `getClubDetail`, which is the gate for the service-role
+ * read inside `getFinishedGameWins`; the names are the member list's own.
+ */
+async function BoardSection({
+  clubId,
+  userId,
+  members,
+}: {
+  clubId: string;
+  userId: string;
+  members: readonly ClubMember[];
+}) {
+  const board = await readBoard(clubId, members);
+  if (!board.ok) {
+    return (
+      <div className="mx-4 pt-[18px]">
+        <SectionError testId="club-board-error" />
+      </div>
+    );
+  }
+  if (board.season === null) return null;
+  const me = board.rows.find((row) => row.userId === userId) ?? null;
+  return <ClubBoardSection year={board.season} rows={board.rows} me={me} />;
+}
+
+/** The board's season and rows; `season: null` when no year has a finished round. */
+async function readBoard(
+  clubId: string,
+  members: readonly ClubMember[],
+): Promise<
+  | { ok: true; season: number | null; rows: ReturnType<typeof rankBoard> }
+  | { ok: false }
+> {
+  try {
+    const { year } = osloParts(new Date());
+    let season = year;
+    let wins = await getFinishedGameWins({ groupId: clubId, seasonYear: season });
+    if (!wins.hasGames) {
+      season = year - 1;
+      wins = await getFinishedGameWins({ groupId: clubId, seasonYear: season });
+    }
+    if (!wins.hasGames) return { ok: true, season: null, rows: [] };
+
+    const names = new Map(members.map((m) => [m.userId, m.name]));
+    const rows = rankBoard(
+      wins.winnerCounts.map(([id, count]) => ({ userId: id, count, name: names.get(id) ?? '' })),
+      { onlyUserIds: new Set(names.keys()) },
+    );
+    return { ok: true, season, rows };
+  } catch (error) {
+    console.error('[klubb] board', error);
+    return { ok: false };
+  }
 }

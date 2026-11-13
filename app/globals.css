@@ -151,6 +151,14 @@
   /* The demo (#2281): the strip's ▲/▼ on --surface-strong, and the birdie
    * ring in the flight rows (ScoreShape size `row`). Artboard values. */
   --on-strong-arrow: #b9d8c1;
+  /* The club page's honour board (#2326) on --surface-strong: gold, silver
+   * and bronze medallions with dark numbers, artboard values (silver and
+   * bronze as on the ceremony stage). The card is green in both modes, so
+   * the night keeps the same values. */
+  --medal-gold: #c9a961;
+  --medal-silver: radial-gradient(circle at 50% 38%, #ffffff 0%, #cfc9bd 100%);
+  --medal-bronze: radial-gradient(circle at 50% 38%, #e8c3a4 0%, #b07c52 100%);
+  --medal-ink: #1a2e1f;
   --score-under-ring: #1f6b3a;
   /* The follow page (#2286), artboard values. The LIVE dot on the green head
    * and the number on the leader's gold disc sit on --surface-strong and
@@ -404,6 +412,10 @@
     /* Demo (#2281) — see :root. The arrow keeps its pale green on the lifted
      * --surface-strong; the ring takes the night birdie green on --surface. */
     --on-strong-arrow: #b9d8c1;
+    --medal-gold: #c9a961;
+    --medal-silver: radial-gradient(circle at 50% 38%, #ffffff 0%, #cfc9bd 100%);
+    --medal-bronze: radial-gradient(circle at 50% 38%, #e8c3a4 0%, #b07c52 100%);
+    --medal-ink: #1a2e1f;
     --score-under-ring: #7daa8a;
     /* Follow page (#2286) — see :root. */
     --live-dot-on-strong: #7daa8a;
@@ -567,6 +579,10 @@
   --live-dot: #7daa8a;
   --rank-up: #7daa8a;
   --on-strong-arrow: #b9d8c1;
+  --medal-gold: #c9a961;
+  --medal-silver: radial-gradient(circle at 50% 38%, #ffffff 0%, #cfc9bd 100%);
+  --medal-bronze: radial-gradient(circle at 50% 38%, #e8c3a4 0%, #b07c52 100%);
+  --medal-ink: #1a2e1f;
   --score-under-ring: #7daa8a;
   --live-dot-on-strong: #7daa8a;
   --on-accent: #1a2e1f;
@@ -695,6 +711,8 @@
   --color-on-accent: var(--on-accent);
   --color-score-under-ring: var(--score-under-ring);
   --color-round-mine: var(--round-mine);
+  --color-medal-gold: var(--medal-gold);
+  --color-medal-ink: var(--medal-ink);
   --color-score-over1-ring: var(--score-over1-ring);
   --color-rank-up: var(--rank-up);
   --color-danger-deep: var(--danger-deep);
