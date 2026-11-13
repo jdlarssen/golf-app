@@ -85,9 +85,17 @@ export function ClubRoundsSection({
   );
 }
 
+/**
+ * The heading row is 44 px high, as the artboard draws it with its link beside
+ * the heading, so the card sits where it is drawn and the members heading below
+ * (which keeps its «Se alle») has the same rhythm.
+ */
 function RoundsHeading({ id, children }: { id?: string; children: string }) {
   return (
-    <h2 id={id} className="px-5 pt-4 pb-2 text-xs font-semibold leading-[normal] text-muted">
+    <h2
+      id={id}
+      className="flex min-h-11 items-center px-5 pt-4 pb-2 text-xs font-semibold leading-[normal] text-muted box-content"
+    >
       {children}
     </h2>
   );

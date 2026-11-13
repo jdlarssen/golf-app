@@ -256,7 +256,7 @@ export default async function KlubbDetailPage({
           <SmartLink
             href={`/klubber/${club.id}/medlemmer`}
             aria-label={t('seeAllMembersLabel')}
-            className="flex min-h-11 items-center text-[13px] font-semibold text-primary underline"
+            className="flex min-h-11 min-w-11 items-center justify-end text-[13px] font-semibold text-primary underline"
           >
             {t('seeAllMembers')}
           </SmartLink>
