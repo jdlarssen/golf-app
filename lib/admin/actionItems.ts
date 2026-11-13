@@ -25,6 +25,8 @@ export interface ActiveGameInput {
    * 9-hulls segment-spill aldri som «klart» i Sekretariatets action-items.
    */
   expectedHoles?: number;
+  /** When the round started; «I dag» keeps the last 24 hours (#2345). */
+  startedAt?: string | null;
 }
 
 /** One player row from game_players, withdrawn players included. */
@@ -129,17 +131,24 @@ export function needsYouRows(
   return rows.sort((a, b) => Number(b.notDelivered > 0) - Number(a.notDelivered > 0));
 }
 
+const LIVE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 /**
- * «I dag» (#2345): one row per active game, in the order given. The hole is
- * the tail of the field: the fewest filled holes among the players still
- * playing. Pure, I/O-free.
+ * «I dag» (#2345): one row per active game started in the last 24 hours, in
+ * the order given (owner's answer 13.11: an older active round is not
+ * today's; it stays on the games list, and under «Trenger deg» when cards
+ * wait). The hole is the tail of the field: the fewest filled holes among the
+ * players still playing. Pure, I/O-free.
  */
 export function liveRoundRows(
   games: readonly ActiveGameInput[],
   players: readonly ActivePlayerInput[],
+  now: Date,
 ): LiveRoundRow[] {
   const byGame = playersByGame(players);
-  return games.map((game) => {
+  const since = now.getTime() - LIVE_WINDOW_MS;
+  const today = games.filter((g) => g.startedAt != null && Date.parse(g.startedAt) >= since);
+  return today.map((game) => {
     let playerCount = 0;
     let hole: number | null = null;
     let finished = false;
@@ -226,7 +235,7 @@ export const getActiveRoundsDelivery = cache(
     // 1. Fetch all active games, the earliest started first.
     const { data: gamesData, error: gamesError } = await supabase
       .from('games')
-      .select('id, name, require_peer_approval, hole_segment, game_mode')
+      .select('id, name, require_peer_approval, hole_segment, game_mode, started_at')
       .eq('status', 'active')
       .order('started_at', { ascending: true, nullsFirst: false });
 
@@ -297,6 +306,7 @@ export const getActiveRoundsDelivery = cache(
       requirePeerApproval: g.require_peer_approval ?? false,
       // #1441 — front9/back9-spill er «ferdig» ved 9 hull, ikke 18.
       expectedHoles: holeCountForSegment(g.hole_segment as HoleSegment),
+      startedAt: g.started_at,
     }));
 
     const players: ActivePlayerInput[] = playerRows.map((p) => ({
