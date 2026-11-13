@@ -7,6 +7,13 @@
  * wrapper is a v2 idea (contract: Out of Scope).
  */
 
+/**
+ * The frame height the snippet asks for (#2330): the compact card for solo
+ * strokeplay and solo stableford (`liveBoardCovers`) fits in 560 px; every
+ * other format keeps the full board's 700 px.
+ */
+export const EMBED_HEIGHT = { compact: 560, full: 700 } as const;
+
 /** Escape the characters that could break out of a double-quoted attribute. */
 function escapeAttr(value: string): string {
   return value
