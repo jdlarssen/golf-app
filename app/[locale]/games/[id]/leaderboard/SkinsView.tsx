@@ -1,19 +1,16 @@
 import type { JSX, ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { Card } from '@/components/ui/Card';
-import { Medallion } from '@/components/ui/Medallion';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { LeaderboardFooter } from './LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { skinsPotNow } from '@/lib/leaderboard/skinsPot';
 import { SettlementTable } from './SettlementTable';
+import { SkinsPotHero } from './SkinsPotHero';
+import { SkinsCoinGrid } from './SkinsCoinGrid';
 import type { Settlement } from '@/lib/scoring/settlement';
-import type {
-  SkinsResult,
-  SkinsHoleRow,
-} from '@/lib/scoring/modes/types';
-import { RowReactionsForPlayer } from './RowReactionsForPlayer';
+import type { SkinsResult } from '@/lib/scoring/modes/types';
 
 /**
  * Spillerinfo for SkinsView. En map fra userId → navn + kallenavn.
@@ -68,18 +65,19 @@ export interface SkinsViewProps {
 }
 
 /**
- * Live/post-finished leaderboard for Skins med carryover. To seksjoner:
+ * Live/post-finished leaderboard for Skins med carryover (skinspotten, #2317):
  *
- *   - Spiller-totals øverst (primær storyline): hvem som vant hvor mange
- *     skins er den viktigste informasjonen — spillere gjør opp potten eksternt.
- *     Sortert på totalSkins DESC. Tydelig visning av skins-tall per spiller.
- *   - Per-hull-tabell (sekundær drilldown): hull, par, SI, på-spill (atStake),
- *     utfall. Vunne hull viser vinner + skins scoopet; delte hull viser
- *     carryover-indikator; pending-hull viser at scores mangler. Carryover-
- *     kjeden er synlig slik at det er åpenbart hvor potten samlet seg.
+ *   - Toppkortet (`SkinsPotHero`) mens runden pågår: hvor mange skins som står
+ *     på spill og på hvilket hull, hvorfor potten har vokst, og om hullet
+ *     venter på resten av slagene. Ferdig spill beholder tittelen og har
+ *     pallen over seg i stedet.
+ *   - «Hull for hull» (`SkinsCoinGrid`): én mynt per hull med vinnerens
+ *     initialer, delte hull, potten som ble vunnet og hullet potten står på.
+ *   - «Stillingen»: navn, hull vunnet og skins, sortert på rank.
  *   - Henger-skins-linje: når spillet er ferdig og `carriedPot > 0`, vises
  *     en eksplisitt linje om at disse skinsene er uvunne (standard Skins-regel).
  *     Dekker også tidlig-avsluttede spill med gap etter et delt hull (#303).
+ *   - Oppgjøret (#937/#2296) under, med «Se oppgjøret ↓» som hopp dit.
  *
  * Reveal-modus (scoreVisibility='reveal' && status='active'): vi rendrer
  * en venterom-melding i stedet for tall — Skins er et penge-orientert spill
@@ -141,8 +139,11 @@ export function SkinsView({
     );
   }
 
+  const isFinished = gameStatus === 'finished';
+  const pot = skinsPotNow(result.holes, result.carriedPot);
+
   const subtitleParts = [
-    gameStatus === 'finished' ? tc('afterNHoles', { holes: holesPlayed }) : tc('live'),
+    tc('afterNHoles', { holes: holesPlayed }),
     'Skins',
     result.scoring === 'net' ? tc('netto') : tc('brutto'),
   ];
@@ -150,10 +151,9 @@ export function SkinsView({
   // Henger-skins: scoring-modulen eksponerer den rå hengende potten (carriedPot)
   // uten å kjenne gameStatus. Når spillet er ferdig er en hengende pott uvunnet —
   // også når spillet ble avsluttet tidlig med et gap rett etter et delt hull
-  // (issue #303). Under aktivt spill vises potten i pending-hullets carriedIn,
-  // så vi holder banneret skjult til spillet er ferdig.
-  const showUnwonSkins =
-    gameStatus === 'finished' && result.carriedPot > 0;
+  // (issue #303). Under aktivt spill står potten i toppkortet, så vi holder
+  // banneret skjult til spillet er ferdig.
+  const showUnwonSkins = isFinished && result.carriedPot > 0;
 
   return (
     <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
@@ -161,258 +161,111 @@ export function SkinsView({
         <LeaderboardHeader gameName={gameName} backHref={backHref} />
       )}
 
-      <div className="px-6 pt-1.5 pb-3.5 text-center">
-        <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Leaderboard
-        </h1>
-        <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          {subtitleParts.join(' · ')}
-        </p>
-      </div>
+      {/* Uten AppShell rundt (chromeless, under pallen) står kortene 16 px fra
+          kanten som på tegningen; inni shellen gir AppShell kanten. */}
+      <div className={`pb-3.5 ${chromeless ? 'px-4' : ''}`}>
+        {isFinished ? (
+          <div className="px-6 pt-1.5 pb-3.5 text-center">
+            <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
+              Leaderboard
+            </h1>
+            <p className="mt-1 text-[11.5px] tabular-nums text-muted">
+              {subtitleParts.join(' · ')}
+            </p>
+          </div>
+        ) : (
+          <SkinsPotHero gameName={gameName} scoring={result.scoring} pot={pot} />
+        )}
 
-      {/* Spiller-totals øverst — primær storyline: hvem vant hvor mange skins. */}
-      <ul
-        data-testid="skins-leaderboard"
-        className="flex flex-col gap-2 px-3.5 pt-3 pb-3.5"
-      >
-        {result.players.map((player, i) => {
-          const info = playersById.get(player.userId);
-          const displayName = info
-            ? formatRevealName(info.name, info.nickname)
-            : tc('unknownPlayerFull');
-          return (
-            <PlayerRow
-              key={player.userId}
-              userId={player.userId}
-              rank={player.rank}
-              displayName={displayName}
-              totalSkins={player.totalSkins}
-              holesWon={player.holesWon}
-              tiedWith={player.tiedWith}
-              staggerIndex={i}
-              t={t}
-            />
-          );
-        })}
-      </ul>
+        <SkinsCoinGrid
+          holes={result.holes}
+          currentHoleNumber={pot.kind === 'pending' ? pot.holeNumber : null}
+          playersById={playersById}
+        />
 
-      {/* Uvunne skins — transparent om potten henger ved rundeslutt. */}
-      {showUnwonSkins && (
-        <div
-          data-testid="skins-unwon"
-          className="mx-3.5 mb-3 rounded-2xl border border-border bg-surface px-4 py-3 text-center"
-        >
-          <p className="font-sans text-[13px] text-muted">
-            <span className="font-semibold tabular-nums text-text">
-              {t('skins.skinCount', { count: result.carriedPot })}
-            </span>{' '}
-            {t('skins.unwonNote')}
-          </p>
-        </div>
-      )}
+        <section aria-labelledby="skins-standing-title">
+          <Kicker as="h2" id="skins-standing-title" className="px-1 pt-4 pb-2 leading-[normal]">
+            {t('skins.standing.title')}
+          </Kicker>
+          <ul
+            data-testid="skins-leaderboard"
+            className="overflow-hidden rounded-2xl border border-border bg-surface"
+          >
+            {result.players.map((player) => {
+              const info = playersById.get(player.userId);
+              const displayName = info
+                ? formatRevealName(info.name, info.nickname)
+                : tc('unknownPlayerFull');
+              return (
+                <li
+                  key={player.userId}
+                  className="flex items-center gap-3 border-b border-row-divider-warm px-3.5 py-2.5 last:border-b-0"
+                >
+                  <span className="min-w-0 flex-1 truncate text-[15px] font-semibold leading-[normal] text-text">
+                    {displayName}
+                  </span>
+                  <span className="shrink-0 text-xs leading-[normal] text-muted">
+                    <span aria-hidden>
+                      {t('skins.standing.holes', { count: player.holesWon })}
+                    </span>
+                    <span className="sr-only">
+                      {t('skins.holesWonCount', { count: player.holesWon })}
+                    </span>
+                  </span>
+                  <span className="score-num min-w-16 shrink-0 text-right text-[20px] leading-[normal] text-text">
+                    {t('skins.skinCount', { count: player.totalSkins })}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
 
-      {/* Pengeoppgjør (#937) — vises kun når kr_per_unit er satt (settlement != null). */}
-      {settlement && (
-        <div className="px-3.5 pb-3.5">
-          <SettlementTable
-            settlement={settlement}
-            playersById={playersById}
-            gameName={gameName}
-            mode="skins"
-            isFinal={gameStatus === 'finished'}
-          />
-        </div>
-      )}
+        {settlement && (
+          <a
+            href="#oppgjoret"
+            data-testid="skins-settlement-link"
+            className="tap-extend mt-2.5 flex min-h-11 items-center justify-center text-[14px] font-semibold leading-[normal] text-primary"
+          >
+            {/* One flex item, so the space before the arrow survives. Inter has
+                no «↓»; the artboard's stack falls back to system-ui. */}
+            <span>
+              {t('skins.pot.settlementLink')}{' '}
+              <span aria-hidden className="font-[system-ui]">↓</span>
+            </span>
+          </a>
+        )}
 
-      {/* Per-hull-tabell — sekundær drilldown for carryover-kjeden. */}
-      <section className="px-3.5 pt-2 pb-3.5">
-        <Kicker tone="muted" className="px-1 pb-2">
-          {tc('perHullKicker')}
-        </Kicker>
-        <ul
-          data-testid="skins-hole-list"
-          className="flex flex-col gap-2 list-none"
-        >
-          {result.holes.map((hole) => (
-            <HoleRow
-              key={hole.holeNumber}
-              hole={hole}
+        {/* Uvunne skins — transparent om potten henger ved rundeslutt. */}
+        {showUnwonSkins && (
+          <div
+            data-testid="skins-unwon"
+            className="mt-3 rounded-2xl border border-border bg-surface px-4 py-3 text-center"
+          >
+            <p className="font-sans text-[13px] text-muted">
+              <span className="font-semibold tabular-nums text-text">
+                {t('skins.skinCount', { count: result.carriedPot })}
+              </span>{' '}
+              {t('skins.unwonNote')}
+            </p>
+          </div>
+        )}
+
+        {/* Pengeoppgjør (#937) — vises kun når kr_per_unit er satt (settlement != null). */}
+        {settlement && (
+          <div id="oppgjoret" className="mt-3.5 scroll-mt-4">
+            <SettlementTable
+              settlement={settlement}
               playersById={playersById}
-              t={t}
+              gameName={gameName}
+              mode="skins"
+              isFinal={isFinished}
             />
-          ))}
-        </ul>
-      </section>
+          </div>
+        )}
+      </div>
 
       <LeaderboardFooter gameStatus={gameStatus} className="px-6 pt-1 pb-4" />
     </LeaderboardShell>
-  );
-}
-
-function PlayerRow({
-  userId,
-  rank,
-  displayName,
-  totalSkins,
-  holesWon,
-  tiedWith,
-  staggerIndex,
-  t,
-}: {
-  userId: string;
-  rank: number;
-  displayName: string;
-  totalSkins: number;
-  holesWon: number;
-  tiedWith: string[];
-  staggerIndex: number;
-  t: ReturnType<typeof useTranslations<'leaderboard'>>;
-}) {
-  const isPodium = rank >= 1 && rank <= 3;
-  const isTied = tiedWith.length > 0;
-  const rankLabel = isTied ? `T${rank}` : `${rank}`;
-  const cardClass =
-    rank === 1 && !isTied
-      ? 'border-accent bg-accent/[0.06]'
-      : '';
-
-  return (
-    <li
-      className="list-none reveal-up"
-      style={{ animationDelay: `${60 + staggerIndex * 80}ms` }}
-    >
-      <Card className={`flex items-center gap-3.5 px-4 py-3.5 ${cardClass}`}>
-        {isPodium && !isTied ? (
-          <span className="shrink-0">
-            <Medallion place={rank as 1 | 2 | 3} size={36} />
-          </span>
-        ) : (
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-surface font-serif text-[15px] font-medium text-muted tabular-nums">
-            {rankLabel}
-          </span>
-        )}
-
-        <div className="min-w-0 flex-1">
-          <p className="font-serif text-[17px] font-medium tracking-[-0.005em] text-text truncate">
-            {displayName}
-          </p>
-          <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-            {t('skins.holesWonCount', { count: holesWon })}
-          </p>
-        </div>
-
-        <div className="shrink-0 text-right">
-          <span className="score-num block text-[26px] leading-none tracking-[-0.02em] text-text tabular-nums">
-            {totalSkins}
-          </span>
-          <span className="mt-1 block text-xs font-semibold text-muted">
-            {t('skins.skinLabel', { count: totalSkins })}
-          </span>
-        </div>
-      </Card>
-      <RowReactionsForPlayer targetUserId={userId} />
-    </li>
-  );
-}
-
-function outcomeClass(outcome: SkinsHoleRow['outcome']): string {
-  switch (outcome) {
-    case 'won':
-      return 'text-accent-text';
-    case 'carryover':
-      return 'text-muted';
-    default:
-      return 'text-muted';
-  }
-}
-
-function HoleRow({
-  hole,
-  playersById,
-  t,
-}: {
-  hole: SkinsHoleRow;
-  playersById: Map<string, SkinsPlayerInfo>;
-  t: ReturnType<typeof useTranslations<'leaderboard'>>;
-}) {
-  const tc = useTranslations('leaderboard.common');
-  const winnerInfo = hole.winnerUserId
-    ? playersById.get(hole.winnerUserId)
-    : null;
-  const winnerName = winnerInfo
-    ? formatRevealName(winnerInfo.name, winnerInfo.nickname)
-    : null;
-
-  const atStakeLabel = t('skins.atStakeLabel', { count: hole.atStake });
-
-  return (
-    <li
-      className="list-none"
-      data-testid={`skins-hole-row-${hole.holeNumber}`}
-    >
-      <Card className="px-3.5 py-3">
-        <div className="flex items-baseline justify-between gap-3">
-          <div className="flex items-baseline gap-2">
-            <span className="font-serif text-[15px] font-medium tabular-nums text-text">
-              {tc('hullNumber', { number: hole.holeNumber })}
-            </span>
-            <span className="text-[10.5px] tabular-nums text-muted">
-              {tc('parSiChip', { par: hole.par, si: hole.strokeIndex })}
-            </span>
-          </div>
-          {/* Skins på spill — fremhevet når potten er bygget opp */}
-          <span
-            className={`text-[10.5px] tabular-nums font-medium ${
-              hole.atStake > 1 ? 'text-accent-text' : 'text-muted'
-            }`}
-          >
-            {atStakeLabel}
-          </span>
-        </div>
-
-        <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[12px] text-muted">
-          <span className={`font-medium ${outcomeClass(hole.outcome)}`}>
-            {hole.outcome === 'won'
-              ? t('skins.outcomeWon')
-              : hole.outcome === 'carryover'
-                ? t('skins.outcomeCarryover')
-                : t('skins.outcomePending')}
-          </span>
-
-          {hole.outcome === 'won' && winnerName && (
-            <>
-              <span aria-hidden className="text-muted/40">
-                ·
-              </span>
-              <span className="text-text">{winnerName}</span>
-              <span aria-hidden className="text-muted/40">
-                ·
-              </span>
-              <span className="tabular-nums text-accent-text font-medium">
-                +{hole.skinsAwarded}{' '}
-                {t('skins.skinLabel', { count: hole.skinsAwarded })}
-              </span>
-            </>
-          )}
-
-          {hole.outcome === 'carryover' && (
-            <>
-              <span aria-hidden className="text-muted/40">
-                ·
-              </span>
-              <span className="text-muted">{t('skins.carriedForward')}</span>
-            </>
-          )}
-        </div>
-
-        {/* Carryover-kjede: vis carriedIn når det er en bygget pott (atStake > 1)
-            slik at det er åpenbart hvor potten samlet seg opp til dette hullet. */}
-        {hole.carriedIn > 0 && (
-          <p className="mt-1 text-[11px] tabular-nums text-muted">
-            {t('skins.carriedInLabel', { count: hole.carriedIn })}
-          </p>
-        )}
-      </Card>
-    </li>
   );
 }

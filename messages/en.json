@@ -3287,17 +3287,35 @@
       "skinLabel": "{count, plural, one {skin} other {skins}}",
       "skinCount": "{count, plural, one {1 skin} other {# skins}}",
       "atStakeLabel": "{count, plural, one {1 skin at stake} other {# skins at stake}}",
-      "outcomeWon": "Won",
-      "outcomeCarryover": "Halved",
       "outcomePending": "Waiting for scores",
       "carriedInLabel": "{count, plural, one {# skin carried in} other {# skins carried in}}",
-      "carriedForward": "carried forward",
       "unwonNote": "not won. The last played hole was halved.",
       "skinsWinnerKronet": "Skins winner crowned",
       "skinsWinnerSubtitle": "Skins · {scoring}",
       "holesWonCount": "{count, plural, one {# hole won} other {# holes won}}",
       "drattVidere": "Halved → carried over",
-      "bruttoLabel": "gross {count}"
+      "bruttoLabel": "gross {count}",
+      "pot": {
+        "onHole": "at stake on hole {hole}",
+        "carriedFrom": "Halved on {holes}, so the pot has grown",
+        "waiting": "Decided once everyone has entered hole {hole}.",
+        "settled": "All holes are decided",
+        "settlementLink": "See the settlement"
+      },
+      "coins": {
+        "title": "Hole by hole",
+        "won": "Hole {hole}: {name} won {count, plural, one {# skin} other {# skins}}",
+        "carried": "Hole {hole}: halved, {count, plural, one {# skin carries} other {# skins carry}} over",
+        "current": "Hole {hole}: {count, plural, one {# skin} other {# skins}} at stake now",
+        "future": "Hole {hole}: not decided",
+        "legendWon": "Initials: won the hole",
+        "legendCarried": "halved, carries over",
+        "legendPot": "Gold ring: the pot"
+      },
+      "standing": {
+        "title": "Standings",
+        "holes": "{count, plural, one {# hole} other {# holes}}"
+      }
     },
     "matchplay": {
       "matchCannotShow": "Match cannot be displayed",

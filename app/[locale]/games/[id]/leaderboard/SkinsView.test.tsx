@@ -5,6 +5,7 @@ import {
   type SkinsPlayerInfo,
   type SkinsViewProps,
 } from './SkinsView';
+import { computeSettlement } from '@/lib/scoring/settlement';
 import type {
   SkinsResult,
   SkinsHoleRow,
@@ -118,75 +119,80 @@ function defaultProps(
 }
 
 describe('SkinsView', () => {
-  it('rendrer spiller-totals, carryover-rad, og skjuler tall i reveal-modus midt-runde', () => {
-    // 1) Default (live, finished) — full visning.
+  // Type C (#2317): structure only — which parts the board shows in which
+  // state. The pot and coin numbers are Type A in lib/leaderboard/skinsPot.test.ts.
+
+  it('ferdig: tittel, mynter og stilling uten toppkort; uvunne skins bare når ferdig', () => {
     const { unmount } = render(<SkinsView {...defaultProps()} />);
 
-    // Spiller-totals: alle 3 spillere, sortert på rank (DESC totalSkins).
+    expect(screen.queryByTestId('skins-pot-hero')).toBeNull();
+    expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
+
+    // «Hull for hull»: én mynt per hull.
+    const coins = screen.getByTestId('skins-coins');
+    expect(within(coins).getAllByRole('listitem')).toHaveLength(3);
+
+    // «Stillingen» (h2) står over lista, én rad per spiller i rank-rekkefølge.
     const leaderboard = screen.getByTestId('skins-leaderboard');
+    const heading = screen.getByRole('heading', { level: 2, name: 'Stillingen' });
+    expect(
+      heading.compareDocumentPosition(leaderboard) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     const playerRows = within(leaderboard).getAllByRole('listitem');
     expect(playerRows).toHaveLength(3);
     expect(playerRows[0].textContent).toContain('Alice Andersen');
-    // u1 har 2 skins — verdi vises prominently.
-    expect(playerRows[0].textContent).toContain('2');
-    // u2 med kallenavn
     expect(playerRows[1].textContent).toContain('Bjørnen');
-    expect(playerRows[2].textContent).toContain('Camilla Carlsen');
 
-    // Per-hull-liste: alle 3 hull rendret.
-    const holeList = screen.getByTestId('skins-hole-list');
-    expect(holeList.textContent).toContain('Hull 1');
-    expect(holeList.textContent).toContain('Hull 2');
-    expect(holeList.textContent).toContain('Hull 3');
-
-    // Hull 1: carryover — viser «Delt» + «ruller videre».
-    const hole1 = within(holeList).getByTestId('skins-hole-row-1');
-    expect(hole1.textContent).toContain('Delt');
-    expect(hole1.textContent).toContain('ruller videre');
-
-    // Hull 2: vunnet av Alice med 2 skins, carriedIn=1 vises.
-    const hole2 = within(holeList).getByTestId('skins-hole-row-2');
-    expect(hole2.textContent).toContain('Vunnet');
-    expect(hole2.textContent).toContain('Alice Andersen');
-    expect(hole2.textContent).toContain('+2');
-    // carriedIn=1 → «1 skin rullet inn»
-    expect(hole2.textContent).toContain('1 skin rullet inn');
-
-    // Hull 3: pending.
-    const hole3 = within(holeList).getByTestId('skins-hole-row-3');
-    expect(hole3.textContent).toContain('Venter på score');
-
-    // Ingen uvunne skins (carriedPot=0) — boksen skal ikke vises.
     expect(screen.queryByTestId('skins-unwon')).toBeNull();
-
+    expect(screen.queryByTestId('skins-settlement-link')).toBeNull();
     unmount();
 
-    // 2) Uvunne skins vises når spillet er ferdig og carriedPot > 0 — inkludert
-    //    tidlig-avsluttet spill med gap etter et delt hull (#303). Mock-en har
-    //    et trailing pending hull (hull 3) men carriedPot fra siste delte spilte
-    //    hull skal likevel rapporteres som uvunnet når status='finished'.
-    const resultWithUnwon: SkinsResult = {
-      ...makeResult(),
-      carriedPot: 3,
-    };
+    // Hengende pott: uvunne skins når ferdig (#303), aldri under aktivt spill.
+    const resultWithUnwon: SkinsResult = { ...makeResult(), carriedPot: 3 };
     const { unmount: unmount2 } = render(
-      <SkinsView {...defaultProps({ result: resultWithUnwon, gameStatus: 'finished' })} />,
+      <SkinsView {...defaultProps({ result: resultWithUnwon })} />,
     );
-    const unwonBox = screen.getByTestId('skins-unwon');
-    expect(unwonBox.textContent).toContain('3');
-    expect(unwonBox.textContent).toContain('ikke vunnet');
-    expect(unwonBox.textContent).toContain('Siste spilte hull ble delt');
+    expect(screen.getByTestId('skins-unwon')).toBeTruthy();
     unmount2();
-
-    // 2b) Samme hengende pott under AKTIVT spill → banneret skal IKKE vises
-    //     (potten er fortsatt i spill, synlig via pending-hullets carriedIn).
-    const { unmount: unmount2b } = render(
-      <SkinsView {...defaultProps({ result: resultWithUnwon, gameStatus: 'active' })} />,
-    );
+    render(<SkinsView {...defaultProps({ result: resultWithUnwon, gameStatus: 'active' })} />);
     expect(screen.queryByTestId('skins-unwon')).toBeNull();
-    unmount2b();
+  });
 
-    // 3) Reveal-modus midt-runde → skjuler tall, viser venterom-melding.
+  it('live: toppkortet står over myntene, og hullet potten står på er markert', () => {
+    render(<SkinsView {...defaultProps({ gameStatus: 'active' })} />);
+
+    const hero = screen.getByTestId('skins-pot-hero');
+    const coins = screen.getByTestId('skins-coins');
+    expect(hero.compareDocumentPosition(coins) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Toppkortet bærer sidens h1 i stedet for «Leaderboard».
+    expect(within(hero).getByRole('heading', { level: 1 })).toBeTruthy();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+
+    const states = within(coins)
+      .getAllByRole('listitem')
+      .map((li) => li.getAttribute('data-coin'));
+    expect(states).toEqual(['carried', 'potWon', 'current']);
+  });
+
+  it('lenka til oppgjøret finnes bare med oppgjør, og peker på det', () => {
+    const settlement = computeSettlement({
+      units: [
+        { userId: 'u1', units: 2 },
+        { userId: 'u2', units: 0 },
+        { userId: 'u3', units: 0 },
+      ],
+      krPerUnit: 10,
+      unitLabel: 'skin',
+    });
+    const { container } = render(
+      <SkinsView {...defaultProps({ gameStatus: 'active', settlement })} />,
+    );
+    const link = screen.getByTestId('skins-settlement-link');
+    expect(link.getAttribute('href')).toBe('#oppgjoret');
+    expect(container.querySelector('#oppgjoret')).not.toBeNull();
+  });
+
+  it('avsløring midt i runden: venterom uten mynter, pott eller stilling', () => {
     render(
       <SkinsView
         {...defaultProps({
@@ -195,10 +201,9 @@ describe('SkinsView', () => {
         })}
       />,
     );
-    const hidden = screen.getByTestId('skins-reveal-hidden');
-    expect(hidden.textContent).toContain('Resultatene avsløres etter runden');
-    // Leaderboard og hull-listen skal ikke være rendret.
+    expect(screen.getByTestId('skins-reveal-hidden')).toBeTruthy();
+    expect(screen.queryByTestId('skins-pot-hero')).toBeNull();
+    expect(screen.queryByTestId('skins-coins')).toBeNull();
     expect(screen.queryByTestId('skins-leaderboard')).toBeNull();
-    expect(screen.queryByTestId('skins-hole-list')).toBeNull();
   });
 });
