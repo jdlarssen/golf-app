@@ -236,7 +236,12 @@ export const getActiveRoundsDelivery = cache(
     }
     if (gamesData.length === 0) return { games: [], players: [] };
 
-    const activeIds = gamesData.map((g) => g.id);
+    // The rosters and strokes are filtered on the parent game's status, not
+    // `.in('game_id', ids)`: a few hundred ids overrun PostgREST's URL limit
+    // (400 failed on staging, #2214; it held 299 active games on 13.11), and
+    // paging does not help. Both forms return the same rows.
+    // A game that changes status between the reads is skipped by the helpers,
+    // which walk `gamesData`.
 
     // 2. Fetch all game_players for those games. Withdrawn players stay in:
     //    `holesFilledByGame` needs the whole team to pick its row owner, and
@@ -245,8 +250,10 @@ export const getActiveRoundsDelivery = cache(
       (from, to) =>
         supabase
           .from('game_players')
-          .select('game_id, user_id, team_number, submitted_at, approved_at, withdrawn_at')
-          .in('game_id', activeIds)
+          .select(
+            'game_id, user_id, team_number, submitted_at, approved_at, withdrawn_at, games!inner(status)',
+          )
+          .eq('games.status', 'active')
           .order('game_id')
           .order('user_id')
           .range(from, to),
@@ -258,9 +265,9 @@ export const getActiveRoundsDelivery = cache(
       (from, to) =>
         supabase
           .from('scores')
-          .select('game_id, user_id, hole_number')
+          .select('game_id, user_id, hole_number, games!inner(status)')
           .not('strokes', 'is', null)
-          .in('game_id', activeIds)
+          .eq('games.status', 'active')
           .order('id')
           .range(from, to),
       'getActiveRoundsDelivery scores',
