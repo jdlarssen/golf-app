@@ -1,15 +1,15 @@
 // #2754: hvem som får reaksjoner på tavla i appen.
 //
-// Samme formater som nettet: tavla for slagspill og solo stableford, og de sju
+// Samme formater som nettet: tavla for slagspill og solo stableford, og de seks
 // enkle formatene der en rad er én spiller. Lag, matchplay og Patsome står i
-// #977, og de koster verken lesing eller kanal.
+// #977, og de koster verken lesing eller kanal. Skins har en slank stilling
+// uten reaksjoner (#2317, som tegningen); appen har ingen pall som bruker dem.
 import type { GameBundle } from '../data/gameBundle';
 import { hasSoloBoard } from './soloBoard';
 
 const SIMPLE_FORMATS: ReadonlySet<string> = new Set([
   'wolf',
   'nassau',
-  'skins',
   'bingo_bango_bongo',
   'nines',
   'round_robin',

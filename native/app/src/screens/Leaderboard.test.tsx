@@ -396,13 +396,13 @@ describe('Leaderboard — reaksjonene (#2754)', () => {
     expect(screen.getByTestId('reaction-strip')).toBeTruthy();
   });
 
-  it('skins: stripa kommer også uten egen tavle, nederst på skjermen', async () => {
+  it('nassau: stripa kommer også uten egen tavle, nederst på skjermen', async () => {
     mockBundleOverride.current = {
       ...mockBundle,
       game: {
         ...bundleGame,
-        gameMode: 'skins',
-        modeConfig: { kind: 'skins', team_size: 1, skins_scoring: 'net' },
+        gameMode: 'nassau',
+        modeConfig: { kind: 'nassau', team_size: 1, nassau_scoring: 'net' },
       },
     };
     await renderLeaderboard();
@@ -419,6 +419,8 @@ describe('Leaderboard — reaksjonene (#2754)', () => {
     ['texas_scramble', { kind: 'texas_scramble', team_size: 2 }],
     ['stableford', { kind: 'stableford', team_size: 2, points_table: 'standard' }],
     ['patsome', { kind: 'patsome', team_size: 2 }],
+    // #2317: Skins-stillingen er en slank liste uten reaksjoner.
+    ['skins', { kind: 'skins', team_size: 1, skins_scoring: 'net' }],
   ])('%s leser ingen reaksjoner og åpner ingen kanal', async (gameMode, modeConfig) => {
     mockBundleOverride.current = {
       ...mockBundle,
@@ -1388,8 +1390,8 @@ describe('resultatets topp', () => {
 
   it('et format uten tavle: setningen over tabellen, og spillnavnet står ikke to ganger', async () => {
     mockBundleOverride.current = game({
-      gameMode: 'skins',
-      modeConfig: { kind: 'skins', team_size: 1, skins_scoring: 'net' },
+      gameMode: 'nassau',
+      modeConfig: { kind: 'nassau', team_size: 1, nassau_scoring: 'net' },
     });
     await renderLeaderboard();
     await waitFor(() => expect(screen.getByTestId('result-hero')).toBeTruthy());
