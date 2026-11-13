@@ -52,7 +52,9 @@ export function EmbedBoard({
   return (
     <div
       data-testid="embed-board"
-      className="flex flex-col overflow-hidden rounded-[14px] border border-embed-card-border bg-bg leading-[normal] text-text"
+      // The reveal card has no rows: it fills the frame (sized for the full
+      // board) as a place waiting for the board, not a short card over a gap.
+      className={`flex flex-col overflow-hidden rounded-[14px] border border-embed-card-border bg-bg leading-[normal] text-text ${board === null ? 'min-h-dvh' : ''}`}
     >
       <div className="flex items-center justify-between gap-2 border-b border-row-divider-warm px-3.5 py-3">
         <h1 className="font-serif text-[18px] font-semibold">
@@ -63,7 +65,7 @@ export function EmbedBoard({
       </div>
 
       {board === null ? (
-        <p data-testid="embed-hidden" className="px-3.5 py-6 text-center text-[13px] text-muted">
+        <p data-testid="embed-hidden" className="flex grow items-center justify-center px-3.5 py-6 text-center text-[13px] text-muted">
           {t('hidden')}
         </p>
       ) : (
