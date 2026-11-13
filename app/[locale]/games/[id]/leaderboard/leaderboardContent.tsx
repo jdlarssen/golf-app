@@ -372,6 +372,7 @@ export async function renderLeaderboardContent({
       rawScoresRows: scopedScoresRows,
       backHref,
       prizeAwardsNode,
+      viewerUserId: viewerUserId || null,
     }));
   }
 
