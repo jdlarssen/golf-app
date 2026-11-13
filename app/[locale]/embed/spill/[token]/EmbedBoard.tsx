@@ -95,7 +95,8 @@ export function EmbedBoard({
               rel="noopener"
               data-testid="embed-more"
               data-focus-inset
-              className="flex min-h-11 items-center justify-center border-t border-row-divider-warm text-[13px] font-semibold text-primary"
+              // box-content as drawn: 44 px to tap plus the 1 px line above.
+              className="box-content flex min-h-11 items-center justify-center border-t border-row-divider-warm text-[13px] font-semibold text-primary"
             >
               {live ? t('showAll', { count: board.fieldSize }) : t('fullResult')}
             </a>
