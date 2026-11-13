@@ -94,8 +94,10 @@ describe('NassauBoard', () => {
     // Back 9 er åpen: vanlige plasser, ingen skive og ingen medalje.
     expect(screen.queryByTestId('nassau-row-gold')).toBeNull();
     expect(screen.queryByTestId('board-medal-2', { includeHiddenElements: true })).toBeNull();
-    expect(screen.queryByTestId('nassau-mark-decided')).toBeNull();
-    expect(screen.getAllByTestId('nassau-mark-live', { includeHiddenElements: true }).length).toBeGreaterThan(0);
+    // Bare Front 9 er avgjort, så bare det kortet har gullskiven; Back 9 og Totalt har ringen.
+    const hidden = { includeHiddenElements: true };
+    expect(screen.getAllByTestId('nassau-mark-decided', hidden)).toHaveLength(1);
+    expect(screen.getAllByTestId('nassau-mark-live', hidden)).toHaveLength(2);
     expect(screen.queryByTestId('nassau-section-back9-push')).toBeNull();
     // Front 9 er avgjort for alle, og kortet sier det.
     expect(board.sections.front9.state).toBe('decided');
