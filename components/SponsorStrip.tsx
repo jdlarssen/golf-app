@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useLocale, useTranslations } from 'next-intl';
 import { sponsorLogoUrl } from '@/lib/storage/sponsorLogoUrl';
-import type { GamePrize } from '@/lib/games/prizes';
+import { sponsorStripItems, type GamePrize } from '@/lib/games/prizes';
 
 /**
  * #1051/#1052: diskret sponsor-stripe på tavle-flatene (live-tavla,
@@ -24,25 +24,9 @@ export function SponsorStrip({
   const t = useTranslations('prizes');
   const locale = useLocale();
 
-  const logos: Array<{ path: string; alt: string }> = [];
-  const seenPaths = new Set<string>();
-  const namesWithLogo = new Set<string>();
-  for (const p of prizes) {
-    if (!p.sponsorLogoPath) continue;
-    const name = p.sponsor?.trim() ?? '';
-    if (name) namesWithLogo.add(name);
-    if (seenPaths.has(p.sponsorLogoPath)) continue;
-    seenPaths.add(p.sponsorLogoPath);
-    logos.push({ path: p.sponsorLogoPath, alt: name || t('logoAlt') });
-  }
-
-  const names = Array.from(
-    new Set(
-      prizes
-        .map((p) => p.sponsor?.trim())
-        .filter((s): s is string => s != null && s.length > 0),
-    ),
-  ).filter((name) => !namesWithLogo.has(name));
+  const items = sponsorStripItems(prizes);
+  const logos = items.logos.map((l) => ({ path: l.path, alt: l.alt ?? t('logoAlt') }));
+  const { names } = items;
 
   if (logos.length === 0 && names.length === 0) return null;
 

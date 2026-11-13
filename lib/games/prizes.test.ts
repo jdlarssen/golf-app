@@ -15,6 +15,7 @@ import {
   activePrizeSlots,
   PRIZE_SLOTS,
   safeParsePrizes,
+  sponsorStripItems,
   prunePrizes,
   prizeFieldName,
   prizeDraftFromList,
@@ -348,5 +349,36 @@ describe('countPrizesInPlay — samme regel som prunePrizes (#2457)', () => {
     expect(prizeShapeFor({ gameMode: 'fourball_matchplay', sideEnabled: true, sideLdCount: 1, sideCtpCount: 2 })).toEqual(
       { hasPodium: false, ldCount: 1, ctpCount: 2 },
     );
+  });
+});
+
+describe('sponsorStripItems (#2330) — what the sponsor strip shows', () => {
+  const p = (position: number, sponsor: string | null, sponsorLogoPath: string | null = null): GamePrize => ({
+    category: 'placement',
+    position,
+    description: 'Premie',
+    sponsor,
+    sponsorLogoPath,
+  });
+
+  it('one logo per path, named by its sponsor; names without a logo listed once', () => {
+    expect(
+      sponsorStripItems([
+        p(1, 'Klubbshoppen', 'uid/a.webp'),
+        p(2, 'Klubbshoppen', 'uid/a.webp'),
+        p(3, 'Baren'),
+        { ...p(1, 'Baren'), category: 'longest_drive' },
+      ]),
+    ).toEqual({ logos: [{ path: 'uid/a.webp', alt: 'Klubbshoppen' }], names: ['Baren'] });
+  });
+
+  it('a name that has a logo elsewhere is not repeated as text; a logo without a name has no alt', () => {
+    expect(
+      sponsorStripItems([p(1, 'Klubbshoppen', 'uid/a.webp'), p(2, 'Klubbshoppen'), p(3, null, 'uid/b.webp')]),
+    ).toEqual({ logos: [{ path: 'uid/a.webp', alt: 'Klubbshoppen' }, { path: 'uid/b.webp', alt: null }], names: [] });
+  });
+
+  it('nothing to show without sponsors', () => {
+    expect(sponsorStripItems([p(1, null), p(2, '  ')])).toEqual({ logos: [], names: [] });
   });
 });
