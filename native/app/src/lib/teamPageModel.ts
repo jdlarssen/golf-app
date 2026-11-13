@@ -13,60 +13,28 @@
 //  - «•••» står for den som har sagt ja eller ikke har svart. «Send på nytt» bare for
 //    den som ikke har svart, «Gi kapteinsrollen» bare for den som har sagt ja og ikke er
 //    gjest (0228), og «Fjern fra laget» for begge.
-import type {
-  AppTeamPageMember,
-  AppTeamPageTeam,
-  TeamRequestStatus,
-} from '../../../../lib/games/appRoundInviteView';
+import type { AppTeamPageTeam } from '../../../../lib/games/appRoundInviteView';
+import {
+  answeredYes as answeredYesOf,
+  freeSlotCount as freeSlotsOf,
+  memberState,
+  menuActions,
+  orderedMembers,
+} from '../../../../lib/games/teamPageModel';
 
-export type MemberState = 'approved' | 'pending' | 'declined';
-
-/** `rejected` (sa nei) og `withdrawn` (trakk seg) er begge «Takket nei». */
-export function memberState(status: TeamRequestStatus): MemberState {
-  if (status === 'approved') return 'approved';
-  if (status === 'pending') return 'pending';
-  return 'declined';
-}
-
-const RANK: Record<MemberState, number> = { approved: 0, pending: 1, declined: 2 };
-
-/** Medspillerne i rekkefølgen tegningen har: ja, venter, nei. Ellers som serveren sendte dem. */
-export function orderedMembers(members: readonly AppTeamPageMember[]): AppTeamPageMember[] {
-  return members
-    .map((member, index) => ({ member, index }))
-    .sort((a, b) => RANK[memberState(a.member.status)] - RANK[memberState(b.member.status)] || a.index - b.index)
-    .map(({ member }) => member);
-}
+// Reglene bor i `lib/games/teamPageModel.ts`, som nettets lagside også leser (#2840 del 5).
+// Her er bare appens innpakning med hele laget som inndata.
+export { memberState, menuActions, orderedMembers };
+export type { MemberState, MenuAction } from '../../../../lib/games/teamPageModel';
 
 /** Plassene ingen rad holder. 0 når formatet ikke har en lagstørrelse. */
 export function freeSlotCount(team: Pick<AppTeamPageTeam, 'game' | 'members'>): number {
-  const size = team.game.teamSize;
-  if (size === null) return 0;
-  return Math.max(0, size - 1 - team.members.length);
+  return freeSlotsOf(team.game.teamSize, team.members.length);
 }
 
 /** «2 av 3 har svart ja»: av dem som er med på laget nå, hvor mange som har sagt ja. */
 export function answeredYes(team: Pick<AppTeamPageTeam, 'captain' | 'members'>): { yes: number; of: number } {
-  const captainIn = team.captain !== null && memberState(team.captain.status) !== 'declined' ? 1 : 0;
-  const active = team.members.filter((m) => memberState(m.status) !== 'declined');
-  return {
-    yes: captainIn + active.filter((m) => m.status === 'approved').length,
-    of: captainIn + active.length,
-  };
-}
-
-export type MenuAction = 'resend' | 'transfer' | 'remove';
-
-/** Det «•••» har for akkurat denne medspilleren. Tom: ingen «•••». */
-export function menuActions(member: Pick<AppTeamPageMember, 'status' | 'isGuest'>): MenuAction[] {
-  switch (memberState(member.status)) {
-    case 'pending':
-      return ['resend', 'remove'];
-    case 'approved':
-      return member.isGuest ? ['remove'] : ['transfer', 'remove'];
-    case 'declined':
-      return [];
-  }
+  return answeredYesOf(team.captain, team.members);
 }
 
 export type LineupEntry =

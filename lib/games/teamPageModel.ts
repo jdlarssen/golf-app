@@ -8,8 +8,9 @@ import type {
  * The team page's rules without words (#2840 del 5), for the web's
  * `/signup/[shortId]/team`. Pure (Type A).
  *
- * The drawing v3.1, «3. Lagsiden», is the spec, and the app reads the same
- * rules in `native/app/src/lib/teamPageModel.ts`:
+ * The drawing v3.1, «3. Lagsiden», is the spec. The rules have one home here:
+ * the app's `native/app/src/lib/teamPageModel.ts` re-exports them and wraps
+ * the two that take the whole team:
  *  - A free seat is a seat no row holds. A teammate who said no holds no seat
  *    in `addTeamMemberCore`, but keeps a row with «Bytt med en venn», so the
  *    free seats are `teamSize − 1 − rows`.
