@@ -34,7 +34,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(56);
+select plan(58);
 
 \ir fixtures/rls_helpers.psql
 
@@ -162,6 +162,19 @@ select ok(
 select ok(
   not has_function_privilege('authenticated', 'public.is_side_contest_hole(uuid, text, integer)', 'execute'),
   'is_side_contest_hole is internal: no client role runs it');
+
+-- has_table_privilege with a list is true when ANY of them is held.
+select ok(
+  not has_table_privilege('anon', 'public.game_side_claims', 'select, insert, update, delete, truncate, references, trigger')
+  and not has_table_privilege('anon', 'public.game_gir_claims', 'select, insert, update, delete, truncate, references, trigger'),
+  'anon holds no privilege on either table');
+
+select ok(
+  has_table_privilege('authenticated', 'public.game_side_claims', 'select')
+  and has_table_privilege('authenticated', 'public.game_gir_claims', 'select')
+  and not has_table_privilege('authenticated', 'public.game_side_claims', 'insert, update, delete, truncate, references, trigger')
+  and not has_table_privilege('authenticated', 'public.game_gir_claims', 'insert, update, delete, truncate, references, trigger'),
+  'authenticated holds only SELECT on both tables');
 
 -- ═════════════════════════════════════════════════════════════════════════════
 -- Flight key
