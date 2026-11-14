@@ -8,6 +8,7 @@ import {
 } from './types';
 import { OFF_APP_THRESHOLD_MS } from './thresholds';
 import { QUIET_KINDS } from './readOnVisit';
+import { shouldPush, type PushPreferences } from './pushPreferences';
 import { sendPushToUser } from './push/sendPush';
 
 // Re-export så eksisterende imports fra notify.ts ikke brekker.
@@ -48,8 +49,9 @@ export async function notify<K extends NotificationKind>(opts: {
 
   // Insert + lookup last_seen_at i parallell. Insert er den autoritative
   // operasjonen; mail-gaten er informativ. The new row's id rides on the push
-  // link, so a tap marks exactly this notification read (#2201).
-  const [insertRes, userRes] = await Promise.all([
+  // link, so a tap marks exactly this notification read (#2201). The player's
+  // push choices are read alongside (#2315); no row means everything on.
+  const [insertRes, userRes, prefsRes] = await Promise.all([
     admin
       .from('notifications')
       .insert({
@@ -69,6 +71,11 @@ export async function notify<K extends NotificationKind>(opts: {
         is_guest: boolean;
         deleted_at: string | null;
       }>(),
+    admin
+      .from('notification_preferences')
+      .select('muted_groups, quiet_hours')
+      .eq('user_id', userId)
+      .maybeSingle(),
   ]);
 
   if (insertRes.error) {
@@ -99,12 +106,24 @@ export async function notify<K extends NotificationKind>(opts: {
 
   const offApp = shouldSendMailFallback(userRes.data?.last_seen_at ?? null);
 
+  // #2315: a failed read pushes as before, so a player never goes dark because
+  // of the choices.
+  if (prefsRes.error) {
+    console.error('[notifications] push preferences read failed', prefsRes.error);
+  }
+  const prefs: PushPreferences | null =
+    !prefsRes.error && prefsRes.data
+      ? { mutedGroups: prefsRes.data.muted_groups, quietHours: prefsRes.data.quiet_hours }
+      : null;
+
   // Additive Web Push: when the user is off-app, also push to their devices.
   // Best-effort — sendPushToUser never throws. Email is unchanged (offApp), so a
   // blocked/failed push never leaves the user dark. (#24, spec §4)
   // #2201: news about Tørny is never pushed (the owner's choice); the row
   // above still feeds the inbox and the banner on Hjem.
-  if (offApp && !QUIET_KINDS.includes(kind)) {
+  // #2315: nor is a group the player muted, or one that can be turned off
+  // during quiet hours at night. The inbox row and the email stand.
+  if (offApp && !QUIET_KINDS.includes(kind) && shouldPush({ kind, prefs, now: new Date() })) {
     await sendPushToUser({
       userId,
       kind,
