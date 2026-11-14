@@ -60,6 +60,7 @@ export function HcpRuler({
   min,
   stored,
   onChange,
+  disabled = false,
   accessibilityValueText,
 }: {
   value: number;
@@ -68,6 +69,8 @@ export function HcpRuler({
   /** Det lagrede tallet, som prikken under merkene. */
   stored: number;
   onChange: (value: number) => void;
+  /** Lagringen pågår: linjalen står stille, også for skjermleseren. */
+  disabled?: boolean;
   /** «13,8, 0,4 lavere enn sist». */
   accessibilityValueText: string;
 }) {
@@ -94,6 +97,7 @@ export function HcpRuler({
   };
 
   const onAccessibilityAction = (event: AccessibilityActionEvent) => {
+    if (disabled) return;
     const delta = event.nativeEvent.actionName === 'increment' ? 1 : -1;
     const next = stepHcp(reported.current, delta, min);
     scrollRef.current?.scrollTo({ x: hcpToOffset(next, min), animated: false });
@@ -127,6 +131,7 @@ export function HcpRuler({
         <ScrollView
           ref={scrollRef}
           horizontal
+          scrollEnabled={!disabled}
           showsHorizontalScrollIndicator={false}
           contentOffset={startOffset}
           snapToInterval={RULER_STEP}

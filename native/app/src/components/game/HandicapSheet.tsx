@@ -12,9 +12,13 @@
 //
 // Tastaturet: `KeyboardAvoidingView` rundt arket, som avvisningsarket
 // (`RejectSheet`), så «Lagre» står rett over tastaturet mens feltet er oppe.
-import { useRef, useState } from 'react';
+// Talltastaturet på iPhone har ingen Ferdig-tast. Et trykk på arket utenfor
+// feltet lukker det, og når tastaturet går ned (også med tilbake på Android,
+// som ikke tar fokus fra feltet), kommer linjalen tilbake.
+import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Pressable,
@@ -88,7 +92,8 @@ export function HandicapSheet({
   const candidate = typing ? typed : value;
   const invalid = typing && text.trim() !== '' && typed === null;
   const change = hcpChange(stored, candidate ?? value);
-  const fromLast = fromLastLine(change);
+  // Et tomt eller ugyldig felt har ikke noe tall å måle fra.
+  const fromLast = candidate === null ? null : fromLastLine(change);
   const canSave = candidate !== null && online && !pending;
 
   const cancel = () => {
@@ -117,6 +122,17 @@ export function HandicapSheet({
     setTyping(false);
     setText('');
   };
+
+  // Tastaturet gikk ned mens feltet var oppe: tilbake til linjalen.
+  useEffect(() => {
+    if (!typing) return undefined;
+    const sub = Keyboard.addListener('keyboardDidHide', () => {
+      if (typed !== null) setValue(typed);
+      setTyping(false);
+      setText('');
+    });
+    return () => sub.remove();
+  }, [typing, typed]);
 
   // Dra ned fra toppen av arket. Rå berøringer, ikke en responder: ✕ i samme
   // rad skal fortsatt få trykket sitt. `pageY` er skjermens, så arket som
@@ -174,116 +190,126 @@ export function HandicapSheet({
             onAccessibilityEscape={cancel}
             testID="hcp-sheet"
           >
+            {/* Mens feltet er oppe: et trykk på arket utenfor feltet og
+                knappene lukker tastaturet. Feltet og knappene ligger dypere og
+                tar trykket sitt selv. */}
             <View
-              style={styles.top}
-              onTouchStart={onTouchStart}
-              onTouchMove={onTouchMove}
-              onTouchEnd={endDrag}
-              onTouchCancel={endDrag}
-              testID="hcp-sheet-top"
+              style={styles.body}
+              onStartShouldSetResponder={() => typing}
+              onResponderRelease={() => Keyboard.dismiss()}
+              testID="hcp-sheet-body"
             >
-              <View style={[styles.grabber, { backgroundColor: sheetGrabber(scheme) }]} />
-              <View style={styles.head}>
-                <View style={styles.headText}>
-                  <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
-                    {HANDICAP_TEXT.sheetTitle}
-                  </Text>
-                  <Text style={[styles.subtitle, { color: colors.muted }]} testID="hcp-sheet-subtitle">
-                    {sheetSubtitle(updatedAt, stored)}
-                  </Text>
-                </View>
-                <Pressable
-                  onPress={cancel}
-                  style={styles.close}
-                  accessibilityRole="button"
-                  accessibilityLabel={HANDICAP_TEXT.close}
-                  testID="hcp-sheet-close"
-                >
-                  <LukkIcon color={colors.text} size={20} strokeWidth={2} />
-                </Pressable>
-              </View>
-            </View>
-
-            {typing ? (
-              <View style={styles.fieldBlock}>
-                <TextInput
-                  value={text}
-                  onChangeText={setText}
-                  onBlur={stopTyping}
-                  autoFocus
-                  keyboardType="decimal-pad"
-                  autoComplete="off"
-                  autoCorrect={false}
-                  accessibilityLabel={HANDICAP_TEXT.fieldLabel}
-                  style={[styles.field, { color: colors.text, borderBottomColor: colors.primary }]}
-                  testID="hcp-sheet-field"
-                />
-                {invalid ? (
-                  <Text
-                    accessibilityRole="alert"
-                    style={[styles.alert, { color: colors.danger }]}
-                    testID="hcp-sheet-invalid"
-                  >
-                    {invalidLine}
-                  </Text>
-                ) : (
-                  <FromLast change={change.direction} line={fromLast} />
-                )}
-              </View>
-            ) : (
-              <>
-                <View style={styles.numberBlock}>
-                  <Text
-                    style={[styles.number, { color: colors.text }]}
-                    accessibilityLiveRegion="polite"
-                    testID="hcp-sheet-number"
-                  >
-                    {formatHcpNb(value)}
-                  </Text>
-                  <FromLast change={change.direction} line={fromLast} />
-                </View>
-                <HcpRuler
-                  value={value}
-                  min={min}
-                  stored={stored}
-                  onChange={setValue}
-                  accessibilityValueText={rulerA11yValue(value, change)}
-                />
-                <Pressable
-                  onPress={startTyping}
-                  style={styles.typeButton}
-                  accessibilityRole="button"
-                  testID="hcp-sheet-type"
-                >
-                  <Text style={[styles.typeText, { color: colors.primary }]}>{HANDICAP_TEXT.typeNumber}</Text>
-                </Pressable>
-              </>
-            )}
-
-            <Pressable
-              onPress={() => void save()}
-              disabled={!canSave}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: !canSave, busy: pending }}
-              style={[styles.save, { backgroundColor: colors.primary }, !canSave && styles.off]}
-              testID="hcp-sheet-save"
-            >
-              <Text style={[styles.saveText, { color: colors.onPrimary }]}>{saveText}</Text>
-            </Pressable>
-            {error ? (
-              <Text
-                accessibilityRole="alert"
-                style={[styles.alert, { color: colors.danger }]}
-                testID="hcp-sheet-error"
+              <View
+                style={styles.top}
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={endDrag}
+                onTouchCancel={endDrag}
+                testID="hcp-sheet-top"
               >
-                {error}
-              </Text>
-            ) : null}
-            {!online ? (
-              <Text style={[styles.offline, { color: colors.muted }]} testID="hcp-sheet-offline">
-                {HANDICAP_TEXT.needsNetwork}
-              </Text>
-            ) : null}
+                <View style={[styles.grabber, { backgroundColor: sheetGrabber(scheme) }]} />
+                <View style={styles.head}>
+                  <View style={styles.headText}>
+                    <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
+                      {HANDICAP_TEXT.sheetTitle}
+                    </Text>
+                    <Text style={[styles.subtitle, { color: colors.muted }]} testID="hcp-sheet-subtitle">
+                      {sheetSubtitle(updatedAt, stored)}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={cancel}
+                    style={styles.close}
+                    accessibilityRole="button"
+                    accessibilityLabel={HANDICAP_TEXT.close}
+                    testID="hcp-sheet-close"
+                  >
+                    <LukkIcon color={colors.text} size={20} strokeWidth={2} />
+                  </Pressable>
+                </View>
+              </View>
+
+              {typing ? (
+                <View style={styles.fieldBlock}>
+                  <TextInput
+                    value={text}
+                    onChangeText={setText}
+                    onBlur={stopTyping}
+                    autoFocus
+                    keyboardType="decimal-pad"
+                    autoComplete="off"
+                    autoCorrect={false}
+                    accessibilityLabel={HANDICAP_TEXT.fieldLabel}
+                    style={[styles.field, { color: colors.text, borderBottomColor: colors.primary }]}
+                    testID="hcp-sheet-field"
+                  />
+                  {invalid ? (
+                    <Text
+                      accessibilityRole="alert"
+                      style={[styles.alert, { color: colors.danger }]}
+                      testID="hcp-sheet-invalid"
+                    >
+                      {invalidLine}
+                    </Text>
+                  ) : (
+                    <FromLast change={change.direction} line={fromLast} />
+                  )}
+                </View>
+              ) : (
+                <>
+                  <View style={styles.numberBlock}>
+                    {/* Ingen live-region: linjalen sier tallet selv, og TalkBack
+                        ville ellers lest hver tidel mens den dras. */}
+                    <Text style={[styles.number, { color: colors.text }]} testID="hcp-sheet-number">
+                      {formatHcpNb(value)}
+                    </Text>
+                    <FromLast change={change.direction} line={fromLast} />
+                  </View>
+                  <HcpRuler
+                    value={value}
+                    min={min}
+                    stored={stored}
+                    onChange={setValue}
+                    // Tallet som lagres står fast til svaret kommer.
+                    disabled={pending}
+                    accessibilityValueText={rulerA11yValue(value, change)}
+                  />
+                  <Pressable
+                    onPress={startTyping}
+                    style={styles.typeButton}
+                    accessibilityRole="button"
+                    testID="hcp-sheet-type"
+                  >
+                    <Text style={[styles.typeText, { color: colors.primary }]}>{HANDICAP_TEXT.typeNumber}</Text>
+                  </Pressable>
+                </>
+              )}
+
+              <Pressable
+                onPress={() => void save()}
+                disabled={!canSave}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !canSave, busy: pending }}
+                style={[styles.save, { backgroundColor: colors.primary }, !canSave && styles.off]}
+                testID="hcp-sheet-save"
+              >
+                <Text style={[styles.saveText, { color: colors.onPrimary }]}>{saveText}</Text>
+              </Pressable>
+              {error ? (
+                <Text
+                  accessibilityRole="alert"
+                  style={[styles.alert, { color: colors.danger }]}
+                  testID="hcp-sheet-error"
+                >
+                  {error}
+                </Text>
+              ) : null}
+              {!online ? (
+                <Text style={[styles.offline, { color: colors.muted }]} testID="hcp-sheet-offline">
+                  {HANDICAP_TEXT.needsNetwork}
+                </Text>
+              ) : null}
+            </View>
           </Animated.View>
         </KeyboardAvoidingView>
       </View>
@@ -312,8 +338,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 22,
     paddingTop: 10,
     paddingHorizontal: 20,
-    gap: 14,
   },
+  body: { gap: 14 },
   top: { gap: 14 },
   grabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: 999 },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
