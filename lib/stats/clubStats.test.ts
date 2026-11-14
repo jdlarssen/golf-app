@@ -186,3 +186,32 @@ describe('wins: a league flight (#2712, #2850)', () => {
   });
 });
 
+
+// #2259: a derived game (a cup match played on the host game's strokes) is the same
+// physical round as its host. The win is the match's own, the round is not counted twice.
+describe('tallyClubStats: a derived game (#2259)', () => {
+  it('credits the win but not an extra round', () => {
+    const { winnerCounts, participationCounts } = tallyClubStats(
+      [
+        { id: 'host', players: [row('anne', placement(1)), row('bjorn', placement(2))] },
+        {
+          id: 'cup-kamp',
+          derived: true,
+          players: [row('anne', matchplay('win')), row('bjorn', matchplay('loss'))],
+        },
+      ],
+      new Map(),
+    );
+    expect(winnerCounts.get('anne')).toBe(2);
+    expect(participationCounts.get('anne')).toBe(1);
+    expect(participationCounts.get('bjorn')).toBe(1);
+  });
+
+  it('a derived game alone gives no round at all', () => {
+    const { participationCounts } = tallyClubStats(
+      [{ id: 'cup-kamp', derived: true, players: [row('anne', matchplay('win'))] }],
+      new Map(),
+    );
+    expect(participationCounts.size).toBe(0);
+  });
+});

@@ -81,6 +81,11 @@ export type FinishedGameForTally = {
   players: StatPlayerRow[];
   /** #2712: the game is a league flight (counts as played, not won). */
   leagueFlight?: boolean;
+  /**
+   * #2259: a derived game (`source_game_id` set; a cup match on the host game's
+   * strokes). Its win counts, but it is the host's round, so it is no round of its own.
+   */
+  derived?: boolean;
 };
 
 export type ClubStatTally = {
@@ -109,8 +114,10 @@ export function tallyClubStats(
       { leagueFlight: game.leagueFlight },
     );
 
-    for (const userId of participants) {
-      participationCounts.set(userId, (participationCounts.get(userId) ?? 0) + 1);
+    if (!game.derived) {
+      for (const userId of participants) {
+        participationCounts.set(userId, (participationCounts.get(userId) ?? 0) + 1);
+      }
     }
 
     const winnerIds = needsFallback
