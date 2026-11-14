@@ -139,7 +139,7 @@ bypasses every TS guard — only RLS + the guard trigger stop it.
 **«Dine data» describes these rules to the player (#2332).** When you change who can read `users`,
 `roster_candidates`, `handicap_history`, `invitations`, `games` (incl. `round_report`, `payment_link`),
 `game_players` (incl. `paid_at`), `scores`, `reactions`, `friendships`, `group_members`, `ai_consents`,
-`kavalkades`, `kavalkade_shares`, `notifications`, the push-token tables or `idea_submissions` — or
+`kavalkades`, `kavalkade_shares`, `notifications`, `notification_preferences`, the push-token tables or `idea_submissions` — or
 widen a service-role surface over them (spectate, embeds, the finished-game board) — update
 `messages/*.json → profile.data`, `DATA_TEXT` and the source comment above `DATA_ROWS` in
 `native/app/src/lib/profileCopy.ts` in the same PR.
