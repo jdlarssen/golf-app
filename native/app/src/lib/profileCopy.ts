@@ -250,7 +250,10 @@ export const PROFILE_TEXT = {
  *
  * - `profile`: navnet via `users select own or shared games` (alle du deler et
  *   spill med) og venne- og klubbsidene, som bare viser navn og kallenavn
- *   (`lib/friends/getFriendData.ts`, `lib/clubs/getClubDetail.ts`). Handicap,
+ *   (`lib/friends/getFriendData.ts`, `lib/clubs/getClubDetail.ts`). Uten
+ *   innlogging viser en åpen påmeldingsside spillerlista med «Ola N.»
+ *   (`getPublicSignupRoster` → `formatPublicName`,
+ *   `app/[locale]/signup/[shortId]/page.tsx:152`). Handicap,
  *   kjønn og spillerklasse via `roster_candidates` (0181) bak
  *   `is_invite_eligible` (0202): vennskap i hvilken som helst status, også en
  *   ventende forespørsel begge veier, medspillere i et spill som ikke er en
@@ -309,7 +312,7 @@ export const DATA_TEXT = {
   rows: {
     profile: {
       title: 'Navn, handicap og golfprofil',
-      body: 'Navnet ser de du spiller med, vennene dine og de andre i klubbene dine. Handicapet, kjønnet og spillerklassen ser de du spiller med og de som kan invitere deg: vennene dine, den du har en venneforespørsel med, og den som setter opp et spill i klubben din. Handicaphistorikken ser bare du.',
+      body: 'Navnet ser de du spiller med, vennene dine og de andre i klubbene dine. Uten innlogging viser påmeldingssiden til et åpent spill bare fornavnet og forbokstaven i etternavnet. Handicapet, kjønnet og spillerklassen ser de du spiller med og de som kan invitere deg: vennene dine, den du har en venneforespørsel med, og den som setter opp et spill i klubben din. Handicaphistorikken ser bare du.',
     },
     email: {
       title: 'E-postadressen',
