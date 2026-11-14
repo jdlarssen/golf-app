@@ -238,6 +238,106 @@ export const PROFILE_TEXT = {
     'Du er fortsatt logget inn. Utlogging krever nett når det er en stund siden sist — koble til og prøv igjen.',
 } as const;
 
+/**
+ * #2332: radene under «Dette lagrer vi» i «Dine data», i den rekkefølgen
+ * skjermen viser dem.
+ *
+ * **Hver setning beskriver en regel, og her står regelen.** Lest mot den siste
+ * definisjonen i `supabase/migrations/` og mot staging 14.11.2026. Endres hvem
+ * som ser en av tabellene under, endres teksten i `messages/*.json →
+ * profile.data`, {@link DATA_TEXT} og denne lista i samme PR
+ * (`docs/schema-ground-truth.md`, RLS-avsnittet).
+ *
+ * - `profile`: navnet via `users select own or shared games` (alle du deler et
+ *   spill med) og venne- og klubbsidene, som bare viser navn og kallenavn
+ *   (`lib/friends/getFriendData.ts`, `lib/clubs/getClubDetail.ts`). Handicap,
+ *   kjønn og spillerklasse via `roster_candidates` (0181) bak
+ *   `is_invite_eligible` (0202): vennskap i hvilken som helst status, også en
+ *   ventende forespørsel begge veier, medspillere i et spill som ikke er en
+ *   kladd, og klubbmedlemmer når en arrangør setter opp et spill i klubben.
+ *   Historikken: `handicap_history read own` (0195).
+ * - `email`: 0186 tar SELECT på `users.email` fra `anon` og `authenticated`.
+ *   Invitasjonen bærer adressen til den som skrev den inn
+ *   (`invitations select own incoming`, `invitations creator game-invite
+ *   select`), og de som styrer en klubb, leser de åpne klubbinvitasjonene med
+ *   service-rollen (`lib/clubs/getClubDetail.ts:117`). Lagoppsettet viser
+ *   `maskEmail` (`lib/users/getTeamCandidates.ts`), og uten navn er
+ *   visningsnavnet den skjulte adressen (`displayNameForOthers`). Månedsbrevet:
+ *   `lib/productUpdates/digest.ts`.
+ * - `rounds`: `scores select gating per mode` og `reactions select if
+ *   participant`; en arrangør som ikke spiller, ser tavla med service-rollen
+ *   (`lib/games/nonPlayerGameDoor.ts`, #2202). Et ferdig spill: RLS slipper
+ *   bare inn deltakerne, men tavla leser med `getResultReadClient` for alle
+ *   som er logget inn (`app/[locale]/games/[id]/leaderboard/page.tsx:113`).
+ *   Live-lenka (`getGameBySpectateToken`, `app/[locale]/spectate/[token]`) er
+ *   åpen uten innlogging, også etter slutt, med fullt navn; ligatabellen på en
+ *   nettside også (`lib/league/getLigaSnapshot.ts`), spilltavla på en nettside
+ *   med `formatPublicName` (`lib/embed/embedBoard.ts`). `paid_at` (0133) har
+ *   SELECT for `authenticated` og leses gjennom `game_players select shared
+ *   game` (`is_in_game`) og `game_players creator select`. Vipps-nummeret er
+ *   `games.payment_link`, vist på spillsiden og på den åpne påmeldingssiden
+ *   (`app/[locale]/signup/[shortId]/PublicLandingView.tsx`).
+ * - `social`: `friendships view own` (ingen admin-gren), `group_members select
+ *   member or admin`; vennelenka krever innlogging
+ *   (`app/[locale]/venner/legg-til/[code]/page.tsx:48`).
+ * - `ai`: `ai_consents select own` (0210). Bare et ja slipper navnet inn i
+ *   rundereferatet og i andres Kavalkade (`lib/ai/consent.ts`). Referatet
+ *   (`games.round_report`) rendres av tavla, også bak live-lenka
+ *   (`RoundReportCard` i `leaderboardContent.tsx` og formatvisningene).
+ *   `kavalkades own select`, `kavalkade_shares own select`.
+ * - `notifications`: `notifications_select_own`, `push_subscriptions own
+ *   select`, `apns_tokens own select`, `fcm_tokens own select` (0232).
+ * - `adminLine`: `is_admin()` i SELECT-policyene på `users`, `games`,
+ *   `game_players`, `scores`, `reactions`, `group_members`, `invitations` og
+ *   `idea_submissions`, og e-posten med service-rollen bak `requireAdmin`.
+ *   Ikke vennskap, varsler, enheter, AI-svaret, Kavalkaden eller
+ *   handicaphistorikken.
+ */
+export const DATA_ROWS = ['profile', 'email', 'rounds', 'social', 'ai', 'notifications'] as const;
+
+export type DataRowId = (typeof DATA_ROWS)[number];
+
+/**
+ * #2332: tekstene i «Dine data». Webbens `messages/no.json → profile.data`
+ * tegn for tegn (`profileCopy.test.ts` sammenligner hele objektet), så
+ * nettsiden og appen sier det samme om hvem som ser hva.
+ */
+export const DATA_TEXT = {
+  title: 'Dine data',
+  lede: 'Hva Tørny vet om deg, og hvem som ser det.',
+  sectionStored: 'Dette lagrer vi',
+  rows: {
+    profile: {
+      title: 'Navn, handicap og golfprofil',
+      body: 'Navnet ser de du spiller med, vennene dine og de andre i klubbene dine. Handicapet, kjønnet og spillerklassen ser de du spiller med og de som kan invitere deg: vennene dine, den du har en venneforespørsel med, og den som setter opp et spill i klubben din. Handicaphistorikken ser bare du.',
+    },
+    email: {
+      title: 'E-postadressen',
+      body: 'Vi bruker den til innlogging, invitasjoner, varsler på e-post og månedsbrevet. Andre spillere ser ikke hele adressen, med to unntak: den som skrev den inn for å invitere deg, og de som styrer en klubb du er invitert til, så lenge invitasjonen er åpen. Setter noen opp et lag, eller har du ikke fylt inn navn, ser de andre en delvis skjult adresse.',
+    },
+    rounds: {
+      title: 'Rundene og slagene dine',
+      body: 'Under runden ser de andre i spillet og arrangøren slagene og reaksjonene dine. Et ferdig spill er ikke åpent for hvem som helst, men alle som er logget inn og har lenka, kan se resultatene. Deler arrangøren en live-lenke eller legger tavla ut på en nettside, kan hvem som helst følge spillet der med navn, også etter at det er ferdig. Har spillet startkontingent, ser arrangøren og de andre i spillet om du har betalt. Et Vipps-nummer du legger inn som arrangør, ser de i spillet og alle som åpner påmeldingssiden.',
+    },
+    social: {
+      title: 'Venner og klubber',
+      body: 'Hvem du er venn med, ser bare du og vennen. De andre i en klubb ser at du er med. Deler du vennelenka di, kan alle som er logget inn og åpner den, se navnet ditt.',
+    },
+    ai: {
+      title: 'Rundereferater og Kavalkaden',
+      body: 'Svaret ditt om AI-tekster ser bare du. Har du sagt ja, kan navnet ditt stå i rundereferatet og i Kavalkaden til dem du har spilt med. Referatet står ved resultatene, og alle som kan se dem, kan lese det. Kavalkaden din ser bare du, til du deler et kort fra den.',
+    },
+    notifications: {
+      title: 'Varsler',
+      body: 'Vi lagrer varslene i innboksen din og hvilke telefoner og nettlesere som får varsler. Bare du ser dem.',
+    },
+  } satisfies Record<DataRowId, { title: string; body: string }>,
+  adminLine:
+    'Administratoren som driver Tørny, ser profilen, e-postadressen, spillene, klubbene og invitasjonene dine, og ideene du foreslår.',
+  processorsLine:
+    'Tjenestene vi bruker til lagring, e-post og rundereferater, behandler dataene for oss. Hvem de er, står i personvernerklæringen.',
+} as const;
+
 /** Statuslinja når varslene står på: designet sier «iPhone», og Android sier sitt (#2758). */
 export function pushOnLabel(os: string): string {
   return os === 'android' ? 'På · Android' : 'På · iPhone';

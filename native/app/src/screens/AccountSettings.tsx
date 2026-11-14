@@ -4,9 +4,16 @@
 // Raden til personvernerklæringen kom fra `Profile.tsx` (#2229: Apple krever
 // at den kan nås inne i appen). #2216 satte den under «Du bestemmer», der
 // designet for «Dine data» (Data-forslag, #2332) har den, med designets ord og
-// pil. Resten av «Dine data» kommer med #2332. «Slett konto» står fortsatt
-// alene nederst i rødt, med luft over, og fører til bekreftelsessiden
-// (`DeleteAccount`). Tilbake derfra (`goBack`) lander her.
+// pil. «Slett konto» står fortsatt alene nederst i rødt, med luft over, og
+// fører til bekreftelsessiden (`DeleteAccount`). Tilbake derfra (`goBack`)
+// lander her.
+//
+// **#2332: «Dine data» øverst.** Skjermen åpner med hva Tørny lagrer og hvem
+// som ser det (`DATA_TEXT`, hjemmelen står over `DATA_ROWS` i
+// `profileCopy.ts`). Så kommer «Du bestemmer», «Konto» med e-posten og
+// utloggingen, utviklerflaten i staging og til slutt sletting. Designet har
+// ikke e-posten, Face ID, AI-bryteren eller utviklerflaten, og ingen av dem er
+// fjernet.
 //
 // **Profil v2: «Logg ut» og utviklerflaten bor her.** Profilen skal være
 // identisk med designlerretet, og der slutter siden med «Del bag-taggen».
@@ -30,6 +37,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DesignSwitch, listSwitchOffColor } from '../components/DesignSwitch';
+import { PageTitle } from '../components/PageTitle';
 import { SettingList, SettingRow } from '../components/SettingRow';
 import { fetchOwnAiConsent, saveAiConsent } from '../data/aiConsent';
 import { rememberAiConsentAnswered } from '../data/aiConsentGate';
@@ -43,16 +51,16 @@ import {
   type AppLockSupport,
 } from '../lib/appLock';
 import { appLockLabel, appLockSublabel } from '../lib/appLockCopy';
-import { PROFILE_TEXT, unsentStrokesWarning } from '../lib/profileCopy';
+import { DATA_ROWS, DATA_TEXT, PROFILE_TEXT, unsentStrokesWarning } from '../lib/profileCopy';
 import { isStagingBuild } from '../lib/stagingGate';
 import { PRIVACY_PATH, describeWebLinkFailure, openWeb } from '../lib/webLink';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { FONTS, useTheme } from '../theme';
+import { FONTS, interLine, useTheme } from '../theme';
 
 export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) {
   const { email } = useSession();
-  const { ui } = useTheme();
+  const { ui, colors } = useTheme();
   const insets = useSafeAreaInsets();
   // Null til et trykk ikke fikk åpnet nettsiden; da står grunnen under raden
   // til neste trykk.
@@ -157,10 +165,48 @@ export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) 
   return (
     <ScrollView
       // #1954 D3: luften under innholdet står over systemlinja (navigasjonslinja på Android, hjemindikatoren på iPhone).
-      contentContainerStyle={[ui.scroll, { paddingBottom: 20 + insets.bottom }]}
+      contentContainerStyle={[styles.scroll, { paddingBottom: 20 + insets.bottom, backgroundColor: colors.bg }]}
       testID="account-settings-screen"
     >
-      <Text style={ui.sectionTitle}>{PROFILE_TEXT.sectionAccount}</Text>
+      <View testID="account-data-intro">
+        <PageTitle size="settings" title={DATA_TEXT.title} subtitle={DATA_TEXT.lede} />
+      </View>
+
+      <Text style={[ui.kicker, styles.label]} testID="account-section-stored">
+        {DATA_TEXT.sectionStored}
+      </Text>
+      <DataInventory />
+      <Text style={[styles.footnote, { color: colors.muted }]} testID="account-data-admin">
+        {DATA_TEXT.adminLine}
+      </Text>
+      <Text style={[styles.footnote, { color: colors.muted }]} testID="account-data-processors">
+        {DATA_TEXT.processorsLine}
+      </Text>
+
+      <Text style={[ui.kicker, styles.label]} testID="account-section-you-decide">
+        {PROFILE_TEXT.sectionYouDecide}
+      </Text>
+      <SettingList testID="account-you-decide" style={styles.list}>
+        <AppLockSetting />
+        <AiConsentSetting />
+        <SettingRow
+          label={PROFILE_TEXT.privacyRow}
+          sublabel={PROFILE_TEXT.privacySublabel}
+          chevron
+          onPress={onOpenPrivacy}
+          testID="account-privacy"
+        />
+      </SettingList>
+
+      {privacyNote ? (
+        <Text style={[ui.error, styles.note]} testID="account-privacy-error">
+          {privacyNote}
+        </Text>
+      ) : null}
+
+      <Text style={[ui.kicker, styles.label]} testID="account-section-account">
+        {PROFILE_TEXT.sectionAccount}
+      </Text>
       {/* Innlogging går via engangskode på e-post, så feltet er i praksis
           alltid satt — men sesjonstypen tillater null, og da er «Innlogget»
           ærligere enn en tom linje. */}
@@ -181,27 +227,8 @@ export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) 
         />
       </SettingList>
       {logoutNote ? (
-        <Text style={ui.error} testID="account-logout-error">
+        <Text style={[ui.error, styles.note]} testID="account-logout-error">
           {logoutNote}
-        </Text>
-      ) : null}
-
-      <Text style={ui.sectionTitle}>{PROFILE_TEXT.sectionYouDecide}</Text>
-      <SettingList testID="account-you-decide">
-        <AppLockSetting />
-        <AiConsentSetting />
-        <SettingRow
-          label={PROFILE_TEXT.privacyRow}
-          sublabel={PROFILE_TEXT.privacySublabel}
-          chevron
-          onPress={onOpenPrivacy}
-          testID="account-privacy"
-        />
-      </SettingList>
-
-      {privacyNote ? (
-        <Text style={ui.error} testID="account-privacy-error">
-          {privacyNote}
         </Text>
       ) : null}
 
@@ -210,8 +237,8 @@ export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) 
           en rad. */}
       {isStagingBuild() ? (
         <>
-          <Text style={ui.sectionTitle}>{PROFILE_TEXT.sectionDeveloper}</Text>
-          <SettingList testID="account-developer">
+          <Text style={[ui.kicker, styles.label]}>{PROFILE_TEXT.sectionDeveloper}</Text>
+          <SettingList testID="account-developer" style={styles.list}>
             <SettingRow
               label={PROFILE_TEXT.syncLabRow}
               sublabel={PROFILE_TEXT.syncLabSublabel}
@@ -237,6 +264,30 @@ export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) 
         </SettingList>
       </View>
     </ScrollView>
+  );
+}
+
+/**
+ * #2332: kortet under «Dette lagrer vi». En rad per id i {@link DATA_ROWS},
+ * tittel 15/600 og tekst 12 dempet, med lista sine skillelinjer (designet
+ * «Data-forslag»). Radene beskriver, de gjør ingenting, så de er ikke
+ * trykkbare og har ingen pil.
+ */
+function DataInventory() {
+  const { colors } = useTheme();
+  return (
+    <SettingList testID="account-data-rows" style={styles.list}>
+      {DATA_ROWS.map((id) => (
+        <View key={id} style={styles.dataRow} testID={`account-data-${id}`}>
+          <Text style={[styles.dataTitle, { color: colors.text }]} testID={`account-data-${id}-title`}>
+            {DATA_TEXT.rows[id].title}
+          </Text>
+          <Text style={[styles.dataBody, { color: colors.muted }]} testID={`account-data-${id}-body`}>
+            {DATA_TEXT.rows[id].body}
+          </Text>
+        </View>
+      ))}
+    </SettingList>
   );
 }
 
@@ -393,6 +444,24 @@ function AiConsentSetting() {
 }
 
 const styles = StyleSheet.create({
+  // #2332, designet «Data-forslag»: kortene 16 pt fra kanten, og tittelen 4 pt
+  // under topp-raden, som «Varsler». Siden har ingen `gap`; hver blokk setter
+  // luften over seg selv.
+  scroll: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 4 },
+  // Etiketten 20 pt fra kanten, 16 pt over og 8 under.
+  label: { paddingHorizontal: 4, paddingTop: 16, paddingBottom: 8 },
+  list: { marginTop: 0 },
+  note: { marginTop: 8 },
+  dataRow: { paddingVertical: 12, paddingHorizontal: 14, gap: 2 },
+  dataTitle: { ...interLine(15, 18), fontFamily: FONTS.sansSemiBold },
+  dataBody: { ...interLine(12, 15, { multiline: true }), fontFamily: FONTS.sans },
+  // De to småtekstlinjene under kortet, i flukt med etiketten.
+  footnote: {
+    ...interLine(12, 15, { multiline: true }),
+    fontFamily: FONTS.sans,
+    paddingHorizontal: 4,
+    marginTop: 8,
+  },
   // 16 som innstillingslistene rett under (#2709).
   cardRound: { borderRadius: 16 },
   dangerGap: { marginTop: 24 },

@@ -32,6 +32,8 @@ import { HCP_MAX } from '../../../../lib/users/profileInput';
 import type { ProfileSaveFailure } from '../data/profile';
 import { isFinishedSentence } from '../test/copy';
 import {
+  DATA_ROWS,
+  DATA_TEXT,
   ONBOARDING_TEXT,
   PROFILE_TEXT,
   describeHandicapAge,
@@ -159,6 +161,30 @@ describe('PROFILE_TEXT', () => {
     // `ACCOUNT_TEXT.heading`: den ene er veien inn, den andre er stedet.
     expect(PROFILE_TEXT.editRow).toBe('Rediger profil');
     expect(PROFILE_TEXT.editHeading).toBe('Rediger profil');
+  });
+});
+
+// #2332: «Dine data» sier hvem som ser hva. Nettsiden og appen skal si det
+// samme, så hele objektet sammenlignes med webbens `profile.data`: en ny,
+// fjernet eller endret setning på én flate gir rødt til den andre følger etter.
+describe('DATA_TEXT', () => {
+  const leaves = (value: unknown, path: string): [string, string][] =>
+    typeof value === 'string'
+      ? [[path, value]]
+      : Object.entries(value as Record<string, unknown>).flatMap(([key, child]) =>
+          leaves(child, path ? `${path}.${key}` : key),
+        );
+
+  it('er webbens profile.data tegn for tegn', () => {
+    expect(DATA_TEXT).toEqual(web.data);
+  });
+
+  it.each(leaves(DATA_TEXT, ''))('«%s» er en ferdig tekst', (_path, text) => {
+    expect(isFinishedSentence(text)).toBe(true);
+  });
+
+  it('har én rad per id i DATA_ROWS, og ingen andre', () => {
+    expect(Object.keys(DATA_TEXT.rows)).toEqual([...DATA_ROWS]);
   });
 });
 

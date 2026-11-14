@@ -522,7 +522,40 @@
     "monthlyDigestTitle": "Monthly digest",
     "monthlyDigestSubtitle": "What's new in Tørny by email",
     "monthlyDigestAriaLabel": "Monthly digest by email",
-    "monthlyDigestFailed": "Couldn't save — try again."
+    "monthlyDigestFailed": "Couldn't save — try again.",
+    "data": {
+      "title": "Your data",
+      "lede": "What Tørny knows about you, and who can see it.",
+      "sectionStored": "What we store",
+      "rows": {
+        "profile": {
+          "title": "Name, handicap and golf profile",
+          "body": "Your name is seen by the people you play with, your friends and the other members of your clubs. Your handicap, gender and player class are seen by the people you play with and by those who can invite you: your friends, anyone you have a friend request with, and whoever sets up a game in your club. Only you see your handicap history."
+        },
+        "email": {
+          "title": "Email address",
+          "body": "We use it for signing in, invitations, email notifications and the monthly digest. Other players don't see the full address, with two exceptions: the person who typed it in to invite you, and those who run a club you are invited to, while the invitation is open. When someone sets up a team, or if you haven't filled in your name, others see a partly hidden address."
+        },
+        "rounds": {
+          "title": "Your rounds and strokes",
+          "body": "During the round, the others in the game and the organiser see your strokes and reactions. A finished game is not open to everyone, but anyone who is signed in and has the link can see the results. If the organiser shares a live link or puts the board on a website, anyone can follow the game there with names, even after it has finished. If the game has an entry fee, the organiser and the others in the game can see whether you have paid. A Vipps number you enter as an organiser is seen by those in the game and by anyone who opens the sign-up page."
+        },
+        "social": {
+          "title": "Friends and clubs",
+          "body": "Only you and your friend can see that you are friends. The other members of a club can see that you are in it. If you share your friend link, anyone who is signed in and opens it can see your name."
+        },
+        "ai": {
+          "title": "Round reports and the cavalcade",
+          "body": "Only you see your answer about AI texts. If you have said yes, your name can appear in the round report and in the cavalcade of people you have played with. The report sits with the results, and anyone who can see them can read it. Only you see your own cavalcade, until you share a card from it."
+        },
+        "notifications": {
+          "title": "Notifications",
+          "body": "We store the notifications in your inbox and which phones and browsers get notifications. Only you see them."
+        }
+      },
+      "adminLine": "The administrator who runs Tørny can see your profile, email address, games, clubs and invitations, and the ideas you suggest.",
+      "processorsLine": "The services we use for storage, email and round reports process the data on our behalf. The privacy policy says who they are."
+    }
   },
   "friends": {
     "kicker": "Friends",
