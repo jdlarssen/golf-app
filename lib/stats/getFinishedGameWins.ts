@@ -3,6 +3,7 @@ import { unstable_cache } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { selectAllRows } from '@/lib/supabase/selectAllRows';
 import { osloYearWindow } from '@/lib/format/osloCalendar';
+import { osloParts } from '@/lib/format/teeOff';
 import { buildModeResultForGame } from '@/lib/scoring/buildModeResultForGame';
 import {
   computeResultSummaries,
@@ -19,7 +20,8 @@ import {
 
 type GameRow = {
   id: string;
-  course_id: string;
+  /** `null` for a game without a course (a free round); it has no holes to recompute from. */
+  course_id: string | null;
   game_mode: GameMode;
   mode_config: GameModeConfig;
   /** #2217: a cup match on 9 holes is scored over its own holes only. */
@@ -37,6 +39,7 @@ type GamePlayerRow = {
   result_summary: ResultSummary | null;
   users: {
     name: string | null;
+    nickname: string | null;
     is_guest: boolean;
   } | null;
 };
@@ -61,6 +64,8 @@ export type ClubStatsAggregate = {
   participationCounts: Array<[string, number]>;
   /** `[userId, name]` — first non-null name seen for each player. */
   userNames: Array<[string, string]>;
+  /** `[userId, nickname]` — first non-null nickname seen, for `formatPublicName`'s fallback. */
+  userNicknames: Array<[string, string]>;
 };
 
 /**
@@ -82,11 +87,11 @@ export type ClubStatsAggregate = {
  * `unstable_cache` callbacks cannot read request-scoped APIs (`cookies()`,
  * `headers()`), so the cookie-based `getServerClient()` can't be used inside
  * the cache. We use the service-role `getAdminClient()` (same pattern as
- * `lib/games/getGameWithPlayers.ts`). This does NOT widen exposure: the data
- * is already globally public — every finished game is world-readable via the
- * open `games.status = 'finished'` RLS policy, and this page is reachable by
- * any logged-in user. The auth gate (`getProxyVerifiedUserId`) stays at the
- * call-site, outside the cache, so the gate is unchanged.
+ * `lib/games/getGameWithPlayers.ts`). A finished game is NOT world-readable
+ * (#1542): RLS shows it to its players only, so this read goes past RLS. The
+ * caller is the gate and stays outside the cache — `authenticatedUserId` in
+ * `/api/aeresbrett`, the club-membership check in `getClubDetail`. Only counts
+ * and display names leave the callers, never games, dates or strokes.
  *
  * ## Why a time-based revalidate (and no tag invalidation)
  *
@@ -103,7 +108,7 @@ export type ClubStatsAggregate = {
  *
  * `groupId` counts only the games of one club; `seasonYear` only games that
  * ended (`ended_at`, the one field a finished game always has) within that
- * Oslo calendar year. Both are optional: the toppliste passes neither.
+ * Oslo calendar year. Both are optional: `/api/aeresbrett` passes only the year (all of Tørny).
  * `unstable_cache` keys on its arguments, so every scope is cached on its own
  * under the same tag. A club board reads finished club games with the service
  * role: the caller is the gate and passes a club id only after checking the
@@ -142,6 +147,7 @@ export const getFinishedGameWins = unstable_cache(
         winnerCounts: [],
         participationCounts: [],
         userNames: [],
+        userNicknames: [],
       };
     }
 
@@ -155,7 +161,7 @@ export const getFinishedGameWins = unstable_cache(
         supabase
           .from('game_players')
           .select(
-            'game_id, user_id, withdrawn_at, result_summary, users!game_players_user_id_fkey(name, is_guest)',
+            'game_id, user_id, withdrawn_at, result_summary, users!game_players_user_id_fkey(name, nickname, is_guest)',
           )
           .in('game_id', gameIds)
           .order('game_id')
@@ -186,11 +192,20 @@ export const getFinishedGameWins = unstable_cache(
       }
     }
 
+    const userNicknames = new Map<string, string>();
+    for (const p of allPlayers) {
+      if (p.users?.nickname && !userNicknames.has(p.user_id)) {
+        userNicknames.set(p.user_id, p.users.nickname);
+      }
+    }
+
     // Shape into the pure-tally input.
     const tallyGames: FinishedGameForTally[] = games.map((g) => ({
       id: g.id,
       // #2712: a league flight counts as played, not won.
       leagueFlight: g.league_round_id != null,
+      // #2259: a derived game is its host's round, not one of its own.
+      derived: g.source_game_id != null,
       players: (playersByGame.get(g.id) ?? []).map((p) => ({
         userId: p.user_id,
         name: p.users?.name ?? null,
@@ -212,7 +227,8 @@ export const getFinishedGameWins = unstable_cache(
       await Promise.all(
         fallbackGameIds.map(async (id) => {
           const game = gamesById.get(id);
-          if (!game) return;
+          // A game without a course has no holes to recompute from; it names no winner.
+          if (!game || game.course_id === null) return;
           const result = await buildModeResultForGame(supabase, {
             id: game.id,
             game_mode: game.game_mode,
@@ -248,11 +264,28 @@ export const getFinishedGameWins = unstable_cache(
       winnerCounts: Array.from(winnerCounts.entries()),
       participationCounts: Array.from(participationCounts.entries()),
       userNames: Array.from(userNames.entries()),
+      userNicknames: Array.from(userNicknames.entries()),
     };
   },
   ['club-statistikk'],
   { tags: ['club-statistikk'], revalidate: 300 },
 );
+
+/**
+ * The season the boards show, and its wins: this Oslo year, or last year while this
+ * year has no finished round yet (January). `season: null` when neither has one.
+ * The club board and the app's honour board share this rule, so a year never reads
+ * differently on the two (#2259). Not cached itself; each year's read is.
+ */
+export async function getCurrentSeasonWins(
+  opts: { groupId?: string } = {},
+): Promise<{ season: number | null; wins: ClubStatsAggregate }> {
+  const { year } = osloParts(new Date());
+  let wins = await getFinishedGameWins({ ...opts, seasonYear: year });
+  if (wins.hasGames) return { season: year, wins };
+  wins = await getFinishedGameWins({ ...opts, seasonYear: year - 1 });
+  return { season: wins.hasGames ? year - 1 : null, wins };
+}
 
 function groupBy<T, K>(items: T[], keyFn: (item: T) => K): Map<K, T[]> {
   const out = new Map<K, T[]>();

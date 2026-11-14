@@ -10,9 +10,8 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getClubDetail } from '@/lib/clubs/getClubDetail';
 import { getClubRounds } from '@/lib/clubs/getClubRounds';
 import type { ClubMember } from '@/lib/clubs/getClubDetail';
-import { getFinishedGameWins } from '@/lib/stats/getFinishedGameWins';
+import { getCurrentSeasonWins } from '@/lib/stats/getFinishedGameWins';
 import { rankBoard } from '@/lib/stats/aeresbrett';
-import { osloParts } from '@/lib/format/teeOff';
 import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { nameInitials } from '@/lib/names/initials';
 import { AppShell } from '@/components/ui/AppShell';
@@ -411,14 +410,8 @@ async function readBoard(
   | { ok: false }
 > {
   try {
-    const { year } = osloParts(new Date());
-    let season = year;
-    let wins = await getFinishedGameWins({ groupId: clubId, seasonYear: season });
-    if (!wins.hasGames) {
-      season = year - 1;
-      wins = await getFinishedGameWins({ groupId: clubId, seasonYear: season });
-    }
-    if (!wins.hasGames) return { ok: true, season: null, rows: [] };
+    const { season, wins } = await getCurrentSeasonWins({ groupId: clubId });
+    if (season === null) return { ok: true, season: null, rows: [] };
 
     const names = new Map(members.map((m) => [m.userId, m.name]));
     const rows = rankBoard(
