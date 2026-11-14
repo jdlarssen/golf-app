@@ -34,6 +34,7 @@
 --    17. idempotent — a second call succeeds without error
 --    18. admin target → REJECTED (42501 — admin accounts can't be anonymized)
 --    19. fcm_tokens deleted (#2758, 0232)
+--    20. notification_preferences deleted (#2315, 0236)
 --
 -- Runs as the `authenticated` role with a forged JWT `sub` claim — the same
 -- runtime path the app uses. See supabase/tests/README.md for how to run.
@@ -43,7 +44,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(19);
+select plan(20);
 
 \ir fixtures/rls_helpers.psql
 
@@ -79,6 +80,9 @@ insert into public.kavalkade_shares (user_id, year, card_kind)
 insert into public.ai_consents (user_id, granted)
   values (torny_rls.active_id(), true);
 update public.users set level = 'junior' where id = torny_rls.active_id();
+-- #2315 (0236): the notification choices are personal too.
+insert into public.notification_preferences (user_id, muted_groups, quiet_hours)
+  values (torny_rls.active_id(), array['friends'], true);
 
 -- ═════════════════════════════════════════════════════════════════════════════
 -- GUARD — a non-admin cannot touch their own deleted_at
@@ -209,6 +213,12 @@ select is(
   (select level::text from public.users where id = torny_rls.active_id()),
   'normal',
   '#2561: level is reset to the default (normal)'
+);
+
+select is(
+  (select count(*) from public.notification_preferences where user_id = torny_rls.active_id()),
+  0::bigint,
+  '#2315: notification_preferences are deleted'
 );
 
 select lives_ok(
