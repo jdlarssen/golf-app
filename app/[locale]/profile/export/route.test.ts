@@ -29,7 +29,21 @@ type Read =
   | 'invitations_email'
   | 'invitations_inviter'
   | 'friendships'
-  | 'group_members';
+  | 'group_members'
+  | NewTable;
+
+// #2332: tabellene kjernen leste inn i tillegg. Hver er filtrert på eieren.
+const NEW_TABLES = [
+  'handicap_history',
+  'notifications',
+  'ai_consents',
+  'kavalkades',
+  'kavalkade_shares',
+  'reactions',
+  'idea_submissions',
+] as const;
+type NewTable = (typeof NEW_TABLES)[number];
+const isNewTable = (table: string): table is NewTable => (NEW_TABLES as readonly string[]).includes(table);
 
 let state: {
   userId: string | null;
@@ -53,6 +67,7 @@ function classify(op: QueryOp): Read {
   if (op.table === 'invitations' && hasEq(op, 'invited_by', USER)) return 'invitations_inviter';
   if (op.table === 'friendships') return 'friendships';
   if (op.table === 'group_members' && hasEq(op, 'user_id', USER)) return 'group_members';
+  if (isNewTable(op.table) && hasEq(op, 'user_id', USER)) return op.table;
   throw new Error(`uventet spørring: ${op.table} ${JSON.stringify(op.filters)}`);
 }
 
@@ -63,7 +78,8 @@ const ROWS: Record<Exclude<Read, 'users'>, unknown[]> = {
   invitations_inviter: [{ id: 'i2', invited_by: USER }],
   friendships: [{ id: 'f1', requester_id: USER, addressee_id: 'venn', status: 'accepted' }],
   group_members: [{ group_id: 'k1', role: 'member', joined_at: '2026-10-02', groups: { name: 'Klubb' } }],
-};
+  ...Object.fromEntries(NEW_TABLES.map((table) => [table, [{ id: `${table}-1`, user_id: USER }]])),
+} as Record<Exclude<Read, 'users'>, unknown[]>;
 
 function respond(op: QueryOp): QueryResponse {
   const read = classify(op);
@@ -126,6 +142,7 @@ describe('GET /profile/export', () => {
     'invitations_inviter',
     'friendships',
     'group_members',
+    'notifications',
   ])('lesefeil på %s → 500 og ingen fil', async (read) => {
     state.failing = read;
 
@@ -154,6 +171,8 @@ describe('GET /profile/export', () => {
     const body = await res.json();
     expect(body.friendships).toEqual(ROWS.friendships);
     expect(body.club_memberships).toEqual(ROWS.group_members);
+    // #2332: samme fil som appen får, med de nye tabellene.
+    for (const table of NEW_TABLES) expect(body[table]).toEqual(ROWS[table]);
 
     const clubOp = fake.ops.find((op) => op.table === 'group_members');
     expect(clubOp?.filters).toContainEqual({ op: 'eq', column: 'user_id', value: USER });

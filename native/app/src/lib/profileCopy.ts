@@ -345,6 +345,11 @@ export const DATA_TEXT = {
     'Administratoren som driver Tørny, ser profilen, e-postadressen, spillene og klubbene dine.',
   processorsLine:
     'Tjenestene som behandler dataene for oss, står i personvernerklæringen.',
+  // PR C: raden i «Du bestemmer». Underteksten lister nøyaktig det fila har
+  // (`lib/profile/exportCore.ts`; `exportCore.test.ts` holder dem i takt).
+  exportRow: 'Last ned dataene dine',
+  exportSublabel:
+    'Profilen, handicaphistorikken, spillene, slagene, reaksjonene, invitasjonene, vennene, klubbene, varslene, AI-svaret, Kavalkaden og ideene dine i én fil.',
 } as const;
 
 /** Statuslinja når varslene står på: designet sier «iPhone», og Android sier sitt (#2758). */
