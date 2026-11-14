@@ -1,21 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { fours, nassauResult as nassau } from './__fixtures__/nassauResult';
+import { B3, fours, nassauResult as nassau } from './__fixtures__/nassauResult';
 import { NASSAU_SECTION_KEYS } from './nassauBoard';
 import { nassauAloneFrom, nassauHoleCards, nassauStandingAfter } from './nassauHoles';
-
-/**
- * The B3 artboard's round (`Nassau-hull-B3-*`): par 4 and handicap 0, so net
- * is gross. Hole winners as drawn — front 9: meg, =, jonas, anne, anne, =, =,
- * marte, =; back 9: =, anne, meg, meg, =, meg, =, marte, =. Anne wins the
- * front 9 (33) alone from hole 5, meg the back 9 (34) alone from hole 15
- * (alone after 13, caught on 14), Anne the total (68) alone from hole 5.
- */
-const B3 = {
-  meg: [3, 4, 4, 4, 4, 4, 5, 4, 3, 4, 4, 3, 3, 4, 3, 4, 4, 5],
-  anne: [4, 4, 4, 3, 3, 4, 4, 4, 3, 4, 3, 4, 4, 3, 4, 4, 4, 5],
-  jonas: [4, 4, 3, 4, 4, 4, 4, 4, 3, 4, 4, 4, 4, 3, 4, 4, 4, 5],
-  marte: [4, 4, 4, 4, 4, 4, 4, 3, 3, 4, 4, 4, 4, 4, 4, 4, 3, 5],
-} as const;
 
 const lastHole = { front9: 9, back9: 18, total18: 18 } as const;
 

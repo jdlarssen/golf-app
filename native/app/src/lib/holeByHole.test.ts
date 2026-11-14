@@ -23,14 +23,15 @@ describe('holeByHoleKind', () => {
     ['acey_deucey', { kind: 'acey_deucey', team_size: 1, acey_deucey_scoring: 'net' }, 'acey-deucey'],
     ['bingo_bango_bongo', { kind: 'bingo_bango_bongo', team_size: 1 }, 'bingo-bango-bongo'],
     ['best_ball', { kind: 'best_ball', team_size: 2 }, 'best-ball'],
+    // #2755: Nassau etter tegningen B3.
+    ['nassau', { kind: 'nassau', team_size: 1, nassau_scoring: 'net' }, 'nassau'],
     // Webben har ingen egen visning for lag-stableford: tavla.
     ['stableford', { kind: 'stableford', team_size: 2, points_table: 'standard' }, null],
     // Matchplay og scramble har ingen «Hull for hull» på webben heller.
     ['singles_matchplay', { kind: 'singles_matchplay', team_size: 1, teams_count: 2 }, null],
     ['texas_scramble', { kind: 'texas_scramble', team_size: 2, teams_count: 2, team_handicap_pct: 25 }, null],
-    // Skins og Nassau bygges etter sine egne tegninger (#2317, #2327), ikke som en webkopi.
+    // Skins har myntene på tavla (#2317), ikke en webkopi av hullsiden.
     ['skins', { kind: 'skins' }, null],
-    ['nassau', { kind: 'nassau' }, null],
     // En config som peker på et annet format, og et ukjent format.
     ['stableford', { kind: 'solo_strokeplay' }, null],
     ['ukjent', {}, null],
@@ -352,6 +353,32 @@ describe('buildHoleByHole', () => {
     it('uten spillere er det ingen lag å vise, og modellen er null', () => {
       expect(buildHoleByHole(bestBall({}, []), [])).toBeNull();
     });
+  });
+
+  it('Nassau (#2755): de tre kampene fra motoren, netto i undertittelen, og hullkortet på et hull som handler om den som ser på', () => {
+    // Kari vinner front 9 alene fra hull 9; Ola back 9 alene fra hull 10 og
+    // totalen alene fra hull 11 (likt etter 10).
+    const bundle = homeBundle({
+      game: { id: 'g4', status: 'finished', gameMode: 'nassau', modeConfig: { kind: 'nassau', team_size: 1, nassau_scoring: 'net' } },
+      players,
+    });
+    const scores = [
+      ...holeScores('g4', 'ola', 18, 4),
+      ...holeScores('g4', 'kari', 8, 4),
+      ...holeScores('g4', 'kari', 9, 3, 9),
+      ...holeScores('g4', 'kari', 18, 5, 10),
+    ];
+    const model = buildHoleByHole(bundle, scores, {}, 'kari');
+    if (model?.kind !== 'nassau') throw new Error(`forventet nassau, fikk ${model?.kind}`);
+    expect(model.subtitle).toBe('Nassau · Netto');
+    expect(model.nassau.holes).toHaveLength(18);
+    expect(model.nassau.matches.front9).toMatchObject({ winnerUserIds: ['kari'], aloneFrom: 9 });
+    expect(model.nassau.matches.back9).toMatchObject({ winnerUserIds: ['ola'], aloneFrom: 10 });
+    expect(model.nassau.matches.total18).toMatchObject({ winnerUserIds: ['ola'], aloneFrom: 11 });
+    expect(model.nassau.startHoleNumber).toBe(9);
+    // Ola vant totalen, den største kampen: kortet åpner der.
+    const forOla = buildHoleByHole(bundle, scores, {}, 'ola');
+    expect(forOla?.kind === 'nassau' ? forOla.nassau.startHoleNumber : null).toBe(11);
   });
 
   it('et format uten appens «Hull for hull» gir null', () => {

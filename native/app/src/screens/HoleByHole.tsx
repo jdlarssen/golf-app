@@ -6,7 +6,8 @@
 // (`lib/leaderboard/soloScorecard.ts`, `lib/leaderboard/wolfHoles.ts`,
 // `lib/leaderboard/ninesHoles.ts`, `lib/leaderboard/roundRobinHoles.ts`,
 // `lib/leaderboard/aceyDeuceyHoles.ts`, `lib/leaderboard/bingoBangoBongoHoles.ts`,
-// `lib/leaderboard/bestBallHoles.ts`).
+// `lib/leaderboard/bestBallHoles.ts`). Nassau tegnes etter appens egen tegning
+// B3 (#2755, `lib/leaderboard/nassauHoles.ts`).
 // I en blind runde som pågår holdes alt tilbake, som på webben.
 //
 // Slagene er de lokale, seedet fra serveren når skjermen åpnes. Etter at
@@ -24,6 +25,7 @@ import {
 import { AceyDeuceyHoleCardsView } from '../components/holes/AceyDeuceyHoleCardsView';
 import { BestBallHoleCardsView } from '../components/holes/BestBallHoleCardsView';
 import { BingoBangoBongoHoleCardsView } from '../components/holes/BingoBangoBongoHoleCardsView';
+import { NassauHoleCardsView } from '../components/holes/NassauHoleCardsView';
 import { NinesHoleCardsView } from '../components/holes/NinesHoleCardsView';
 import { RoundRobinHoleCardsView } from '../components/holes/RoundRobinHoleCardsView';
 import { SoloScorecardView } from '../components/holes/SoloScorecardView';
@@ -40,6 +42,7 @@ import { useGameChoices } from '../lib/useChoices';
 import { scoresGameId } from '../lib/segmentRound';
 import { useGameBundle, useLocalScores } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
+import { useSession } from '../session';
 import { fraunces, useTheme } from '../theme';
 import { holesStyles } from '../components/holes/holesShared';
 
@@ -49,6 +52,7 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
   const scrollToTop = useCallback(() => scrollRef.current?.scrollTo({ y: 0, animated: false }), []);
   const { colors, ui } = useTheme();
   const insets = useSafeAreaInsets();
+  const { userId } = useSession();
   const { gameId } = route.params;
   const { bundle, loading, refresh, notFound } = useGameBundle(gameId);
   // #2752: en avledet kamp har ingen slag selv, og leser dem fra verten.
@@ -119,7 +123,13 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
           {CHOICES_MISSING_HOLES_TEXT}
         </Text>
       ) : (
-        <HoleByHoleBody bundle={bundle} scores={scores} extras={extras} onTeamChange={scrollToTop} />
+        <HoleByHoleBody
+          bundle={bundle}
+          scores={scores}
+          extras={extras}
+          viewerUserId={userId}
+          onTeamChange={scrollToTop}
+        />
       )}
     </ScrollView>
   );
@@ -130,12 +140,15 @@ export function HoleByHoleBody({
   bundle,
   scores,
   extras = {},
+  viewerUserId = null,
   onTeamChange,
 }: {
   bundle: GameBundle;
   scores: readonly LocalScore[];
   /** Valgene formatet trenger fra serveren (Wolf, Bingo Bango Bongo). */
   extras?: ScoringExtras;
+  /** Den som ser på: «Du» og «Deg» i Nassau, og hullet kortet åpner på. */
+  viewerUserId?: string | null;
   /** Best ball: et annet lag er valgt; skjermen ruller til toppen, som webben. */
   onTeamChange?: () => void;
 }) {
@@ -166,7 +179,7 @@ export function HoleByHoleBody({
     );
   }
 
-  const model = buildHoleByHole(bundle, scores, extras);
+  const model = buildHoleByHole(bundle, scores, extras, viewerUserId);
   if (!model) {
     return (
       <Text style={ui.muted} testID="hole-by-hole-unavailable">
@@ -221,6 +234,17 @@ export function HoleByHoleBody({
         cards={model.bingoBangoBongo}
         subtitle={model.subtitle}
         players={bundle.players}
+        finished={game.status === 'finished'}
+      />
+    );
+  }
+  if (model.kind === 'nassau') {
+    return (
+      <NassauHoleCardsView
+        cards={model.nassau}
+        subtitle={model.subtitle}
+        players={bundle.players}
+        viewerUserId={viewerUserId}
         finished={game.status === 'finished'}
       />
     );

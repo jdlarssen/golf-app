@@ -984,6 +984,8 @@ describe('GameHome — «Hull for hull»-flisa (#2255 PR 3a)', () => {
     ['avsluttet acey deucey (PR 3c)', 'finished', 'acey_deucey', { kind: 'acey_deucey', team_size: 1, acey_deucey_scoring: 'net' }, 'open-hole-by-hole', 'HoleByHole'],
     ['avsluttet bingo bango bongo (PR 3c)', 'finished', 'bingo_bango_bongo', { kind: 'bingo_bango_bongo', team_size: 1 }, 'open-hole-by-hole', 'HoleByHole'],
     ['avsluttet skins (bygges etter tegningen, #2317)', 'finished', 'skins', { kind: 'skins' }, 'open-leaderboard', 'Leaderboard'],
+    ['avsluttet nassau (B3, #2755)', 'finished', 'nassau', { kind: 'nassau', team_size: 1, nassau_scoring: 'net' }, 'open-hole-by-hole', 'HoleByHole'],
+    ['pågående nassau (#2755)', 'active', 'nassau', { kind: 'nassau', team_size: 1, nassau_scoring: 'net' }, 'open-leaderboard', 'Leaderboard'],
   ])('%s → %s', async (_case, status, gameMode, modeConfig, tileId, route) => {
     mockState.bundle = homeBundle({
       game: { id: 'game-1', status, gameMode, modeConfig },

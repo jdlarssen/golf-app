@@ -14,6 +14,8 @@ import { HoleByHole, HoleByHoleBody } from './HoleByHole';
 import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+// Den som ser på (#2755: «Du» og «Deg» i Nassau, og hullet kortet åpner på).
+jest.mock('../session', () => ({ useSession: () => ({ userId: 'kari' }) }));
 jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 // Skjermen rundt kroppen: bundel og slag fra enheten, og hentingen av slagene.
 const mockScreen: {
@@ -160,6 +162,47 @@ describe('hentingen av slagene', () => {
     await waitFor(() => expect(mockReload).toHaveBeenCalledTimes(1));
     expect(screen.getByTestId('hole-by-hole-front9')).toBeTruthy();
     expect(screen.queryByTestId('hole-by-hole-seed-failed')).toBeNull();
+  });
+});
+
+// #2755: Nassau etter tegningen B3. Hva skjermen tegner, låses i
+// `NassauHoleCardsView.test.tsx`; her koblingen: modellen og den som ser på.
+describe('Nassau (#2755)', () => {
+  const nassauBundle = () =>
+    homeBundle({
+      game: {
+        id: 'gn',
+        status: 'finished',
+        gameMode: 'nassau',
+        modeConfig: { kind: 'nassau', team_size: 1, nassau_scoring: 'net' },
+      },
+      players,
+    });
+  // Kari vinner front 9 alene fra hull 9; Ola back 9 og totalen.
+  const nassauScores = [
+    ...holeScores('gn', 'ola', 18, 4),
+    ...holeScores('gn', 'kari', 8, 4),
+    ...holeScores('gn', 'kari', 9, 3, 9),
+    ...holeScores('gn', 'kari', 18, 5, 10),
+  ];
+  const props = { route: { params: { gameId: 'gn' } }, navigation: mockNavigation } as unknown as ScreenProps<'HoleByHole'>;
+
+  it('avsluttet: de tre kampene, og hullkortet åpner der den som ser på ble alene i ledelsen', async () => {
+    mockScreen.bundle = nassauBundle();
+    mockScreen.scores = nassauScores;
+    mockScreen.seed = async () => 0;
+    mockScreen.extras = {};
+    await render(<HoleByHole {...props} />);
+    await waitFor(() => expect(screen.getByTestId('nassau-hole-card')).toBeTruthy());
+    expect(screen.getByRole('header', { name: 'Hull for hull' })).toBeTruthy();
+    expect(screen.getByText('Nassau · Netto')).toBeTruthy();
+    for (const key of ['front9', 'back9', 'total18']) {
+      expect(screen.getByTestId(`nassau-match-${key}`)).toBeTruthy();
+    }
+    // Kari (den som ser på) vant front 9 alene fra hull 9.
+    expect(screen.getByTestId('nassau-hole-card-title')).toHaveTextContent('Hull 9');
+    expect(screen.getByTestId('nassau-match-front9-name')).toHaveTextContent('Deg');
+    expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt»');
   });
 });
 
