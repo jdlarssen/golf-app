@@ -530,7 +530,7 @@
       "rows": {
         "profile": {
           "title": "Name, handicap and golf profile",
-          "body": "Your name is seen by the people you play with, your friends and the other members of your clubs. Your handicap, gender and player class are seen by the people you play with and by those who can invite you: your friends, anyone you have a friend request with, and whoever sets up a game in your club. Only you see your handicap history."
+          "body": "Your name is seen by the people you play with, your friends and the other members of your clubs. Without signing in, the sign-up page of an open game shows only your first name and the first letter of your last name. Your handicap, gender and player class are seen by the people you play with and by those who can invite you: your friends, anyone you have a friend request with, and whoever sets up a game in your club. Only you see your handicap history."
         },
         "email": {
           "title": "Email address",

@@ -530,7 +530,7 @@
       "rows": {
         "profile": {
           "title": "Navn, handicap og golfprofil",
-          "body": "Navnet ser de du spiller med, vennene dine og de andre i klubbene dine. Handicapet, kjønnet og spillerklassen ser de du spiller med og de som kan invitere deg: vennene dine, den du har en venneforespørsel med, og den som setter opp et spill i klubben din. Handicaphistorikken ser bare du."
+          "body": "Navnet ser de du spiller med, vennene dine og de andre i klubbene dine. Uten innlogging viser påmeldingssiden til et åpent spill bare fornavnet og forbokstaven i etternavnet. Handicapet, kjønnet og spillerklassen ser de du spiller med og de som kan invitere deg: vennene dine, den du har en venneforespørsel med, og den som setter opp et spill i klubben din. Handicaphistorikken ser bare du."
         },
         "email": {
           "title": "E-postadressen",
