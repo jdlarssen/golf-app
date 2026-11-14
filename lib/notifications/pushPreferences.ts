@@ -1,4 +1,6 @@
-import { osloParts } from '@/lib/format/teeOff';
+// Relative imports, like `readMarker.ts`: the app imports `isQuietHourOfDay`
+// for the night on its strip (#2315 PR B) and has no `@/` alias.
+import { osloParts } from '../format/teeOff';
 import type { NotificationKind } from './types';
 import { isLockedPushGroup, pushGroupForKind } from './pushGroups';
 
@@ -12,10 +14,20 @@ export type PushPreferences = {
   quietHours: boolean;
 };
 
-/** Quiet hours: 22:00–07:00 in Norwegian time, whatever the host's time zone. */
+/**
+ * Quiet hours: from 22:00 up to 07:00 in Norwegian time. The app's text
+ * «22:00–07:00» is held equal to these by `profileCopy.test.ts`.
+ */
+export const QUIET_HOURS = { start: 22, end: 7 } as const;
+
+/** Whether an hour of the Oslo day (0–23) is a quiet hour. */
+export function isQuietHourOfDay(hour: number): boolean {
+  return hour >= QUIET_HOURS.start || hour < QUIET_HOURS.end;
+}
+
+/** Quiet hours at this instant, in Norwegian time whatever the host's time zone. */
 export function isQuietHour(now: Date): boolean {
-  const { hour } = osloParts(now);
-  return hour >= 22 || hour < 7;
+  return isQuietHourOfDay(osloParts(now).hour);
 }
 
 /**

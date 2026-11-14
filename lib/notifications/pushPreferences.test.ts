@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { NOTIFICATION_KINDS } from './types';
 import { pushGroupForKind } from './pushGroups';
-import { isQuietHour, shouldPush, type PushPreferences } from './pushPreferences';
+import { QUIET_HOURS, isQuietHour, isQuietHourOfDay, shouldPush, type PushPreferences } from './pushPreferences';
 
 /**
  * Type A (#2315): the rule notify() asks before it pushes. Quiet hours are
@@ -46,6 +46,30 @@ describe('isQuietHour', () => {
   it('half past midnight is quiet, noon is not', () => {
     expect(isQuietHour(NIGHT)).toBe(true);
     expect(isQuietHour(DAY)).toBe(false);
+  });
+});
+
+// The app draws the night on a 24-hour strip from the same bounds (#2315 PR B).
+describe('isQuietHourOfDay', () => {
+  it('the bounds are 22 and 7', () => {
+    expect(QUIET_HOURS).toEqual({ start: 22, end: 7 });
+  });
+
+  it('the quiet hours are 22, 23 and 0 to 6, nine in all', () => {
+    const quiet = Array.from({ length: 24 }, (_, hour) => hour).filter(isQuietHourOfDay);
+    expect(quiet).toEqual([0, 1, 2, 3, 4, 5, 6, 22, 23]);
+  });
+
+  it('agrees with isQuietHour for every hour of a winter and a summer day', () => {
+    for (const day of ['2026-01-15', '2026-07-15']) {
+      for (let utc = 0; utc < 24; utc++) {
+        const at = new Date(`${day}T${String(utc).padStart(2, '0')}:30:00Z`);
+        const osloHour = Number(
+          new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', hour12: false }).format(at),
+        );
+        expect([at.toISOString(), isQuietHour(at)]).toEqual([at.toISOString(), isQuietHourOfDay(osloHour)]);
+      }
+    }
   });
 });
 
