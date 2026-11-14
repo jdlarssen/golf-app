@@ -1168,6 +1168,23 @@ describe('summaryLines — kontingent og premiebord', () => {
     expect(screen.getByTestId(net).props.accessibilityState).toMatchObject({ selected: false });
   });
 
+  // #2880: tallfeltet under kortene er 50 høyt og etiketten har ingen egen toppluft (`Nyttspill-5-avansert-a`).
+  it.each([
+    { slug: 'stableford', input: 'create-allowance', label: 'Handicap-andel (%)' },
+    { slug: 'texas_scramble', input: 'create-team-hcp', label: 'Prosent av lagets snitt-handicap' },
+  ])('#2880: $slug har tallfeltet 50 høyt og etiketten uten toppluft', async ({ slug, input, label }) => {
+    (fetchFormatCatalog as jest.Mock).mockResolvedValueOnce([
+      { slug, label: slug, iconKey: slug, isPrimary: false, sortOrder: 10 },
+    ]);
+    await renderWizard();
+    await fireEvent.press(await screen.findByTestId(`create-format-${slug}`));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    expect(StyleSheet.flatten(screen.getByTestId(input).props.style).minHeight).toBe(50);
+    const labelText = screen.getAllByText(/./).find((n) => n.props.children === label);
+    expect(labelText).toBeTruthy();
+    expect(StyleSheet.flatten(labelText!.props.style).marginTop).toBe(0);
+  });
+
   // #2880: Wolf og Skins, `Nyttspill-2-wolf` og `-skins`: ett kort med scoring, netto valgt fra start.
   it.each([
     { slug: 'wolf', legend: 'Wolf-oppsett', label: 'Wolf-scoring', startNote: true },

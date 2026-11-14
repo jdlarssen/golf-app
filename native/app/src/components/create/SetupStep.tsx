@@ -14,6 +14,7 @@
 import { isStablefordFamily } from '../../../../../lib/scoring/modes/types';
 import { settlementUnitKeyFor } from '../../../../../lib/scoring/settlement';
 import { SHOW_SETTLEMENT_IN_APP } from '../../../../../lib/launchRules';
+import type { ReactNode } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   ALLOWANCE_TEXT,
@@ -62,6 +63,22 @@ const COUNT_OPTIONS = (kind: 'ld' | 'ctp') =>
     label: String(n),
     testID: `create-side-${kind}-${n}`,
   }));
+
+/**
+ * Feltet under valgkortene i andel og lag-handicap (`Nyttspill-5-avansert-a`):
+ * 12 pt fra kortene (6 fra gruppa pluss 6 her) og 6 mellom etikett og felt.
+ * `Field` ville lagt 26 pt, siden etiketten har egen toppluft.
+ */
+function NestedField({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  const { ui } = useTheme();
+  return (
+    <View style={styles.nestedField}>
+      <Text style={[ui.label, styles.nestedLabel]}>{label}</Text>
+      {children}
+      {hint ? <Text style={ui.muted}>{hint}</Text> : null}
+    </View>
+  );
+}
 
 /**
  * Kortet med scoring for Nassau, Wolf og Skins (`Nyttspill-2-nassau|wolf|skins`):
@@ -206,8 +223,9 @@ export function SetupStep({
       {/* #1980: webbens AllowanceField for de fire formatene. «0» er brutto,
           som i webbens datamodell; tomt felt er 100 (fullt banehandicap). */}
       {hasHcpAllowanceField(mode) ? (
-        <Field label={ALLOWANCE_TEXT.legend} hint={ALLOWANCE_TEXT.description}>
-          {/* #2880: valgkort som `Nyttspill-5-avansert-a`: to kort, 52 høye. */}
+        <Field label={ALLOWANCE_TEXT.legend}>
+          {/* #2880: forklaringen over kortene og kortene 52 høye, som `Nyttspill-5-avansert-a`. */}
+          <Text style={ui.muted}>{ALLOWANCE_TEXT.description}</Text>
           <ChoiceCards
             columns={2}
             minHeight={52}
@@ -223,10 +241,10 @@ export function SetupStep({
               {BRUTTO_HELPER[mode]}
             </Text>
           ) : (
-            <Field label={ALLOWANCE_TEXT.inputLabel} hint={ALLOWANCE_TEXT.nettoHelper}>
+            <NestedField label={ALLOWANCE_TEXT.inputLabel} hint={ALLOWANCE_TEXT.nettoHelper}>
               <TextInput
                 testID="create-allowance"
-                style={ui.input}
+                style={[ui.input, styles.input50]}
                 value={text.allowance}
                 onChangeText={(allowance) =>
                   onText({ allowance: allowance.replace(/[^0-9]/g, '') })
@@ -235,7 +253,7 @@ export function SetupStep({
                 placeholder="100"
                 placeholderTextColor={colors.muted}
               />
-            </Field>
+            </NestedField>
           )}
         </Field>
       ) : null}
@@ -282,13 +300,13 @@ export function SetupStep({
                 {TEAM_HANDICAP_TEXT.bruttoHelper}
               </Text>
             ) : (
-              <Field
+              <NestedField
                 label={TEAM_HANDICAP_TEXT.inputLabel}
                 hint={TEAM_HANDICAP_TEXT.nettoHelper[mode][teamSize]}
               >
                 <TextInput
                   testID="create-team-hcp"
-                  style={ui.input}
+                  style={[ui.input, styles.input50]}
                   value={text.allowance}
                   onChangeText={(allowance) => onText({ allowance: allowance.replace(/[^0-9]/g, '') })}
                   keyboardType="number-pad"
@@ -298,7 +316,7 @@ export function SetupStep({
                 <Text style={ui.muted} testID="create-team-hcp-sum">
                   {sumEquivalentText(teamHandicapSumPct)}
                 </Text>
-              </Field>
+              </NestedField>
             )}
           </Field>
         </>
@@ -545,6 +563,10 @@ const styles = StyleSheet.create({
   cardLabel: { ...interLine(14, 17), fontFamily: FONTS.sansSemiBold },
   // Scoring-kortet: overskrift og forklaring i én gruppe, 13 pt med 18,85 i linjen, som artboardene.
   cardIntro: { gap: 2 },
+  nestedField: { gap: 6, marginTop: 6 },
+  nestedLabel: { marginTop: 0 },
+  // Tallfeltet under valgkortene er 50 høyt på tegningen (`ui.input` er 44).
+  input50: { minHeight: 50 },
   cardDescription: { ...interLine(13, 18.85, { multiline: true }), fontFamily: FONTS.sans },
   cardNote: { ...interLine(12, 15), fontFamily: FONTS.sans },
   // `Nyttspill-2-patsome`: boksen med de tre delene av runden.
