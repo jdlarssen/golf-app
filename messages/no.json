@@ -358,8 +358,8 @@
     "friendsSublabel": "Legg til venner og se spillene deres",
     "friendsBadgeSublabel": "{count, plural, one {1 vil bli venn med deg} other {{count} vil bli venner med deg}}",
     "historikkRow": "Min historikk",
-    "exportRow": "Eksporter mine data",
-    "exportSublabel": "Last ned alt vi har lagret om deg som en JSON-fil. Dataene er dine å ta med.",
+    "dataRow": "Dine data",
+    "dataRowSublabel": "Hva vi lagrer, og hvem som ser det",
     "deleteRow": "Slett konto",
     "logoutButton": "Logg ut",
     "logoutPending": "Logger ut …",
@@ -557,6 +557,11 @@
       "processorsLine": "Tjenestene som behandler dataene for oss, står i personvernerklæringen.",
       "exportRow": "Last ned dataene dine",
       "exportSublabel": "Profilen, handicaphistorikken, spillene, slagene, reaksjonene, invitasjonene, vennene, klubbene, varslene, AI-svaret, Kavalkaden og ideene dine i én fil."
+    },
+    "dataPage": {
+      "sectionYouDecide": "Du bestemmer",
+      "privacyRow": "Personvernerklæringen",
+      "privacySublabel": "Hele teksten, på vanlig norsk"
     }
   },
   "friends": {

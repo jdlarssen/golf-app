@@ -170,29 +170,19 @@ export default async function ProfilePage({
           </section>
         )}
 
-        {/* Konto — eksport og destruktiv slett-handling */}
+        {/* Konto (#2332): «Dine data» samler hva vi lagrer, nedlastingen,
+            personvernerklæringen og sletting på én side, som i appen. */}
         <section>
           <p className="mb-2 px-1 font-sans text-xs font-semibold text-muted">
             {t('sectionAccount')}
           </p>
           <SettingList>
             <SettingRow
-              href="/profile/export"
-              download
-              label={t('exportRow')}
-              sublabel={t('exportSublabel')}
+              href="/profile/konto"
+              label={t('dataRow')}
+              sublabel={t('dataRowSublabel')}
             />
           </SettingList>
-          {/* Extra spacing isolates the destructive action visually. */}
-          <div className="mt-4">
-            <SettingList>
-              <SettingRow
-                href="/profile/slett-konto"
-                label={t('deleteRow')}
-                tone="danger"
-              />
-            </SettingList>
-          </div>
         </section>
       </div>
 
