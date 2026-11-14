@@ -46,12 +46,19 @@ export type SheetBottom =
  */
 export function FriendSheet({
   person,
+  open,
   bottom,
   errorLine = null,
   loading = false,
   onClose,
 }: {
   person: SheetPerson | null;
+  /**
+   * Om arket er oppe. Uten den er det oppe så lenge `person` finnes (Venner).
+   * Ligaen holder siste person og setter `open` til false, så innholdet står
+   * mens arket glir ned.
+   */
+  open?: boolean;
   bottom: SheetBottom;
   errorLine?: string | null;
   /** Mens forholdet hentes: en liten hjul der knappen kommer. */
@@ -62,7 +69,13 @@ export function FriendSheet({
   // #1954 D3: en Modal i bunnen går under navigasjonslinja med kant til kant.
   const insets = useSafeAreaInsets();
   return (
-    <Modal visible={person !== null} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={open ?? person !== null}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+      testID="friend-sheet-modal"
+    >
       <View style={styles.sheetRoot}>
         <Pressable
           style={[styles.backdrop, { backgroundColor: sheetScrim(colors, scheme) }]}
