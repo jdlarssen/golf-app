@@ -719,6 +719,34 @@ describe('#2878: navnet i tabellen og arket', () => {
     expect(await screen.findByTestId('friend-sheet-sent')).toBeTruthy();
   });
 
+  it('forespørselen ble godtatt med en gang (de hadde alt sendt): dere står som venner', async () => {
+    friendsAre({ suggestions: [{ id: 'martin', name: 'Martin Lie', stats }] });
+    sendFriendRequest.mockResolvedValue({ ok: true, status: 'accepted' });
+    await openSheet('martin');
+    await fireEvent.press(await screen.findByTestId('league-person-add'));
+    expect(await screen.findByText('Dere er venner')).toBeTruthy();
+    expect(screen.queryByTestId('league-person-add')).toBeNull();
+    expect(screen.queryByTestId('friends-remove-martin')).toBeNull();
+  });
+
+  it('allerede venner eller allerede sendt gir riktig tilstand uten feillinje', async () => {
+    friendsAre({ suggestions: [{ id: 'martin', name: 'Martin Lie', stats }] });
+    sendFriendRequest.mockResolvedValueOnce({ ok: true, status: 'already_pending' });
+    await openSheet('martin');
+    await fireEvent.press(await screen.findByTestId('league-person-add'));
+    expect(await screen.findByTestId('friend-sheet-sent')).toBeTruthy();
+    expect(screen.queryByTestId('friend-sheet-error')).toBeNull();
+  });
+
+  it('allerede venner (annen enhet nådde først) gir venne-tilstanden', async () => {
+    friendsAre({ suggestions: [{ id: 'martin', name: 'Martin Lie', stats }] });
+    sendFriendRequest.mockResolvedValueOnce({ ok: true, status: 'already_friends' });
+    await openSheet('martin');
+    await fireEvent.press(await screen.findByTestId('league-person-add'));
+    expect(await screen.findByText('Dere er venner')).toBeTruthy();
+    expect(screen.queryByTestId('friend-sheet-error')).toBeNull();
+  });
+
   it('du har sendt: linja står der knappen var', async () => {
     friendsAre({ outgoing: [{ id: 'martin', name: 'Martin Lie', stats, requestId: 'req-out' }] });
     await openSheet('martin');
