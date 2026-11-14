@@ -21,6 +21,15 @@ import { callWebRoute, type WebApiFailure } from './webApi';
 
 const EXPORT_PATH = '/api/profile/export';
 
+/**
+ * Tidstaket for hentingen: det samme som ruta tåler (`maxDuration` 60 s), ikke
+ * appens vanlige 15 s. Taket gjelder til hele kroppen er lest, og for en spiller
+ * med mange sesonger er fila stor. Målt på staging 14.11: 682 kB på under 3,1 s
+ * i simulatoren, og den tyngste spilleren der har omtrent 1,4 ganger så mye; på
+ * svakt mobilnett blir det fort mange ganger mer.
+ */
+export const EXPORT_TIMEOUT_MS = 60_000;
+
 /** Hvorfor fila ikke kom fram. `failed` dekker både ruta og telefonen. */
 export type DataExportFailure = WebApiFailure | 'failed';
 
@@ -37,7 +46,7 @@ export function dataExportFilename(now: Date): string {
 
 /** Hent fila, skriv den og åpne delingsarket. Kaster aldri. */
 export async function downloadDataExport(now: Date = new Date()): Promise<DataExportResult> {
-  const call = await callWebRoute(EXPORT_PATH, 'GET');
+  const call = await callWebRoute(EXPORT_PATH, 'GET', undefined, { timeoutMs: EXPORT_TIMEOUT_MS });
   if (!call.ok) return call;
   if (call.status === 401) return { ok: false, reason: 'unauthorized' };
   if (call.status !== 200) return { ok: false, reason: 'failed' };

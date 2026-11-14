@@ -115,8 +115,16 @@ function abortError(): Error {
  * signalet, og avbryter forespørselen under. Taket gjelder til kroppen er lest
  * (se fil-kommentaren). `globalThis.fetch` leses ved hvert
  * kall, ikke ved import, slik at testene kan bytte den.
+ *
+ * @param timeoutMs et eget tak for ett kall. #2332: «Last ned dataene dine»
+ *   henter hele eksporten, og for en spiller med mange sesonger kan det ta
+ *   lenger enn 15 s på mobilnett. Utelatt gir {@link REQUEST_TIMEOUT_MS}.
  */
-export function timedFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+export function timedFetch(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  timeoutMs: number = REQUEST_TIMEOUT_MS,
+): Promise<Response> {
   const outer = init.signal ?? undefined;
   if (outer?.aborted) return Promise.reject(abortError());
 
@@ -137,7 +145,7 @@ export function timedFetch(input: RequestInfo | URL, init: RequestInit = {}): Pr
     const timer = setTimeout(() => {
       controller.abort();
       settle(() => reject(new TypeError(TIMEOUT_MESSAGE)));
-    }, REQUEST_TIMEOUT_MS);
+    }, timeoutMs);
     outer?.addEventListener('abort', onOuterAbort);
 
     globalThis.fetch(input, { ...init, signal: controller.signal })
