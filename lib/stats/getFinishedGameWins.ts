@@ -4,6 +4,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { selectAllRows } from '@/lib/supabase/selectAllRows';
 import { osloYearWindow } from '@/lib/format/osloCalendar';
 import { osloParts } from '@/lib/format/teeOff';
+import { chunks } from '@/lib/stats/chunks';
 import { buildModeResultForGame } from '@/lib/scoring/buildModeResultForGame';
 import {
   computeResultSummaries,
@@ -156,20 +157,26 @@ export const getFinishedGameWins = unstable_cache(
     // Round-trip 2: all players for those games, with their stored per-mode
     // outcome (`result_summary`, #572) and `withdrawn_at`. No holes/scores
     // fetch — the stored summary is the source of truth for who won.
-    const playersRaw = await selectAllRows(
-      (from, to) =>
-        supabase
-          .from('game_players')
-          .select(
-            'game_id, user_id, withdrawn_at, result_summary, users!game_players_user_id_fkey(name, nickname, is_guest)',
-          )
-          .in('game_id', gameIds)
-          .order('game_id')
-          .order('user_id')
-          .range(from, to)
-          .returns<GamePlayerRow[]>(),
-      'club stats game_players',
-    );
+    // Sliced: a season of all Tørny's games is more ids than one `.in()` URL holds.
+    const playersRaw: GamePlayerRow[] = [];
+    for (const ids of chunks(gameIds)) {
+      playersRaw.push(
+        ...(await selectAllRows(
+          (from, to) =>
+            supabase
+              .from('game_players')
+              .select(
+                'game_id, user_id, withdrawn_at, result_summary, users!game_players_user_id_fkey(name, nickname, is_guest)',
+              )
+              .in('game_id', ids)
+              .order('game_id')
+              .order('user_id')
+              .range(from, to)
+              .returns<GamePlayerRow[]>(),
+          'club stats game_players',
+        )),
+      );
+    }
     // #1009: gjester (skygge-brukere) teller ikke på klubbtavla — verken i
     // seiers- eller deltakelseslistene. Trygt å kutte dem fra tally-inputen
     // her: fallback-motoren under henter sine egne data fra DB, så andres
