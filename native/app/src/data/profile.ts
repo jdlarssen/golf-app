@@ -231,3 +231,27 @@ export async function saveProfile(input: ProfileInput): Promise<ProfileSaveResul
   if (call.status === 401) return { ok: false, reason: 'unauthorized' };
   return { ok: false, reason: 'update_failed' };
 }
+
+/**
+ * Lagre bare handicapet, fra arket på spillsiden (#2297).
+ *
+ * Samme vei som profilskjemaet: `PUT /api/profile` stempler `handicap_updated_at`
+ * og regner om de frosne banehandicapene, så appen skriver aldri selv til `users`.
+ * Ruta tar hele profilen, så navn, kallenavn, kjønn og nivå sendes som de står.
+ * `signed` er den lagrede, signerte verdien (plusshandicap er negativt); ruta vil
+ * ha magnituden og fortegnet hver for seg.
+ */
+export function saveHandicap(
+  profile: Pick<OwnProfile, 'name' | 'nickname' | 'gender' | 'level'>,
+  signed: number,
+): Promise<ProfileSaveResult> {
+  return saveProfile({
+    name: profile.name ?? '',
+    nickname: profile.nickname,
+    hcpIndex: Math.abs(signed).toFixed(1),
+    hcpPlus: signed < 0,
+    gender: profile.gender,
+    // `users.level` er `not null default 'normal'`; ruta godtar `normal` for en rad uten.
+    level: profile.level ?? 'normal',
+  });
+}

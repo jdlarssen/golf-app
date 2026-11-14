@@ -4,6 +4,7 @@ import {
   parseHcpMagnitude,
   HCP_MIN,
   HCP_MAX,
+  HCP_RULER_MIN,
   type ProfileInputError,
 } from './profileInput';
 
@@ -251,5 +252,17 @@ describe('parseHcpMagnitude — formatsjekken de andre inngangene deler (#2048)'
     ['ikke trimmet', ' 12'],
   ])('%s: «%s» → null', (_label, input) => {
     expect(parseHcpMagnitude(input)).toBeNull();
+  });
+});
+
+describe('HCP_RULER_MIN — linjalens stopp i appen (#2297)', () => {
+  it('er smalere enn valideringen, og et plusshandicap', () => {
+    expect(HCP_MIN).toBeLessThanOrEqual(HCP_RULER_MIN);
+    expect(HCP_RULER_MIN).toBeLessThan(0);
+  });
+
+  it('er en verdi serveren godtar, som plusshandicap', () => {
+    const result = parse({ hcpIndex: String(Math.abs(HCP_RULER_MIN)), hcpPlus: true });
+    expect(result).toMatchObject({ ok: true, value: { hcpIndex: HCP_RULER_MIN } });
   });
 });

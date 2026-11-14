@@ -288,3 +288,54 @@ describe('saveProfile', () => {
     });
   });
 });
+
+describe('saveHandicap', () => {
+  useWebRoute();
+
+  const PROFILE = { name: 'Jørgen Larssen', nickname: 'Jøggi', gender: 'mens', level: 'senior' };
+
+  function sentBody(): Record<string, unknown> {
+    return JSON.parse(String(requestInit().body)) as Record<string, unknown>;
+  }
+
+  it('sender handicapet som magnitude, og resten av profilen som den står', async () => {
+    respondWith(200, { ok: true });
+
+    expect(await profile().saveHandicap(PROFILE, 13.8)).toEqual({ ok: true });
+
+    expect(mockFetch.mock.calls[0][0]).toBe(PROFILE_URL);
+    expect((mockFetch.mock.calls[0][1] as RequestInit).method).toBe('PUT');
+    expect(sentBody()).toEqual({
+      name: 'Jørgen Larssen',
+      nickname: 'Jøggi',
+      hcpIndex: '13.8',
+      hcpPlus: false,
+      gender: 'mens',
+      level: 'senior',
+    });
+  });
+
+  it('sender plusshandicap som magnitude med hcpPlus', async () => {
+    respondWith(200, { ok: true });
+
+    await profile().saveHandicap(PROFILE, -0.6);
+
+    expect(sentBody()).toMatchObject({ hcpIndex: '0.6', hcpPlus: true });
+  });
+
+  it('sender scratch uten plusstegn', async () => {
+    respondWith(200, { ok: true });
+
+    await profile().saveHandicap(PROFILE, 0);
+
+    expect(sentBody()).toMatchObject({ hcpIndex: '0.0', hcpPlus: false });
+  });
+
+  it('sender en profil uten nivå som «normal», slik kolonnen er', async () => {
+    respondWith(200, { ok: true });
+
+    await profile().saveHandicap({ ...PROFILE, level: null, nickname: null }, 20);
+
+    expect(sentBody()).toMatchObject({ level: 'normal', nickname: null });
+  });
+});
