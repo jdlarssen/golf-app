@@ -111,9 +111,9 @@ export default async function ProfilePage({
         </Suspense>
       </div>
 
-      {/* Settings split into labelled sections for clarity. Extra vertical
-          space before «Slett konto» prevents accidental taps on the destructive
-          action (one-door-per-room: dedicated /slett-konto confirm page). */}
+      {/* Settings split into labelled sections for clarity. «Slett konto» lives
+          on «Dine data» (/profile/konto, #2332), alone with space above it
+          (one-door-per-room: dedicated /slett-konto confirm page). */}
       <div className="mt-8 space-y-6">
         {/* Aktivitet */}
         <section>

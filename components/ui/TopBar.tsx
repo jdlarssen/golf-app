@@ -17,8 +17,8 @@ import { HistoryBackLink } from './HistoryBackLink';
  *
  * `back="history"` switches the chevron to a router.back()-based control
  * for pages that can be reached from any context (e.g. /legal/privacy
- * from the global footer link). `backHref` is then the fallback used
- * when there is no same-origin referrer.
+ * from the global footer link). `backHref` is then the fallback used when
+ * the tab has no Tørny page to go back to (`HistoryBackLink`, #2746 rule 7).
  *
  * `action` slots a node (typically a `<SmartLink>` chip such as «+ Nytt»)
  * into the right side of the bar — used by admin list pages where we want

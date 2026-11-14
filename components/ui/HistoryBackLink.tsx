@@ -31,9 +31,9 @@ function cameFromTornyPage(): boolean {
 
 /**
  * Back link that prefers browser history (so users return to the page
- * they actually came from) and falls back to a static href when there
- * is no same-origin referrer — e.g. when the page was opened directly
- * via a deep link or shared URL.
+ * they actually came from) and falls back to a static href when the tab has
+ * no Tørny page before this one — e.g. when the page was opened directly
+ * via a deep link or shared URL ({@link cameFromTornyPage}).
  *
  * Visual style mirrors `BackLink` exactly so the two are interchangeable
  * inside `TopBar`.
