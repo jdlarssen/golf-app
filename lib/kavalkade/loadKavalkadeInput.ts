@@ -24,7 +24,7 @@ import 'server-only';
  * ikke nødvendigvis spilleren lesetilgang til alle sammen. Gaten ligger derfor i
  * kallstedet: lasteren tar `viewerUserId` som allerede er verifisert
  * (`getProxyVerifiedUserId`), og leser bare runder den spilleren selv gikk.
- * Samme mønster som `lib/stats`-tavla i `/profile/statistikk`.
+ * Samme mønster som klubbens æresbrett (`lib/stats/getFinishedGameWins.ts`).
  */
 import { getAdminClient } from '@/lib/supabase/admin';
 import {

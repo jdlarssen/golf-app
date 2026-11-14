@@ -46,8 +46,8 @@ function fmt(value: number | null): string {
  * **Kobling boks ↔ linje:** boks-rammen følger linjestilen (brutto heltrukken
  * `--color-primary`, netto stiplet `--color-muted`), så vi slipper en egen
  * tegnforklaring. **Rekord:** «Beste»-boksen får en svak gull-tint og punktet
- * på kurven en gull-ring. Gullet bærer ALDRI tekst (stryker WCAG AA på lys bg,
- * jf. `/profile/statistikk`) — tallet står i `--color-text`, og «Beste»-merket
+ * på kurven en gull-ring. Gullet bærer ALDRI tekst (stryker WCAG AA på lys bg)
+ * — tallet står i `--color-text`, og «Beste»-merket
  * er ikke eneste bærer av rekord-info (boksen er også tekstmerket).
  */
 export function ScoringTrendChart({
