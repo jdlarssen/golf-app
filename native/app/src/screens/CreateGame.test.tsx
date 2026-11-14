@@ -28,6 +28,7 @@ import { describePendingOthers, PENDING_SELF_NOTE } from '../lib/createGameCopy'
 import type { ScreenProps } from '../navigation';
 import { SessionProvider } from '../session';
 import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
+import { buildDraftPayload } from '../lib/wizardPayload';
 import { CreateGame, summaryLines } from './CreateGame';
 
 // Den ekte `supabase.ts` kaster uten EXPO_PUBLIC_-variablene og kobler seg på
@@ -1113,4 +1114,70 @@ describe('summaryLines — kontingent og premiebord', () => {
     expect(draft.setup).toMatchObject({ nassauScoring: 'gross' });
     publishGameMock.mockClear();
   });
+
+  // #2880: Wolf og Skins, `Nyttspill-2-wolf` og `-skins`: ett kort med scoring, netto valgt fra start.
+  it.each([
+    { slug: 'wolf', legend: 'Wolf-oppsett', label: 'Wolf-scoring', startNote: true },
+    { slug: 'skins', legend: 'Skins-oppsett', label: 'Skins-scoring', startNote: false },
+  ])('$slug viser oppsettet som valgkort med netto valgt, og tar brutto', async ({ slug, legend, label, startNote }) => {
+    (fetchFormatCatalog as jest.Mock).mockResolvedValueOnce([
+      { slug, label: slug, iconKey: slug, isPrimary: false, sortOrder: 60 },
+    ]);
+    await renderWizard();
+    await fireEvent.press(await screen.findByTestId(`create-format-${slug}`));
+    await fireEvent.press(screen.getByTestId('create-next'));
+
+    expect(screen.getByText(legend)).toBeTruthy();
+    expect(screen.getByText('Scoring')).toBeTruthy();
+    expect(screen.getByLabelText(label)).toBeTruthy();
+    expect(screen.getByTestId(`create-${slug}-net`).props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId(`create-${slug}-gross`).props.accessibilityState).toMatchObject({ selected: false });
+    expect(screen.queryByText('Rotasjonen trekkes når runden starter.') !== null).toBe(startNote);
+    // Chips-kontrollen og dens spørsmål er borte; kroner står bak oppgjørsbryteren (#2561).
+    expect(screen.queryByTestId('create-scoring-net')).toBeNull();
+    expect(screen.queryByText('Teller brutto eller netto?')).toBeNull();
+    expect(screen.queryByTestId('create-kr-per-unit')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId(`create-${slug}-gross`));
+    expect(screen.getByTestId(`create-${slug}-gross`).props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId(`create-${slug}-net`).props.accessibilityState).toMatchObject({ selected: false });
+  });
+
+  // #2880: Wolf og Skins bytter kontroll for netto/brutto (chips til valgkort).
+  // Det som sendes til serveren skal være det samme: urørt gir netto, et trykk
+  // gir det som er trykket. Verdiene er skrevet inn fra en kjøring før endringen.
+  it.each([
+    { slug: 'wolf', press: null, expectSetup: {}, expectModeConfig: { kind: 'wolf', team_size: 1, teams_count: 3, wolf_scoring: 'net' } },
+    { slug: 'wolf', press: 'net', expectSetup: { wolfScoring: 'net' }, expectModeConfig: { kind: 'wolf', team_size: 1, teams_count: 3, wolf_scoring: 'net' } },
+    { slug: 'wolf', press: 'gross', expectSetup: { wolfScoring: 'gross' }, expectModeConfig: { kind: 'wolf', team_size: 1, teams_count: 3, wolf_scoring: 'gross' } },
+    { slug: 'skins', press: null, expectSetup: {}, expectModeConfig: { kind: 'skins', team_size: 1, skins_scoring: 'net' } },
+    { slug: 'skins', press: 'net', expectSetup: { skinsScoring: 'net' }, expectModeConfig: { kind: 'skins', team_size: 1, skins_scoring: 'net' } },
+    { slug: 'skins', press: 'gross', expectSetup: { skinsScoring: 'gross' }, expectModeConfig: { kind: 'skins', team_size: 1, skins_scoring: 'gross' } },
+  ])(
+    '#2880: $slug, trykket: $press, sender det samme som før',
+    async ({ slug, press, expectSetup, expectModeConfig }) => {
+      (fetchFormatCatalog as jest.Mock).mockResolvedValueOnce([
+        { slug, label: slug, iconKey: slug, isPrimary: false, sortOrder: 60 },
+      ]);
+      publishGameMock.mockResolvedValueOnce({ ok: true, gameId: `${slug}-game` });
+      await renderWizard();
+      await fireEvent.press(await screen.findByTestId(`create-format-${slug}`));
+      await fireEvent.press(screen.getByTestId('create-next'));
+      if (press) await fireEvent.press(screen.getByTestId(`create-${slug}-${press}`));
+
+      await fireEvent.press(screen.getByTestId('create-next'));
+      await fireEvent.press(await screen.findByTestId('create-course-course-1'));
+      await fireEvent.press(screen.getByTestId('create-tee-tee-1'));
+      await fireEvent.press(screen.getByTestId('create-next'));
+      await fireEvent.press(await screen.findByTestId('create-player-p2'));
+      await fireEvent.press(screen.getByTestId('create-player-p3'));
+      await fireEvent.press(screen.getByTestId('create-next'));
+      await fireEvent.press(screen.getByTestId('create-publish'));
+
+      const [draft] = publishGameMock.mock.calls.at(-1)!;
+      expect(draft.setup).toEqual(expectSetup);
+      expect(buildDraftPayload(draft).payload.mode_config).toMatchObject(expectModeConfig);
+      publishGameMock.mockClear();
+    },
+  );
 });

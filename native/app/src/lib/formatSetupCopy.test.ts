@@ -4,8 +4,10 @@ import {
   NASSAU_SETUP_TEXT,
   PATSOME_TEXT,
   SHAMBLE_TEXT,
+  SKINS_SETUP_TEXT,
   TEAM_HANDICAP_TEXT,
   TEAM_SIZE_TEXT,
+  WOLF_SETUP_TEXT,
   sumEquivalentText,
 } from './formatSetupCopy';
 
@@ -36,6 +38,16 @@ describe('Patsome-oppsettet er nettets', () => {
 describe('Nassau-oppsettet er nettets (#2755)', () => {
   it('alle seks strengene er wizard.sections.nassau, tegn for tegn', () => {
     expect(NASSAU_SETUP_TEXT).toStrictEqual(source.wizard.sections.nassau);
+  });
+});
+
+describe('Wolf- og Skins-oppsettet er nettets (#2880)', () => {
+  it('Wolf er wizard.sections.wolf, tegn for tegn', () => {
+    expect(WOLF_SETUP_TEXT).toStrictEqual(source.wizard.sections.wolf);
+  });
+
+  it('Skins er wizard.sections.skins, tegn for tegn', () => {
+    expect(SKINS_SETUP_TEXT).toStrictEqual(source.wizard.sections.skins);
   });
 });
 

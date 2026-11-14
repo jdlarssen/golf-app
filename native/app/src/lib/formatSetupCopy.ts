@@ -43,6 +43,29 @@ export const NASSAU_SETUP_TEXT = {
   scoringAriaLabel: 'Nassau-scoring',
 } as const;
 
+/** `wizard.sections.wolf` (#2880). */
+export const WOLF_SETUP_TEXT = {
+  legend: 'Wolf-oppsett',
+  scoringLabel: 'Scoring',
+  scoringDescription:
+    'Velger om Wolf-scoringen bruker spillernes handicap-slag, eller om beste rene bruttoslag avgjør hvert hull.',
+  scoringNet: 'Med handicap (netto)',
+  scoringGross: 'Brutto',
+  scoringAriaLabel: 'Wolf-scoring',
+  startNote: 'Rotasjonen trekkes når runden starter.',
+} as const;
+
+/** `wizard.sections.skins` (#2880). */
+export const SKINS_SETUP_TEXT = {
+  legend: 'Skins-oppsett',
+  scoringLabel: 'Scoring',
+  scoringDescription:
+    'Hvert hull er verdt 1 skin. Deler to eller flere spillere hullet, ruller skinnet videre til neste hull (da verdt 2, så 3, osv.), helt til én vinner alene og tar hele potten.',
+  scoringNet: 'Med handicap (netto)',
+  scoringGross: 'Brutto',
+  scoringAriaLabel: 'Skins-scoring',
+} as const;
+
 /** `wizard.teamSize`: kortene for lagstørrelsen i scramble-familien. */
 export const TEAM_SIZE_TEXT = {
   legend: 'Velg lagstørrelse',

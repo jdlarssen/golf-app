@@ -622,6 +622,18 @@ describe('oppsett-feltene', () => {
     });
   });
 
+  it('wolf brutto gir wolf_scoring gross (#2880)', () => {
+    const { payload } = buildDraftPayload(
+      draft({ gameMode: 'wolf', players: solo('a', 'b', 'c', 'd'), setup: { wolfScoring: 'gross' } }),
+    );
+    expect(payload.mode_config).toEqual({
+      kind: 'wolf',
+      team_size: 1,
+      teams_count: 4,
+      wolf_scoring: 'gross',
+    });
+  });
+
   it('greensome-andelen kan settes ned fra 100', () => {
     const { payload } = buildDraftPayload(
       draft({
