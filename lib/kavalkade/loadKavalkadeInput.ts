@@ -34,7 +34,7 @@ import {
 import { selectAllRows } from '@/lib/supabase/selectAllRows';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
 import type { GameMode, ScoringGender } from '@/lib/scoring/modes/types';
-import { parForGender, type HoleScore } from '@/lib/stats/achievements';
+import { toHoleScores } from '@/lib/stats/achievements';
 import { effectiveDate, effectiveYear } from '@/lib/stats/effectiveDate';
 import type {
   KavalkadeGame,
@@ -257,24 +257,4 @@ export function windowStart(year: number): Date {
   return new Date(
     osloNewYear.getTime() - YEAR_START_SLACK_DAYS * 24 * 60 * 60 * 1000,
   );
-}
-
-/**
- * Score-rader → hull med kjønns-valgt par. Hull uten bane-rad får `par: 0`, som
- * `countRoundAchievements` og nemesis-regningen allerede hopper over — et manglende
- * par skal aldri bli en birdie.
- */
-function toHoleScores(
-  scores: ScoreRow[],
-  courseHoles: Map<number, CourseHoleRow> | undefined,
-  gender: ScoringGender | null,
-): HoleScore[] {
-  return scores.map((score) => {
-    const hole = courseHoles?.get(score.hole_number);
-    return {
-      holeNumber: score.hole_number,
-      strokes: score.strokes,
-      par: hole ? parForGender(hole, gender) : 0,
-    };
-  });
 }

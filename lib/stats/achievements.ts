@@ -83,6 +83,26 @@ export function parForGender(
 }
 
 /**
+ * Score-rader → hull med kjønns-valgt par. Hull uten bane-rad får `par: 0`, som
+ * `countRoundAchievements` og nemesis-regningen allerede hopper over — et manglende
+ * par skal aldri bli en birdie. Delt av Kavalkaden og Æresbrettet (#2259).
+ */
+export function toHoleScores(
+  scores: ReadonlyArray<{ hole_number: number; strokes: number | null }>,
+  courseHoles: ReadonlyMap<number, CourseHoleRow> | undefined,
+  gender: ScoringGender | null,
+): HoleScore[] {
+  return scores.map((score) => {
+    const hole = courseHoles?.get(score.hole_number);
+    return {
+      holeNumber: score.hole_number,
+      strokes: score.strokes,
+      par: hole ? parForGender(hole, gender) : 0,
+    };
+  });
+}
+
+/**
  * The counting rule for an under-par hole: `'eagle'` for two or more under
  * (an albatross counts as an eagle — the brags have no albatross counter),
  * `'birdie'` for one under. Built on the hole page's `strokeTerm`, so the
