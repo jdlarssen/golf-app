@@ -485,25 +485,6 @@
       "streakDormant": "Serien starter neste gang du spiller.",
       "streakSeason": "{count, plural, one {# runde} other {# runder}} i {year}"
     },
-    "statistikk": {
-      "kicker": "Toppliste",
-      "backLabel": "Tilbake til hjem",
-      "heading": "Toppliste",
-      "subtitle": "Fra alle ferdigspilte spill i Tørny.",
-      "emptyState": "Ingen ferdige spill ennå. Statistikken fylles inn så snart admin avslutter det første spillet. Da ser du hvem som har vunnet flest og hvem som har vært med på flest.",
-      "winnersLabel": "Vinnerliste",
-      "winnersHeading": "Flest spill vunnet",
-      "winnersSubtitle": "Antall ferdigspilte spill spilleren har vunnet.",
-      "mostActiveLabel": "Mest aktive",
-      "mostActiveHeading": "Flest spill spilt",
-      "mostActiveSubtitle": "Antall ferdigspilte spill spilleren har deltatt i.",
-      "noData": "Ingen data ennå.",
-      "unitWinSingular": "seier",
-      "unitWinPlural": "seire",
-      "unitGameSingular": "spill",
-      "unitGamePlural": "spill",
-      "unknownPlayer": "(ukjent)"
-    },
     "myStats": {
       "heading": "Mine tall",
       "roundsPlayed": "Runder spilt",
@@ -6602,8 +6583,6 @@
     "roundNetto": "{netto} netto",
     "roundTeamBall": "Lagrunde",
     "discoverCard": "Bli med i en åpen turnering",
-    "sectionToppliste": "Toppliste",
-    "topplisteCard": "Flest seire og mest aktive",
     "proximity": {
       "today": "I dag kl. {time}",
       "tomorrow": "I morgen",
