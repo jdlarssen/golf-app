@@ -1115,6 +1115,41 @@ describe('summaryLines — kontingent og premiebord', () => {
     publishGameMock.mockClear();
   });
 
+  // #2880: handicap-andelen (Stableford) og lag-handicap (Texas) bytter chips mot valgkort.
+  // Det som sendes skal være det samme: urørt = netto, trykket brutto = 0.
+  it.each([
+    { slug: 'stableford', press: null, field: 'hcpAllowancePct', expected: undefined },
+    { slug: 'stableford', press: 'create-allowance-brutto', field: 'hcpAllowancePct', expected: 0 },
+    { slug: 'texas_scramble', press: null, field: 'teamHandicapSumPct', expected: undefined },
+    { slug: 'texas_scramble', press: 'create-team-hcp-brutto', field: 'teamHandicapSumPct', expected: 0 },
+  ])('#2880: $slug, trykket: $press, sender $field = $expected som før', async ({ slug, press, field, expected }) => {
+    (fetchFormatCatalog as jest.Mock).mockResolvedValueOnce([
+      { slug, label: slug, iconKey: slug, isPrimary: false, sortOrder: 10 },
+    ]);
+    publishGameMock.mockResolvedValueOnce({ ok: true, gameId: `${slug}-game` });
+    await renderWizard();
+    await fireEvent.press(await screen.findByTestId(`create-format-${slug}`));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    if (press) await fireEvent.press(screen.getByTestId(press));
+
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(await screen.findByTestId('create-course-course-1'));
+    await fireEvent.press(screen.getByTestId('create-tee-tee-1'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(await screen.findByTestId('create-player-p2'));
+    if (slug === 'texas_scramble') {
+      await fireEvent.press(screen.getByTestId('create-team-me-1'));
+      await fireEvent.press(screen.getByTestId('create-team-p2-1'));
+    }
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(screen.getByTestId('create-publish'));
+
+    const [draft] = publishGameMock.mock.calls.at(-1)!;
+    const sent = field === 'hcpAllowancePct' ? draft.hcpAllowancePct : draft.setup[field as 'teamHandicapSumPct'];
+    expect(sent).toBe(expected);
+    publishGameMock.mockClear();
+  });
+
   // #2880: Wolf og Skins, `Nyttspill-2-wolf` og `-skins`: ett kort med scoring, netto valgt fra start.
   it.each([
     { slug: 'wolf', legend: 'Wolf-oppsett', label: 'Wolf-scoring', startNote: true },
@@ -1176,7 +1211,7 @@ describe('summaryLines — kontingent og premiebord', () => {
 
       const [draft] = publishGameMock.mock.calls.at(-1)!;
       expect(draft.setup).toEqual(expectSetup);
-      expect(buildDraftPayload(draft).payload.mode_config).toMatchObject(expectModeConfig);
+      expect(buildDraftPayload(draft).payload.mode_config).toEqual(expectModeConfig);
       publishGameMock.mockClear();
     },
   );
