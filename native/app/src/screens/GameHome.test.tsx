@@ -70,6 +70,14 @@ jest.mock('../data/joinFlight', () => ({
 }));
 // #2749: «Kopier» på kontingentkortet. Pakka har native kode; her holder det å se kallet.
 jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn(async () => true) }));
+// #2297: profilen bak handicapkortet. Uten et svar (standard) står kortet ikke,
+// som før profilen ble lest her.
+const mockFetchOwnProfile = jest.fn((..._args: unknown[]): Promise<unknown> => Promise.reject(new Error('ingen profil')));
+const mockSaveHandicap = jest.fn((..._args: unknown[]): Promise<unknown> => Promise.resolve({ ok: true }));
+jest.mock('../data/profile', () => ({
+  fetchOwnProfile: (...args: unknown[]) => mockFetchOwnProfile(...args),
+  saveHandicap: (...args: unknown[]) => mockSaveHandicap(...args),
+}));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
 }));
@@ -1513,5 +1521,167 @@ describe('GameHome — kontingent og premiebord (#2749)', () => {
     expect(screen.queryByTestId(/^payment-card/)).toBeNull();
     const order = testIdsInOrder().filter((id) => ['game-ticket', 'game-tiles', 'prize-table'].includes(id));
     expect(order).toEqual(['game-ticket', 'game-tiles', 'prize-table']);
+  });
+});
+
+describe('GameHome — handicapkortet før runden (#2297)', () => {
+  const DAY = 86_400_000;
+  // Slope 113 og CR lik par: banehandicapet er handicapet rundet (14,2 → 14).
+  const RATINGS = {
+    lengthMeters: null,
+    slopeMens: 113,
+    courseRatingMens: 72,
+    parTotalMens: 72,
+    slopeLadies: null,
+    courseRatingLadies: null,
+    parTotalLadies: null,
+    slopeJuniors: null,
+    courseRatingJuniors: null,
+    parTotalJuniors: null,
+  };
+
+  function ownProfile(ageDays: number, hcpIndex = 14.2) {
+    return {
+      name: 'Meg Selv',
+      nickname: null,
+      hcpIndex,
+      handicapUpdatedAt: new Date(Date.now() - ageDays * DAY).toISOString(),
+      gender: 'mens',
+      level: 'normal',
+      isAdmin: false,
+      profileCompletedAt: '2026-08-01T10:00:00.000Z',
+      createdAt: '2026-04-12T18:00:00.000Z',
+    };
+  }
+
+  function setBundle(status: string, meOnRoster = true): void {
+    mockState.bundle = {
+      ...homeBundle({
+        game: {
+          id: 'game-1',
+          status,
+          modeConfig: { kind: 'stableford', team_size: 1 },
+          scheduledTeeOffAt: new Date(Date.now() + 2 * DAY).toISOString(),
+        },
+        players: [
+          ...(meOnRoster ? [homePlayer({ userId: 'me', courseHandicap: null })] : []),
+          homePlayer({ userId: 'ola', courseHandicap: null }),
+        ],
+      }),
+      teeRatings: RATINGS,
+    };
+    mockState.scores = [];
+  }
+
+  const renderHome = async () => {
+    await render(
+      <GameHome
+        {...({
+          route: { params: { gameId: 'game-1' } },
+          navigation: { navigate: jest.fn(), setOptions: jest.fn() },
+        } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+    await waitFor(() => expect(screen.getByTestId('game-ticket')).toBeTruthy());
+  };
+
+  beforeEach(() => {
+    mockFetchOwnProfile.mockReset();
+    mockSaveHandicap.mockReset();
+    mockSaveHandicap.mockResolvedValue({ ok: true });
+  });
+
+  it('står over billetten i et planlagt spill med fire uker gammelt handicap', async () => {
+    mockFetchOwnProfile.mockResolvedValue(ownProfile(29));
+    setBundle('scheduled');
+    await renderHome();
+    expect(await screen.findByTestId('hcp-card')).toBeTruthy();
+    expect(screen.getByText('Sjekk handicapet ditt')).toBeTruthy();
+    expect(screen.getByTestId('hcp-card-body')).toHaveTextContent(
+      'Handicapet ditt er 14,2, sist oppdatert for 4 uker siden. Stemmer det?',
+    );
+    const ids: string[] = [];
+    const walk = (node: unknown): void => {
+      if (node == null || typeof node !== 'object') return;
+      if (Array.isArray(node)) return node.forEach(walk);
+      const element = node as { props?: { testID?: string }; children?: unknown };
+      if (element.props?.testID) ids.push(element.props.testID);
+      walk(element.children);
+    };
+    walk(screen.toJSON());
+    expect(ids.filter((id) => id === 'hcp-card' || id === 'game-ticket')).toEqual(['hcp-card', 'game-ticket']);
+  });
+
+  it.each([
+    ['ferskt handicap', 'scheduled', true, 20],
+    ['runden er i gang', 'active', true, 60],
+    ['du står ikke på lista', 'scheduled', false, 60],
+  ])('står ikke når %s', async (_label, status, meOnRoster, ageDays) => {
+    mockFetchOwnProfile.mockResolvedValue(ownProfile(ageDays));
+    setBundle(status, meOnRoster);
+    await renderHome();
+    // La profilen komme fram før vi ser etter.
+    await act(async () => undefined);
+    expect(screen.queryByTestId('hcp-card')).toBeNull();
+  });
+
+  it('lagring fra arket gir kvitteringen, tar bort kortet og gir nye slag', async () => {
+    mockFetchOwnProfile.mockResolvedValue(ownProfile(35));
+    setBundle('scheduled');
+    await renderHome();
+    await waitFor(() => expect(screen.getByTestId('ticket-strokes')).toHaveTextContent(/14/));
+
+    await fireEvent.press(await screen.findByTestId('hcp-card-update'));
+    expect(screen.getByTestId('hcp-sheet')).toBeTruthy();
+    for (let i = 0; i < 8; i += 1) {
+      await fireEvent(screen.getByTestId('hcp-ruler'), 'accessibilityAction', {
+        nativeEvent: { actionName: 'decrement' },
+      });
+    }
+    // Serveren har lagret 13,4 når profilen hentes på nytt.
+    mockFetchOwnProfile.mockResolvedValue(ownProfile(0, 13.4));
+    await fireEvent.press(screen.getByText('Lagre 13,4'));
+
+    expect(mockSaveHandicap).toHaveBeenCalledWith(expect.objectContaining({ name: 'Meg Selv' }), 13.4);
+    expect(await screen.findByTestId('hcp-receipt')).toHaveTextContent('Handicapet ditt er oppdatert.');
+    expect(screen.queryByTestId('hcp-card')).toBeNull();
+    expect(screen.getByTestId('ticket-strokes')).toHaveTextContent(/13/);
+    // Profilen hentes på nytt etter lagringen.
+    await waitFor(() => expect(mockFetchOwnProfile).toHaveBeenCalledTimes(2));
+  });
+
+  it('«Ja, stemmer» lagrer samme tall og tar bort kortet uten kvittering', async () => {
+    mockFetchOwnProfile.mockResolvedValue(ownProfile(35));
+    setBundle('scheduled');
+    await renderHome();
+    // Ruta stempler tidspunktet: profilen som hentes på nytt, er fersk.
+    mockFetchOwnProfile.mockResolvedValue(ownProfile(0));
+    await fireEvent.press(await screen.findByTestId('hcp-card-confirm'));
+    expect(mockSaveHandicap).toHaveBeenCalledWith(expect.objectContaining({ hcpIndex: 14.2 }), 14.2);
+    await waitFor(() => expect(screen.queryByTestId('hcp-card')).toBeNull());
+    expect(screen.queryByTestId('hcp-receipt')).toBeNull();
+  });
+
+  it('«Ja, stemmer» som feiler, sier hvorfor og lar kortet stå', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    mockFetchOwnProfile.mockResolvedValue(ownProfile(35));
+    mockSaveHandicap.mockResolvedValue({ ok: false, reason: 'offline' });
+    setBundle('scheduled');
+    await renderHome();
+    await fireEvent.press(await screen.findByTestId('hcp-card-confirm'));
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Du trenger nett for å lagre.'));
+    expect(screen.getByTestId('hcp-card')).toBeTruthy();
+    alert.mockRestore();
+  });
+
+  it('lukket uten lagring står kortet som før', async () => {
+    mockFetchOwnProfile.mockResolvedValue(ownProfile(35));
+    setBundle('scheduled');
+    await renderHome();
+    await fireEvent.press(await screen.findByTestId('hcp-card-update'));
+    await fireEvent.press(screen.getByLabelText('Lukk'));
+    expect(mockSaveHandicap).not.toHaveBeenCalled();
+    expect(screen.getByTestId('hcp-card')).toBeTruthy();
+    expect(screen.queryByTestId('hcp-receipt')).toBeNull();
   });
 });
