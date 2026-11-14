@@ -41,6 +41,7 @@ import { PageTitle } from '../components/PageTitle';
 import { SettingList, SettingRow } from '../components/SettingRow';
 import { fetchOwnAiConsent, saveAiConsent } from '../data/aiConsent';
 import { rememberAiConsentAnswered } from '../data/aiConsentGate';
+import { downloadDataExport } from '../data/dataExport';
 import { logOut } from '../data/logout';
 import { AI_CONSENT_TEXT } from '../lib/aiConsentCopy';
 import {
@@ -51,7 +52,13 @@ import {
   type AppLockSupport,
 } from '../lib/appLock';
 import { appLockLabel, appLockSublabel } from '../lib/appLockCopy';
-import { DATA_ROWS, DATA_TEXT, PROFILE_TEXT, unsentStrokesWarning } from '../lib/profileCopy';
+import {
+  DATA_ROWS,
+  DATA_TEXT,
+  PROFILE_TEXT,
+  describeDataExportFailure,
+  unsentStrokesWarning,
+} from '../lib/profileCopy';
 import { isStagingBuild } from '../lib/stagingGate';
 import { PRIVACY_PATH, describeWebLinkFailure, openWeb } from '../lib/webLink';
 import type { ScreenProps } from '../navigation';
@@ -77,6 +84,21 @@ export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) 
     setPrivacyNote(null);
     void openWeb(PRIVACY_PATH).then((result) => {
       if (!result.ok) setPrivacyNote(describeWebLinkFailure(result.reason));
+    });
+  }, []);
+
+  // #2332 PR C: «Last ned dataene dine». Raden er låst mens fila hentes, så et
+  // nytt trykk ikke starter en ny henting. Feiler den, står grunnen under lista
+  // til neste trykk, som for personvernerklæringen. Et lukket delingsark er
+  // ingen feil. `downloadDataExport` kaster aldri; den svarer typet.
+  const [exportPending, setExportPending] = useState(false);
+  const [exportNote, setExportNote] = useState<string | null>(null);
+  const onDownloadData = useCallback(() => {
+    setExportPending(true);
+    setExportNote(null);
+    void downloadDataExport().then((result) => {
+      setExportPending(false);
+      if (!result.ok) setExportNote(describeDataExportFailure(result.reason));
     });
   }, []);
 
@@ -190,6 +212,14 @@ export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) 
         <AppLockSetting />
         <AiConsentSetting />
         <SettingRow
+          label={exportPending ? PROFILE_TEXT.exportPending : DATA_TEXT.exportRow}
+          sublabel={DATA_TEXT.exportSublabel}
+          chevron
+          disabled={exportPending}
+          onPress={onDownloadData}
+          testID="account-export"
+        />
+        <SettingRow
           label={PROFILE_TEXT.privacyRow}
           sublabel={PROFILE_TEXT.privacySublabel}
           chevron
@@ -198,6 +228,11 @@ export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) 
         />
       </SettingList>
 
+      {exportNote ? (
+        <Text style={[ui.error, styles.note]} testID="account-export-error">
+          {exportNote}
+        </Text>
+      ) : null}
       {privacyNote ? (
         <Text style={[ui.error, styles.note]} testID="account-privacy-error">
           {privacyNote}

@@ -29,12 +29,14 @@ import source from '../../../../messages/no.json';
 import { formatHcpDisplay } from '../../../../lib/handicap/signFormat';
 import { HANDICAP_STALENESS_MS } from '../../../../lib/handicap/staleness';
 import { HCP_MAX } from '../../../../lib/users/profileInput';
+import type { DataExportFailure } from '../data/dataExport';
 import type { ProfileSaveFailure } from '../data/profile';
 import { isFinishedSentence } from '../test/copy';
 import {
   DATA_ROWS,
   DATA_TEXT,
   ONBOARDING_TEXT,
+  describeDataExportFailure,
   PROFILE_TEXT,
   describeHandicapAge,
   describeProfileSaveFailure,
@@ -185,6 +187,36 @@ describe('DATA_TEXT', () => {
 
   it('har én rad per id i DATA_ROWS, og ingen andre', () => {
     expect(Object.keys(DATA_TEXT.rows)).toEqual([...DATA_ROWS]);
+  });
+});
+
+// #2332 PR C: hver grunn til at nedlastingen stoppet, gir en setning spilleren
+// kan gjøre noe med. Kartet er porten: en ny grunn i unionen gir rød `tsc`.
+describe('describeDataExportFailure', () => {
+  const REASONS = {
+    offline: true,
+    network: true,
+    'no-web-base-url': false,
+    unauthorized: false,
+    failed: false,
+  } as const satisfies Record<DataExportFailure, boolean>;
+
+  it.each(Object.keys(REASONS) as DataExportFailure[])('gir en ferdig setning for «%s»', (reason) => {
+    expect(isFinishedSentence(describeDataExportFailure(reason))).toBe(true);
+  });
+
+  it('sier at nett er kravet i begge nett-grenene, og bare der', () => {
+    for (const [reason, needsNet] of Object.entries(REASONS)) {
+      expect([reason, /nett|tilkobling/i.test(describeDataExportFailure(reason as DataExportFailure))]).toEqual([
+        reason,
+        needsNet,
+      ]);
+    }
+  });
+
+  it('holder grunnene fra hverandre', () => {
+    const sentences = (Object.keys(REASONS) as DataExportFailure[]).map(describeDataExportFailure);
+    expect(new Set(sentences).size).toBe(sentences.length);
   });
 });
 

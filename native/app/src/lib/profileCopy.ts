@@ -31,6 +31,7 @@
 // TESTEN: den kjører i node, importerer webbens `formatHcpDisplay` og krever
 // at hver eneste verdi i tabellen gir samme streng. Importer aldri
 // `lib/i18n/format` eller `formatHcpDisplay` i app-kildekode — bare i tester.
+import type { DataExportFailure } from '../data/dataExport';
 import type { ProfileSaveFailure } from '../data/profile';
 import { formatShortDateNb } from '../../../../lib/format/date';
 import { isHandicapStale } from '../../../../lib/handicap/staleness';
@@ -210,6 +211,13 @@ export const PROFILE_TEXT = {
   sectionYouDecide: 'Du bestemmer',
   privacyRow: 'Personvernerklæringen',
   privacySublabel: 'Hele teksten, på vanlig norsk',
+
+  // --- App-egent: nedlastingen av dataene (#2332 PR C) ---------------------
+  // Raden og underteksten er webbens (`DATA_TEXT.exportRow`/`exportSublabel`).
+  // Nettsiden laster ned med et klikk og har ingen ventetekst; appen henter
+  // fila før delingsarket åpnes, og raden sier det mens den venter. Feillinjene
+  // står i {@link describeDataExportFailure}.
+  exportPending: 'Henter dataene …',
 
   // --- App-egent: advarselen ved utlogging --------------------------------
   // Utlogging tømmer den lokale basen (#1877), og det er nettopp derfor denne
@@ -576,6 +584,33 @@ export function isHandicapAgeStale(
   // som når tidsstempelet mangler helt.
   if (Number.isNaN(updated.getTime())) return true;
   return isHandicapStale(updated, now);
+}
+
+/**
+ * #2332 PR C: hvorfor «Last ned dataene dine» ikke ga noen fil, som en setning
+ * spilleren kan gjøre noe med. Uttømmende switch uten `default`, som
+ * {@link describeProfileSaveFailure}: en ny grunn i `DataExportFailure` gir rød
+ * `tsc` til den har fått en setning.
+ *
+ * `failed` er webbens egen tekst når en lesing feiler (#2333,
+ * `app/[locale]/profile/export/route.ts`); i appen dekker den også en fil som
+ * ikke kunne skrives eller deles.
+ */
+export function describeDataExportFailure(reason: DataExportFailure): string {
+  switch (reason) {
+    case 'offline':
+      return 'Du er uten nett. Koble til, så kan du laste ned dataene dine.';
+    // Wi-Fi av og mobildata på: telefonen er «på nett», men når ikke serveren.
+    // Setningen må si at nett er kravet, som de andre nett-tekstene i appen.
+    case 'network':
+      return 'Du må være på nett for å laste ned dataene. Sjekk tilkoblingen og prøv igjen.';
+    case 'no-web-base-url':
+      return 'Appen mangler adressen til serveren, så du får ikke lastet ned dataene herfra. Ta kontakt med administrator.';
+    case 'unauthorized':
+      return 'Du er ikke logget inn lenger. Logg inn på nytt og prøv igjen.';
+    case 'failed':
+      return 'Klarte ikke å hente dataene dine. Prøv igjen om litt.';
+  }
 }
 
 /**
