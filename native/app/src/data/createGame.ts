@@ -269,6 +269,8 @@ export type CreateGameFailure =
   | 'tee_off_in_past'
   | 'bad_side_ld_count'
   | 'bad_side_ctp_count'
+  | 'bad_side_ld_holes'
+  | 'bad_side_ctp_holes'
   | 'rls_denied'
   | 'no_rows'
   | 'db_game'

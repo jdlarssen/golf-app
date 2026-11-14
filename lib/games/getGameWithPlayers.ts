@@ -109,6 +109,14 @@ export type GameForHole = {
   // SideCategoryId, så vi caster trygt på input-side.
   side_disabled_categories: SideCategoryId[] | null;
   /**
+   * #2283: the hole for each LD/CTP slot, read through `holeForSlot` in
+   * `lib/games/sideContest.ts`. Null = no holes chosen. Only the create and
+   * edit actions write them, and the edit actions already expire the
+   * `game-${id}` tag. Optional so literal constructors need not set them.
+   */
+  side_ld_holes?: (number | null)[] | null;
+  side_ctp_holes?: (number | null)[] | null;
+  /**
    * Spillmodus-discriminator fra `games.game_mode`. DB-CHECK garanterer at
    * verdien er én av kjente moduser, men vi caster trygt på input-side fordi
    * Supabase-typene returnerer `string` (CHECK-constraints projiseres ikke).
@@ -245,7 +253,7 @@ export type GameWithPlayers = {
  * `getGameWithPlayers`, so any change to them gives a fresh cache entry.
  */
 export const GAME_SELECT =
-  'id, name, status, created_by, tournament_id, league_round_id, group_id, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, round_report, entry_fee_kr, payment_link, prizes, hole_segment, start_type, source_game_id, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
+  'id, name, status, created_by, tournament_id, league_round_id, group_id, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, side_ld_holes, side_ctp_holes, game_mode, mode_config, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, round_report, entry_fee_kr, payment_link, prizes, hole_segment, start_type, source_game_id, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
 
 export const PLAYERS_SELECT =
   'user_id, team_number, flight_number, course_handicap, submitted_at, submitted_by_user_id, marker_user_id, approved_at, rejection_reason, withdrawn_at, withdrawn_by_user_id, accepted_at, paid_at, tee_gender, users!game_players_user_id_fkey(name, nickname, is_guest)';

@@ -1578,6 +1578,8 @@
       "team_balance": "Lagene er ikke jevne. Fordel spillerne likt før du publiserer.",
       "bad_side_ld_count": "Lengste drive kan spilles på 0, 1 eller 2 hull.",
       "bad_side_ctp_count": "Nærmest pinnen kan spilles på 0, 1 eller 2 hull.",
+      "bad_side_ld_holes": "Lengste drive må spilles på et hull fra 1 til 18, og ikke på samme hull to ganger.",
+      "bad_side_ctp_holes": "Nærmest pinnen må spilles på et hull fra 1 til 18, og ikke på samme hull to ganger.",
       "tee_missing_rating": "Den valgte teen mangler rating for en spillers kjønn (M/D/J). Sjekk bane-administrasjon eller endre spillerens tee-kjønn.",
       "tee_off_required": "Tee-off-tidspunkt er påkrevd.",
       "tee_off_in_past": "Tee-off kan ikke være i fortiden. Velg et tidspunkt fra nå av.",

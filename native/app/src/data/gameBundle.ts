@@ -14,6 +14,12 @@ import {
   type SegmentSibling,
 } from '../../../../lib/games/segmentSiblingRules';
 import { safeParsePrizes, type GamePrize } from '../../../../lib/games/prizes';
+import {
+  CUP_SIDE_AWARD_SELECT,
+  toCupSideAwards,
+  type CupSideAward,
+  type CupSideAwardRow,
+} from '../../../../lib/games/sideContest';
 import type { HoleSegment } from '../../../../lib/scoring/holeSegment';
 import type { ResultSummary } from '../../../../lib/scoring/resultSummary';
 import {
@@ -146,6 +152,14 @@ export interface BundleGame {
    * fortsatt fordi gamle spill kan ha verdier her.
    */
   sideDisabledCategories: string[];
+  /**
+   * #2283: hullet for hver LD-/CTP-plass, lest med `holeForSlot`
+   * (`lib/games/sideContest.ts`). `null` = ingen hull valgt. Valgfri og uten ny
+   * versjon: en bundel i cachen uten feltene leses som «ingen hull», og da viser
+   * hullet ikke kortet før neste henting.
+   */
+  sideLdHoles?: (number | null)[] | null;
+  sideCtpHoles?: (number | null)[] | null;
   /**
    * `games.hcp_allowance_pct` (#2255): «85 % handicap» i billetthodet og
    * andelen DINE SLAG regnes med før start. Bare formatene i
@@ -318,6 +332,13 @@ export interface GameBundle {
    * cup-tavla) står urørt. Valgfri av samme grunn som `teeRatings`.
    */
   myPaidAt?: string | null;
+  /**
+   * #2283: cupens sidepoeng (nærmest pinnen, lengste drive og GIR) med hull og
+   * poeng, uten vinnere og tellere, så hullet ikke røper noe fra de andre kampene.
+   * Tom for et spill utenfor en cup. Ligger her så kortet virker uten nett.
+   * Valgfri av samme grunn som `teeRatings`: mangler den, er det ingen cup-hull.
+   */
+  cupSideAwards?: CupSideAward[];
   /** Når bundelen sist ble hentet fra serveren (ISO). */
   fetchedAt: string;
 }
@@ -354,7 +375,7 @@ function toTeeRatings(tee: TeeBoxRow | null): BundleTeeRatings | null {
 export function toBundle(
   game: GameRow,
   players: PlayerRow[],
-  related: Pick<GameBundle, 'segmentSibling' | 'sourceGameName' | 'myPaidAt'>,
+  related: Pick<GameBundle, 'segmentSibling' | 'sourceGameName' | 'myPaidAt' | 'cupSideAwards'>,
 ): GameBundle {
   return {
     ...related,
@@ -387,6 +408,8 @@ export function toBundle(
       // NOT NULL i skjemaet, men en eldre cache-rad eller en select som mister
       // kolonnen skal gi tom liste — ikke `undefined` inn i kategori-filteret.
       sideDisabledCategories: game.side_disabled_categories ?? [],
+      sideLdHoles: game.side_ld_holes ?? null,
+      sideCtpHoles: game.side_ctp_holes ?? null,
       hcpAllowancePct: game.hcp_allowance_pct,
       hcpMaxStrokes: game.hcp_max_strokes ?? null,
       spectateToken: game.spectate_token ?? null,
@@ -470,11 +493,12 @@ export async function fetchGameBundle(
     throw new GameNotFoundError(gameId);
   }
 
-  const [related, myPaidAt] = await Promise.all([
+  const [related, myPaidAt, cupSideAwards] = await Promise.all([
     fetchRelated(gameRes.data, signal),
     fetchMyPaidAt(gameId, signal),
+    fetchCupSideAwards(gameRes.data, signal),
   ]);
-  return toBundle(gameRes.data, playersRes.data ?? [], { ...related, myPaidAt });
+  return toBundle(gameRes.data, playersRes.data ?? [], { ...related, myPaidAt, cupSideAwards });
 }
 
 /**
@@ -515,6 +539,29 @@ async function fetchMyPaidAt(gameId: string, signal: AbortSignal | undefined): P
   } catch {
     return null;
   }
+}
+
+/**
+ * #2283: hullene der cupen har nærmest pinnen, lengste drive eller GIR. Bare for
+ * en cup-kamp som fører egne slag: et vanlig spill og en avledet kamp (0151, ingen
+ * konkurransehull) koster ikke et ekstra kall. En feil slipper ut og lar den
+ * forrige bundelen stå, som feilen fra søsken-ruta: uten hullene ville kortet
+ * forsvunnet midt i runden.
+ */
+async function fetchCupSideAwards(
+  game: GameRow,
+  signal: AbortSignal | undefined,
+): Promise<CupSideAward[]> {
+  if (!game.tournament_id || game.source_game_id) return [];
+  let query = supabase
+    .from('tournament_side_awards')
+    .select(CUP_SIDE_AWARD_SELECT)
+    .eq('tournament_id', game.tournament_id)
+    .in('kind', ['ctp', 'ld', 'gir']);
+  if (signal) query = query.abortSignal(signal);
+  const { data, error } = await query.returns<CupSideAwardRow[]>();
+  if (error) throw new Error(error.message);
+  return toCupSideAwards(data ?? []);
 }
 
 async function fetchGameName(gameId: string, signal: AbortSignal | undefined): Promise<string | null> {

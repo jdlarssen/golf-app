@@ -601,6 +601,58 @@ export type Database = {
           },
         ]
       }
+      game_gir_claims: {
+        Row: {
+          entered_by: string
+          flight_number: number
+          game_id: string
+          hit: boolean
+          hole_number: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          entered_by: string
+          flight_number: number
+          game_id: string
+          hit: boolean
+          hole_number: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          entered_by?: string
+          flight_number?: number
+          game_id?: string
+          hit?: boolean
+          hole_number?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_gir_claims_entered_by_fkey"
+            columns: ["entered_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_gir_claims_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_gir_claims_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_players: {
         Row: {
           accepted_at: string | null
@@ -800,6 +852,61 @@ export type Database = {
           },
         ]
       }
+      game_side_claims: {
+        Row: {
+          category: string
+          distance_m: number | null
+          entered_by: string
+          flight_number: number
+          game_id: string
+          hole_number: number
+          updated_at: string
+          winner_user_id: string | null
+        }
+        Insert: {
+          category: string
+          distance_m?: number | null
+          entered_by: string
+          flight_number: number
+          game_id: string
+          hole_number: number
+          updated_at?: string
+          winner_user_id?: string | null
+        }
+        Update: {
+          category?: string
+          distance_m?: number | null
+          entered_by?: string
+          flight_number?: number
+          game_id?: string
+          hole_number?: number
+          updated_at?: string
+          winner_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_side_claims_entered_by_fkey"
+            columns: ["entered_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_side_claims_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_side_claims_winner_user_id_fkey"
+            columns: ["winner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_side_winners: {
         Row: {
           category: string
@@ -874,8 +981,10 @@ export type Database = {
           score_visibility: string
           short_id: string
           side_ctp_count: number
+          side_ctp_holes: number[] | null
           side_disabled_categories: string[]
           side_ld_count: number
+          side_ld_holes: number[] | null
           side_tournament_enabled: boolean
           signups_closed_at: string | null
           source_game_id: string | null
@@ -921,8 +1030,10 @@ export type Database = {
           score_visibility?: string
           short_id?: string
           side_ctp_count?: number
+          side_ctp_holes?: number[] | null
           side_disabled_categories?: string[]
           side_ld_count?: number
+          side_ld_holes?: number[] | null
           side_tournament_enabled?: boolean
           signups_closed_at?: string | null
           source_game_id?: string | null
@@ -968,8 +1079,10 @@ export type Database = {
           score_visibility?: string
           short_id?: string
           side_ctp_count?: number
+          side_ctp_holes?: number[] | null
           side_disabled_categories?: string[]
           side_ld_count?: number
+          side_ld_holes?: number[] | null
           side_tournament_enabled?: boolean
           signups_closed_at?: string | null
           source_game_id?: string | null
@@ -2587,10 +2700,33 @@ export type Database = {
         Args: { p_game_id: string }
         Returns: boolean
       }
+      is_side_contest_hole: {
+        Args: { p_category: string; p_game_id: string; p_hole_number: number }
+        Returns: boolean
+      }
       is_sole_club_owner: { Args: { p_user_id: string }; Returns: boolean }
       join_club_league: { Args: { p_league_id: string }; Returns: string }
       league_group_id: { Args: { p_league_id: string }; Returns: string }
       leave_club_league: { Args: { p_league_id: string }; Returns: string }
+      record_gir_claims: {
+        Args: {
+          p_game_id: string
+          p_hit: boolean
+          p_hole_number: number
+          p_user_ids: string[]
+        }
+        Returns: string
+      }
+      record_side_claim: {
+        Args: {
+          p_category: string
+          p_distance_m: number
+          p_game_id: string
+          p_hole_number: number
+          p_winner_user_id: string
+        }
+        Returns: string
+      }
       registration_seats_held: {
         Args: { p_game_ids: string[]; p_seat_team_sizes: number[] }
         Returns: {
@@ -2657,6 +2793,20 @@ export type Database = {
         Returns: {
           tee_starter: string
           was_applied: boolean
+        }[]
+      }
+      side_claim_flight_key: { Args: { p_game_id: string }; Returns: number }
+      side_claims_for_finish: {
+        Args: { p_game_id: string }
+        Returns: {
+          category: string
+          distance_m: number
+          flight_number: number
+          hole_number: number
+          updated_at: string
+          winner_name: string
+          winner_nickname: string
+          winner_user_id: string
         }[]
       }
       sim_settings_valid: { Args: { s: Json }; Returns: boolean }
