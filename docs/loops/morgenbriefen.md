@@ -11,6 +11,14 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
   åpent/lukket (`gh issue view --json state`), label faktisk satt. En påstand
   som ikke lar seg verifisere rapporteres som **loop-feil** i briefen — aldri
   som suksess.
+- **Unntak: tavla (eierbeslutning 2026-11-14).** GitHub-tavla (prosjekt 2) kan
+  ikke leses fra sky-kjøringen, fordi GraphQL og prosjekt-API-et er stengt for
+  sky-økter. Det er en kjent begrensning, ikke en loop-feil. Feiler
+  tavle-lesingen, påstår briefen ingenting om tavla: «Bygges nå» bygges stille
+  fra utkast-PR-ene, og sjekkene som bare kan gjøres mot tavla faller bort (se
+  «Bygges nå — orkestratoren»). Tavla nevnes aldri under «⚠️ Noe er galt» eller
+  andre steder i briefen. Eierens ord: «Vi trenger ikke fikse det, men det er
+  unødvendig å si hver dag i hvert fall.»
 - **Beslutningspunkter krever fersk kommentar-sjekk.** Før et «Svar A/B på
   #N»-punkt listes: les issuets NYESTE kommentarer. Finnes et eier-svar (den
   kanoniske strengen «Eierbeslutning via Discord: **A**» — samme streng som
@@ -81,6 +89,8 @@ en eier som ikke leser kode: hver linje er én handling med lenke.
 ```
 
 Ingenting å melde i en gruppe → utelat gruppa. Alle grupper tomme → tom-natt-linja.
+Kunne ikke tavla leses, heter gruppa «Bygges nå (fra PR-ene)» i stedet for
+«Bygges nå (orkestratoren)» (se «Bygges nå — orkestratoren»).
 
 **Kort format (eierbeslutning 2026-10-26):** «Skjedde i går» og den gamle «Loop-helse» ble for mye tekst. Eieren skal bare se det han må vite:
 - **Skjedde i går:** høyst tre linjer med synlige endringer, uten ↳-linjer. Resten samles i én telle-linje. Interne endringer (CI, hooks, dok, refaktor) nevnes aldri én for én.
@@ -106,6 +116,22 @@ Slik finner du gruppa:
   Funksjonell-setningen hentes fra kontraktens json-blokk der den finnes, ellers
   skrives den i samme tone («Du kan nå …»). Utredninger får «📝 #N — utredes».
 - Ingen kort i Bygges → utelat gruppa (normalt når køen er tom eller Macen sover).
+
+**Når tavla ikke kan leses (sky-kjøringen, se «Harde regler»):** bygg gruppa
+stille fra de åpne utkast-PR-ene i stedet.
+
+- `gh api "repos/jdlarssen/golf-app/pulls?state=open&per_page=100"`; ta PR-ene
+  med `draft: true` og en gren som heter `claude/<N>-*`. N er issuet.
+- Overskriften blir «**Bygges nå (fra PR-ene):**». Mer forklaring trengs ikke:
+  ingen setning om tavla, ingen kursiv fotnote og ingen oppfordring om å se på
+  tavla eller spørre orkestratoren.
+- Linje: «🏗️ #N — <funksjonell-setning>; utkast-PR #M siden <datoen PR-en ble
+  åpnet> → <lenke til issuet>», med ↳-linje som ellers. Funksjonell-setningen
+  hentes fra PR-ens `## Funksjonelt` eller fra kontrakten.
+- Ingen utkast-PR-er → utelat gruppa, uten noen linje om det.
+- Det bare tavla vet, faller stille bort: utredninger (📝), «Svar orkestratoren
+  om #N» og 2-døgnssjekken under «Heartbeat-vakta». Ingen av dem blir en linje
+  under «⚠️ Noe er galt».
 
 Det finnes ingen «natt-kø» lenger: 🌙-knappen («Klarer for natta») sendes ikke, og
 `autonomy:ready` betyr bare «har kontrakt» — orkestratoren tar issues i tavlas
@@ -152,7 +178,8 @@ fortsatt er åpent.
   routine). Helsen leses av tavla: et kort i Fase «Bygges» med Startdato eldre
   enn 2 døgn og ingen åpen PR fra `claude/<N>-*` → linje i «⚠️ Noe er galt» («#N har
   stått i bygg i X døgn uten PR — spør orkestratoren»). Ingen kort i Bygges er
-  ikke en feil.
+  ikke en feil. Kan ikke tavla leses, gjøres ikke sjekken, og det blir ingen
+  linje om det (se «Harde regler»).
 - **Mangler én kjøring:** varsellinje øverst i briefen («⚠️ Dok-avstemmeren la
   ikke heartbeat — sjekk claude.ai/code/routines»).
 - **Mangler to på rad:** i tillegg opprett infra-issue («Loop X har ikke kjørt
