@@ -30,6 +30,7 @@ import {
   offsetToHcp,
   RULER_TICK_PT,
   rulerSteps,
+  stepHcp,
 } from '../../lib/hcpRuler';
 import { FONTS, useTheme } from '../../theme';
 
@@ -39,7 +40,6 @@ const CHUNK_TENTHS = 100;
 const CHUNK_WIDTH = CHUNK_TENTHS * RULER_TICK_PT;
 /** Luft på hver side i en bit, så en strek eller en tosifret etikett på kanten ikke klippes. */
 const EDGE = RULER_TICK_PT;
-const SLACK = RULER_TICK_PT / 2 + 0.5;
 
 const mod = (n: number, m: number) => ((n % m) + m) % m;
 const label = (whole: number) => (whole < 0 ? `+${-whole}` : String(whole));
@@ -49,7 +49,6 @@ export function HcpRuler({
   stored,
   min,
   onChange,
-  onStep,
 }: {
   value: number;
   /** Det som står lagret: prikken. */
@@ -57,15 +56,15 @@ export function HcpRuler({
   /** Nederste stopp (`rulerMin`). */
   min: number;
   onChange: (value: number) => void;
-  /** VoiceOver: ±1 tidel. Eieren av verdien klemmer og setter den. */
-  onStep: (deltaTenths: number) => void;
 }) {
   const { colors } = useTheme();
   const window = useWindowDimensions();
   const [width, setWidth] = useState(window.width - 40);
   const scrollRef = useRef<ScrollView>(null);
-  // Startposisjonen leses én gang. Resten flyttes med `scrollTo` i effekten under: en styrt
-  // `contentOffset` ville lagt posisjonen inn i native midt i en dra eller et glid.
+  // Startposisjonen leses én gang, og linjalen monteres på nytt hver gang feltet har vært
+  // oppe. Mens den står, flytter bare fingeren den, og VoiceOver-trinn (`step` under) med
+  // `scrollTo`. Ingen effekt flytter den ut fra `value`: en styrt `contentOffset` eller en
+  // effekt som svarer på hver verdi ville kjempet mot en dra eller et glid.
   const [initialOffset] = useState(() => hcpToOffset(value, min));
   const x = useRef(initialOffset);
   const latest = useRef(value);
@@ -76,12 +75,17 @@ export function HcpRuler({
 
   useEffect(() => {
     latest.current = value;
-    const target = hcpToOffset(value, min);
-    if (Math.abs(x.current - target) > SLACK) {
-      scrollRef.current?.scrollTo({ x: target, animated: false });
-      x.current = target;
-    }
-  }, [value, min, width]);
+  }, [value]);
+
+  // VoiceOver: ±1 tidel. Linjalen flyttes her, med fingeren ute av bildet.
+  const step = (deltaTenths: number) => {
+    const next = stepHcp(latest.current, deltaTenths, min);
+    if (next === latest.current) return;
+    latest.current = next;
+    x.current = hcpToOffset(next, min);
+    scrollRef.current?.scrollTo({ x: x.current, animated: false });
+    onChange(next);
+  };
 
   const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     x.current = event.nativeEvent.contentOffset.x;
@@ -132,8 +136,8 @@ export function HcpRuler({
       accessibilityValue={{ text: handicapRulerValueText(value, change) }}
       accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
       onAccessibilityAction={(event) => {
-        if (event.nativeEvent.actionName === 'increment') onStep(1);
-        if (event.nativeEvent.actionName === 'decrement') onStep(-1);
+        if (event.nativeEvent.actionName === 'increment') step(1);
+        if (event.nativeEvent.actionName === 'decrement') step(-1);
       }}
       testID="hcp-ruler"
     >

@@ -6,7 +6,7 @@
 // og en lagringsfeil gir riktig linje, og at ✕ lukker uten å lagre.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { Keyboard } from 'react-native';
+import { Keyboard, ScrollView } from 'react-native';
 import type { ProfileSaveResult } from '../../data/profile';
 import { HandicapSheet } from './HandicapSheet';
 
@@ -230,6 +230,32 @@ describe('dra ned', () => {
 });
 
 describe('linjalen', () => {
+  it('VoiceOver-trinn flytter linjalen med scrollTo, og fingeren gjør det aldri', async () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation(() => undefined);
+    // Jest-mocken kan alt være en mock med kall fra andre tester.
+    scrollTo.mockClear();
+    await renderSheet();
+
+    await act1('decrement', 2);
+
+    // 14,2 → 14,1 → 14,0: 220 og 218 trinn over −8, 12 pt per trinn.
+    expect(scrollTo.mock.calls.map(([arg]) => arg)).toEqual([
+      { x: 221 * 12, animated: false },
+      { x: 220 * 12, animated: false },
+    ]);
+
+    scrollTo.mockClear();
+    await fireEvent.scroll(screen.getByTestId('hcp-ruler-scroll', { includeHiddenElements: true }), {
+      nativeEvent: { contentOffset: { x: 200 * 12, y: 0 }, contentSize: {}, layoutMeasurement: {} },
+    });
+    await fireEvent.scroll(screen.getByTestId('hcp-ruler-scroll', { includeHiddenElements: true }), {
+      nativeEvent: { contentOffset: { x: 190 * 12, y: 0 }, contentSize: {}, layoutMeasurement: {} },
+    });
+
+    expect(scrollTo).not.toHaveBeenCalled();
+    expect(screen.getByTestId('handicap-sheet-number')).toHaveTextContent('11,0');
+  });
+
   it('får startposisjonen én gang, så en styrt contentOffset ikke hopper midt i en dra', async () => {
     await renderSheet();
     const scroll = () => screen.getByTestId('hcp-ruler-scroll', { includeHiddenElements: true });

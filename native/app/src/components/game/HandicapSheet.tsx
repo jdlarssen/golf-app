@@ -40,7 +40,6 @@ import {
   isPlusOverLimit,
   parseRulerField,
   rulerMin,
-  stepHcp,
 } from '../../lib/hcpRuler';
 import { formatHcpNb } from '../../lib/profileCopy';
 import { useDeviceOnline } from '../../lib/useDeviceOnline';
@@ -117,7 +116,10 @@ export function HandicapSheet({
       const far = dragged.current >= DRAG_CLOSE_PT;
       dragFrom.current = null;
       dragged.current = 0;
-      if (far && !pending) onClose();
+      if (far && !pending) {
+        onClose();
+        return;
+      }
       Animated.spring(drag, { toValue: 0, useNativeDriver: true, bounciness: 0 }).start();
     },
     onTouchCancel: () => {
@@ -242,7 +244,6 @@ export function HandicapSheet({
                   stored={stored}
                   min={min}
                   onChange={setValue}
-                  onStep={(delta) => setValue((current) => stepHcp(current, delta, min))}
                 />
                 <Pressable
                   accessibilityRole="button"
