@@ -183,6 +183,8 @@ const FIELD_COMPONENTS: Record<string, { host: string; scrollTestID: string } | 
   'components/course/TeeTable.tsx': { host: 'screens/CreateCourse.tsx', scrollTestID: 'create-course-screen' },
   // Arket ligger i en Modal (eget vindu) med KeyboardAvoidingView rundt seg.
   'components/approve/RejectSheet.tsx': 'modal',
+  // #2297: «Skriv inn tallet» i handicaparket, samme oppbygning.
+  'components/game/HandicapSheet.tsx': 'modal',
   // #2675: søkefeltet over medspillerlista og over markørvalget.
   'components/PickerSearch.tsx': { host: 'screens/LeagueRoundStart.tsx', scrollTestID: 'round-start-scroll' },
   // #2840: lagnavnet og søket i lagskjemaet, i skjemaets eget rullefelt.
@@ -216,8 +218,12 @@ describe('rullefeltet på skjermer med tekstfelt', () => {
     expect(componentsWithFields.sort()).toEqual(Object.keys(FIELD_COMPONENTS).sort());
   });
 
-  it('arket med avvisningsgrunnen holder seg over tastaturet selv', () => {
-    const sheet = read('components/approve/RejectSheet.tsx');
+  it.each(
+    Object.entries(FIELD_COMPONENTS)
+      .filter(([, v]) => v === 'modal')
+      .map(([file]) => file),
+  )('arket %s holder seg over tastaturet selv', (file) => {
+    const sheet = read(file);
     expect(sheet).toMatch(/<Modal\b/);
     expect(sheet).toMatch(/<KeyboardAvoidingView\b/);
   });

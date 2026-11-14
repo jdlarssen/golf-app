@@ -288,3 +288,53 @@ describe('saveProfile', () => {
     });
   });
 });
+
+describe('saveHandicap (#2297)', () => {
+  useWebRoute();
+
+  const OWN = {
+    name: 'Jørgen Larssen',
+    nickname: 'Jøggi',
+    hcpIndex: 14.2,
+    handicapUpdatedAt: '2026-08-22T10:00:00.000Z',
+    gender: 'mens',
+    level: 'senior',
+    isAdmin: false,
+    profileCompletedAt: '2026-08-22T10:00:00.000Z',
+    createdAt: '2026-04-12T18:00:00.000Z',
+  };
+
+  function sentBody(): Record<string, unknown> {
+    return JSON.parse(String(requestInit().body)) as Record<string, unknown>;
+  }
+
+  it.each([
+    // Magnitude med ett desimal og fortegnet som flagg, som profilskjemaet.
+    ['vanlig handicap', 13.8, '13.8', false],
+    ['plusshandicap', -0.6, '0.6', true],
+    ['scratch', 0, '0.0', false],
+    // −0 ville ellers vært et «pluss 0» som ingen kan ha.
+    ['minus null', -0, '0.0', false],
+    ['linjalens plussende', -8, '8.0', true],
+  ])('%s: %s sendes som %s med hcpPlus %s', async (_label, signed, hcpIndex, hcpPlus) => {
+    respondWith(200, { ok: true });
+
+    expect(await profile().saveHandicap(OWN, signed)).toEqual({ ok: true });
+
+    expect((mockFetch.mock.calls[0][1] as RequestInit).method).toBe('PUT');
+    // Resten av profilen går uendret med: ruta skriver hele raden.
+    expect(sentBody()).toEqual({
+      name: 'Jørgen Larssen',
+      nickname: 'Jøggi',
+      hcpIndex,
+      hcpPlus,
+      gender: 'mens',
+      level: 'senior',
+    });
+  });
+
+  it('gir videre det ruta svarer', async () => {
+    respondWith(400, { error: 'hcp_invalid' });
+    expect(await profile().saveHandicap(OWN, 13.8)).toEqual({ ok: false, reason: 'hcp_invalid' });
+  });
+});

@@ -27,11 +27,16 @@
 //  6. arrangørdelen.
 // Reglene bak billetten bor i `lib/gameTicket.ts`; stubben velger de samme
 // grenene, i samme rekkefølge, som `PrimarySection` gjorde før.
+//
+// #2297: før runden står «Sjekk handicapet ditt» over billetten når handicapet
+// er fire uker gammelt. «Oppdater» åpner arket med linjalen, og etter lagring
+// står kvitteringen der kortet sto.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentRef } from 'react';
 import {
   AccessibilityInfo,
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -50,6 +55,8 @@ import { CupGameLink } from '../components/cup/CupGameLink';
 import { FlightPicker } from '../components/game/FlightPicker';
 import { GameTicket, type TicketField } from '../components/game/GameTicket';
 import { GameTiles } from '../components/game/GameTiles';
+import { HandicapCard, HandicapReceipt } from '../components/game/HandicapCard';
+import { HandicapSheet } from '../components/game/HandicapSheet';
 import { OrganiserSection } from '../components/game/OrganiserSection';
 import { PaymentCard } from '../components/game/PaymentCard';
 import { PrizeTable } from '../components/game/PrizeTable';
@@ -64,9 +71,11 @@ import { isGameOrganiser } from '../lib/gameOrganiser';
 import { DelIcon, HakeIcon } from '../components/icons/Icons';
 import { SyncBanner } from '../components/sync/SyncBanner';
 import type { BundlePlayer } from '../data/gameBundle';
-import { fetchOwnProfile } from '../data/profile';
+import { fetchOwnProfile, saveHandicap, type OwnProfile } from '../data/profile';
 import { confirmParticipation } from '../data/rosterActions';
 import { displayName } from '../lib/display';
+import { describeHandicapSaveFailure } from '../lib/handicapCopy';
+import { isHandicapAgeStale } from '../lib/profileCopy';
 import { flightPickerVisible } from '../lib/flightPicker';
 import { paymentView } from '../lib/paymentView';
 import { gateReason } from '../lib/formatGate';
@@ -134,7 +143,23 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const rulesHeadingRef = useRef<ComponentRef<typeof Text>>(null);
   const rulesY = useRef<number | null>(null);
-  const [profileHcpIndex, setProfileHcpIndex] = useState<number | null>(null);
+  const [profile, setProfile] = useState<OwnProfile | null>(null);
+  // #2297: øker etter en lagring, så profilen hentes på nytt.
+  const [profileVersion, setProfileVersion] = useState(0);
+  // #2297: arket, «Ja, stemmer» som lagrer, og kvitteringen. Arket holder
+  // profilen fra da det ble åpnet: etter lagringen er kortet borte, men arket
+  // skal fortsatt gli ut. Ny `opening` monterer det på nytt, så det starter på
+  // det lagrede tallet.
+  const [sheet, setSheet] = useState<{ open: boolean; opening: number; profile: OwnProfile | null }>({
+    open: false,
+    opening: 0,
+    profile: null,
+  });
+  const [confirming, setConfirming] = useState(false);
+  const [receipt, setReceipt] = useState(false);
+  const updateRef = useRef<ComponentRef<typeof View>>(null);
+  const receiptRef = useRef<ComponentRef<typeof View>>(null);
+  const focusAfterSheet = useRef<'update' | 'receipt' | null>(null);
   // #2752: en planlagt cup-kamp spør om cupen er i gang, før den tilbyr et trekk fra den.
   const [cupRunning, setCupRunning] = useState(false);
   const plannedCupId = bundle?.game.status === 'scheduled' ? bundle.game.tournamentId : null;
@@ -172,20 +197,36 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   // #2255: DINE SLAG før start. Banehandicapen fryses først ved tee-off, så
   // til da regnes den fra hcp-indeksen i profilen (samme vei som webben).
   // Uten nett står «—», og tallet kommer neste gang skjermen åpnes.
-  const needsHcpIndex = myRow != null && myRow.courseHandicap == null;
+  // #2297: før runden trengs profilen også til handicapkortet.
+  const needsProfile =
+    myRow != null && (myRow.courseHandicap == null || bundle?.game.status === 'scheduled');
   useEffect(() => {
-    if (!needsHcpIndex) return;
+    if (!needsProfile) return;
     let live = true;
     void fetchOwnProfile(userId).then(
-      (profile) => {
-        if (live) setProfileHcpIndex(profile.hcpIndex);
+      (fresh) => {
+        if (live) setProfile(fresh);
       },
       () => undefined,
     );
     return () => {
       live = false;
     };
-  }, [needsHcpIndex, userId]);
+  }, [needsProfile, userId, profileVersion]);
+
+  // #2297: fokus etter arket. Lukket uten lagring står det på «Oppdater»,
+  // etter lagring på kvitteringen. iOS flytter det når arket har glidd ut
+  // (`onDismiss`); Android har ingen slik hendelse, og arket er borte når
+  // effekten kjører.
+  const moveFocusAfterSheet = useCallback(() => {
+    const target = focusAfterSheet.current === 'receipt' ? receiptRef.current : updateRef.current;
+    if (focusAfterSheet.current === null || !target) return;
+    focusAfterSheet.current = null;
+    AccessibilityInfo.sendAccessibilityEvent(target, 'focus');
+  }, []);
+  useEffect(() => {
+    if (!sheet.open && Platform.OS !== 'ios') moveFocusAfterSheet();
+  }, [sheet.open, moveFocusAfterSheet]);
 
   // «Regler»-flisa hopper ned til forklaringen og gir den fokus for
   // skjermleseren. Uten animasjon: det er et hopp, ikke en reise.
@@ -275,7 +316,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const strokes = ticketStrokes({
     bundle,
     me: me?.player,
-    profileHcpIndex,
+    profileHcpIndex: profile?.hcpIndex ?? null,
     teamMode,
     teamHandicap,
   });
@@ -343,6 +384,47 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
       ? teamShortId
       : null;
 
+  // #2297: kortet før runden, når handicapet er fire uker gammelt eller mer.
+  // Kolonnene er NOT NULL, men et kort uten tall eller dato har ingenting å
+  // spørre om.
+  const hcpCard =
+    game.status === 'scheduled' &&
+    me != null &&
+    !receipt &&
+    profile?.hcpIndex != null &&
+    profile.handicapUpdatedAt != null &&
+    isHandicapAgeStale(profile.handicapUpdatedAt)
+      ? { profile, hcp: profile.hcpIndex, updatedAt: profile.handicapUpdatedAt }
+      : null;
+
+  const confirmHandicap = async () => {
+    if (!hcpCard) return;
+    setConfirming(true);
+    const result = await saveHandicap(hcpCard.profile, hcpCard.hcp);
+    setConfirming(false);
+    if (!result.ok) {
+      Alert.alert(describeHandicapSaveFailure(result.reason));
+      return;
+    }
+    // Ruta har stemplet tidspunktet. Kortet går bort med én gang, og profilen
+    // hentes på nytt bak det.
+    setProfile({ ...hcpCard.profile, handicapUpdatedAt: new Date().toISOString() });
+    setProfileVersion((version) => version + 1);
+  };
+
+  const sheetProfile = sheet.profile;
+  const closeSheet = (after: 'update' | 'receipt') => {
+    focusAfterSheet.current = after;
+    setSheet((current) => ({ ...current, open: false }));
+  };
+
+  const onHandicapSaved = (signed: number) => {
+    if (profile) setProfile({ ...profile, hcpIndex: signed, handicapUpdatedAt: new Date().toISOString() });
+    setReceipt(true);
+    setProfileVersion((version) => version + 1);
+    closeSheet('receipt');
+  };
+
   return (
     <ScrollView
       ref={scrollRef}
@@ -371,6 +453,32 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
         <OwnTeamCard
           shortId={ownTeamShortId}
           onOpen={() => openOrReturn(navigation, 'RoundInvite', { shortId: ownTeamShortId, src: null })}
+        />
+      ) : null}
+
+      {hcpCard ? (
+        <HandicapCard
+          hcp={hcpCard.hcp}
+          updatedAt={hcpCard.updatedAt}
+          busy={confirming}
+          onConfirm={() => void confirmHandicap()}
+          onUpdate={() =>
+            setSheet((current) => ({ open: true, opening: current.opening + 1, profile: hcpCard.profile }))
+          }
+          updateRef={updateRef}
+        />
+      ) : null}
+      {receipt && game.status === 'scheduled' ? <HandicapReceipt receiptRef={receiptRef} /> : null}
+      {sheetProfile?.hcpIndex != null && sheetProfile.handicapUpdatedAt != null ? (
+        <HandicapSheet
+          key={sheet.opening}
+          open={sheet.open}
+          stored={sheetProfile.hcpIndex}
+          updatedAt={sheetProfile.handicapUpdatedAt}
+          onSave={(signed) => saveHandicap(sheetProfile, signed)}
+          onSaved={onHandicapSaved}
+          onCancel={() => closeSheet('update')}
+          onDismissed={moveFocusAfterSheet}
         />
       ) : null}
 
