@@ -672,6 +672,22 @@ describe('#2878: navnet i tabellen og arket', () => {
     expect(screen.queryByTestId('friend-sheet')).toBeNull();
   });
 
+  // Tilstand 0 i tegningen: navnet som trykkes på dempes til 0,6, som resultatcellene.
+  // Fingeren legges ned med responder-hendelsene Pressable lytter på.
+  it('navnet gir opacity 0,6 mens det er trykket, og ingen annen markering i hvile', async () => {
+    answer({ ok: true, view: leagueView({ standings }) });
+    await renderLeague();
+    const touch = { persist: () => {}, nativeEvent: { touches: [], changedTouches: [], timestamp: 0 } };
+    const opacityOf = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style)?.opacity;
+    expect(opacityOf('league-standings-person-kristian')).toBeUndefined();
+    await fireEvent(screen.getByTestId('league-standings-person-kristian'), 'responderGrant', touch);
+    expect(opacityOf('league-standings-person-kristian')).toBe(0.6);
+    expect(opacityOf('league-standings-person-martin')).toBeUndefined();
+    // Cellene bruker samme verdi.
+    await fireEvent(screen.getByTestId('league-standings-card-martin-r1'), 'responderGrant', touch);
+    expect(opacityOf('league-standings-card-martin-r1')).toBe(0.6);
+  });
+
   it('ikke venner: de tre radene fra forslaget, og «Legg til venn» sender forespørselen', async () => {
     friendsAre({ suggestions: [{ id: 'martin', name: 'Martin Lie', stats }] });
     sendFriendRequest.mockResolvedValue({ ok: true, status: 'requested' });
