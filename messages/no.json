@@ -554,7 +554,9 @@
         }
       },
       "adminLine": "Administratoren som driver Tørny, ser profilen, e-postadressen, spillene og klubbene dine.",
-      "processorsLine": "Tjenestene som behandler dataene for oss, står i personvernerklæringen."
+      "processorsLine": "Tjenestene som behandler dataene for oss, står i personvernerklæringen.",
+      "exportRow": "Last ned dataene dine",
+      "exportSublabel": "Profilen, handicaphistorikken, spillene, slagene, reaksjonene, invitasjonene, vennene, klubbene, varslene, AI-svaret, Kavalkaden og ideene dine i én fil."
     }
   },
   "friends": {
