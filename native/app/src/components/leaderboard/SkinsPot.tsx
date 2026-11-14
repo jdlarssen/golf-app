@@ -25,7 +25,7 @@ import {
   skinsPotLines,
 } from '../../lib/leaderboardModel';
 import { BOARD_TEAM_TEXT } from '../../lib/boardCopy';
-import { FONTS, fraunces, interLine, useTheme, withAlpha } from '../../theme';
+import { FONTS, fraunces, interLine, useTheme, winCoin, withAlpha } from '../../theme';
 
 /**
  * Det skoggrønne kortet øverst mens runden pågår. Kickeren har ikke spillnavnet
@@ -165,7 +165,7 @@ function Coin({
   state: CoinState;
   nameOf: (userId: string) => string;
 }) {
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
   const won = state === 'won' || state === 'potWon';
   const winner = won && hole.winnerUserId ? nameOf(hole.winnerUserId) : null;
   const count = won ? hole.skinsAwarded : hole.atStake;
@@ -175,13 +175,15 @@ function Coin({
   let coinStyle;
   let face = null;
   if (won) {
+    // #2755: vinnermynten fra temaet, salvie om natten.
+    const coin = winCoin(colors, scheme);
     coinStyle = [
-      { backgroundColor: colors.surfaceStrong },
+      { backgroundColor: coin.fill },
       state === 'potWon' && {
         boxShadow: `0 0 0 2px ${colors.surface}, 0 0 0 3.5px ${colors.accent}`,
       },
     ];
-    face = <Text style={[styles.initials, { color: colors.onStrongWarm }]}>{nameInitials(winner)}</Text>;
+    face = <Text style={[styles.initials, { color: coin.ink }]}>{nameInitials(winner)}</Text>;
   } else if (state === 'carried') {
     coinStyle = [styles.dashed, { borderColor: colors.scoreUnsetFg }];
     face = <Text style={[styles.arrow, { color: colors.muted }]}>→</Text>;

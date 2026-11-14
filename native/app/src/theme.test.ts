@@ -575,6 +575,36 @@ describe('SUNLIGHT_THEME', () => {
   });
 });
 
+// #2755: vinnermynten (`Nassau-hull-B3-*`, og Skins-myntene om natten). Om
+// natten forsvant `surfaceStrong` mot kortet (1,23:1); en mynt som ikke er
+// tekst trenger minst 3:1 mot flaten (WCAG 1.4.11), og initialene 4,5:1.
+describe('winCoin', () => {
+  it('er skoggrønn med varmt blekk i lys drakt og sollys, og salvie med mørkt blekk om natten', () => {
+    expect(theme.winCoin(PALETTES.light, 'light')).toEqual({
+      fill: PALETTES.light.surfaceStrong,
+      ink: PALETTES.light.onStrongWarm,
+    });
+    expect(theme.winCoin(SUNLIGHT_THEME.colors, SUNLIGHT_THEME.scheme)).toEqual({
+      fill: SUNLIGHT_THEME.colors.surfaceStrong,
+      ink: SUNLIGHT_THEME.colors.onStrongWarm,
+    });
+    expect(theme.winCoin(PALETTES.dark, 'dark')).toEqual({
+      fill: PALETTES.dark.primary,
+      ink: PALETTES.dark.onPrimary,
+    });
+  });
+
+  it.each([
+    ['lys', PALETTES.light, 'light'],
+    ['sollys', SUNLIGHT_THEME.colors, SUNLIGHT_THEME.scheme],
+    ['klubbhus-natt', PALETTES.dark, 'dark'],
+  ] as const)('%s: mynten synes mot kortet, og initialene leses på mynten', (_label, colors, scheme) => {
+    const coin = theme.winCoin(colors, scheme);
+    expect(contrast(coin.fill, colors.surface)).toBeGreaterThanOrEqual(3);
+    expect(contrast(coin.ink, coin.fill)).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
 describe('ThemeScope', () => {
   function SunlightScope({ children }: { children: ReactNode }) {
     return createElement(ThemeScope, { theme: SUNLIGHT_THEME }, children);

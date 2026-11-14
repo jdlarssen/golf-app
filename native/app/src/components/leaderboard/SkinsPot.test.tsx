@@ -2,10 +2,12 @@
 // mens runden pågår, én mynt per hull med riktig tilstand, en stilling uten
 // knapper, og ingen pott på spill i et ferdig spill. Tallene og teksten er
 // Type A i `lib/leaderboard/skinsPot.test.ts` og `leaderboardModel.test.ts`.
-import { render, screen } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
+import { render, screen, within } from '@testing-library/react-native';
 import type { SkinsHoleRow, SkinsResult } from '../../../../../lib/scoring/modes/types';
 import { BOARD_TEAM_TEXT } from '../../lib/boardCopy';
 import { SkinsView } from './PotViews';
+import { PALETTES, ThemeScope, themeFor } from '../../theme';
 
 function hole(holeNumber: number, fields: Partial<SkinsHoleRow>): SkinsHoleRow {
   return {
@@ -84,5 +86,41 @@ describe('SkinsView (#2317)', () => {
     expect(screen.queryByTestId('skins-pot-hero')).toBeNull();
     expect(coinStates()).toEqual(['carried', 'potWon', 'future', 'future']);
     expect(screen.getByTestId('skins-pot')).toBeTruthy();
+  });
+});
+
+// #2755 (eierens tillegg): om natten forsvant den vunne mynten mot kortet
+// (`surfaceStrong` #1F3B2C på `surface` #1C2A22). Den får vinnermynten fra
+// temaet (`winCoin`); lys drakt og det grønne toppkortet er uendret.
+describe('den vunne mynten (#2755)', () => {
+  const styleOf = (testID: string) =>
+    StyleSheet.flatten(screen.getByTestId(testID, { includeHiddenElements: true }).props.style);
+  // Marte Lie vant hull 2: «ML» på mynten.
+  const inkOf = (testID: string) =>
+    StyleSheet.flatten(
+      within(screen.getByTestId(testID, { includeHiddenElements: true })).getByText('ML', {
+        includeHiddenElements: true,
+      }).props.style,
+    ).color;
+
+  it('om natten: salvie med mørke initialer, og toppkortet er fortsatt skoggrønt', async () => {
+    await render(
+      <ThemeScope theme={themeFor('dark')}>
+        <SkinsView result={RESULT} status="active" settlement={null} nameOf={nameOf} />
+      </ThemeScope>,
+    );
+    expect(styleOf('skins-coin-2-potWon').backgroundColor).toBe(PALETTES.dark.primary);
+    expect(inkOf('skins-coin-2-potWon')).toBe(PALETTES.dark.onPrimary);
+    expect(styleOf('skins-pot-hero').backgroundColor).toBe(PALETTES.dark.surfaceStrong);
+  });
+
+  it('i lys drakt: skoggrønn med varme initialer, som før', async () => {
+    await render(
+      <ThemeScope theme={themeFor('light')}>
+        <SkinsView result={RESULT} status="active" settlement={null} nameOf={nameOf} />
+      </ThemeScope>,
+    );
+    expect(styleOf('skins-coin-2-potWon').backgroundColor).toBe(PALETTES.light.surfaceStrong);
+    expect(inkOf('skins-coin-2-potWon')).toBe(PALETTES.light.onStrongWarm);
   });
 });

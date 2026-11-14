@@ -676,6 +676,18 @@ export function boardSelectRing(colors: ThemeColors, scheme: Scheme): string {
 }
 
 /**
+ * Vinnermynten (#2755, `Nassau-hull-B3-*`): mynten med initialene til den som
+ * vant hullet, i Nassau og Skins. Lys drakt og sollys er skoggrønn med det
+ * varme blekket. Klubbhus-natt er salvie med mørkt blekk, for `surfaceStrong`
+ * (#1F3B2C) forsvinner mot kortets `surface` (#1C2A22), 1,23:1.
+ */
+export function winCoin(colors: ThemeColors, scheme: Scheme): { fill: string; ink: string } {
+  return scheme === 'dark'
+    ? { fill: colors.primary, ink: colors.onPrimary }
+    : { fill: colors.surfaceStrong, ink: colors.onStrongWarm };
+}
+
+/**
  * Gullringen rundt lederlaget på lagtavla mens runden pågår (#2579,
  * `Lagtavle-forslag` og `Lagtavle-bestball-forslag-*`): svakere enn
  * {@link boardRing}, 70 % i lys og 80 % i klubbhus-natt.
