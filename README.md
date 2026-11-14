@@ -35,7 +35,7 @@ It's invite-only: players sign in with a one-time code by mail, with no open sig
 - A fixture list for finding a round. "Finn turneringer" shows every round you can join in one list, split by day, with filters for this weekend and your club; a round with a player cap shows how many places are left, and a full one says so instead of offering a button. Under the clock a round with a tee-off says whether it starts from the first tee or as a shotgun (the organiser ticks it when setting the round up), and a nine-hole round says «9 hull».
 - Open tournaments you can browse before you sign in. Reach Tørny without an account and "Finn turneringer" lists the open rounds anyone can join; tap one to see the details, then log in when you want to sign up. It shows the round itself, never player names or personal details.
 - Installable on your home screen. It opens like a native app, with no browser bar on top.
-- GDPR self-service. Export or delete your data from your profile page without emailing anyone.
+- GDPR self-service. «Dine data» under your profile says what Tørny stores and who can see it, and lets you download or delete your data without emailing anyone, on the website and in the app.
 
 ## Formats
 
