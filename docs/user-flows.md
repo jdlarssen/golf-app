@@ -160,7 +160,9 @@ tilbakeknapp. Nettsiden har sin egen, i punkt 7.
 7. **På nettsiden er pila en lenke til skjermen over.** Målet er fast, styrt av `?from=` og
    `?kilde=`, og følger ikke «dit du kom fra». Unntaket er liga, cup, kavalkade, påmelding,
    personvern og slett konto, der pila går tilbake hvis nettleseren oppgir at du kom fra en side i
-   Tørny, og ellers til det faste målet. Nettleserens egen tilbakeknapp blar i historikken. Et skjema
+   Tørny, og ellers til det faste målet. Nettleseren spørres med Navigation API-et, så det gjelder
+   også sider du klikket deg til uten ny lasting (#2332); uten API-et brukes referreren
+   (`components/ui/HistoryBackLink.tsx`). Nettleserens egen tilbakeknapp blar i historikken. Et skjema
    som sender deg videre, erstatter seg selv, så det ligger ikke bak deg. I veiviseren går pila ett
    steg, mens nettleserens tilbake går ut av veiviseren, og utkastet står. Godkjenningen og andre
    skjemaer med kvittering på samme side blir stående i historikken.
