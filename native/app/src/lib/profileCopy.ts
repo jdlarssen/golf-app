@@ -248,6 +248,12 @@ export const PROFILE_TEXT = {
  * profile.data`, {@link DATA_TEXT} og denne lista i samme PR
  * (`docs/schema-ground-truth.md`, RLS-avsnittet).
  *
+ * **Teksten er kort, lista under er hele bildet.** Eieren valgte 14.11 én til
+ * to linjer per rad, som i tegningen. Radene sier det viktigste for spilleren
+ * og ingenting som er usant; unntakene og detaljene står bare her (og i PR-en
+ * for #2332 som innspill til personvernerklæringen). En setning må aldri bli
+ * usann ved at noe er tatt bort: «bare» brukes bare der ingen andre ser det.
+ *
  * - `profile`: navnet via `users select own or shared games` (alle du deler et
  *   spill med) og venne- og klubbsidene, som bare viser navn og kallenavn
  *   (`lib/friends/getFriendData.ts`, `lib/clubs/getClubDetail.ts`). Uten
@@ -312,33 +318,33 @@ export const DATA_TEXT = {
   rows: {
     profile: {
       title: 'Navn, handicap og golfprofil',
-      body: 'Navnet ser de du spiller med, vennene dine og de andre i klubbene dine. Uten innlogging viser påmeldingssiden til et åpent spill bare fornavnet og forbokstaven i etternavnet. Handicapet, kjønnet og spillerklassen ser de du spiller med og de som kan invitere deg: vennene dine, den du har en venneforespørsel med, og den som setter opp et spill i klubben din. Handicaphistorikken ser bare du.',
+      body: 'Medspillere og venner ser navn og handicap. Uten innlogging viser påmeldingen fornavn og forbokstav.',
     },
     email: {
       title: 'E-postadressen',
-      body: 'Vi bruker den til innlogging, invitasjoner, varsler på e-post og månedsbrevet. Andre spillere ser ikke hele adressen, med to unntak: den som skrev den inn for å invitere deg, og de som styrer en klubb du er invitert til, så lenge invitasjonen er åpen. Setter noen opp et lag, eller har du ikke fylt inn navn, ser de andre en delvis skjult adresse.',
+      body: 'Vi bruker den til innlogging og varsler. Andre spillere ser ikke hele adressen, bortsett fra den som inviterer deg.',
     },
     rounds: {
       title: 'Rundene og slagene dine',
-      body: 'Under runden ser de andre i spillet og arrangøren slagene og reaksjonene dine. Et ferdig spill er ikke åpent for hvem som helst, men alle som er logget inn og har lenka, kan se resultatene. Deler arrangøren en live-lenke eller legger tavla ut på en nettside, kan hvem som helst følge spillet der med navn, også etter at det er ferdig. Har spillet startkontingent, ser arrangøren og de andre i spillet om du har betalt. Et Vipps-nummer du legger inn som arrangør, ser de i spillet og alle som åpner påmeldingssiden.',
+      body: 'De andre i spillet og arrangøren ser slagene dine. Med en live-lenke kan hvem som helst følge spillet.',
     },
     social: {
       title: 'Venner og klubber',
-      body: 'Hvem du er venn med, ser bare du og vennen. De andre i en klubb ser at du er med. Deler du vennelenka di, kan alle som er logget inn og åpner den, se navnet ditt.',
+      body: 'Hvem du er venn med, ser bare du og vennen. Klubben ser at du er med.',
     },
     ai: {
       title: 'Rundereferater og Kavalkaden',
-      body: 'Svaret ditt om AI-tekster ser bare du. Har du sagt ja, kan navnet ditt stå i rundereferatet og i Kavalkaden til dem du har spilt med. Referatet står ved resultatene, og alle som kan se dem, kan lese det. Kavalkaden din ser bare du, til du deler et kort fra den.',
+      body: 'Har du sagt ja, kan navnet ditt stå i rundereferater og Kavalkaden. Kavalkaden din ser bare du.',
     },
     notifications: {
       title: 'Varsler',
-      body: 'Vi lagrer varslene i innboksen din og hvilke telefoner og nettlesere som får varsler. Bare du ser dem.',
+      body: 'Varslene og hvilke telefoner som får dem, ser bare du.',
     },
   } satisfies Record<DataRowId, { title: string; body: string }>,
   adminLine:
-    'Administratoren som driver Tørny, ser profilen, e-postadressen, spillene, klubbene og invitasjonene dine, og ideene du foreslår.',
+    'Administratoren som driver Tørny, ser profilen, e-postadressen, spillene og klubbene dine.',
   processorsLine:
-    'Tjenestene vi bruker til lagring, e-post og rundereferater, behandler dataene for oss. Hvem de er, står i personvernerklæringen.',
+    'Tjenestene som behandler dataene for oss, står i personvernerklæringen.',
 } as const;
 
 /** Statuslinja når varslene står på: designet sier «iPhone», og Android sier sitt (#2758). */
