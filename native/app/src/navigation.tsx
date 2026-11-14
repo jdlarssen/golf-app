@@ -525,10 +525,14 @@ export function RootNavigator() {
           component={DeleteAccount}
           options={{ title: 'Slett konto' }}
         />
+        {/* #2332: som «Varsler»: «Profil» i toppen, og «Dine data» stort i
+            innholdet (designet «Data-forslag»). */}
         <Stack.Screen
           name="AccountSettings"
           component={AccountSettings}
-          options={{ title: PROFILE_TEXT.menuAccount }}
+          options={kickerHeader(PROFILE_TEXT.heading, PROFILE_TEXT.menuAccount, {
+            backLabel: PROFILE_TEXT.backToProfile,
+          })}
         />
         {/* Rommene under profilen (#2256, designet): «PROFIL» i toppen, og
             sidens navn stort i innholdet. */}

@@ -18,6 +18,10 @@
 //
 // Rekkefølgen drain → port → signOut → wipe er `data/logout.test.ts` sin.
 //
+// #2332: «Dine data» står øverst. Testen sjekker bare at radene og seksjonene
+// finnes og står i riktig rekkefølge; ordlyden låses av paritetstesten i
+// `profileCopy.test.ts`.
+//
 // Flere renders og ikke én: staging-på og staging-av er to bygg, og en dialog
 // som står åpen eller en feilet utlogging er tilstander skjermen ikke kan være
 // i samtidig med utgangspunktet. Samme unntak som `Profile.test.tsx` hadde for
@@ -36,7 +40,7 @@ import { fetchOwnAiConsent, saveAiConsent } from '../data/aiConsent';
 import { logOut } from '../data/logout';
 import { AI_CONSENT_TEXT } from '../lib/aiConsentCopy';
 import { APP_LOCK_STORAGE_KEY, getAppLock, loadAppLock, setAppLock } from '../lib/appLock';
-import { PROFILE_TEXT, unsentStrokesWarning } from '../lib/profileCopy';
+import { DATA_ROWS, PROFILE_TEXT, unsentStrokesWarning } from '../lib/profileCopy';
 import { isStagingBuild } from '../lib/stagingGate';
 import { describeWebLinkFailure, openWeb } from '../lib/webLink';
 import type { ScreenProps } from '../navigation';
@@ -80,6 +84,25 @@ async function renderScreen() {
   );
 }
 
+type JsonNode = ReturnType<typeof screen.toJSON>;
+
+/** Alle `testID`-ene i treet, i den rekkefølgen skjermen tegner dem. */
+function testIdsInOrder(): string[] {
+  const ids: string[] = [];
+  const walk = (node: JsonNode | string): void => {
+    if (node === null || typeof node === 'string') return;
+    if (Array.isArray(node)) {
+      node.forEach(walk);
+      return;
+    }
+    const id = node.props.testID;
+    if (typeof id === 'string') ids.push(id);
+    node.children?.forEach(walk);
+  };
+  walk(screen.toJSON());
+  return ids;
+}
+
 describe('AccountSettings', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -111,6 +134,39 @@ describe('AccountSettings', () => {
       expect(bottomPadding('account-settings-screen')).toBe(20 + 48);
     } finally {
       setBottomInset(0);
+    }
+  });
+
+  it('#2332: «Dine data» først, så «Du bestemmer», «Konto» og «Slett konto» nederst', async () => {
+    await renderScreen();
+    await screen.findByTestId('account-ai-consent-switch');
+    const ids = testIdsInOrder();
+
+    const sections = [
+      'account-data-intro',
+      'account-section-stored',
+      'account-data-rows',
+      'account-data-admin',
+      'account-data-processors',
+      'account-section-you-decide',
+      'account-you-decide',
+      'account-section-account',
+      'account-email',
+      'account-logout',
+      'account-danger',
+    ];
+    expect(sections.filter((id) => !ids.includes(id))).toEqual([]);
+    const positions = sections.map((id) => ids.indexOf(id));
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+
+    // Én rad per id, i lista og i samme rekkefølge, hver med tittel og tekst.
+    const rows = ids.filter((id) => DATA_ROWS.some((row) => id === `account-data-${row}`));
+    expect(rows).toEqual(DATA_ROWS.map((row) => `account-data-${row}`));
+    for (const row of DATA_ROWS) {
+      expect(ids.indexOf(`account-data-${row}`)).toBeGreaterThan(ids.indexOf('account-data-rows'));
+      expect(ids.indexOf(`account-data-${row}`)).toBeLessThan(ids.indexOf('account-data-admin'));
+      expect(ids).toContain(`account-data-${row}-title`);
+      expect(ids).toContain(`account-data-${row}-body`);
     }
   });
 

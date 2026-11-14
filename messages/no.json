@@ -522,7 +522,40 @@
     "monthlyDigestTitle": "Månedsbrev",
     "monthlyDigestSubtitle": "Nytt i Tørny på e-post",
     "monthlyDigestAriaLabel": "Månedsbrev på e-post",
-    "monthlyDigestFailed": "Fikk ikke lagret — prøv igjen."
+    "monthlyDigestFailed": "Fikk ikke lagret — prøv igjen.",
+    "data": {
+      "title": "Dine data",
+      "lede": "Hva Tørny vet om deg, og hvem som ser det.",
+      "sectionStored": "Dette lagrer vi",
+      "rows": {
+        "profile": {
+          "title": "Navn, handicap og golfprofil",
+          "body": "Navnet ser de du spiller med, vennene dine og de andre i klubbene dine. Handicapet, kjønnet og spillerklassen ser de du spiller med og de som kan invitere deg: vennene dine, den du har en venneforespørsel med, og den som setter opp et spill i klubben din. Handicaphistorikken ser bare du."
+        },
+        "email": {
+          "title": "E-postadressen",
+          "body": "Vi bruker den til innlogging, invitasjoner, varsler på e-post og månedsbrevet. Andre spillere ser ikke hele adressen, med to unntak: den som skrev den inn for å invitere deg, og de som styrer en klubb du er invitert til, så lenge invitasjonen er åpen. Setter noen opp et lag, eller har du ikke fylt inn navn, ser de andre en delvis skjult adresse."
+        },
+        "rounds": {
+          "title": "Rundene og slagene dine",
+          "body": "Under runden ser de andre i spillet og arrangøren slagene og reaksjonene dine. Et ferdig spill er ikke åpent for hvem som helst, men alle som er logget inn og har lenka, kan se resultatene. Deler arrangøren en live-lenke eller legger tavla ut på en nettside, kan hvem som helst følge spillet der med navn, også etter at det er ferdig. Har spillet startkontingent, ser arrangøren og de andre i spillet om du har betalt. Et Vipps-nummer du legger inn som arrangør, ser de i spillet og alle som åpner påmeldingssiden."
+        },
+        "social": {
+          "title": "Venner og klubber",
+          "body": "Hvem du er venn med, ser bare du og vennen. De andre i en klubb ser at du er med. Deler du vennelenka di, kan alle som er logget inn og åpner den, se navnet ditt."
+        },
+        "ai": {
+          "title": "Rundereferater og Kavalkaden",
+          "body": "Svaret ditt om AI-tekster ser bare du. Har du sagt ja, kan navnet ditt stå i rundereferatet og i Kavalkaden til dem du har spilt med. Referatet står ved resultatene, og alle som kan se dem, kan lese det. Kavalkaden din ser bare du, til du deler et kort fra den."
+        },
+        "notifications": {
+          "title": "Varsler",
+          "body": "Vi lagrer varslene i innboksen din og hvilke telefoner og nettlesere som får varsler. Bare du ser dem."
+        }
+      },
+      "adminLine": "Administratoren som driver Tørny, ser profilen, e-postadressen, spillene, klubbene og invitasjonene dine, og ideene du foreslår.",
+      "processorsLine": "Tjenestene vi bruker til lagring, e-post og rundereferater, behandler dataene for oss. Hvem de er, står i personvernerklæringen."
+    }
   },
   "friends": {
     "kicker": "Venner",
