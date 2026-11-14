@@ -81,6 +81,12 @@ insert into fk_coverage (tbl, col, handling) values
   ('game_players',               'approved_by_user_id',                 'kept_history'),
   ('game_players',               'marker_user_id',                      'kept_history'),
   ('game_players',               'submitted_by_user_id',                'kept_history'),
+  -- #2283 (0237): the flights' reports from the hole, game history like the
+  -- winners the organiser picked from them.
+  ('game_gir_claims',            'entered_by',                          'kept_history'),
+  ('game_gir_claims',            'user_id',                             'kept_history'),
+  ('game_side_claims',           'entered_by',                          'kept_history'),
+  ('game_side_claims',           'winner_user_id',                      'kept_history'),
   ('game_side_winners',          'winner_user_id',                      'kept_history'),
   ('games',                      'foursomes_side1_tee_starter_user_id', 'kept_history'),
   ('games',                      'foursomes_side2_tee_starter_user_id', 'kept_history'),
