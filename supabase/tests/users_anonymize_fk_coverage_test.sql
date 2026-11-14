@@ -63,6 +63,7 @@ insert into fk_coverage (tbl, col, handling) values
   ('idea_submissions',           'user_id',                             'deleted'),
   ('kavalkade_shares',           'user_id',                             'deleted'),
   ('kavalkades',                 'user_id',                             'deleted'),
+  ('notification_preferences',   'user_id',                             'deleted'),
   ('notifications',              'user_id',                             'deleted'),
   ('push_subscriptions',         'user_id',                             'deleted'),
   ('reactions',                  'user_id',                             'deleted'),
