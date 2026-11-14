@@ -36,6 +36,7 @@ type Read =
 const NEW_TABLES = [
   'handicap_history',
   'notifications',
+  'notification_preferences',
   'ai_consents',
   'kavalkades',
   'kavalkade_shares',

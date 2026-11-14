@@ -44,6 +44,7 @@ export const EXPORT_KEYS = [
   'club_memberships',
   'handicap_history',
   'notifications',
+  'notification_preferences',
   'ai_consents',
   'kavalkades',
   'kavalkade_shares',
@@ -161,6 +162,11 @@ export async function buildUserExport(userId: string, rlsClient: Client): Promis
     // ones the user gave (`user_id`), not the ones they got.
     const handicapHistory = rowsOf('handicap_history', await allOwnRows(rlsClient, 'handicap_history', userId));
     const notifications = rowsOf('notifications', await allOwnRows(rlsClient, 'notifications', userId));
+    // #2315: the push choices, one row or none.
+    const notificationPreferences = rowsOf(
+      'notification_preferences',
+      await rlsClient.from('notification_preferences').select('*').eq('user_id', userId),
+    );
     const aiConsents = rowsOf('ai_consents', await rlsClient.from('ai_consents').select('*').eq('user_id', userId));
     const kavalkades = rowsOf('kavalkades', await rlsClient.from('kavalkades').select('*').eq('user_id', userId));
     const kavalkadeShares = rowsOf(
@@ -185,6 +191,7 @@ export async function buildUserExport(userId: string, rlsClient: Client): Promis
         club_memberships: clubMemberships,
         handicap_history: handicapHistory,
         notifications,
+        notification_preferences: notificationPreferences,
         ai_consents: aiConsents,
         kavalkades,
         kavalkade_shares: kavalkadeShares,
