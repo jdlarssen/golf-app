@@ -1115,6 +1115,34 @@ describe('summaryLines — kontingent og premiebord', () => {
     publishGameMock.mockClear();
   });
 
+  // #2880: Wolf og Skins, `Nyttspill-2-wolf` og `-skins`: ett kort med scoring, netto valgt fra start.
+  it.each([
+    { slug: 'wolf', legend: 'Wolf-oppsett', label: 'Wolf-scoring', startNote: true },
+    { slug: 'skins', legend: 'Skins-oppsett', label: 'Skins-scoring', startNote: false },
+  ])('$slug viser oppsettet som valgkort med netto valgt, og tar brutto', async ({ slug, legend, label, startNote }) => {
+    (fetchFormatCatalog as jest.Mock).mockResolvedValueOnce([
+      { slug, label: slug, iconKey: slug, isPrimary: false, sortOrder: 60 },
+    ]);
+    await renderWizard();
+    await fireEvent.press(await screen.findByTestId(`create-format-${slug}`));
+    await fireEvent.press(screen.getByTestId('create-next'));
+
+    expect(screen.getByText(legend)).toBeTruthy();
+    expect(screen.getByText('Scoring')).toBeTruthy();
+    expect(screen.getByLabelText(label)).toBeTruthy();
+    expect(screen.getByTestId(`create-${slug}-net`).props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId(`create-${slug}-gross`).props.accessibilityState).toMatchObject({ selected: false });
+    expect(screen.queryByText('Rotasjonen trekkes når runden starter.') !== null).toBe(startNote);
+    // Chips-kontrollen og dens spørsmål er borte; kroner står bak oppgjørsbryteren (#2561).
+    expect(screen.queryByTestId('create-scoring-net')).toBeNull();
+    expect(screen.queryByText('Teller brutto eller netto?')).toBeNull();
+    expect(screen.queryByTestId('create-kr-per-unit')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId(`create-${slug}-gross`));
+    expect(screen.getByTestId(`create-${slug}-gross`).props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId(`create-${slug}-net`).props.accessibilityState).toMatchObject({ selected: false });
+  });
+
   // #2880: Wolf og Skins bytter kontroll for netto/brutto (chips til valgkort).
   // Det som sendes til serveren skal være det samme: urørt gir netto, et trykk
   // gir det som er trykket. Verdiene er skrevet inn fra en kjøring før endringen.
@@ -1135,7 +1163,7 @@ describe('summaryLines — kontingent og premiebord', () => {
       await renderWizard();
       await fireEvent.press(await screen.findByTestId(`create-format-${slug}`));
       await fireEvent.press(screen.getByTestId('create-next'));
-      if (press) await fireEvent.press(screen.getByTestId(`create-scoring-${press}`));
+      if (press) await fireEvent.press(screen.getByTestId(`create-${slug}-${press}`));
 
       await fireEvent.press(screen.getByTestId('create-next'));
       await fireEvent.press(await screen.findByTestId('create-course-course-1'));

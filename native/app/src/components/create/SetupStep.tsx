@@ -25,8 +25,10 @@ import {
   NASSAU_SETUP_TEXT,
   PATSOME_TEXT,
   SHAMBLE_TEXT,
+  SKINS_SETUP_TEXT,
   TEAM_HANDICAP_TEXT,
   TEAM_SIZE_TEXT,
+  WOLF_SETUP_TEXT,
   sumEquivalentText,
 } from '../../lib/formatSetupCopy';
 import { defaultTeamHandicapPct } from '../../../../../lib/games/formatSetupDefaults';
@@ -85,7 +87,7 @@ export function SetupStep({
 }) {
   const { colors, ui } = useTheme();
   const stablefordFamily = isStablefordFamily(mode);
-  const hasScoringToggle = mode === 'wolf' || mode === 'skins';
+  const scoringSetup = mode === 'wolf' ? WOLF_SETUP_TEXT : mode === 'skins' ? SKINS_SETUP_TEXT : null;
   // Om formatet spiller om penger, og i hvilken enhet, er den delte regelen
   // resultattavla også leser (#2221): skins sier «per skin», ikke «per poeng».
   // #2561: appen spør ikke om kroner per enhet ved lansering (rot-
@@ -398,26 +400,28 @@ export function SetupStep({
         </Field>
       ) : null}
 
-      {hasScoringToggle ? (
-        <Field label="Teller brutto eller netto?">
-          <Chips
-            value={
-              (mode === 'wolf' ? setup.wolfScoring : setup.skinsScoring) ?? 'net'
-            }
-            onChange={(value) =>
-              onSetup(
-                mode === 'wolf' ? { wolfScoring: value } : { skinsScoring: value },
-              )
-            }
-            options={[
-              { value: 'net' as const, label: 'Netto', testID: 'create-scoring-net' },
-              {
-                value: 'gross' as const,
-                label: 'Brutto',
-                testID: 'create-scoring-gross',
-              },
-            ]}
-          />
+      {/* #2880: Wolf og Skins, som `Nyttspill-2-wolf` og `-skins`: samme kort som Nassau. */}
+      {scoringSetup ? (
+        <Field label={scoringSetup.legend}>
+          <View style={[styles.setupCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.cardLabel, { color: colors.text }]}>{scoringSetup.scoringLabel}</Text>
+            <Text style={ui.muted}>{scoringSetup.scoringDescription}</Text>
+            <ChoiceCards
+              columns={2}
+              minHeight={60}
+              wrapTitle
+              accessibilityLabel={scoringSetup.scoringAriaLabel}
+              value={(mode === 'wolf' ? setup.wolfScoring : setup.skinsScoring) ?? 'net'}
+              onChange={(value) =>
+                onSetup(mode === 'wolf' ? { wolfScoring: value } : { skinsScoring: value })
+              }
+              options={[
+                { value: 'net' as const, title: scoringSetup.scoringNet, testID: `create-${mode}-net` },
+                { value: 'gross' as const, title: scoringSetup.scoringGross, testID: `create-${mode}-gross` },
+              ]}
+            />
+            {'startNote' in scoringSetup ? <Text style={ui.muted}>{scoringSetup.startNote}</Text> : null}
+          </View>
         </Field>
       ) : null}
 
