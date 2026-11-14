@@ -232,7 +232,7 @@ export function ChoiceCards<T extends string | number>({
               onPress={() => onChange(option.value)}
               style={[
                 styles.card,
-                { minHeight, paddingHorizontal: paddingX, alignItems: centered ? 'center' : 'flex-start' },
+                { minHeight, flexGrow: 1, paddingHorizontal: paddingX, alignItems: centered ? 'center' : 'flex-start' },
                 active
                   ? { backgroundColor: colors.primarySoft, borderColor: colors.primary, borderWidth: 2 }
                   : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },

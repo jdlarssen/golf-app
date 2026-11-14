@@ -63,6 +63,53 @@ const COUNT_OPTIONS = (kind: 'ld' | 'ctp') =>
     testID: `create-side-${kind}-${n}`,
   }));
 
+/**
+ * Kortet med scoring for Nassau, Wolf og Skins (`Nyttspill-2-nassau|wolf|skins`):
+ * «Scoring» og forklaringen står tett (2 pt), så to valgkort, og for Wolf en
+ * merknad nederst.
+ */
+function ScoringCard({
+  text,
+  value,
+  onChange,
+  testIdPrefix,
+}: {
+  text: {
+    scoringLabel: string;
+    scoringDescription: string;
+    scoringNet: string;
+    scoringGross: string;
+    scoringAriaLabel: string;
+    startNote?: string;
+  };
+  value: 'net' | 'gross';
+  onChange: (value: 'net' | 'gross') => void;
+  testIdPrefix: string;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.setupCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={styles.cardIntro}>
+        <Text style={[styles.cardLabel, { color: colors.text }]}>{text.scoringLabel}</Text>
+        <Text style={[styles.cardDescription, { color: colors.muted }]}>{text.scoringDescription}</Text>
+      </View>
+      <ChoiceCards
+        columns={2}
+        minHeight={60}
+        wrapTitle
+        accessibilityLabel={text.scoringAriaLabel}
+        value={value}
+        onChange={onChange}
+        options={[
+          { value: 'net' as const, title: text.scoringNet, testID: `${testIdPrefix}-net` },
+          { value: 'gross' as const, title: text.scoringGross, testID: `${testIdPrefix}-gross` },
+        ]}
+      />
+      {text.startNote ? <Text style={[styles.cardNote, { color: colors.muted }]}>{text.startNote}</Text> : null}
+    </View>
+  );
+}
+
 export function SetupStep({
   mode,
   common,
@@ -381,47 +428,24 @@ export function SetupStep({
       {/* #2755: Nassau, som `Nyttspill-2-nassau`: ett kort med scoring. Kroner settes på nettet (#2561). */}
       {mode === 'nassau' ? (
         <Field label={NASSAU_SETUP_TEXT.legend}>
-          <View style={[styles.setupCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.cardLabel, { color: colors.text }]}>{NASSAU_SETUP_TEXT.scoringLabel}</Text>
-            <Text style={ui.muted}>{NASSAU_SETUP_TEXT.scoringDescription}</Text>
-            <ChoiceCards
-              columns={2}
-              minHeight={60}
-              wrapTitle
-              accessibilityLabel={NASSAU_SETUP_TEXT.scoringAriaLabel}
-              value={setup.nassauScoring ?? 'net'}
-              onChange={(nassauScoring) => onSetup({ nassauScoring })}
-              options={[
-                { value: 'net' as const, title: NASSAU_SETUP_TEXT.scoringNet, testID: 'create-nassau-net' },
-                { value: 'gross' as const, title: NASSAU_SETUP_TEXT.scoringGross, testID: 'create-nassau-gross' },
-              ]}
-            />
-          </View>
+          <ScoringCard
+            text={NASSAU_SETUP_TEXT}
+            value={setup.nassauScoring ?? 'net'}
+            onChange={(nassauScoring) => onSetup({ nassauScoring })}
+            testIdPrefix="create-nassau"
+          />
         </Field>
       ) : null}
 
       {/* #2880: Wolf og Skins, som `Nyttspill-2-wolf` og `-skins`: samme kort som Nassau. */}
       {scoringSetup ? (
         <Field label={scoringSetup.legend}>
-          <View style={[styles.setupCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.cardLabel, { color: colors.text }]}>{scoringSetup.scoringLabel}</Text>
-            <Text style={ui.muted}>{scoringSetup.scoringDescription}</Text>
-            <ChoiceCards
-              columns={2}
-              minHeight={60}
-              wrapTitle
-              accessibilityLabel={scoringSetup.scoringAriaLabel}
-              value={(mode === 'wolf' ? setup.wolfScoring : setup.skinsScoring) ?? 'net'}
-              onChange={(value) =>
-                onSetup(mode === 'wolf' ? { wolfScoring: value } : { skinsScoring: value })
-              }
-              options={[
-                { value: 'net' as const, title: scoringSetup.scoringNet, testID: `create-${mode}-net` },
-                { value: 'gross' as const, title: scoringSetup.scoringGross, testID: `create-${mode}-gross` },
-              ]}
-            />
-            {'startNote' in scoringSetup ? <Text style={ui.muted}>{scoringSetup.startNote}</Text> : null}
-          </View>
+          <ScoringCard
+            text={scoringSetup}
+            value={(mode === 'wolf' ? setup.wolfScoring : setup.skinsScoring) ?? 'net'}
+            onChange={(value) => onSetup(mode === 'wolf' ? { wolfScoring: value } : { skinsScoring: value })}
+            testIdPrefix={`create-${mode}`}
+          />
         </Field>
       ) : null}
 
@@ -521,6 +545,10 @@ const styles = StyleSheet.create({
   setupCard: { marginHorizontal: -4, borderWidth: 1, borderRadius: 16, padding: 14, gap: 12 },
   // Underoverskriftene i kortet: 14 pt halvfet, som artboardene.
   cardLabel: { ...interLine(14, 17), fontFamily: FONTS.sansSemiBold },
+  // Scoring-kortet: overskrift og forklaring i én gruppe, 13 pt med 18,85 i linjen, som artboardene.
+  cardIntro: { gap: 2 },
+  cardDescription: { ...interLine(13, 18.85, { multiline: true }), fontFamily: FONTS.sans },
+  cardNote: { ...interLine(12, 15), fontFamily: FONTS.sans },
   // `Nyttspill-2-patsome`: boksen med de tre delene av runden.
   segments: { borderRadius: 12, padding: 12, gap: 10 },
   segment: { flexDirection: 'row', gap: 10 },
