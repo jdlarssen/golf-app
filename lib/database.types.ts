@@ -1644,6 +1644,35 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          muted_groups: string[]
+          quiet_hours: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          muted_groups?: string[]
+          quiet_hours?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          muted_groups?: string[]
+          quiet_hours?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           archived_at: string | null
