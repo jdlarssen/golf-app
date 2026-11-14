@@ -97,6 +97,7 @@ function ScoringCard({
         columns={2}
         minHeight={60}
         wrapTitle
+        stretch
         accessibilityLabel={text.scoringAriaLabel}
         value={value}
         onChange={onChange}
@@ -206,20 +207,15 @@ export function SetupStep({
           som i webbens datamodell; tomt felt er 100 (fullt banehandicap). */}
       {hasHcpAllowanceField(mode) ? (
         <Field label={ALLOWANCE_TEXT.legend} hint={ALLOWANCE_TEXT.description}>
-          <Chips
+          {/* #2880: valgkort som `Nyttspill-5-avansert-a`: to kort, 52 høye. */}
+          <ChoiceCards
+            columns={2}
+            minHeight={52}
             value={text.allowance === '0' ? 'brutto' : 'netto'}
             onChange={(choice) => onText({ allowance: choice === 'brutto' ? '0' : '' })}
             options={[
-              {
-                value: 'netto' as const,
-                label: ALLOWANCE_TEXT.nettoLabel,
-                testID: 'create-allowance-netto',
-              },
-              {
-                value: 'brutto' as const,
-                label: ALLOWANCE_TEXT.bruttoLabel,
-                testID: 'create-allowance-brutto',
-              },
+              { value: 'netto' as const, title: ALLOWANCE_TEXT.nettoLabel, testID: 'create-allowance-netto' },
+              { value: 'brutto' as const, title: ALLOWANCE_TEXT.bruttoLabel, testID: 'create-allowance-brutto' },
             ]}
           />
           {text.allowance === '0' ? (
@@ -271,12 +267,14 @@ export function SetupStep({
           <Field label={TEAM_HANDICAP_TEXT.legend}>
             {/* Forklaringen står under overskriften, før valget, som på nettet. */}
             <Text style={ui.muted}>{TEAM_HANDICAP_TEXT.description}</Text>
-            <Chips
+            <ChoiceCards
+              columns={2}
+              minHeight={52}
               value={text.allowance === '0' ? 'brutto' : 'netto'}
               onChange={(choice) => onText({ allowance: choice === 'brutto' ? '0' : '' })}
               options={[
-                { value: 'netto' as const, label: ALLOWANCE_TEXT.nettoLabel, testID: 'create-team-hcp-netto' },
-                { value: 'brutto' as const, label: ALLOWANCE_TEXT.bruttoLabel, testID: 'create-team-hcp-brutto' },
+                { value: 'netto' as const, title: ALLOWANCE_TEXT.nettoLabel, testID: 'create-team-hcp-netto' },
+                { value: 'brutto' as const, title: ALLOWANCE_TEXT.bruttoLabel, testID: 'create-team-hcp-brutto' },
               ]}
             />
             {text.allowance === '0' ? (

@@ -186,6 +186,7 @@ export function ChoiceCards<T extends string | number>({
   testID,
   accessibilityLabel,
   wrapTitle = false,
+  stretch = false,
 }: {
   options: readonly ChoiceCardOption<T>[];
   value: T;
@@ -211,6 +212,8 @@ export function ChoiceCards<T extends string | number>({
    * «Med handicap (netto)» står i 17 pt og brekker, som i nettleseren).
    */
   wrapTitle?: boolean;
+  /** Kortene i samme rad blir like høye som det høyeste, som rutenettet i tegningen (scoring-kortet). */
+  stretch?: boolean;
 }) {
   const { colors } = useTheme();
   const gap = 8;
@@ -232,7 +235,8 @@ export function ChoiceCards<T extends string | number>({
               onPress={() => onChange(option.value)}
               style={[
                 styles.card,
-                { minHeight, flexGrow: 1, paddingHorizontal: paddingX, alignItems: centered ? 'center' : 'flex-start' },
+                { minHeight, paddingHorizontal: paddingX, alignItems: centered ? 'center' : 'flex-start' },
+                stretch && styles.cardStretch,
                 active
                   ? { backgroundColor: colors.primarySoft, borderColor: colors.primary, borderWidth: 2 }
                   : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
@@ -329,6 +333,7 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   cards: { flexDirection: 'row', flexWrap: 'wrap' },
   centeredText: { textAlign: 'center' },
+  cardStretch: { flexGrow: 1 },
   card: {
     borderRadius: 14,
     paddingVertical: 10,
