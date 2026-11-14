@@ -303,7 +303,8 @@ export const PROFILE_TEXT = {
  *   (`RoundReportCard` i `leaderboardContent.tsx` og formatvisningene).
  *   `kavalkades own select`, `kavalkade_shares own select`.
  * - `notifications`: `notifications_select_own`, `push_subscriptions own
- *   select`, `apns_tokens own select`, `fcm_tokens own select` (0232).
+ *   select`, `apns_tokens own select`, `fcm_tokens own select` (0232),
+ *   `notification_preferences select own` (0236, varselvalgene).
  * - `adminLine`: `is_admin()` i SELECT-policyene på `users`, `games`,
  *   `game_players`, `scores`, `reactions`, `group_members`, `invitations` og
  *   `idea_submissions`, og e-posten med service-rollen bak `requireAdmin`.
