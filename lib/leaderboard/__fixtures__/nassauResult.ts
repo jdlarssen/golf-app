@@ -12,12 +12,12 @@ const HOLES = Array.from({ length: 18 }, (_, i) => ({
 
 /**
  * A real Nassau result from the engine, for tests: `strokes[userId][i]` is the
- * gross on hole i + 1, and a shorter list means the later holes are not played
- * yet. Par 4 everywhere and handicap 0, so net equals gross and the sums are
- * easy to check by hand.
+ * gross on hole i + 1, `null` is a hole the player skipped, and a shorter list
+ * means the later holes are not played yet. Par 4 everywhere and handicap 0,
+ * so net equals gross and the sums are easy to check by hand.
  */
 export function nassauResult(
-  strokes: Record<string, readonly number[]>,
+  strokes: Record<string, readonly (number | null)[]>,
   ranking?: 'net_to_par',
 ): NassauResult {
   const modeConfig = {
