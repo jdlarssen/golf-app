@@ -429,7 +429,16 @@ const styles = StyleSheet.create({
   barFill: { height: 4, borderRadius: 999 },
   count: { ...fraunces(600, 17, 21), minWidth: 24, textAlign: 'right', fontVariant: ['tabular-nums'], flexShrink: 0 },
 
-  empty: { marginHorizontal: 16, marginTop: 12, borderRadius: 20, paddingVertical: 20, paddingHorizontal: 18 },
+  // Tegningen har en 1 pt gjennomsiktig kant (`border: 1px solid transparent`), som gir kortet 2 pt mer høyde.
+  empty: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    paddingVertical: 20,
+    paddingHorizontal: 18,
+  },
   emptyHeading: fraunces(600, 22, 28),
   emptyBody: { ...interLine(14, 18), marginTop: 4 },
 
