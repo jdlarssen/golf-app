@@ -16,7 +16,7 @@ import messages from '@/messages/no.json';
  *     bare til brukerraden og `game_players` (#2207, #2445); alt annet går
  *     gjennom kallerens egen klient, så RLS gjelder i tillegg.
  *  2. En lesing som feiler, gir `{ ok: false }` med navnet på lesingen, også
- *     for hver av de sju nye tabellene. Ingen halv fil.
+ *     for hver av de nye tabellene. Ingen halv fil.
  *  3. Teksten under raden lister nøyaktig det fila har. Den sier hva du får,
  *     og står det noe der fila ikke har, er det et løfte vi ikke holder.
  *
@@ -40,6 +40,8 @@ let userRow: Record<string, unknown> | null;
 const NEW_READS = [
   'handicap_history',
   'notifications',
+  // #2315: the push choices.
+  'notification_preferences',
   'ai_consents',
   'kavalkades',
   'kavalkade_shares',
@@ -93,7 +95,7 @@ describe('buildUserExport', () => {
     for (const op of [...admin.ops, ...caller.ops]) {
       expect([op.table, filteredOnUser(op)]).toEqual([op.table, true]);
     }
-    // De sju nye tabellene går gjennom kallerens klient, filtrert på eier-kolonnen.
+    // De nye tabellene går gjennom kallerens klient, filtrert på eier-kolonnen.
     for (const table of NEW_READS) {
       const op = caller.ops.find((o) => o.table === table);
       expect(op?.filters).toContainEqual({ op: 'eq', column: 'user_id', value: USER });
@@ -129,7 +131,8 @@ describe('buildUserExport', () => {
 
 // «Profilen, handicaphistorikken, … og ideene dine i én fil.» Hver nøkkel i
 // fila har ett ord i setningen, og setningen har ikke et ord fila mangler.
-// Kavalkaden og delingene av den er ett ord.
+// Kavalkaden og delingene av den er ett ord, og varslene og valgene for dem
+// også (#2315).
 describe('teksten under «Last ned dataene dine»', () => {
   const WORD: Record<(typeof EXPORT_KEYS)[number], string> = {
     user: 'Profilen',
@@ -141,6 +144,7 @@ describe('teksten under «Last ned dataene dine»', () => {
     friendships: 'vennene',
     club_memberships: 'klubbene',
     notifications: 'varslene',
+    notification_preferences: 'varslene',
     ai_consents: 'AI-svaret',
     kavalkades: 'Kavalkaden',
     kavalkade_shares: 'Kavalkaden',
