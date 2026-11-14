@@ -534,7 +534,7 @@
         },
         "email": {
           "title": "Email address",
-          "body": "We use it for signing in and notifications. Other players don't see the full address, except whoever invites you."
+          "body": "We use it for signing in and notifications. Other players don't see the full address, except when you are invited."
         },
         "rounds": {
           "title": "Your rounds and strokes",
