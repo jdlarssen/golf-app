@@ -161,6 +161,13 @@ describe('parseClaimDistance', () => {
     expect(parseClaimDistance('100')).toEqual({ ok: false });
   });
 
+  it('takes at most two decimals, so the rounding never differs from Postgres', () => {
+    expect(parseClaimDistance('2,45')).toEqual({ ok: true, distanceM: 2.5 });
+    expect(parseClaimDistance('2,449999999')).toEqual({ ok: false });
+    expect(parseClaimDistance('0,0499999999')).toEqual({ ok: false });
+    expect(parseClaimDistance('2,449')).toEqual({ ok: false });
+  });
+
   it('refuses text, signs and units', () => {
     for (const raw of ['abc', '-2', '2,4 m', '2,,4', ',5', '1e1']) {
       expect(parseClaimDistance(raw)).toEqual({ ok: false });

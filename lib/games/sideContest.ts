@@ -191,12 +191,13 @@ export type ClaimDistanceResult = { ok: true; distanceM: number | null } | { ok:
 /**
  * «Omtrent hvor nær? [2,4] meter». Takes «2,4» and «2.4», rounds to one
  * decimal the way `round(x, 1)` does in `record_side_claim`, and then checks
- * 0,1–99,9. An empty field is a valid «no distance».
+ * 0,1–99,9. An empty field is a valid «no distance». At most two decimals: with
+ * more, floating point can round where Postgres would not (2,449999999).
  */
 export function parseClaimDistance(raw: string): ClaimDistanceResult {
   const text = raw.trim();
   if (text === '') return { ok: true, distanceM: null };
-  if (!/^\d+([.,]\d+)?$/.test(text)) return { ok: false };
+  if (!/^\d{1,3}([.,]\d{1,2})?$/.test(text)) return { ok: false };
   const value = Number(text.replace(',', '.'));
   // toFixed first: 0.15 * 10 is 1.4999… in floating point, and round(0.15, 1)
   // in Postgres is 0.2.
