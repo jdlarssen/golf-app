@@ -92,10 +92,6 @@ const ALLOWED: Record<string, Allowed> = {
     receivers: ['admin'],
     reason: '(c) serverside utsending: egen rad som avsender av klubb-forespørselen',
   },
-  'app/[locale]/profile/export/route.ts': {
-    receivers: ['getAdminClient()'],
-    reason: '(a) egen rad, id-en er verifisert av proxy',
-  },
   'app/[locale]/profile/venner/fjern/[userId]/page.tsx': {
     receivers: ['getAdminClient()'],
     reason:
@@ -205,6 +201,11 @@ const ALLOWED: Record<string, Allowed> = {
   'lib/league/setFlightMarkerCore.ts': {
     receivers: ['admin'],
     reason: '(c) serverside utsending av overleveringsvarselet til flightkameraten (#2814)',
+  },
+  'lib/profile/exportCore.ts': {
+    receivers: ['admin'],
+    reason:
+      '(a) egen rad i «Last ned dataene dine» (#2332): id-en er verifisert av proxy (nettsiden) eller av GoTrue fra Bearer-tokenet (appen) før kjernen kalles',
   },
   'lib/notifications/notifyGameMoved.ts': {
     receivers: ['admin'],
