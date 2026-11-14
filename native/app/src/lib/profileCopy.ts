@@ -38,6 +38,7 @@ import { isHandicapStale } from '../../../../lib/handicap/staleness';
 import { toSignedHcp } from '../../../../lib/handicap/sign';
 import { HCP_MAX, HCP_MIN, parseHcpMagnitude } from '../../../../lib/users/profileInput';
 import { MODE_LABELS } from '../../../../lib/scoring/modes/types';
+import type { PushGroupId } from '../../../../lib/notifications/pushGroups';
 import { formatStubClock } from './homeDates';
 
 /** Tekstene profil-rommet viser. */
@@ -149,16 +150,37 @@ export const PROFILE_TEXT = {
   // Temaet hører til telefonen, ikke kontoen: det står igjen etter utlogging.
   themeSystem: 'Følg telefonen',
   themeSaveFailedNote: 'Fikk ikke lagret valget, så temaet gjelder bare til du lukker appen.',
-  // --- Varsler på denne telefonen (#2256 PR 4, Varsler-tegningen) ----------
-  /** Undertittelen under «Varsler og tema», som i designet. */
-  pushSubtitle: 'Du bestemmer hva som får telefonen til å plinge.',
-  pushTitle: 'Varsler på denne telefonen',
+  // --- Varsler på denne telefonen (#2256 PR 4; #2315: Varsler-D2) ----------
+  // D2 har all tekst på én linje på både 320 og 390 (eierens ønske 14.11),
+  // så noen tekster er kortere enn før, og to av dem er delt på to linjer.
+  /** Undertittelen under «Varsler». */
+  pushSubtitle: 'Du bestemmer hva som plinger.',
+  /** Telefonkortet. Bryteren sier hele navnet til skjermleseren (`pushSwitchLabel`). */
+  pushTitle: 'Denne telefonen',
+  pushSwitchLabel: 'Varsler på denne telefonen',
   pushOff: 'Av',
-  /** Hva som varsles i dag. Valg per gruppe kommer i #2315. */
-  pushWhat:
-    'Du får varsel om invitasjoner, runder som starter, scorekort som venter på deg, resultater og venneforespørsler.',
-  pushDenied: 'Du har slått av varsler fra Tørny i Innstillinger på telefonen. Slå dem på der.',
+  /** Avslått i Innstillinger: to linjer, med «Åpne Innstillinger» rett under. */
+  pushDenied: 'Varsler fra Tørny er slått av',
+  pushDeniedWhere: 'i Innstillinger på telefonen.',
   pushOpenSettings: 'Åpne Innstillinger',
+  // --- Hva som varsles og stille tid (#2315, Varsler-D2) -------------------
+  pushGroupsHeading: 'Hva som varsles',
+  /** Merkelappen på «Rundene dine», som ikke kan slås av. */
+  pushAlwaysOn: 'Alltid på',
+  /** Under lista: valgene gjelder kontoen, ikke bare denne telefonen. */
+  pushAllDevices: 'Gjelder alle enhetene dine.',
+  /** Under navnet på raden som ikke ble lagret. */
+  pushSaveFailed: 'Fikk ikke lagret. Prøv igjen.',
+  /** Når valgene ikke kunne hentes: to linjer og en knapp. */
+  pushReadFailed: 'Fikk ikke hentet valgene dine.',
+  pushReadHint: 'Sjekk nettet og prøv igjen.',
+  pushRetry: 'Prøv igjen',
+  quietHeading: 'Stille tid',
+  quietTitle: 'Ikke varsle om natta',
+  /** Tidene er de faste i regelen (`QUIET_HOURS`); `profileCopy.test.ts` holder dem like. */
+  quietTimes: '22:00–07:00',
+  quietRounds: 'Rundene dine plinger likevel.',
+  quietInbox: 'Resten ser du i innboksen når du våkner.',
   pushOnFailed: 'Fikk ikke slått på varsler. Prøv igjen.',
   pushOffFailed: 'Fikk ikke slått av varsler. Prøv igjen.',
   // Kortet på Hjem (#2758). Samme tekst som webbens `pushSettings.nudge*`.
@@ -169,8 +191,9 @@ export const PROFILE_TEXT = {
   pushPromptLater: 'Ikke nå',
   pushPromptDoneTitle: 'Varsler er på',
   pushPromptDoneBody: 'Vi sier ifra med en gang noe skjer.',
-  /** Designets fotnote. */
-  pushFooter: 'Innboksen i appen får alt uansett. Dette styrer bare pling på telefonen.',
+  /** Designets fotnote, på to linjer. */
+  pushFooter: 'Innboksen i appen får alt uansett.',
+  pushFooterScope: 'Dette styrer bare pling på telefonen.',
   /** Knappen under menyen (#2256 PR 3), som i designet. */
   shareBagTag: 'Del bag-taggen',
   /** Når bildet eller delearket feilet. Et avbrutt ark er ingen feil. */
@@ -360,6 +383,17 @@ export const DATA_TEXT = {
   exportSublabel:
     'Profilen, handicaphistorikken, spillene, slagene, reaksjonene, invitasjonene, vennene, klubbene, varslene, AI-svaret, Kavalkaden og ideene dine i én fil.',
 } as const;
+
+/**
+ * Navnene på gruppene i «Hva som varsles» (#2315, Varsler-D2). Gruppene og
+ * rekkefølgen bor i `lib/notifications/pushGroups.ts`.
+ */
+export const PUSH_GROUP_LABEL = {
+  rounds: 'Rundene dine',
+  scorecards: 'Scorekort',
+  friends: 'Venner',
+  signups: 'Påmeldinger',
+} as const satisfies Record<PushGroupId, string>;
 
 /** Statuslinja når varslene står på: designet sier «iPhone», og Android sier sitt (#2758). */
 export function pushOnLabel(os: string): string {

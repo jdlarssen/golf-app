@@ -47,6 +47,7 @@ import {
   isHandicapAgeStale,
   memberSinceLine,
   pushOnLabel,
+  PUSH_GROUP_LABEL,
   onboardingGameDate,
   onboardingGameLine,
   onboardingGameTitle,
@@ -56,6 +57,8 @@ import {
   seasonTileWinsLabel,
   unsentStrokesWarning,
 } from './profileCopy';
+import { PUSH_GROUPS } from '../../../../lib/notifications/pushGroups';
+import { QUIET_HOURS } from '../../../../lib/notifications/pushPreferences';
 
 const web = source.profile;
 const webForm = web.form;
@@ -503,6 +506,19 @@ describe('kortet på Hjem', () => {
     expect(PROFILE_TEXT.pushPromptLater).toBe(web.nudgeLater);
     expect(PROFILE_TEXT.pushPromptDoneTitle).toBe(web.nudgeDoneTitle);
     expect(PROFILE_TEXT.pushPromptDoneBody).toBe(web.nudgeDoneBody);
+  });
+});
+
+// #2315 (felle 4): tidene i teksten og gruppene på skjermen har hvert sitt hjem
+// i regelen, og teksten må si det samme som regelen gjør.
+describe('Varsler-D2', () => {
+  it('«22:00–07:00» er de faste tidene i regelen', () => {
+    const hh = (hour: number) => `${String(hour).padStart(2, '0')}:00`;
+    expect(PROFILE_TEXT.quietTimes).toBe(`${hh(QUIET_HOURS.start)}–${hh(QUIET_HOURS.end)}`);
+  });
+
+  it('har et navn for hver gruppe, i regelens rekkefølge', () => {
+    expect(Object.keys(PUSH_GROUP_LABEL)).toEqual(PUSH_GROUPS.map((group) => group.id));
   });
 });
 
