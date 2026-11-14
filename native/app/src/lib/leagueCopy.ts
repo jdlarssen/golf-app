@@ -541,6 +541,11 @@ export function openCardLabel(name: string, roundLabel: string): string {
   return `Se kortet til ${name}, ${roundLabel}`;
 }
 
+/** #2878: skjermleserens navn på et navn i sesongtabellen: «Åpne Martin». */
+export function openPersonLabel(name: string): string {
+  return `Åpne ${name}`;
+}
+
 /** Appens desimaltegn: komma. */
 function comma(value: number, decimals: number): string {
   return value.toFixed(decimals).replace('.', ',');

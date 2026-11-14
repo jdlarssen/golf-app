@@ -17,6 +17,10 @@
 // #2815: et resultat med et kort bak seg (`gameId` fra serveren) kan trykkes
 // på og åpner kortet. Straff og «–» har ikke noe kort. Cellen er 36 bred og
 // 48 høy; trykkflaten strekker seg 4 til hver side, så den er minst 44.
+//
+// #2878: navnet til en annen spiller kan trykkes på og åpner et lite ark med
+// personen (`onOpenPerson`). Trykkflaten fyller navnekolonnen i full radhøyde,
+// så den er minst 48 høy; teksten flytter seg ikke. Din egen rad er tekst.
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { AppLeagueView } from '../../../../../lib/league/appLeagueView';
 import {
@@ -31,6 +35,7 @@ import {
   LEAGUE_TEXT,
   isPointsBased,
   openCardLabel,
+  openPersonLabel,
   participantLabel,
   tableCaption,
   valueHeader,
@@ -56,11 +61,14 @@ export function StandingsTable({
   view,
   now,
   onOpenCard,
+  onOpenPerson,
 }: {
   view: AppLeagueView;
   now: Date;
   /** #2815: et trykk på et resultat med et kort bak seg. Uten den kan ingen celle trykkes på. */
   onOpenCard?: (card: { gameId: string; userId: string }) => void;
+  /** #2878: et trykk på navnet til en annen spiller. Uten den er alle navn tekst. */
+  onOpenPerson?: (userId: string) => void;
 }) {
   const { colors } = useTheme();
   const { league, participants, standings, me } = view;
@@ -160,9 +168,23 @@ export function StandingsTable({
             </Text>
           )}
         </View>
-        <Text style={[styles.name, styles.centered, nameStyle, { color: colors.text }]} numberOfLines={1}>
-          {participantLabel(byId.get(row.userId), participants)}
-        </Text>
+        {onOpenPerson && !you ? (
+          <Pressable
+            onPress={() => onOpenPerson(row.userId)}
+            accessibilityRole="button"
+            accessibilityLabel={openPersonLabel(participantLabel(byId.get(row.userId), participants))}
+            style={({ pressed }) => [styles.nameHit, nameStyle, pressed ? styles.pressed : null]}
+            testID={`league-standings-person-${row.userId}`}
+          >
+            <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
+              {participantLabel(byId.get(row.userId), participants)}
+            </Text>
+          </Pressable>
+        ) : (
+          <Text style={[styles.name, styles.centered, nameStyle, { color: colors.text }]} numberOfLines={1}>
+            {participantLabel(byId.get(row.userId), participants)}
+          </Text>
+        )}
         <Text
           style={[
             styles.sum,
@@ -256,6 +278,8 @@ const styles = StyleSheet.create({
   gold: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   goldText: { ...fraunces(600, 14, 22) },
   nameFlex: { flex: 1, minWidth: 0 },
+  // #2878: trykkflaten fyller navnekolonnen i full radhøyde (minst 48).
+  nameHit: { alignSelf: 'stretch', justifyContent: 'center' },
   name: { ...interLine(15, 20), fontFamily: FONTS.sansSemiBold },
   sumCol: { width: SUM_W },
   sum: { ...fraunces(600, 18, 22), textAlign: 'right', fontVariant: ['tabular-nums'] },

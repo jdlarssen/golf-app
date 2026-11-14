@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppLeagueRound, AppLeagueView } from '../../../../lib/league/appLeagueView';
 import { OpenRoundCard, type RoundAction } from '../components/league/OpenRoundCard';
 import { RoundList } from '../components/league/RoundList';
+import { LeaguePersonSheet } from '../components/league/LeaguePersonSheet';
 import { SimSettingsCard } from '../components/league/SimSettingsCard';
 import { StandingsTable } from '../components/league/StandingsTable';
 import { LeagueLoadFailed, LeagueLoading } from '../components/league/LeagueStates';
@@ -40,6 +41,7 @@ import {
   nextRoundOf,
   nextRoundOpens,
   openRoundOf,
+  participantLabel,
   seasonLine,
   settingsHeading,
 } from '../lib/leagueCopy';
@@ -79,6 +81,8 @@ function LeagueRoom({ navigation, route }: ScreenProps<'League'>) {
   // refen stopper trykk nummer to før det.
   const [joining, setJoining] = useState(false);
   const [selfError, setSelfError] = useState<string | null>(null);
+  // #2878: navnet i tabellen som er trykket på, og som arket åpnes for.
+  const [personId, setPersonId] = useState<string | null>(null);
   const joinInFlight = useRef(false);
 
   const load = useCallback(async () => {
@@ -142,6 +146,15 @@ function LeagueRoom({ navigation, route }: ScreenProps<'League'>) {
   const queues = markerQueues(view.rounds, me.userId, me.isOrganizer);
   const markerRows = queues.forMarker;
   const organizerRows = queues.forOrganizer;
+  const sheetParticipant = view.participants.find((p) => p.userId === personId);
+  const sheetPerson = sheetParticipant
+    ? {
+        userId: sheetParticipant.userId,
+        name: participantLabel(sheetParticipant, view.participants),
+        fullName: sheetParticipant.fullName,
+        hcpIndex: sheetParticipant.hcpIndex,
+      }
+    : null;
   const openMarker = (a: QueuedCard) =>
     openOrReturn(navigation, 'MarkerApprove', { leagueId, gameId: a.gameId, userId: a.userId });
 
@@ -244,7 +257,9 @@ function LeagueRoom({ navigation, route }: ScreenProps<'League'>) {
         view={view}
         now={now}
         onOpenCard={(card) => openOrReturn(navigation, 'LeagueCard', { leagueId, ...card })}
+        onOpenPerson={setPersonId}
       />
+      <LeaguePersonSheet person={sheetPerson} onClose={() => setPersonId(null)} />
 
       <SectionHead title={LEAGUE_TEXT.rounds} />
       <RoundList view={view} now={now} />
