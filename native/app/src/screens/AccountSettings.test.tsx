@@ -37,10 +37,16 @@ import {
   supportedAuthenticationTypesAsync,
 } from 'expo-local-authentication';
 import { fetchOwnAiConsent, saveAiConsent } from '../data/aiConsent';
+import { downloadDataExport } from '../data/dataExport';
 import { logOut } from '../data/logout';
 import { AI_CONSENT_TEXT } from '../lib/aiConsentCopy';
 import { APP_LOCK_STORAGE_KEY, getAppLock, loadAppLock, setAppLock } from '../lib/appLock';
-import { DATA_ROWS, PROFILE_TEXT, unsentStrokesWarning } from '../lib/profileCopy';
+import {
+  DATA_ROWS,
+  PROFILE_TEXT,
+  describeDataExportFailure,
+  unsentStrokesWarning,
+} from '../lib/profileCopy';
 import { isStagingBuild } from '../lib/stagingGate';
 import { describeWebLinkFailure, openWeb } from '../lib/webLink';
 import type { ScreenProps } from '../navigation';
@@ -63,6 +69,8 @@ jest.mock('../data/logout', () => ({ logOut: jest.fn() }));
 // #2561: the AI consent row reads and writes its own row.
 jest.mock('../data/aiConsent', () => ({ fetchOwnAiConsent: jest.fn(), saveAiConsent: jest.fn() }));
 jest.mock('../data/aiConsentGate', () => ({ rememberAiConsentAnswered: jest.fn() }));
+// #2332 PR C: nedlastingen har sin egen suite (`data/dataExport.test.ts`).
+jest.mock('../data/dataExport', () => ({ downloadDataExport: jest.fn() }));
 jest.mock('../lib/stagingGate', () => ({ isStagingBuild: jest.fn() }));
 jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 // #2841: låsen på appen. Telefonen har Face ID og svarer ja som standard.
@@ -168,6 +176,37 @@ describe('AccountSettings', () => {
       expect(ids).toContain(`account-data-${row}-title`);
       expect(ids).toContain(`account-data-${row}-body`);
     }
+  });
+
+  it('#2332 PR C: «Last ned dataene dine» står etter AI-tekstene, er låst mens fila hentes og sier hvorfor den feilet', async () => {
+    let finish: (result: unknown) => void = () => {};
+    (downloadDataExport as jest.Mock).mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    await renderScreen();
+    await screen.findByTestId('account-ai-consent-switch');
+    const ids = testIdsInOrder();
+    expect(ids.indexOf('account-ai-consent')).toBeLessThan(ids.indexOf('account-export'));
+    expect(ids.indexOf('account-export')).toBeLessThan(ids.indexOf('account-privacy'));
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('account-export'));
+    });
+    expect(downloadDataExport).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('account-export')).toBeDisabled();
+    // Et nytt trykk mens fila hentes starter ingen ny henting.
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('account-export'));
+    });
+    expect(downloadDataExport).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      finish({ ok: false, reason: 'offline' });
+    });
+    expect(screen.getByTestId('account-export')).not.toBeDisabled();
+    expect(screen.getByTestId('account-export-error')).toHaveTextContent(describeDataExportFailure('offline'));
   });
 
   it('#2561: the AI switch shows the answer and saves when flipped, rolling back on failure', async () => {
