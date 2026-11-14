@@ -268,7 +268,7 @@ export const PROFILE_TEXT = {
  *   participant`; en arrangør som ikke spiller, ser tavla med service-rollen
  *   (`lib/games/nonPlayerGameDoor.ts`, #2202). Et ferdig spill: RLS slipper
  *   bare inn deltakerne, men tavla leser med `getResultReadClient` for alle
- *   som er logget inn (`app/[locale]/games/[id]/leaderboard/page.tsx:113`).
+ *   som er logget inn (`app/[locale]/games/[id]/leaderboard/page.tsx:113-127`).
  *   Live-lenka (`getGameBySpectateToken`, `app/[locale]/spectate/[token]`) er
  *   åpen uten innlogging, også etter slutt, med fullt navn; ligatabellen på en
  *   nettside også (`lib/league/getLigaSnapshot.ts`), spilltavla på en nettside
