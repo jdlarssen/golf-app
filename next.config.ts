@@ -85,6 +85,13 @@ const nextConfig: NextConfig = {
         destination: "/spillformater/:slug",
         permanent: true,
       },
+      // #2259: nettsidens Toppliste er tatt bort (den bor i appen). Den gamle
+      // adressen sender til Hjem, der kortet sto. `permanent: false` (307):
+      // med 308 lagrer nettleseren svaret for godt, og adressen kunne ikke
+      // brukes igjen hvis nettsiden en gang får et brett. `redirects()` kjører
+      // før `proxy.ts`, så en utlogget bruker får 307 til `/`.
+      { source: "/profile/statistikk", destination: "/", permanent: false },
+      { source: "/en/profile/statistikk", destination: "/en", permanent: false },
     ];
   },
 };
