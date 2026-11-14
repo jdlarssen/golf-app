@@ -413,6 +413,30 @@ export const LaasIcon = (props: IconProps) => (
   </LineIcon>
 );
 
+/** Bjella på telefonkortet i «Varsler» (#2315, `Varsler-D2`). */
+export const BjelleIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z" />
+    <Path d="M10 21a2 2 0 0 0 4 0" />
+  </LineIcon>
+);
+
+/** Månen på «Ikke varsle om natta» (#2315, `Varsler-D2`). */
+export const MaaneIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Path d="M19.5 14.5A8 8 0 1 1 9.5 4.5a6.5 6.5 0 0 0 10 10z" />
+  </LineIcon>
+);
+
+/** Person med pluss: «Påmeldinger» i «Varsler» (#2315, `Varsler-D2`). */
+export const PersonPlussIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Circle cx="9" cy="8" r="3.5" />
+    <Path d="M3 20c.7-3.4 3-5.5 6-5.5s5.3 2.1 6 5.5" />
+    <Path d="M18.5 8v6M15.5 11h6" />
+  </LineIcon>
+);
+
 /**
  * Låsen på lagtavla (#2579, `Lagtavle-bestball-forslag-*`: «Hull 10–18 er
  * skjult» og låskortet). Som {@link LaasIcon}, men bøylen går én enhet høyere,
