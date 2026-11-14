@@ -60,6 +60,27 @@ describe('timedFetch', () => {
     expect(isNetworkFailureMessage((err as TypeError).message)).toBe(true);
   });
 
+  // #2332: dataeksporten har et eget tak. Et kall med eget tak står over
+  // standarden og avviser først ved sitt eget.
+  it('et eget tak for ett kall erstatter standarden', async () => {
+    hang();
+    const outcome = timedFetch(URL, { method: 'GET' }, 60_000).then(
+      () => 'resolved',
+      (err: unknown) => err,
+    );
+    let settled = false;
+    void outcome.then(() => {
+      settled = true;
+    });
+
+    await jest.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS);
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    await jest.advanceTimersByTimeAsync(60_000 - REQUEST_TIMEOUT_MS);
+    expect(((await outcome) as TypeError).message).toBe(TIMEOUT_MESSAGE);
+  });
+
   it('avbryter forespørselen under når taket nås', async () => {
     hang();
     const call = timedFetch(URL).catch(() => undefined);

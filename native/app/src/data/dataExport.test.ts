@@ -6,7 +6,7 @@
 // PR-en med `Podfile.lock` og autolinking.
  
 import { callWebRoute } from './webApi';
-import { dataExportFilename, downloadDataExport } from './dataExport';
+import { EXPORT_TIMEOUT_MS, dataExportFilename, downloadDataExport } from './dataExport';
 
 jest.mock('./webApi', () => ({ callWebRoute: jest.fn() }));
 
@@ -55,7 +55,9 @@ describe('downloadDataExport', () => {
 
     expect(await downloadDataExport(NOW)).toEqual({ ok: true });
 
-    expect(call).toHaveBeenCalledWith('/api/profile/export', 'GET');
+    // Eget tak: hele eksporten kan ta lenger tid enn appens vanlige 15 s.
+    expect(call).toHaveBeenCalledWith('/api/profile/export', 'GET', undefined, { timeoutMs: EXPORT_TIMEOUT_MS });
+    expect(EXPORT_TIMEOUT_MS).toBe(60_000);
     expect(mockFiles).toEqual([{ name: 'torny-data-2026-11-20.json', uri: 'file:///cache/torny-data-2026-11-20.json' }]);
     expect(mockCreate).toHaveBeenCalledWith({ overwrite: true });
     expect(JSON.parse(mockWrite.mock.calls[0][0] as string)).toEqual(body);

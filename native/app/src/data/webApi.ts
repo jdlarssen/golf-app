@@ -113,11 +113,14 @@ type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
  *   sendes hverken `Content-Type` eller kropp, så slettingen (#1876) og
  *   purringen (#1889) går på nettet nøyaktig som før. Aldri en id her — se
  *   fil-kommentaren.
+ * @param options.timeoutMs et eget tidstak for dette kallet, når svaret kan
+ *   være stort (#2332: hele dataeksporten). Utelatt gir `timedFetch` sitt tak.
  */
 export async function callWebRoute(
   path: string,
   method: Method,
   body?: Record<string, unknown>,
+  options?: { timeoutMs?: number },
 ): Promise<WebApiCall> {
   if (!isDeviceOnline()) return { ok: false, reason: 'offline' };
 
@@ -127,7 +130,7 @@ export async function callWebRoute(
   const token = await accessToken();
   if (!token) return { ok: false, reason: 'unauthorized' };
 
-  return send(target.url, path, method, { Authorization: `Bearer ${token}` }, body);
+  return send(target.url, path, method, { Authorization: `Bearer ${token}` }, body, options?.timeoutMs);
 }
 
 /**
@@ -159,6 +162,7 @@ async function send(
   method: Method,
   auth: Record<string, string>,
   body: Record<string, unknown> | undefined,
+  timeoutMs?: number,
 ): Promise<WebApiCall> {
   try {
     // #1954 D2: tidstaket. Et kall som når det, havner i catch-en under som
@@ -172,7 +176,7 @@ async function send(
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       },
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-    });
+    }, timeoutMs);
     return { ok: true, status: response.status, body: await readBody(response) };
   } catch (err) {
     console.error(`[webApi] ${method} ${path} feilet`, err);

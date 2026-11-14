@@ -137,6 +137,32 @@ describe('callWebRoute', () => {
     );
   });
 
+  // #2332: «Last ned dataene dine» ber om et eget tak. Kallet skal stå over
+  // appens vanlige 15 s og først gi opp ved sitt eget tak.
+  describe('eget tidstak', () => {
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('følger kallet videre til fetch-taket', async () => {
+      jest.useFakeTimers();
+      mockFetch.mockImplementation(() => new Promise(() => {}));
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      const call = webApi().callWebRoute(PATH, 'GET', undefined, { timeoutMs: 60_000 });
+      let settled = false;
+      void call.then(() => {
+        settled = true;
+      });
+
+      await jest.advanceTimersByTimeAsync(15_000);
+      expect(settled).toBe(false);
+
+      await jest.advanceTimersByTimeAsync(45_000);
+      expect(await call).toEqual({ ok: false, reason: 'network' });
+    });
+  });
+
   describe('vakt-rekkefølgen', () => {
     it('stopper på nett FØR den ser på adressen', async () => {
       // Begge er brutt. Svarer den `no-web-base-url`, har rekkefølgen snudd.
