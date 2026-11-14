@@ -42,66 +42,61 @@ export function isLockedPushGroup(group: PushGroupId): boolean {
 }
 
 /**
- * The group a notification kind belongs to. Exhaustive: a new kind does not
- * compile until it has a group.
+ * The group of every notification kind. A `Record` over the whole union, like
+ * `NOTIFICATION_ICON`: a new kind does not compile until it has a group.
  *
  * `idea_built` sits under «Rundene dine» (the owner, 14.11: no switch of its
  * own; it goes only to the player who sent the idea, and rarely). It therefore
  * also pushes at night, like the rest of the group. `product_update` needs a
- * group for the switch to be exhaustive, but `QUIET_KINDS` stops it before the
+ * group for the map to be complete, but `QUIET_KINDS` stops it before the
  * filter: it never pushes.
  */
+const PUSH_GROUP_OF_KIND: Record<NotificationKind, PushGroupId> = {
+  idea_built: 'rounds',
+  product_update: 'rounds',
+  invite: 'rounds',
+  team_invite: 'rounds',
+  player_added: 'rounds',
+  registration_approved: 'rounds',
+  registration_rejected: 'rounds',
+  registration_expired: 'rounds',
+  game_started: 'rounds',
+  game_moved: 'rounds',
+  game_cancelled: 'rounds',
+  auto_start_blocked: 'rounds',
+  game_finished: 'rounds',
+  game_reopened: 'rounds',
+  achievement_unlocked: 'rounds',
+  payment_reminder: 'rounds',
+  cup_started: 'rounds',
+  cup_finished: 'rounds',
+  cup_lineup_revealed: 'rounds',
+  league_round_open: 'rounds',
+  league_round_closing: 'rounds',
+  peer_approval_request: 'scorecards',
+  scorecard_submitted: 'scorecards',
+  scorecard_approved: 'scorecards',
+  scorecard_rejected: 'scorecards',
+  scorecard_reopened: 'scorecards',
+  deliver_reminder: 'scorecards',
+  missing_score_reminder: 'scorecards',
+  all_scorecards_delivered: 'scorecards',
+  // The organizer hears that the round has stood still for a day: with the
+  // other delivery reminders.
+  game_stale_reminder: 'scorecards',
+  league_marker_request: 'scorecards',
+  friend_request: 'friends',
+  friend_accepted: 'friends',
+  friend_achievement: 'friends',
+  // The nearest group; the alternative was to lock it under «Rundene dine».
+  club_role_changed: 'friends',
+  registration_request: 'signups',
+  team_member_withdrew: 'signups',
+  cup_signup: 'signups',
+  club_join_request: 'signups',
+};
+
+/** The group a notification kind belongs to. */
 export function pushGroupForKind(kind: NotificationKind): PushGroupId {
-  switch (kind) {
-    case 'idea_built':
-    case 'product_update':
-    case 'invite':
-    case 'team_invite':
-    case 'player_added':
-    case 'registration_approved':
-    case 'registration_rejected':
-    case 'registration_expired':
-    case 'game_started':
-    case 'game_moved':
-    case 'game_cancelled':
-    case 'auto_start_blocked':
-    case 'game_finished':
-    case 'game_reopened':
-    case 'achievement_unlocked':
-    case 'payment_reminder':
-    case 'cup_started':
-    case 'cup_finished':
-    case 'cup_lineup_revealed':
-    case 'league_round_open':
-    case 'league_round_closing':
-      return 'rounds';
-    case 'peer_approval_request':
-    case 'scorecard_submitted':
-    case 'scorecard_approved':
-    case 'scorecard_rejected':
-    case 'scorecard_reopened':
-    case 'deliver_reminder':
-    case 'missing_score_reminder':
-    case 'all_scorecards_delivered':
-    // The organizer hears that the round has stood still for a day: with the
-    // other delivery reminders.
-    case 'game_stale_reminder':
-    case 'league_marker_request':
-      return 'scorecards';
-    case 'friend_request':
-    case 'friend_accepted':
-    case 'friend_achievement':
-    // The nearest group; the alternative was to lock it under «Rundene dine».
-    case 'club_role_changed':
-      return 'friends';
-    case 'registration_request':
-    case 'team_member_withdrew':
-    case 'cup_signup':
-    case 'club_join_request':
-      return 'signups';
-    default: {
-      const unreachable: never = kind;
-      return unreachable;
-    }
-  }
+  return PUSH_GROUP_OF_KIND[kind];
 }
