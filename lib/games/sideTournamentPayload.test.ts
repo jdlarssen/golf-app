@@ -98,3 +98,66 @@ describe('parseSideTournamentFromFormData — disabledCategories alltid tom (#11
     }
   });
 });
+
+describe('parseSideTournamentFromFormData — hull per plass (#2283)', () => {
+  const on = (extra: Record<string, string>) =>
+    fd({ side_tournament_enabled: 'true', side_ld_count: '1', side_ctp_count: '2', ...extra });
+
+  it('gives null holes when no hole field is sent (the app and older forms)', () => {
+    const result = parseSideTournamentFromFormData(on({}));
+    expect(result.ok && result.payload.ldHoles).toBeNull();
+    expect(result.ok && result.payload.ctpHoles).toBeNull();
+  });
+
+  it('gives null holes when every field is blank', () => {
+    const result = parseSideTournamentFromFormData(
+      on({ side_ld_hole_1: '', side_ctp_hole_1: ' ', side_ctp_hole_2: '' }),
+    );
+    expect(result.ok && result.payload.ldHoles).toBeNull();
+    expect(result.ok && result.payload.ctpHoles).toBeNull();
+  });
+
+  it('keeps one element per slot, null for a slot without a hole', () => {
+    const result = parseSideTournamentFromFormData(
+      on({ side_ld_hole_1: '9', side_ctp_hole_2: '7' }),
+    );
+    expect(result.ok && result.payload.ldHoles).toEqual([9]);
+    expect(result.ok && result.payload.ctpHoles).toEqual([null, 7]);
+  });
+
+  it('never reads a slot past the count', () => {
+    const result = parseSideTournamentFromFormData(
+      on({ side_ld_hole_1: '9', side_ld_hole_2: '19' }),
+    );
+    expect(result.ok && result.payload.ldHoles).toEqual([9]);
+  });
+
+  it('gives null holes when the side tournament is off, whatever is sent', () => {
+    const result = parseSideTournamentFromFormData(
+      fd({ side_tournament_enabled: 'false', side_ctp_hole_1: '7' }),
+    );
+    expect(result.ok && result.payload.ctpHoles).toBeNull();
+    expect(result.ok && result.payload.ldHoles).toBeNull();
+  });
+
+  it.each(['0', '19', 'x', '7.5', '-3'])('refuses hole %s', (raw) => {
+    expect(parseSideTournamentFromFormData(on({ side_ld_hole_1: raw }))).toEqual({
+      ok: false,
+      errorCode: 'bad_side_ld_holes',
+    });
+    expect(parseSideTournamentFromFormData(on({ side_ctp_hole_2: raw }))).toEqual({
+      ok: false,
+      errorCode: 'bad_side_ctp_holes',
+    });
+  });
+
+  it('refuses two slots of one category on the same hole, but allows both categories on one hole', () => {
+    expect(
+      parseSideTournamentFromFormData(on({ side_ctp_hole_1: '7', side_ctp_hole_2: '7' })),
+    ).toEqual({ ok: false, errorCode: 'bad_side_ctp_holes' });
+
+    const both = parseSideTournamentFromFormData(on({ side_ld_hole_1: '7', side_ctp_hole_1: '7' }));
+    expect(both.ok && both.payload.ldHoles).toEqual([7]);
+    expect(both.ok && both.payload.ctpHoles).toEqual([7, null]);
+  });
+});

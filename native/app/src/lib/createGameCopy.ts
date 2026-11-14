@@ -56,6 +56,10 @@ export function describeCreateGameFailure(error: CreateGameFailure): string {
       return 'Lengste drive kan spilles på 0, 1 eller 2 hull.';
     case 'bad_side_ctp_count':
       return 'Nærmest pinnen kan spilles på 0, 1 eller 2 hull.';
+    case 'bad_side_ld_holes':
+      return 'Lengste drive må spilles på et hull fra 1 til 18, og ikke på samme hull to ganger.';
+    case 'bad_side_ctp_holes':
+      return 'Nærmest pinnen må spilles på et hull fra 1 til 18, og ikke på samme hull to ganger.';
     case 'db_game':
       return 'Klarte ikke å lagre spillet. Prøv igjen om litt.';
     case 'db_players':

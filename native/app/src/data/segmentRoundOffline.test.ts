@@ -94,12 +94,14 @@ describe('en delt cup-dag uten nett', () => {
     routeFrom({
       games: [queryStub({ data: gameRow(FRONT9, 'front9', 'greensome_matchplay'), error: null })],
       game_players: [queryStub({ data: [playerRow], error: null })],
+      tournament_side_awards: [queryStub({ data: [], error: null })],
     });
     respondWith(200, sibling(BACK9, 'back9', 'best_ball'));
     const front = await refreshGameBundle(FRONT9);
     routeFrom({
       games: [queryStub({ data: gameRow(BACK9, 'back9', 'best_ball'), error: null })],
       game_players: [queryStub({ data: [playerRow], error: null })],
+      tournament_side_awards: [queryStub({ data: [], error: null })],
     });
     respondWith(200, sibling(FRONT9, 'front9', 'greensome_matchplay'));
     await refreshGameBundle(BACK9);
