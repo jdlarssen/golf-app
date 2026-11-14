@@ -110,7 +110,7 @@ describe('arket', () => {
     expect(handicapSheetSubline(new Date(2026, 7, 22).toISOString(), -0.4)).toBe(
       'Sist oppdatert 22. august · +0,4',
     );
-    expect(handicapSheetSubline(null, 14.2)).toBe('Nå · 14,2');
+    expect(handicapSheetSubline(null, 14.2)).toBe('Ikke oppdatert ennå · 14,2');
   });
 
   it.each([

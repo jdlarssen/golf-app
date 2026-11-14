@@ -48,6 +48,7 @@ import {
 } from '../../../../lib/scoring/modes/wolfTurn';
 import { CupGameLink } from '../components/cup/CupGameLink';
 import { FlightPicker } from '../components/game/FlightPicker';
+import { HandicapSection } from '../components/game/HandicapSection';
 import { GameTicket, type TicketField } from '../components/game/GameTicket';
 import { GameTiles } from '../components/game/GameTiles';
 import { OrganiserSection } from '../components/game/OrganiserSection';
@@ -64,7 +65,7 @@ import { isGameOrganiser } from '../lib/gameOrganiser';
 import { DelIcon, HakeIcon } from '../components/icons/Icons';
 import { SyncBanner } from '../components/sync/SyncBanner';
 import type { BundlePlayer } from '../data/gameBundle';
-import { fetchOwnProfile } from '../data/profile';
+import { fetchOwnProfile, type OwnProfile } from '../data/profile';
 import { confirmParticipation } from '../data/rosterActions';
 import { displayName } from '../lib/display';
 import { flightPickerVisible } from '../lib/flightPicker';
@@ -134,7 +135,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const rulesHeadingRef = useRef<ComponentRef<typeof Text>>(null);
   const rulesY = useRef<number | null>(null);
-  const [profileHcpIndex, setProfileHcpIndex] = useState<number | null>(null);
+  const [profile, setProfile] = useState<OwnProfile | null>(null);
   // #2752: en planlagt cup-kamp spør om cupen er i gang, før den tilbyr et trekk fra den.
   const [cupRunning, setCupRunning] = useState(false);
   const plannedCupId = bundle?.game.status === 'scheduled' ? bundle.game.tournamentId : null;
@@ -172,20 +173,29 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   // #2255: DINE SLAG før start. Banehandicapen fryses først ved tee-off, så
   // til da regnes den fra hcp-indeksen i profilen (samme vei som webben).
   // Uten nett står «—», og tallet kommer neste gang skjermen åpnes.
-  const needsHcpIndex = myRow != null && myRow.courseHandicap == null;
+  //
+  // #2297: samme lesing gir kortet «Sjekk handicapet ditt», som også trenger
+  // datoen og resten av profilen, så profilen leses hel i et planlagt spill.
+  // `reloadProfile` leser på nytt etter at handicapet er lagret.
+  const needsProfile =
+    myRow != null && (myRow.courseHandicap == null || bundle?.game.status === 'scheduled');
   useEffect(() => {
-    if (!needsHcpIndex) return;
+    if (!needsProfile) return;
     let live = true;
     void fetchOwnProfile(userId).then(
-      (profile) => {
-        if (live) setProfileHcpIndex(profile.hcpIndex);
+      (own) => {
+        if (live) setProfile(own);
       },
       () => undefined,
     );
     return () => {
       live = false;
     };
-  }, [needsHcpIndex, userId]);
+  }, [needsProfile, userId]);
+  const reloadProfile = useCallback(() => {
+    void fetchOwnProfile(userId).then(setProfile, () => undefined);
+  }, [userId]);
+  const profileHcpIndex = profile?.hcpIndex ?? null;
 
   // «Regler»-flisa hopper ned til forklaringen og gir den fokus for
   // skjermleseren. Uten animasjon: det er et hopp, ikke en reise.
@@ -372,6 +382,11 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
           shortId={ownTeamShortId}
           onOpen={() => openOrReturn(navigation, 'RoundInvite', { shortId: ownTeamShortId, src: null })}
         />
+      ) : null}
+
+      {/* #2297: «Sjekk handicapet ditt» før runden, og kvitteringen etter lagring. */}
+      {game.status === 'scheduled' && me ? (
+        <HandicapSection profile={profile} onChanged={reloadProfile} />
       ) : null}
 
       <GameTicket

@@ -16,6 +16,7 @@ import * as Clipboard from 'expo-clipboard';
 import { AccessibilityInfo, Alert, Linking, ScrollView } from 'react-native';
 import type { ReactElement } from 'react';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
+import { saveHandicap, type OwnProfile } from '../data/profile';
 import { TICKET_TEXT } from '../lib/ticketCopy';
 import type { ScreenProps } from '../navigation';
 import { stackNavigation } from '../test/stackNavigation';
@@ -87,6 +88,14 @@ jest.mock('../components/signup/TeamLink', () => ({
   },
 }));
 
+// #2297: profilen leses hel i et planlagt spill (kortet «Sjekk handicapet ditt»), og
+// lagringen går gjennom ruta. Her holder det å styre svaret og se kallet.
+jest.mock('../data/profile', () => ({
+  fetchOwnProfile: jest.fn(async () => mockProfile.value),
+  saveHandicap: jest.fn(async () => ({ ok: true })),
+}));
+jest.mock('../lib/useDeviceOnline', () => ({ useDeviceOnline: () => true }));
+
 // Navnet må starte med `mock`: jest.mock-factoryene heises over importene.
 const mockState: { bundle: GameBundle | null; scores: unknown[] } = {
   bundle: null,
@@ -94,6 +103,21 @@ const mockState: { bundle: GameBundle | null; scores: unknown[] } = {
 };
 
 let mockCupRunning = true;
+
+// Ferskt handicap som standard: kortet står bare når testen eldrer det.
+const mockProfile: { value: OwnProfile } = {
+  value: {
+    name: 'Meg',
+    nickname: null,
+    hcpIndex: 14.2,
+    handicapUpdatedAt: new Date().toISOString(),
+    gender: 'mens',
+    level: 'normal',
+    isAdmin: false,
+    profileCompletedAt: '2026-04-12T18:00:00.000Z',
+    createdAt: '2026-04-12T18:00:00.000Z',
+  },
+};
 
 function player(overrides: Partial<BundlePlayer> & { userId: string }): BundlePlayer {
   return {
@@ -1513,5 +1537,164 @@ describe('GameHome — kontingent og premiebord (#2749)', () => {
     expect(screen.queryByTestId(/^payment-card/)).toBeNull();
     const order = testIdsInOrder().filter((id) => ['game-ticket', 'game-tiles', 'prize-table'].includes(id));
     expect(order).toEqual(['game-ticket', 'game-tiles', 'prize-table']);
+  });
+});
+
+describe('GameHome — handicapkortet (#2297)', () => {
+  const DAY = 86_400_000;
+
+  /** Handicapet ble sist oppdatert for `days` dager siden. */
+  function ageProfile(days: number, hcpIndex = 14.2): void {
+    mockProfile.value = {
+      ...mockProfile.value,
+      hcpIndex,
+      handicapUpdatedAt: new Date(Date.now() - days * DAY).toISOString(),
+    };
+  }
+
+  function setBundle(game: Partial<BundleGame> = {}, onList = true): void {
+    mockState.bundle = {
+      ...homeBundle({
+        game: {
+          id: 'game-1',
+          status: 'scheduled',
+          modeConfig: { kind: 'stableford', team_size: 1 },
+          scheduledTeeOffAt: new Date(Date.now() + 2 * DAY).toISOString(),
+          ...game,
+        },
+        players: [
+          ...(onList ? [homePlayer({ userId: 'me', courseHandicap: null })] : []),
+          homePlayer({ userId: 'ola' }),
+        ],
+      }),
+      teeBoxName: 'Gul',
+      teeRatings: {
+        lengthMeters: 6124,
+        slopeMens: 125,
+        courseRatingMens: 71.5,
+        parTotalMens: 72,
+        slopeLadies: 128,
+        courseRatingLadies: 73,
+        parTotalLadies: 72,
+        slopeJuniors: null,
+        courseRatingJuniors: null,
+        parTotalJuniors: null,
+      },
+    };
+    mockState.scores = [];
+  }
+
+  const renderHome = async () => {
+    await render(
+      <GameHome
+        {...({
+          route: { params: { gameId: 'game-1' } },
+          navigation: { navigate: jest.fn(), setOptions: jest.fn() },
+        } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+    await waitFor(() => expect(screen.getByTestId('game-ticket')).toBeTruthy());
+  };
+
+  beforeEach(() => {
+    jest.mocked(saveHandicap).mockClear();
+    jest.mocked(saveHandicap).mockResolvedValue({ ok: true });
+  });
+
+  it('viser kortet i et planlagt spill når handicapet er fire uker gammelt, over billetten', async () => {
+    ageProfile(29);
+    setBundle();
+    await renderHome();
+
+    const card = await screen.findByTestId('handicap-card');
+    expect(screen.getByText('Sjekk handicapet ditt')).toBeTruthy();
+    expect(card).toHaveTextContent(
+      'Sjekk handicapet dittHandicapet ditt er 14,2, sist oppdatert for 4 uker siden. Stemmer det?Ja, stemmerOppdater',
+    );
+    const ids: string[] = [];
+    const walk = (node: unknown): void => {
+      if (node == null || typeof node !== 'object') return;
+      if (Array.isArray(node)) return node.forEach(walk);
+      const element = node as { props?: { testID?: string }; children?: unknown };
+      if (element.props?.testID) ids.push(element.props.testID);
+      walk(element.children);
+    };
+    walk(screen.toJSON());
+    expect(ids.filter((id) => ['handicap-card', 'game-ticket'].includes(id))).toEqual([
+      'handicap-card',
+      'game-ticket',
+    ]);
+  });
+
+  it.each([
+    ['ferskt handicap', () => { ageProfile(2); setBundle(); }],
+    ['bare tre uker gammelt', () => { ageProfile(20); setBundle(); }],
+    ['runden pågår', () => { ageProfile(60); setBundle({ status: 'active' }); }],
+    ['du står ikke på lista', () => { ageProfile(60); setBundle({}, false); }],
+  ])('viser ikke kortet: %s', async (_label, arrange) => {
+    arrange();
+    await renderHome();
+
+    // Profilen er lest (billetten har tallet), og kortet har fått sjansen.
+    await waitFor(() => expect(screen.getByTestId('ticket-strokes')).toBeTruthy());
+    expect(screen.queryByTestId('handicap-card')).toBeNull();
+    expect(screen.queryByTestId('handicap-receipt')).toBeNull();
+  });
+
+  it('«Ja, stemmer» lagrer samme tall, og kortet går bort uten kvittering', async () => {
+    ageProfile(40);
+    setBundle();
+    await renderHome();
+    await fireEvent.press(await screen.findByTestId('handicap-card-confirm'));
+
+    expect(saveHandicap).toHaveBeenCalledWith(expect.objectContaining({ name: 'Meg' }), 14.2);
+    await waitFor(() => expect(screen.queryByTestId('handicap-card')).toBeNull());
+    expect(screen.queryByTestId('handicap-receipt')).toBeNull();
+  });
+
+  it('«Ja, stemmer» uten nett: linja sier hvorfor, og kortet står', async () => {
+    ageProfile(40);
+    setBundle();
+    jest.mocked(saveHandicap).mockResolvedValue({ ok: false, reason: 'offline' });
+    await renderHome();
+    await fireEvent.press(await screen.findByTestId('handicap-card-confirm'));
+
+    expect(await screen.findByTestId('handicap-card-error')).toHaveTextContent('Du trenger nett for å lagre.');
+    expect(screen.getByTestId('handicap-card')).toBeTruthy();
+  });
+
+  it('lagring fra arket gir kvitteringen i stedet for kortet, og billetten får de nye slagene', async () => {
+    ageProfile(40);
+    setBundle();
+    await renderHome();
+    await waitFor(() => expect(screen.getByTestId('ticket-strokes')).toHaveTextContent(/\d/));
+    const before = screen.getByTestId('ticket-strokes').props.children;
+
+    await fireEvent.press(await screen.findByTestId('handicap-card-update'));
+    // Dra linjalen til 10,0: 180 trinn over bunnen (−8).
+    await fireEvent.scroll(screen.getByTestId('hcp-ruler-scroll', { includeHiddenElements: true }), {
+      nativeEvent: { contentOffset: { x: (100 + 80) * 12, y: 0 } },
+    });
+    // Serveren har stemplet og lagret; neste lesing gir et ferskt, lavere handicap.
+    mockProfile.value = { ...mockProfile.value, hcpIndex: 10, handicapUpdatedAt: new Date().toISOString() };
+    await fireEvent.press(screen.getByRole('button', { name: 'Lagre 10,0' }));
+
+    expect(saveHandicap).toHaveBeenCalledWith(expect.objectContaining({ name: 'Meg' }), 10);
+    expect(await screen.findByTestId('handicap-receipt')).toHaveTextContent('Handicapet ditt er oppdatert.');
+    expect(screen.queryByTestId('handicap-card')).toBeNull();
+    await waitFor(() => expect(screen.getByTestId('ticket-strokes').props.children).not.toEqual(before));
+  });
+
+  it('✕ i arket lagrer ingenting, og kortet står', async () => {
+    ageProfile(40);
+    setBundle();
+    await renderHome();
+    await fireEvent.press(await screen.findByTestId('handicap-card-update'));
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Lukk' }));
+
+    expect(saveHandicap).not.toHaveBeenCalled();
+    expect(screen.getByTestId('handicap-card')).toBeTruthy();
+    expect(screen.queryByTestId('handicap-receipt')).toBeNull();
   });
 });

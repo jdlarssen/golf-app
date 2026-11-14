@@ -183,6 +183,8 @@ const FIELD_COMPONENTS: Record<string, { host: string; scrollTestID: string } | 
   'components/course/TeeTable.tsx': { host: 'screens/CreateCourse.tsx', scrollTestID: 'create-course-screen' },
   // Arket ligger i en Modal (eget vindu) med KeyboardAvoidingView rundt seg.
   'components/approve/RejectSheet.tsx': 'modal',
+  // #2297: «Skriv inn tallet» i handicap-arket, med KeyboardAvoidingView som RejectSheet.
+  'components/game/HandicapSheet.tsx': 'modal',
   // #2675: søkefeltet over medspillerlista og over markørvalget.
   'components/PickerSearch.tsx': { host: 'screens/LeagueRoundStart.tsx', scrollTestID: 'round-start-scroll' },
   // #2840: lagnavnet og søket i lagskjemaet, i skjemaets eget rullefelt.

@@ -87,7 +87,7 @@ export const HANDICAP_SHEET_TEXT = {
 /** «Sist oppdatert 22. august · 14,2». Uten dato står bare tallet bak ordene. */
 export function handicapSheetSubline(updatedAt: string | null, stored: number): string {
   const value = formatHcpNb(stored);
-  return updatedAt ? `Sist oppdatert ${formatLongDateNb(updatedAt)} · ${value}` : `Nå · ${value}`;
+  return updatedAt ? `Sist oppdatert ${formatLongDateNb(updatedAt)} · ${value}` : `Ikke oppdatert ennå · ${value}`;
 }
 
 /** «Lagre 13,8». Ugyldig tall gir bare «Lagre», og en pågående lagring «Lagrer …». */
