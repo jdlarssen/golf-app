@@ -342,7 +342,10 @@ const styles = StyleSheet.create({
     width: 160,
     paddingTop: 0,
     paddingHorizontal: 0,
-    paddingBottom: 6,
+    // Tegningen har `line-height: 1` og 6 under. Et iOS-felt med linjehøyde 52
+    // klipper toppen av sifrene, så linja er 58, og luften under er 3: da står
+    // sifrene 19 pt over streken, som i tegningen (målt i simulatoren).
+    paddingBottom: 3,
     borderBottomWidth: 2,
     textAlign: 'center',
     fontFamily: fraunces(600, 52).fontFamily,

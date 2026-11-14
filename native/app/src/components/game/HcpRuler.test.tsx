@@ -95,7 +95,9 @@ describe('HcpRuler', () => {
     const dot = screen.getByTestId('hcp-ruler-dot', { includeHiddenElements: true });
     // Halve bredden (175) + 222 merker − halve prikken.
     expect(dot).toHaveStyle({ left: 175 + 222 * 12 - 3.5 });
-    // Merkene står i Svg, så tallene leses fra funksjonen som skriver dem.
     expect([-80, -10, 0, 140, 540].map(tickLabel)).toEqual(['+8', '+1', '0', '14', '54']);
+    for (const label of ['+8', '+1', '0', '14', '54']) {
+      expect(screen.getByText(label, { includeHiddenElements: true })).toBeTruthy();
+    }
   });
 });
