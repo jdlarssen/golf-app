@@ -1578,6 +1578,8 @@
       "team_balance": "The teams are uneven. Split the players evenly before you publish.",
       "bad_side_ld_count": "The number of longest-drive winners must be 0, 1 or 2.",
       "bad_side_ctp_count": "The number of closest-to-pin winners must be 0, 1 or 2.",
+      "bad_side_ld_holes": "Longest drive must be on a hole from 1 to 18, and not on the same hole twice.",
+      "bad_side_ctp_holes": "Closest to the pin must be on a hole from 1 to 18, and not on the same hole twice.",
       "tee_missing_rating": "The selected tee is missing a rating for a player's gender (M/D/J). Check course administration or change the player's tee gender.",
       "tee_off_required": "Tee-off time is required.",
       "tee_off_in_past": "The tee-off time can't be in the past. Pick a time from now on.",

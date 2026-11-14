@@ -113,6 +113,7 @@ function riggFetch(gameOverrides: Record<string, unknown> = {}): void {
   routeFrom({
     games: [queryStub({ data: { ...GAME_ROW, ...gameOverrides }, error: null })],
     game_players: [queryStub({ data: PLAYER_ROWS, error: null })],
+    tournament_side_awards: [queryStub({ data: [], error: null })],
   });
 }
 
@@ -220,6 +221,133 @@ describe('gameBundle', () => {
     expect(select).toContain('registration_mode');
   });
 
+  // #2283: sidekonkurransen på hullet. Hullene og cupens sidepoeng ligger i
+  // bundelen, så kortet virker uten nett.
+  describe('sidekonkurransen (#2283)', () => {
+    it('hullene per plass rir med på spillet, og kolonnene er i select-lista', async () => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const gamesQuery = queryStub({
+        data: { ...GAME_ROW, side_ld_holes: [9, null], side_ctp_holes: [7] },
+        error: null,
+      });
+      routeFrom({
+        games: [gamesQuery],
+        game_players: [queryStub({ data: PLAYER_ROWS, error: null })],
+      });
+
+      const { game } = await bundleModule().refreshGameBundle(GAME);
+
+      expect(game.sideLdHoles).toEqual([9, null]);
+      expect(game.sideCtpHoles).toEqual([7]);
+      const select = String(stepArgs(gamesQuery, 'select')[0]![0]);
+      expect(select).toContain('side_ld_holes');
+      expect(select).toContain('side_ctp_holes');
+    });
+
+    it('et vanlig spill spør ikke etter cupens sidepoeng', async () => {
+      const { queryStub, routeFrom } = mocks();
+      // Ingen rute for tournament_side_awards: en spørring dit ville kastet.
+      routeFrom({
+        games: [queryStub({ data: GAME_ROW, error: null })],
+        game_players: [queryStub({ data: PLAYER_ROWS, error: null })],
+      });
+
+      expect((await bundleModule().refreshGameBundle(GAME)).cupSideAwards).toEqual([]);
+    });
+
+    it('en avledet cup-kamp spør ikke heller: den har ingen konkurransehull', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [
+          queryStub({ data: { ...GAME_ROW, tournament_id: 'cup-1', source_game_id: 'host' }, error: null }),
+          queryStub({ data: { name: 'Fourball' }, error: null }),
+        ],
+        game_players: [queryStub({ data: PLAYER_ROWS, error: null })],
+      });
+
+      expect((await bundleModule().refreshGameBundle(GAME)).cupSideAwards).toEqual([]);
+    });
+
+    it('en cup-kamp får hull og poeng, uten vinnere og tellere, og beholder dem uten nett', async () => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const awards = queryStub({
+        data: [
+          { kind: 'ctp', hole_number: 3, points: '2', gir_max_per_team: null },
+          { kind: 'gir', hole_number: 5, points: 1.5, gir_max_per_team: 2 },
+        ],
+        error: null,
+      });
+      routeFrom({
+        games: [queryStub({ data: { ...GAME_ROW, tournament_id: 'cup-1' }, error: null })],
+        game_players: [queryStub({ data: PLAYER_ROWS, error: null })],
+        tournament_side_awards: [awards],
+      });
+      const { loadGameBundle, refreshGameBundle } = bundleModule();
+
+      const fetched = await refreshGameBundle(GAME);
+
+      expect(fetched.cupSideAwards).toEqual([
+        { kind: 'ctp', holeNumber: 3, points: 2, girMaxPerTeam: null },
+        { kind: 'gir', holeNumber: 5, points: 1.5, girMaxPerTeam: 2 },
+      ]);
+      expect(stepArgs(awards, 'select')[0]).toEqual(['kind, hole_number, points, gir_max_per_team']);
+      expect(stepArgs(awards, 'eq')).toEqual([['tournament_id', 'cup-1']]);
+      expect(stepArgs(awards, 'in')).toEqual([['kind', ['ctp', 'ld', 'gir']]]);
+      expect((await loadGameBundle(GAME))?.cupSideAwards).toEqual(fetched.cupSideAwards);
+    });
+
+    it('feiler sidepoengene, står forrige bundel, så kortet ikke forsvinner midt i runden', async () => {
+      const { queryStub, routeFrom } = mocks();
+      const cupGame = { ...GAME_ROW, tournament_id: 'cup-1' };
+      const award = { kind: 'ctp', hole_number: 3, points: 2, gir_max_per_team: null };
+      routeFrom({
+        games: [queryStub({ data: cupGame, error: null })],
+        game_players: [queryStub({ data: PLAYER_ROWS, error: null })],
+        tournament_side_awards: [queryStub({ data: [award], error: null })],
+      });
+      const { loadGameBundle, refreshGameBundle } = bundleModule();
+      const first = await refreshGameBundle(GAME);
+
+      routeFrom({
+        games: [queryStub({ data: cupGame, error: null })],
+        game_players: [queryStub({ data: PLAYER_ROWS, error: null })],
+        tournament_side_awards: [queryStub({ data: null, error: { message: 'Network request failed' } })],
+      });
+
+      await expect(refreshGameBundle(GAME)).rejects.toThrow('Network request failed');
+      expect(await loadGameBundle(GAME)).toEqual(first);
+    });
+
+    it('en bundel lagret før feltene fantes, leses som før og har ingen konkurransehull', async () => {
+      const { gameBundleCacheKey, loadGameBundle, BUNDLE_PAYLOAD_VERSION } = bundleModule();
+      const { contestsForHole } = require('../../../../lib/games/sideContest') as typeof import('../../../../lib/games/sideContest');
+      const db = require('./db') as typeof import('./db');
+      const connection = await db.getDb();
+      await db.putCacheEntry(connection, {
+        key: gameBundleCacheKey(GAME),
+        payload: JSON.stringify({
+          v: BUNDLE_PAYLOAD_VERSION,
+          bundle: {
+            game: { id: GAME, sideLdCount: 1, sideCtpCount: 1, sourceGameId: null, tournamentId: 'cup-1' },
+            players: [],
+            holes: [],
+            courseName: null,
+            teeBoxName: null,
+            fetchedAt: '2026-11-01T10:00:00.000Z',
+          },
+        }),
+        fetchedAt: '2026-11-01T10:00:00.000Z',
+      });
+
+      const cached = await loadGameBundle(GAME);
+
+      expect(cached?.game.id).toBe(GAME);
+      expect(cached?.game.sideCtpHoles).toBeUndefined();
+      expect(cached?.cupSideAwards).toBeUndefined();
+      expect(contestsForHole(cached!.game, cached!.cupSideAwards, 7)).toEqual([]);
+    });
+  });
+
   // #2749: «Startkontingent betalt» leser egen rad, i en egen spørring.
   it('#2749: myPaidAt kommer fra spillerens egen rad', async () => {
     const { queryStub, routeFrom, stepArgs, currentDeviceUserId } = mocks();
@@ -305,6 +433,9 @@ describe('gameBundle', () => {
       sideLdCount: 2,
       sideCtpCount: 1,
       sideDisabledCategories: [],
+      // #2283: raden har ingen hull valgt.
+      sideLdHoles: null,
+      sideCtpHoles: null,
       hcpAllowancePct: 85,
       hcpMaxStrokes: 32,
       spectateToken: 'tok-123',

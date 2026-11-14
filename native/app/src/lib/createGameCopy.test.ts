@@ -48,6 +48,8 @@ const FAILURE_MAP = {
   tee_off_in_past: 'tee_off_in_past',
   bad_side_ld_count: 'bad_side_ld_count',
   bad_side_ctp_count: 'bad_side_ctp_count',
+  bad_side_ld_holes: 'bad_side_ld_holes',
+  bad_side_ctp_holes: 'bad_side_ctp_holes',
   db_game: 'db_game',
   db_players: 'db_players',
   // #1858 og #1882: webbens tekster for disse fem navnga ett format under en

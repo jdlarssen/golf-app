@@ -40,6 +40,8 @@ export type CreateGameErrorCode =
   | 'only_guests'
   | 'bad_side_ld_count'
   | 'bad_side_ctp_count'
+  | 'bad_side_ld_holes'
+  | 'bad_side_ctp_holes'
   | 'db_game'
   | 'db_players';
 
