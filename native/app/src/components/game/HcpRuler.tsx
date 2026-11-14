@@ -93,6 +93,9 @@ export function HcpRuler({
   };
 
   const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    // Et kast som fortsatt glir når «Lagre» trykkes, skal ikke flytte tallet
+    // som lagres.
+    if (disabled) return;
     report(offsetToHcp(event.nativeEvent.contentOffset.x, min));
   };
 

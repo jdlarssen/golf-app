@@ -192,7 +192,8 @@ export function HandicapSheet({
           >
             {/* Mens feltet er oppe: et trykk på arket utenfor feltet og
                 knappene lukker tastaturet. Feltet og knappene ligger dypere og
-                tar trykket sitt selv. */}
+                tar trykket sitt selv (en grå «Lagre» gjør ikke det, og da
+                lukkes tastaturet). */}
             <View
               style={styles.body}
               onStartShouldSetResponder={() => typing}

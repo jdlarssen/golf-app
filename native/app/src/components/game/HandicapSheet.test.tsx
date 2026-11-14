@@ -260,6 +260,10 @@ describe('HandicapSheet — linjalen står stille mens lagringen pågår', () =>
     expect(onSave).toHaveBeenCalledWith(13.8);
     expect(screen.getByTestId('hcp-ruler-scroll', { includeHiddenElements: true }).props.scrollEnabled).toBe(false);
     await step('decrement', 2);
+    // Et kast som glir videre etter trykket, flytter ikke tallet heller.
+    await fireEvent.scroll(screen.getByTestId('hcp-ruler-scroll', { includeHiddenElements: true }), {
+      nativeEvent: { contentOffset: { x: 0, y: 0 }, contentSize: { width: 8000, height: 64 }, layoutMeasurement: { width: 350, height: 64 } },
+    });
     expect(screen.getByTestId('hcp-sheet-number')).toHaveTextContent('13,8');
   });
 });
