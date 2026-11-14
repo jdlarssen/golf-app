@@ -45,12 +45,39 @@ type LoadState =
 /** Det arket viser etter en handling, før lista er hentet på nytt. */
 type Outcome = 'sent' | 'friend' | null;
 
+/**
+ * Modal-en står montert og får `open` false ved lukking, som i Venner, og
+ * siste person blir stående mens arket glir ned. Hver gang arket åpnes (eller
+ * åpnes for en annen) er det en ny økt: nøkkelen nullstiller henting,
+ * handling, linje og lås, så et nytt åpent ark henter lista på nytt.
+ */
 export function LeaguePersonSheet({ person, onClose }: { person: LeaguePerson | null; onClose: () => void }) {
-  // En ny person er en ny tilstand: nøkkelen nullstiller henting, handling og linje.
-  return <PersonSheetBody key={person?.userId ?? 'none'} person={person} onClose={onClose} />;
+  const isOpen = person !== null;
+  const [shown, setShown] = useState<{ last: LeaguePerson | null; session: number; open: boolean }>({
+    last: person,
+    session: 0,
+    open: isOpen,
+  });
+  if (isOpen !== shown.open || (person !== null && person.userId !== shown.last?.userId)) {
+    // Avledet tilstand, satt under rendringen (React tegner på nytt med en gang).
+    setShown({
+      last: person ?? shown.last,
+      session: isOpen && (!shown.open || person.userId !== shown.last?.userId) ? shown.session + 1 : shown.session,
+      open: isOpen,
+    });
+  }
+  return <PersonSheetBody key={shown.session} person={shown.last} open={isOpen} onClose={onClose} />;
 }
 
-function PersonSheetBody({ person, onClose }: { person: LeaguePerson | null; onClose: () => void }) {
+function PersonSheetBody({
+  person,
+  open,
+  onClose,
+}: {
+  person: LeaguePerson | null;
+  open: boolean;
+  onClose: () => void;
+}) {
   const userId = person?.userId ?? null;
   const [load, setLoad] = useState<LoadState>({ state: 'loading' });
   const [outcome, setOutcome] = useState<Outcome>(null);
@@ -157,6 +184,7 @@ function PersonSheetBody({ person, onClose }: { person: LeaguePerson | null; onC
 
   return (
     <FriendSheet
+      open={open}
       person={{
         id: userId,
         name: person.fullName ?? person.name,

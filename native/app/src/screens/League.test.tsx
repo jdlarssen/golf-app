@@ -25,6 +25,17 @@ jest.mock('../data/friends', () => ({
   sendFriendRequest: jest.fn(),
   respondToFriendRequest: jest.fn(),
 }));
+// RN-mocken tegner ingenting når `visible` er false. Denne beholder Modal-verten med `visible`
+// (barna bare når den er oppe), så testen kan låse at ligaarket står montert når det er lukket.
+jest.mock('react-native/Libraries/Modal/Modal', () => {
+  const { createElement } = require('react');
+  const { View } = require('react-native');
+  return {
+    __esModule: true,
+    default: ({ visible, children, testID }: { visible?: boolean; children?: unknown; testID?: string }) =>
+      createElement(View, { testID, visible }, visible === false ? null : children),
+  };
+});
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 // Fokuset kjøres som en effekt, og testen kan fokusere skjermen igjen.
 jest.mock('@react-navigation/native', () => ({
@@ -816,10 +827,34 @@ describe('#2878: navnet i tabellen og arket', () => {
     expect(screen.getByTestId('friend-sheet-close')).toBeTruthy();
   });
 
-  it('«Lukk» lukker arket', async () => {
-    friendsAre({});
+  // Som i Venner: Modal-en står montert og får `visible: false`, og siste person blir stående
+  // mens arket glir ned (ikke en ny, tom Modal).
+  const modal = () => screen.getByTestId('friend-sheet-modal', { includeHiddenElements: true });
+
+  it('«Lukk» lukker arket: Modal-en står montert med visible false, og å åpne igjen henter på nytt', async () => {
+    friendsAre({ suggestions: [{ id: 'martin', name: 'Martin Lie', stats }] });
     await openSheet('martin');
     await fireEvent.press(await screen.findByTestId('friend-sheet-close'));
+    expect(modal().props.visible).toBe(false);
     expect(screen.queryByTestId('friend-sheet')).toBeNull();
+    fetchFriends.mockClear();
+    await fireEvent.press(screen.getByTestId('league-standings-person-martin'));
+    expect(modal().props.visible).toBe(true);
+    expect(await screen.findByTestId('league-person-add')).toBeTruthy();
+    expect(fetchFriends).toHaveBeenCalledTimes(1);
+  });
+
+  it('et trykk på bakteppet lukker arket på samme måte', async () => {
+    friendsAre({});
+    await openSheet('martin');
+    expect(modal().props.visible).toBe(true);
+    await fireEvent.press(await screen.findByTestId('friend-sheet-backdrop', { includeHiddenElements: true }));
+    expect(modal().props.visible).toBe(false);
+  });
+
+  it('et ark som aldri er åpnet har en Modal med visible false', async () => {
+    answer({ ok: true, view: leagueView({ standings }) });
+    await renderLeague();
+    expect(modal().props.visible).toBe(false);
   });
 });
