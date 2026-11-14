@@ -4,6 +4,7 @@ import {
   parseHcpMagnitude,
   HCP_MIN,
   HCP_MAX,
+  HCP_RULER_MIN,
   type ProfileInputError,
 } from './profileInput';
 
@@ -135,6 +136,20 @@ describe('parseProfileInput — handicap', () => {
     expect(parse({ hcpIndex: '10,1', hcpPlus: true })).toEqual({
       ok: false,
       error: 'hcp_invalid',
+    });
+  });
+
+  // #2297: linjalen i appen stopper på +8. Grensen må ligge innenfor det
+  // serveren godtar, ellers kunne linjalen tilby et tall lagringen avviser.
+  it('linjalens plussgrense ligger innenfor valideringen', () => {
+    expect(HCP_MIN).toBeLessThanOrEqual(HCP_RULER_MIN);
+    expect(HCP_RULER_MIN).toBeLessThan(0);
+    expect(
+      parse({ hcpIndex: String(Math.abs(HCP_RULER_MIN)), hcpPlus: true }),
+    ).toMatchObject({ ok: true, value: { hcpIndex: HCP_RULER_MIN } });
+    expect(parse({ hcpIndex: '8', hcpPlus: true })).toMatchObject({
+      ok: true,
+      value: { hcpIndex: -8 },
     });
   });
 
