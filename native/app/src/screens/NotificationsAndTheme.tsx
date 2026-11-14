@@ -5,6 +5,8 @@
 // **Tegningen er Varsler-D2** (#2315, godkjent 14.11, lerretet rad 98): hver
 // gruppe er én rad på 64 pt med ikonrute, navn og bryter, og all tekst står på
 // én linje på både 320 og 390, så skjermen ser lik ut på smal og bred telefon.
+// Det gjelder vanlig tekststørrelse: med større tekst i Innstillinger bryter
+// linjene heller enn å bli kuttet med «…», så alt kan leses.
 //
 // **Telefonkortet** er skogkortet med en bryter. «På» ber telefonen om lov,
 // registrerer tokenet og husker det (`data/pushDevice.ts`). «Av» sletter raden.
@@ -231,10 +233,10 @@ function PushSection({
           <BjelleIcon color={colors.onStrongWarm} size={20} strokeWidth={1.75} />
         </View>
         <View style={styles.texts}>
-          <Text numberOfLines={1} style={[styles.cardTitle, cream]}>
+          <Text style={[styles.cardTitle, cream]}>
             {PROFILE_TEXT.pushTitle}
           </Text>
-          <Text numberOfLines={1} style={[styles.cardStatus, cream]} testID="push-status">
+          <Text style={[styles.cardStatus, cream]} testID="push-status">
             {on ? pushOnLabel(Platform.OS) : PROFILE_TEXT.pushOff}
           </Text>
         </View>
@@ -254,10 +256,10 @@ function PushSection({
       {state === 'denied' ? (
         <View testID="push-denied">
           <View style={styles.lines}>
-            <Text numberOfLines={1} style={[styles.small, { color: colors.muted }]}>
+            <Text style={[styles.small, { color: colors.muted }]}>
               {PROFILE_TEXT.pushDenied}
             </Text>
-            <Text numberOfLines={1} style={[styles.small, { color: colors.muted }]}>
+            <Text style={[styles.small, { color: colors.muted }]}>
               {PROFILE_TEXT.pushDeniedWhere}
             </Text>
           </View>
@@ -394,7 +396,7 @@ function PushChoices() {
                 <IconTile>
                   <Icon color={colors.surface} size={20} strokeWidth={1.75} />
                 </IconTile>
-                <Text numberOfLines={1} style={[styles.choiceName, { color: colors.text }]}>
+                <Text style={[styles.choiceName, { color: colors.text }]}>
                   {label}
                 </Text>
                 {group.locked ? (
@@ -420,10 +422,10 @@ function PushChoices() {
       {readFailed ? (
         <View testID="push-choices-read-failed">
           <View style={styles.lines}>
-            <Text numberOfLines={1} style={[styles.small, { color: colors.muted }]}>
+            <Text style={[styles.small, { color: colors.muted }]}>
               {PROFILE_TEXT.pushReadFailed}
             </Text>
-            <Text numberOfLines={1} style={[styles.small, { color: colors.muted }]}>
+            <Text style={[styles.small, { color: colors.muted }]}>
               {PROFILE_TEXT.pushReadHint}
             </Text>
           </View>
@@ -437,7 +439,7 @@ function PushChoices() {
           </Pressable>
         </View>
       ) : (
-        <Text numberOfLines={1} style={[styles.small, styles.under, { color: colors.muted }]} testID="push-all-devices">
+        <Text style={[styles.small, styles.under, { color: colors.muted }]} testID="push-all-devices">
           {PROFILE_TEXT.pushAllDevices}
         </Text>
       )}
@@ -449,7 +451,7 @@ function PushChoices() {
             <IconTile>
               <MaaneIcon color={colors.surface} size={20} strokeWidth={1.75} />
             </IconTile>
-            <Text numberOfLines={1} style={[styles.choiceName, { color: colors.text }]}>
+            <Text style={[styles.choiceName, { color: colors.text }]}>
               {PROFILE_TEXT.quietTitle}
             </Text>
             {control(prefs ? prefs.quietHours : null, PROFILE_TEXT.quietTitle, onQuiet, 'quiet-hours-switch')}
@@ -458,10 +460,10 @@ function PushChoices() {
         </View>
         <View style={styles.quietBody}>
           <Text style={[styles.quietTimes, { color: colors.text }]}>{PROFILE_TEXT.quietTimes}</Text>
-          <Text numberOfLines={1} style={[styles.small, styles.quietLine, { color: colors.muted }]}>
+          <Text style={[styles.small, styles.quietLine, { color: colors.muted }]}>
             {PROFILE_TEXT.quietRounds}
           </Text>
-          <Text numberOfLines={1} style={[styles.small, styles.quietLine, { color: colors.muted }]}>
+          <Text style={[styles.small, styles.quietLine, { color: colors.muted }]}>
             {PROFILE_TEXT.quietInbox}
           </Text>
           {/* Stripa er pynt: tidene står i teksten over, så skjermleseren hopper over den. */}
@@ -498,10 +500,10 @@ function PushChoices() {
       </View>
 
       <View style={styles.footer}>
-        <Text numberOfLines={1} style={[styles.small, { color: colors.muted }]}>
+        <Text style={[styles.small, { color: colors.muted }]}>
           {PROFILE_TEXT.pushFooter}
         </Text>
-        <Text numberOfLines={1} style={[styles.small, { color: colors.muted }]}>
+        <Text style={[styles.small, { color: colors.muted }]}>
           {PROFILE_TEXT.pushFooterScope}
         </Text>
       </View>
@@ -521,7 +523,6 @@ function SaveFailedLine({ testID }: { testID: string }) {
   return (
     <Text
       accessibilityLiveRegion="polite"
-      numberOfLines={1}
       style={[styles.small, styles.saveFailed, { color: colors.danger }]}
       testID={testID}
     >
