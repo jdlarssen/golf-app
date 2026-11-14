@@ -394,8 +394,12 @@ create policy "game_gir_claims select own flight"
 
 -- No write grants either: with no write policy RLS already refuses them, and
 -- without the grants a write policy added later still cannot open the tables.
-revoke insert, update, delete, truncate on public.game_side_claims from anon, authenticated;
-revoke insert, update, delete, truncate on public.game_gir_claims from anon, authenticated;
+-- anon gets nothing, and authenticated keeps only SELECT (the policy above),
+-- as in 0210/0236.
+revoke all on public.game_side_claims from anon;
+revoke insert, update, delete, truncate, references, trigger on public.game_side_claims from authenticated;
+revoke all on public.game_gir_claims from anon;
+revoke insert, update, delete, truncate, references, trigger on public.game_gir_claims from authenticated;
 
 -- ── Function grants ────────────────────────────────────────────────────────
 revoke all on function public.side_claim_flight_key(uuid) from public, anon;
