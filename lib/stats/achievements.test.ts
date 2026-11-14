@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   countRoundAchievements,
   parForGender,
+  toHoleScores,
   selectNotableMoments,
   underParKind,
   underParMoment,
@@ -184,5 +185,29 @@ describe('underParKind — the counting rule behind the brags', () => {
     ['invalid par 0', 3, 0, null],
   ] as const)('%s', (_label, strokes, par, expected) => {
     expect(underParKind(strokes, par)).toBe(expected);
+  });
+});
+
+describe('toHoleScores (moved from the kavalkade loader, #2259)', () => {
+  const courseHole = (n: number): CourseHoleRow => ({
+    hole_number: n,
+    par_mens: 4,
+    par_ladies: 5,
+    par_juniors: 3,
+    stroke_index: n,
+  });
+  const holes = new Map([[1, courseHole(1)]]);
+
+  it('picks par by gender', () => {
+    const scores = [{ hole_number: 1, strokes: 4 }];
+    expect(toHoleScores(scores, holes, null)[0].par).toBe(4);
+    expect(toHoleScores(scores, holes, 'ladies')[0].par).toBe(5);
+    expect(toHoleScores(scores, holes, 'juniors')[0].par).toBe(3);
+  });
+
+  it('gives par 0 to a hole the course has no row for, so it can never be a birdie', () => {
+    const [h] = toHoleScores([{ hole_number: 9, strokes: 1 }], holes, null);
+    expect(h).toEqual({ holeNumber: 9, strokes: 1, par: 0 });
+    expect(countRoundAchievements([h]).birdie).toBe(0);
   });
 });
