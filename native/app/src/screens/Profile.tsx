@@ -229,6 +229,12 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
             testID="profile-history"
           />
           <SettingRow
+            label={PROFILE_TEXT.menuToppliste}
+            chevron
+            onPress={() => navigation.navigate('Toppliste', { selfInitials: model?.initials })}
+            testID="profile-toppliste"
+          />
+          <SettingRow
             label={PROFILE_TEXT.friendsRow}
             chevron
             onPress={() => navigation.navigate('Friends', { selfInitials: model?.initials })}

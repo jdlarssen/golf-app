@@ -170,6 +170,16 @@ describe('Profile', () => {
     expect(screen.getByTestId('profile-friends')).toHaveTextContent(PROFILE_TEXT.friendsRow, {
       exact: false,
     });
+    // «Toppliste» (#2259) står rett under historikken, og initialene følger med.
+    const rowIds = screen
+      .getAllByTestId(/^profile-(history|toppliste|friends)$/)
+      .map((node) => node.props.testID as string);
+    expect(rowIds).toEqual(['profile-history', 'profile-toppliste', 'profile-friends']);
+    expect(screen.getByTestId('profile-toppliste')).toHaveTextContent(PROFILE_TEXT.menuToppliste, {
+      exact: false,
+    });
+    await fireEvent.press(screen.getByTestId('profile-toppliste'));
+    expect(navigate).toHaveBeenCalledWith('Toppliste', { selfInitials: 'JL' });
     await fireEvent.press(screen.getByTestId('profile-friends'));
     // Initialene følger med til heltekortet på vennesiden.
     expect(navigate).toHaveBeenCalledWith('Friends', { selfInitials: 'JL' });

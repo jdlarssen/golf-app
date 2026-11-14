@@ -46,6 +46,7 @@ const VARIANT_BY_ROUTE = {
   DeleteAccount: 'default',
   AccountSettings: 'default',
   NotificationsAndTheme: 'default',
+  Toppliste: 'default',
   Friends: 'default',
   Inbox: 'default',
   FriendLink: 'default',

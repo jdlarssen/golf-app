@@ -140,6 +140,8 @@ export const PROFILE_TEXT = {
   hcpNotSetSpoken: 'ikke satt',
   /** Raden til Rundedagboka (#2265), øverst i menyen. */
   menuHistory: 'Historikk og statistikk',
+  /** Raden rett under «Historikk og statistikk» (#2259, eierens svar: «I profilmenyen»). */
+  menuToppliste: 'Toppliste',
   menuNotificationsTheme: 'Varsler og tema',
   /**
    * Tittelen på siden menyraden «Varsler og tema» åpner: «Varsler», som i

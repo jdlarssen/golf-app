@@ -109,6 +109,8 @@ import { TeamSlotPicker } from './screens/TeamSlotPicker';
 import { Terminliste } from './screens/Terminliste';
 import { RoundStats } from './screens/RoundStats';
 import { Kavalkade } from './screens/Kavalkade';
+import { Toppliste } from './screens/Toppliste';
+import { TOPPLISTE_TEXT } from './lib/topplisteCopy';
 import { Scorecard } from './screens/Scorecard';
 import { useSession } from './session';
 import { SyncLab } from './SyncLab';
@@ -177,6 +179,12 @@ export type RootStackParamList = {
   AccountSettings: undefined;
   /** «Varsler og tema» (#2256): temavalget; varslene kommer i PR 4. */
   NotificationsAndTheme: undefined;
+  /**
+   * «Toppliste» (#2259): sesongens topp 10 for hele Tørny, fra profilmenyen.
+   * `selfInitials` er dine initialer til «Du er på …»-kortet når du står
+   * utenfor topp 10, fra profilen som åpner skjermen.
+   */
+  Toppliste: { selfInitials?: string } | undefined;
   /**
    * «Venner» (#2256): vennene dine, via `/api/friends`. `selfInitials` er
    * dine initialer til heltekortet, fra profilen som åpner skjermen.
@@ -541,6 +549,14 @@ export function RootNavigator() {
           component={NotificationsAndTheme}
           options={kickerHeader(PROFILE_TEXT.heading, PROFILE_TEXT.notificationsHeading, {
             backLabel: PROFILE_TEXT.backToProfile,
+          })}
+        />
+        {/* #2259: «Profil» i toppen som Varsler, og «Toppliste» stort i innholdet (designet «Toppliste B»). */}
+        <Stack.Screen
+          name="Toppliste"
+          component={Toppliste}
+          options={kickerHeader(TOPPLISTE_TEXT.kicker, TOPPLISTE_TEXT.heading, {
+            backLabel: TOPPLISTE_TEXT.backLabel,
           })}
         />
         {/* Eierens svar (#2256): tilbakepil til bunnmenyen kommer. Tittelen står i innholdet. */}
