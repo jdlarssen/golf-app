@@ -9,6 +9,7 @@ import {
   BEST_BALL_HOLES_TEXT,
   BINGO_BANGO_BONGO_HOLES_TEXT,
   HOLES_TEXT,
+  NASSAU_HOLES_TEXT,
   NINES_HOLES_TEXT,
   PATSOME_HOLE_TEXT,
   ROUND_ROBIN_HOLES_TEXT,
@@ -25,6 +26,10 @@ import {
   grossChip,
   holeNumberLabel,
   holesPlayedChip,
+  nassauAloneFromLabel,
+  nassauCoinLabel,
+  nassauLeadLabel,
+  nassauSubtitle,
   ninesBruttoLabel,
   ninesPoints,
   ninesPotLabel,
@@ -273,6 +278,37 @@ describe('best ball (#2255 PR 3d): paritet mot messages/no.json', () => {
   });
 });
 
+// #2755: Nassau har ingen meldinger på nettet å låses mot; tegningen B3
+// (`Nassau-hull-B3-*`) er kilden, med hardt mellomrom foran tallene.
+describe('Nassau (#2755): tegnet for tegn som B3', () => {
+  it('tegnforklaringen, initialene til den som ser på og undertittelen', () => {
+    expect(NASSAU_HOLES_TEXT).toEqual({
+      legendWon: 'Vant hullet',
+      legendTied: 'Delt',
+      legendAlone: 'Alene i ledelsen ut kampen',
+      youInitials: 'Du',
+      prevHole: 'Forrige hull',
+      nextHole: 'Neste hull',
+    });
+    expect(nassauSubtitle('net')).toBe('Nassau · Netto');
+    expect(nassauSubtitle('gross')).toBe('Nassau · Brutto');
+  });
+
+  it('gullstreken og stillingen, med hardt mellomrom foran tallet', () => {
+    expect(nassauAloneFromLabel(5)).toBe('Alene i ledelsen fra hull\u00A05');
+    expect(nassauLeadLabel(null, 1)).toBe('Du leder med\u00A01');
+    expect(nassauLeadLabel('Anne-Kristine', 1)).toBe('Anne-Kristine leder med\u00A01');
+    expect(nassauLeadLabel(null, null)).toBe('Du leder');
+    expect(nassauLeadLabel('Anne-Kristine', null)).toBe('Anne-Kristine leder');
+  });
+
+  it('det skjermleseren sier om myntene, uten tegningens løse «og»', () => {
+    expect(nassauCoinLabel(11, 'won', 'Anne-Kristine')).toBe('Hull 11: Anne-Kristine vant hullet');
+    expect(nassauCoinLabel(2, 'tied', null)).toBe('Hull 2: delt');
+    expect(nassauCoinLabel(12, 'unplayed', null)).toBe('Hull 12: ikke spilt');
+  });
+});
+
 it('ingen tekst står tom eller med en plassholder ingen fylte inn', () => {
   for (const text of [
     ...Object.values(HOLES_TEXT),
@@ -282,6 +318,7 @@ it('ingen tekst står tom eller med en plassholder ingen fylte inn', () => {
     ...Object.values(ACEY_DEUCEY_HOLES_TEXT),
     ...Object.values(BINGO_BANGO_BONGO_HOLES_TEXT),
     ...Object.values(BEST_BALL_HOLES_TEXT),
+    ...Object.values(NASSAU_HOLES_TEXT),
   ]) {
     expect(isFinishedSentence(text)).toBe(true);
   }

@@ -123,6 +123,54 @@ export function wolfSubtitle(scoring: 'gross' | 'net'): string {
 }
 
 /**
+ * Nassau (#2755): «Hull for hull» etter tegningen B3 (`Nassau-hull-B3-*`).
+ * Bare i appen: nettets Nassau-hullside er en annen tegning. Kampenes navn,
+ * «Delt», «Ingen vinner», «Deg» og «Delt ledelse» er tavlas
+ * (`nassauBoardCopy.ts`). Tegningen har hardt mellomrom foran tallet i
+ * «fra hull 5» og «leder med 1», så tallet aldri står alene på en linje.
+ */
+export const NASSAU_HOLES_TEXT = {
+  legendWon: 'Vant hullet',
+  legendTied: 'Delt',
+  legendAlone: 'Alene i ledelsen ut kampen',
+  /** Initialene i mynten til den som ser på. */
+  youInitials: 'Du',
+  /** Pilene i hullkortet når det ikke er noe hull den veien (ellers «Hull 14»). */
+  prevHole: 'Forrige hull',
+  nextHole: 'Neste hull',
+} as const;
+
+/** Linja under overskriften: «Nassau · Netto». */
+export function nassauSubtitle(scoring: 'gross' | 'net'): string {
+  return `Nassau · ${scoring === 'net' ? HOLES_TEXT.netto : HOLES_TEXT.brutto}`;
+}
+
+/** Under gullstreken: «Alene i ledelsen fra hull 5». */
+export function nassauAloneFromLabel(holeNumber: number): string {
+  return `Alene i ledelsen fra hull\u00A0${holeNumber}`;
+}
+
+/**
+ * Stillingen etter hullet: «Du leder med 1», «Anne-Kristine leder med 1».
+ * Uten et forsprang å sammenligne (én spiller, eller ulikt antall hull) bare
+ * «Du leder» eller «Anne-Kristine leder». `name` er `null` for den som ser på.
+ */
+export function nassauLeadLabel(name: string | null, lead: number | null): string {
+  const who = name === null ? 'Du' : name;
+  return lead === null ? `${who} leder` : `${who} leder med\u00A0${lead}`;
+}
+
+/** Det skjermleseren sier om en mynt: «Hull 11: Anne-Kristine vant hullet». */
+export function nassauCoinLabel(
+  holeNumber: number,
+  outcome: 'won' | 'tied' | 'unplayed',
+  winner: string | null,
+): string {
+  if (outcome === 'won' && winner !== null) return `Hull ${holeNumber}: ${winner} vant hullet`;
+  return outcome === 'tied' ? `Hull ${holeNumber}: delt` : `Hull ${holeNumber}: ikke spilt`;
+}
+
+/**
  * Nines / Split Sixes (#2255 PR 3c): webbens `leaderboard.nines.*`, låst i
  * `holesCopy.test.ts`. Nøklene er de samme som modellen bærer
  * (`lib/leaderboard/ninesHoles.ts`).

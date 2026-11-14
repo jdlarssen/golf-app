@@ -5,15 +5,17 @@
 // hull» der heller). Oppå den står appens egen liste over formatene skjermen
 // er bygget for. Den vokser format for format (PR 3a: solo stableford,
 // modifisert stableford og solo slagspill; PR 3b: Wolf; PR 3c: Nines, Round
-// Robin, Acey Deucey og Bingo Bango Bongo; PR 3d: best ball). For resten står
-// flisa på spillets side som «Tavla», som for formatene webben sender til tavla.
-// Skins og Nassau bygges etter sine egne tegninger (#2317, #2327), ikke her.
+// Robin, Acey Deucey og Bingo Bango Bongo; PR 3d: best ball; #2755: Nassau).
+// For resten står flisa på spillets side som «Tavla», som for formatene webben
+// sender til tavla. Skins og Nassau bygges etter sine egne tegninger, ikke som
+// en webkopi: Skins har myntene på tavla (#2317), Nassau tegningen B3 (#2755).
 //
 // Regnestykket er delt med webben: motoren (`computeGameLeaderboard`, samme
 // som tavla) og radene (`lib/leaderboard/soloScorecard.ts`,
 // `lib/leaderboard/wolfHoles.ts`, `lib/leaderboard/ninesHoles.ts`,
 // `lib/leaderboard/roundRobinHoles.ts`, `lib/leaderboard/aceyDeuceyHoles.ts`,
-// `lib/leaderboard/bingoBangoBongoHoles.ts`). Best ball regnes som webbens
+// `lib/leaderboard/bingoBangoBongoHoles.ts`, `lib/leaderboard/nassauHoles.ts`).
+// Best ball regnes som webbens
 // drilldown gjør det, ikke med motoren: `bestBallBoardInput` og
 // `lib/leaderboard.ts` sin `computeLeaderboard`, og laget tegnes fra
 // `lib/leaderboard/bestBallHoles.ts`. Skjermen tegner bare det som kommer
@@ -38,6 +40,7 @@ import {
   bingoBangoBongoHoleCards,
   type BingoBangoBongoHoleCards,
 } from '../../../../lib/leaderboard/bingoBangoBongoHoles';
+import { nassauHoleCards, type NassauHoleCards } from '../../../../lib/leaderboard/nassauHoles';
 import { computeLeaderboard as computeTeamLines, type TeamLine } from '../../../../lib/leaderboard';
 import { bestBallBoardInput } from '../../../../lib/leaderboard/bestBallInput';
 import { isHoleInSegment } from '../../../../lib/games/holeScope';
@@ -54,6 +57,7 @@ import {
   HOLES_TEXT,
   ROUND_ROBIN_HOLES_TEXT,
   aceyDeuceySubtitle,
+  nassauSubtitle,
   ninesSubtitle,
   wolfSubtitle,
 } from './holesCopy';
@@ -75,11 +79,13 @@ export type HoleByHoleKind =
   | 'round-robin'
   | 'acey-deucey'
   | 'bingo-bango-bongo'
-  | 'best-ball';
+  | 'best-ball'
+  | 'nassau';
 
 /**
  * Linja under overskriften er formatet («Stableford», «Wolf · Netto», «Nines ·
- * Netto», «Round Robin», «Acey Deucey · Netto», «Bingo Bango Bongo»).
+ * Netto», «Round Robin», «Acey Deucey · Netto», «Bingo Bango Bongo», «Nassau ·
+ * Netto»).
  */
 export type HoleByHoleModel =
   | { kind: 'solo-stableford' | 'solo-strokeplay'; subtitle: string; card: SoloScorecard }
@@ -88,6 +94,7 @@ export type HoleByHoleModel =
   | { kind: 'round-robin'; subtitle: string; roundRobin: RoundRobinHoleCards }
   | { kind: 'acey-deucey'; subtitle: string; aceyDeucey: AceyDeuceyHoleCards }
   | { kind: 'bingo-bango-bongo'; subtitle: string; bingoBangoBongo: BingoBangoBongoHoleCards }
+  | { kind: 'nassau'; subtitle: string; nassau: NassauHoleCards }
   /**
    * Alle lagene og tavlas par over hullene: skjermen velger laget (lederen
    * først, så «forrige» og «neste») med `bestBallDrilldown`.
@@ -117,6 +124,7 @@ export function holeByHoleKind(
   if (mode === 'acey_deucey') return 'acey-deucey';
   if (mode === 'bingo_bango_bongo') return 'bingo-bango-bongo';
   if (mode === 'best_ball') return 'best-ball';
+  if (mode === 'nassau') return 'nassau';
   return null;
 }
 
@@ -181,11 +189,14 @@ export function waitsForChoices(
 /**
  * Modellen skjermen tegner, eller `null` når runden ikke har appens «Hull for
  * hull», eller motoren ikke kan regne (ingen bane, ingen spillere).
+ * `viewerUserId` er den som ser på: Nassau åpner hullkortet på et hull som
+ * handler om hen.
  */
 export function buildHoleByHole(
   bundle: GameBundle,
   scores: readonly LocalScore[],
   extras: ScoringExtras = {},
+  viewerUserId: string | null = null,
 ): HoleByHoleModel | null {
   const kind = holeByHoleKind(bundle.game);
   if (kind === null) return null;
@@ -234,6 +245,13 @@ export function buildHoleByHole(
       kind,
       subtitle: BINGO_BANGO_BONGO_HOLES_TEXT.subtitle,
       bingoBangoBongo: bingoBangoBongoHoleCards(result),
+    };
+  }
+  if (kind === 'nassau' && result.kind === 'nassau') {
+    return {
+      kind,
+      subtitle: nassauSubtitle(result.scoring),
+      nassau: nassauHoleCards(result, { viewerUserId }),
     };
   }
   return null;
