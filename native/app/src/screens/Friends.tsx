@@ -28,12 +28,11 @@
 // heltekortet er den varme (`onStrongWarm`), den stiplede ringen er tegnet
 // (iOS stipler en `border` grovere enn nettleseren), og tallene i
 // underlinjene har vanlige, ikke faste, sifferbredder.
-import { Children, Fragment, useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Svg, { Circle } from 'react-native-svg';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   Pressable,
   ScrollView,
   Share,
@@ -42,9 +41,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { FriendStatus } from '../../../../lib/friends/friendStatus';
-import { nameInitials } from '../../../../lib/names/initials';
 import {
   addFriendByEmail,
   fetchFriends,
@@ -78,10 +75,11 @@ import {
 } from '../lib/friendsCopy';
 import { describeWebLinkFailure, friendLinkPath, webUrl } from '../lib/webLink';
 import { PageTitle } from '../components/PageTitle';
+import { Avatar, FriendSheet, Pill, RowsCard } from '../components/friends/FriendSheet';
 import { ChevronIcon } from '../components/icons/Icons';
 import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
 import type { ScreenProps } from '../navigation';
-import { FONTS, fraunces, interLine, sheetGrabber, sheetScrim, TAP, useTheme } from '../theme';
+import { FONTS, fraunces, interLine, TAP, useTheme } from '../theme';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 
 type LoadState =
@@ -577,119 +575,15 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
       </ScrollView>
 
       <FriendSheet
-        friend={sheetFriend}
-        now={now}
+        person={
+          sheetFriend
+            ? { id: sheetFriend.id, name: sheetFriend.name, avatarTone: 'strong', rows: friendSheetValues(sheetFriend, now) }
+            : null
+        }
+        bottom={{ kind: 'remove', onRemove: () => sheetFriend && onRemove(sheetFriend) }}
         onClose={() => setSheetFriend(null)}
-        onRemove={onRemove}
       />
     </>
-  );
-}
-
-/**
- * Arket fra en venn: navnet, de tre tallene og «Fjern venn». Dras ned eller
- * lukkes med «Lukk» og med et trykk utenfor.
- */
-function FriendSheet({
-  friend,
-  now,
-  onClose,
-  onRemove,
-}: {
-  friend: FriendItem | null;
-  now: Date;
-  onClose: () => void;
-  onRemove: (friend: FriendItem) => void;
-}) {
-  const { ui, colors, scheme } = useTheme();
-  // #1954 D3: en Modal i bunnen går under navigasjonslinja med kant til kant.
-  const insets = useSafeAreaInsets();
-  const values = friend ? friendSheetValues(friend, now) : null;
-  return (
-    <Modal visible={friend !== null} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.sheetRoot}>
-        <Pressable
-          style={[styles.backdrop, { backgroundColor: sheetScrim(colors, scheme) }]}
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel={FRIENDS_TEXT.sheetClose}
-          testID="friend-sheet-backdrop"
-        />
-        {friend && values ? (
-          <View
-            style={[
-              styles.sheet,
-              { backgroundColor: colors.bg, borderColor: colors.border, paddingBottom: 36 + insets.bottom },
-            ]}
-            accessibilityViewIsModal
-            testID="friend-sheet"
-          >
-            <View style={[styles.grabber, { backgroundColor: sheetGrabber(scheme) }]} />
-            <View style={styles.sheetHead}>
-              <Avatar name={friend.name} tone="strong" />
-              <Text
-                accessibilityRole="header"
-                style={[styles.sheetName, { color: colors.text }]}
-                numberOfLines={2}
-              >
-                {friend.name || FRIENDS_TEXT.someoneFallback}
-              </Text>
-            </View>
-            <RowsCard>
-              <SheetRow label={FRIENDS_TEXT.sheetHcp} value={values.hcp} testID="friend-sheet-hcp" />
-              <SheetRow label={FRIENDS_TEXT.sheetRounds} value={values.rounds} testID="friend-sheet-rounds" />
-              <SheetRow
-                label={FRIENDS_TEXT.sheetLastPlayed}
-                value={values.lastPlayed}
-                testID="friend-sheet-last"
-              />
-            </RowsCard>
-            <Pill
-              tone="danger"
-              size="large"
-              label={FRIENDS_TEXT.removeConfirmLabel}
-              onPress={() => onRemove(friend)}
-              testID={`friends-remove-${friend.id}`}
-            />
-            <Pressable
-              accessibilityRole="button"
-              onPress={onClose}
-              style={ui.buttonSecondary}
-              testID="friend-sheet-close"
-            >
-              <Text style={ui.buttonSecondaryText}>{FRIENDS_TEXT.sheetClose}</Text>
-            </Pressable>
-          </View>
-        ) : null}
-      </View>
-    </Modal>
-  );
-}
-
-function SheetRow({ label, value, testID }: { label: string; value: string; testID: string }) {
-  const { ui, colors } = useTheme();
-  return (
-    <View style={styles.sheetRow} accessible accessibilityLabel={`${label}: ${value}`} testID={testID}>
-      <Text style={[styles.sheetLabel, { color: colors.muted }]}>{label}</Text>
-      <Text style={[styles.sheetValue, ui.num, { color: colors.text }]} numberOfLines={1}>
-        {value}
-      </Text>
-    </View>
-  );
-}
-
-/** Radene i et kort, med streker mellom dem, ikke under den siste (som webben). */
-function RowsCard({ children }: { children: ReactNode }) {
-  const { colors } = useTheme();
-  return (
-    <View style={[styles.rowsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      {Children.toArray(children).map((row, index) => (
-        <Fragment key={index}>
-          {index > 0 ? <View style={[styles.separator, { backgroundColor: colors.divider }]} /> : null}
-          {row}
-        </Fragment>
-      ))}
-    </View>
   );
 }
 
@@ -712,103 +606,6 @@ function NameBlock({ name, sub }: { name: string; sub: string | null }) {
   );
 }
 
-/**
- * Initialene i en sirkel. Skogen for venner, den lyse grønne for forespørsler
- * og kremtonen (`trackBg`) for forslag, som i designet. Pynt: navnet står ved
- * siden av.
- */
-function Avatar({ name, tone }: { name: string; tone: 'strong' | 'soft' | 'warm' }) {
-  const { colors } = useTheme();
-  const look =
-    tone === 'strong'
-      ? { bg: colors.surfaceStrong, ink: colors.onStrong }
-      : tone === 'soft'
-        ? { bg: colors.primarySoft, ink: colors.primary }
-        : { bg: colors.trackBg, ink: colors.muted };
-  return (
-    <View
-      style={[styles.avatar, { backgroundColor: look.bg }]}
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-    >
-      <Text style={[styles.avatarText, { color: look.ink }]}>{nameInitials(name)}</Text>
-    </View>
-  );
-}
-
-type PillTone = 'filled' | 'outline' | 'danger' | 'onStrongFilled' | 'onStrongOutline';
-
-/** Knappene på siden: piller som i designet, ≥ 44 pt høye. */
-function Pill({
-  label,
-  pendingLabel,
-  pending = false,
-  disabled = false,
-  tone = 'filled',
-  size = 'regular',
-  smallText = false,
-  grow = false,
-  expanded,
-  accessibilityLabel,
-  onPress,
-  testID,
-}: {
-  label: string;
-  pendingLabel?: string;
-  pending?: boolean;
-  disabled?: boolean;
-  tone?: PillTone;
-  size?: 'regular' | 'large';
-  /** Høyden fra `size`, men 13 pt tekst («På e-post» i heltekortet). */
-  smallText?: boolean;
-  grow?: boolean;
-  expanded?: boolean;
-  accessibilityLabel?: string;
-  onPress: () => void;
-  testID: string;
-}) {
-  const { colors } = useTheme();
-  const look = {
-    filled: { bg: colors.primary, border: colors.primary, ink: colors.onPrimary },
-    outline: { bg: 'transparent', border: colors.primary, ink: colors.primary },
-    danger: { bg: 'transparent', border: colors.danger, ink: colors.danger },
-    onStrongFilled: { bg: colors.onStrongWarm, border: colors.onStrongWarm, ink: colors.surfaceStrong },
-    onStrongOutline: { bg: 'transparent', border: `${colors.onStrongWarm}80`, ink: colors.onStrongWarm },
-  }[tone];
-  // Fylte piller har ingen kant i designet, så de blir ikke 2 pt bredere.
-  const filled = tone === 'filled' || tone === 'onStrongFilled';
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ disabled, busy: pending, ...(expanded === undefined ? {} : { expanded }) }}
-      disabled={disabled}
-      onPress={onPress}
-      style={[
-        styles.pill,
-        size === 'large' ? styles.pillLarge : null,
-        grow ? styles.pillGrow : null,
-        { backgroundColor: look.bg, borderColor: look.border },
-        filled ? styles.pillFilled : null,
-        disabled && !pending ? styles.dimmed : null,
-      ]}
-      testID={testID}
-    >
-      <Text
-        style={[
-          styles.pillText,
-          size === 'large' && !smallText ? styles.pillTextLarge : null,
-          { color: look.ink },
-        ]}
-        numberOfLines={1}
-      >
-        {pending && pendingLabel ? pendingLabel : label}
-      </Text>
-    </Pressable>
-  );
-}
-
-const AVATAR = 36;
 const HERO_AVATAR = 30;
 /** Ringen rundt deg i heltekortet, utenfor kremen (designets `box-shadow`). */
 const HERO_RING = 2;
@@ -903,7 +700,6 @@ const styles = StyleSheet.create({
   },
   suggestionName: { fontSize: 14, fontFamily: FONTS.sansSemiBold },
 
-  rowsCard: { borderWidth: 1, borderRadius: 16, overflow: 'hidden' },
   personRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -913,64 +709,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   pressed: { opacity: 0.6 },
-  separator: { height: 1 },
   // Nettleserens linje for 15 pt Inter, med luften over navnet (målt).
   name: { fontSize: 15, lineHeight: 19.5, fontFamily: FONTS.sansSemiBold },
   sub: { fontSize: 12, lineHeight: 14.5, fontFamily: FONTS.sans },
 
-  avatar: {
-    width: AVATAR,
-    height: AVATAR,
-    borderRadius: AVATAR / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  avatarText: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
-
-  pill: {
-    minHeight: TAP,
-    minWidth: TAP,
-    paddingHorizontal: 14,
-    borderRadius: 999,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  pillLarge: { minHeight: 48 },
-  pillGrow: { flexGrow: 1 },
-  pillFilled: { borderWidth: 0 },
-  pillText: { fontSize: 13, fontFamily: FONTS.sansSemiBold },
-  pillTextLarge: { fontSize: 15 },
   dimmed: { opacity: 0.5 },
-
-  sheetRoot: { flex: 1, justifyContent: 'flex-end' },
-  // Hinnen og grep-streken som de andre arkene (#2709): `sheetScrim` blir
-  // mørkere i klubbhus-natt, og hjørnene er 20 som på QR- og send-tilbake-arket.
-  backdrop: { ...StyleSheet.absoluteFill },
-  sheet: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderWidth: 1,
-    borderBottomWidth: 0,
-    // Bunnen: 36 + systemlinja, i komponenten. Toppen: 8 over grep-streken.
-    paddingTop: 8,
-    paddingHorizontal: 20,
-    gap: 14,
-  },
-  grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2 },
-  sheetHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  // Navnet kan gå over to linjer.
-  sheetName: { ...fraunces(500, 22, undefined, { multiline: true }), flex: 1 },
-  sheetRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    minHeight: TAP,
-    paddingHorizontal: 14,
-  },
-  sheetLabel: { fontSize: 14, fontFamily: FONTS.sans },
-  sheetValue: { flexShrink: 1, fontSize: 15, fontFamily: FONTS.sansSemiBold, textAlign: 'right' },
 });
