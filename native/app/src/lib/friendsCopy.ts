@@ -80,6 +80,10 @@ export const FRIENDS_TEXT = {
   loadFailed: 'Fikk ikke hentet vennene dine. Prøv igjen.',
   offline: 'Du må være på nett for å se vennene dine. Koble til og prøv igjen.',
   retry: 'Prøv igjen',
+  /** #2878: ligaarket til en annen spiller. «Vil bli venn med deg» og «Godta» er webbens (over). */
+  addFriendLabel: 'Legg til venn',
+  addFriendPending: 'Sender …',
+  friendsLine: 'Dere er venner',
 } as const;
 
 /**

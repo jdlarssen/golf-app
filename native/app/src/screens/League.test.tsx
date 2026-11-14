@@ -7,6 +7,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { Share, StyleSheet } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import type { FriendsData } from '../data/friends';
 import type { ClubLeagueJoinResult, LeagueResult } from '../data/league';
 import type { ScreenProps } from '../navigation';
 import { leagueRound, leagueView } from '../test/leagueFixtures';
@@ -18,6 +19,11 @@ jest.mock('../lib/useMarkVisitRead');
 jest.mock('../data/league', () => ({
   fetchLeague: jest.fn(async () => mockResults.shift() ?? mockLast),
   joinClubLeague: jest.fn(async () => mockSelfJoin()),
+}));
+jest.mock('../data/friends', () => ({
+  fetchFriends: jest.fn(),
+  sendFriendRequest: jest.fn(),
+  respondToFriendRequest: jest.fn(),
 }));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 // Fokuset kjøres som en effekt, og testen kan fokusere skjermen igjen.
@@ -33,6 +39,12 @@ let mockFocus: () => void = () => {};
 let mockResults: LeagueResult[] = [];
 let mockLast: LeagueResult = { ok: false, reason: 'offline' };
 let mockSelfJoin: () => Promise<ClubLeagueJoinResult> | ClubLeagueJoinResult = () => ({ ok: true, leagueId: 'liga-vinter' });
+
+const { fetchFriends, sendFriendRequest, respondToFriendRequest } = jest.requireMock('../data/friends') as {
+  fetchFriends: jest.Mock;
+  sendFriendRequest: jest.Mock;
+  respondToFriendRequest: jest.Mock;
+};
 
 const { fetchLeague, joinClubLeague } = jest.requireMock('../data/league') as {
   fetchLeague: jest.Mock;
@@ -618,5 +630,152 @@ describe('meld deg på og av en klubbliga (#2839)', () => {
     expect(screen.getByTestId('league-self-error')).toHaveTextContent(text);
     expect(screen.getByTestId('league-signup-button')).not.toBeDisabled();
     expect(setParams).not.toHaveBeenCalledWith({ joined: true });
+  });
+});
+
+// #2878: et trykk på et navn i tabellen åpner arket til personen.
+describe('#2878: navnet i tabellen og arket', () => {
+  const cell = (userId: string, rank: number) => ({
+    userId,
+    rank,
+    value: 70 - rank,
+    ranked: true,
+    roundsPlayed: 1,
+    perRound: [{ roundId: 'r1', value: 30, points: null, penalised: false, gameId: `g-${userId}-r1` }],
+  });
+  const standings = [cell('martin', 1), cell('kristian', 2), cell('me', 3), cell('erlend', 4)];
+  const stats = { roundsTogether: 3, lastPlayedAt: new Date().toISOString(), lastGameName: 'Onsdagsgolf' };
+  const EMPTY: FriendsData = { friends: [], incoming: [], outgoing: [], suggestions: [], friendCode: null };
+
+  function friendsAre(data: Partial<FriendsData>) {
+    fetchFriends.mockResolvedValue({ ok: true, data: { ...EMPTY, ...data } });
+  }
+
+  async function openSheet(userId: string) {
+    answer({ ok: true, view: leagueView({ standings }) });
+    const rendered = await renderLeague();
+    await fireEvent.press(screen.getByTestId(`league-standings-person-${userId}`));
+    return rendered;
+  }
+
+  const row = (id: string) => screen.getByTestId(id).props.accessibilityLabel as string;
+
+  it('navnet til en annen kan trykkes på, ditt eget ikke, og en resultatcelle åpner fortsatt kortet', async () => {
+    answer({ ok: true, view: leagueView({ standings }) });
+    const { navigate } = await renderLeague();
+    const name = screen.getByTestId('league-standings-person-martin');
+    expect(name.props.accessibilityLabel).toBe('Åpne Martin');
+    expect(screen.getByTestId('league-standings-person-kristian')).toBeTruthy();
+    expect(screen.queryByTestId('league-standings-person-me')).toBeNull();
+    await fireEvent.press(screen.getByTestId('league-standings-card-martin-r1'));
+    expect(navigate).toHaveBeenCalledWith('LeagueCard', expect.objectContaining({ gameId: 'g-martin-r1' }));
+    expect(screen.queryByTestId('friend-sheet')).toBeNull();
+  });
+
+  it('ikke venner: de tre radene fra forslaget, og «Legg til venn» sender forespørselen', async () => {
+    friendsAre({ suggestions: [{ id: 'martin', name: 'Martin Lie', stats }] });
+    sendFriendRequest.mockResolvedValue({ ok: true, status: 'requested' });
+    await openSheet('martin');
+    expect(await screen.findByTestId('league-person-add')).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Martin Lie' })).toBeTruthy();
+    expect(row('friend-sheet-hcp')).toBe('Handicap: 9,4');
+    expect(row('friend-sheet-rounds')).toBe('Runder sammen: 3');
+    expect(row('friend-sheet-last')).toBe('Sist spilt: Onsdagsgolf, i dag');
+    expect(screen.queryByTestId('friend-sheet-subline')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('league-person-add'));
+    expect(sendFriendRequest).toHaveBeenCalledWith('martin');
+    expect(await screen.findByTestId('friend-sheet-sent')).toHaveTextContent('Venneforespørsel sendt.');
+    expect(screen.queryByTestId('league-person-add')).toBeNull();
+  });
+
+  it('mens forespørselen går, står knappen med «Sender …» og et nytt trykk gjør ingenting', async () => {
+    friendsAre({ suggestions: [{ id: 'martin', name: 'Martin Lie', stats }] });
+    let finish: (value: unknown) => void = () => {};
+    sendFriendRequest.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    await openSheet('martin');
+    const button = await screen.findByTestId('league-person-add');
+    await fireEvent.press(button);
+    expect(screen.getByTestId('league-person-add')).toHaveTextContent('Sender …');
+    await fireEvent.press(screen.getByTestId('league-person-add'));
+    expect(sendFriendRequest).toHaveBeenCalledTimes(1);
+    await act(async () => finish({ ok: true, status: 'requested' }));
+    expect(await screen.findByTestId('friend-sheet-sent')).toBeTruthy();
+  });
+
+  it('du har sendt: linja står der knappen var', async () => {
+    friendsAre({ outgoing: [{ id: 'martin', name: 'Martin Lie', stats, requestId: 'req-out' }] });
+    await openSheet('martin');
+    expect(await screen.findByTestId('friend-sheet-sent')).toHaveTextContent('Venneforespørsel sendt.');
+    expect(screen.queryByTestId('league-person-add')).toBeNull();
+  });
+
+  it('de har sendt deg en forespørsel: «Godta» godtar den, og så står dere som venner', async () => {
+    friendsAre({ incoming: [{ id: 'martin', name: 'Martin Lie', stats, requestId: 'req-in' }] });
+    respondToFriendRequest.mockResolvedValue({ ok: true, status: 'accepted' });
+    await openSheet('martin');
+    expect(await screen.findByTestId('friend-sheet-subline')).toHaveTextContent('Vil bli venn med deg');
+    await fireEvent.press(screen.getByTestId('league-person-accept'));
+    expect(respondToFriendRequest).toHaveBeenCalledWith('req-in', true);
+    expect(await screen.findByText('Dere er venner')).toBeTruthy();
+    expect(screen.queryByTestId('league-person-accept')).toBeNull();
+  });
+
+  it('venner: «Dere er venner», de tre radene og ingen «Fjern venn»', async () => {
+    friendsAre({ friends: [{ id: 'martin', name: 'Martin Lie', stats, hcp: 9.4 }] });
+    await openSheet('martin');
+    expect(await screen.findByText('Dere er venner')).toBeTruthy();
+    expect(row('friend-sheet-rounds')).toBe('Runder sammen: 3');
+    expect(screen.queryByTestId('friends-remove-martin')).toBeNull();
+    expect(screen.queryByText('Fjern venn')).toBeNull();
+    expect(screen.getByTestId('friend-sheet-close')).toBeTruthy();
+  });
+
+  it('en som ikke står i noen liste: handicapet fra ligaen og to streker', async () => {
+    friendsAre({});
+    await openSheet('kristian');
+    expect(await screen.findByTestId('league-person-add')).toBeTruthy();
+    expect(row('friend-sheet-hcp')).toBe('Handicap: 14,2');
+    expect(row('friend-sheet-rounds')).toBe('Runder sammen: –');
+    expect(row('friend-sheet-last')).toBe('Sist spilt: –');
+  });
+
+  it('uten nett: linja står, ingen hvit skjerm, og knappen kan trykkes på igjen', async () => {
+    friendsAre({ suggestions: [{ id: 'martin', name: 'Martin Lie', stats }] });
+    sendFriendRequest.mockResolvedValueOnce({ ok: false, reason: 'offline' });
+    sendFriendRequest.mockResolvedValueOnce({ ok: true, status: 'requested' });
+    await openSheet('martin');
+    await fireEvent.press(await screen.findByTestId('league-person-add'));
+    expect(await screen.findByTestId('friend-sheet-error')).toHaveTextContent('Du er uten nett. Koble til og prøv igjen.');
+    await fireEvent.press(screen.getByTestId('league-person-add'));
+    expect(sendFriendRequest).toHaveBeenCalledTimes(2);
+    expect(await screen.findByTestId('friend-sheet-sent')).toBeTruthy();
+    expect(screen.queryByTestId('friend-sheet-error')).toBeNull();
+  });
+
+  it('en serverfeil fra forespørselen gir linja fra serveren, og knappen står igjen', async () => {
+    friendsAre({ suggestions: [{ id: 'martin', name: 'Martin Lie', stats }] });
+    sendFriendRequest.mockResolvedValue({ ok: true, status: 'error' });
+    await openSheet('martin');
+    await fireEvent.press(await screen.findByTestId('league-person-add'));
+    expect(await screen.findByTestId('friend-sheet-error')).toHaveTextContent('Noe gikk galt. Prøv igjen.');
+    expect(screen.getByTestId('league-person-add')).toBeTruthy();
+  });
+
+  it('henting som feiler: navnet, handicapet, to streker og linja, uten knapp', async () => {
+    fetchFriends.mockResolvedValue({ ok: false, reason: 'offline' });
+    await openSheet('martin');
+    expect(await screen.findByTestId('friend-sheet-error')).toHaveTextContent('Du er uten nett. Koble til og prøv igjen.');
+    expect(row('friend-sheet-hcp')).toBe('Handicap: 9,4');
+    expect(row('friend-sheet-rounds')).toBe('Runder sammen: –');
+    expect(screen.queryByTestId('league-person-add')).toBeNull();
+    expect(screen.getByTestId('friend-sheet-close')).toBeTruthy();
+  });
+
+  it('«Lukk» lukker arket', async () => {
+    friendsAre({});
+    await openSheet('martin');
+    await fireEvent.press(await screen.findByTestId('friend-sheet-close'));
+    expect(screen.queryByTestId('friend-sheet')).toBeNull();
   });
 });
