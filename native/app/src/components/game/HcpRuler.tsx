@@ -20,19 +20,20 @@
 //
 // Merkene tegnes i Svg-biter på 100 tideler (1200 pt), ikke som én flate på
 // 7400 pt (det er større enn en tekstur kan være på iOS) og ikke som 620
-// View-er. Bitene overlapper med {@link CHUNK_MARGIN}, så et tall ved kanten
-// av en bit tegnes helt.
+// View-er. Tallene under de hele merkene er vanlig tekst: react-native-svg
+// finner ikke Inter-snittene appen laster, og tegnet dem i feil vekt.
 import { memo, useRef, useState, type ComponentRef } from 'react';
 import {
   ScrollView,
   StyleSheet,
+  Text,
   View,
   type AccessibilityActionEvent,
   type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import Svg, { Line, Text as SvgText } from 'react-native-svg';
+import Svg, { Line } from 'react-native-svg';
 import { HCP_MAX } from '../../../../../lib/users/profileInput';
 import { HANDICAP_TEXT } from '../../lib/handicapCopy';
 import {
@@ -42,13 +43,15 @@ import {
   rulerSteps,
   stepHcp,
 } from '../../lib/hcpRuler';
-import { FONTS, useTheme, type ThemeColors } from '../../theme';
+import { browserBaseline, FONTS, interLine, useTheme, type ThemeColors } from '../../theme';
 
 /** Høyden på linjalen i tegningen. */
 const HEIGHT = 64;
 const CHUNK = 100;
-const CHUNK_MARGIN = 24;
 const DOT = 7;
+/** Tallene står med grunnlinja 56 pt ned, som `<text y="56">` i tegningen. */
+const LABEL_BASELINE = 56;
+const LABEL_WIDTH = 40;
 
 const ACTIONS = [{ name: 'increment' as const }, { name: 'decrement' as const }];
 
@@ -179,19 +182,23 @@ const Ticks = memo(function Ticks({
   const first = Math.round(min * 10);
   const chunks: number[] = [];
   for (let start = 0; start <= steps; start += CHUNK) chunks.push(start);
+  const labels: { i: number; text: string }[] = [];
+  for (let i = 0; i <= steps; i += 1) {
+    if (tickKind(first + i) === 'whole') labels.push({ i, text: tickLabel(first + i) });
+  }
   return (
     <>
       {chunks.map((start) => {
         const end = Math.min(steps, start + CHUNK - 1);
-        const svgWidth = (end - start) * RULER_STEP + 2 * CHUNK_MARGIN;
+        // Én pt på hver side, så den ytterste streken ikke klippes.
+        const svgWidth = (end - start) * RULER_STEP + 2;
         const marks = [];
         for (let i = start; i <= end; i += 1) {
-          const tenths = first + i;
-          const kind = tickKind(tenths);
-          const x = (i - start) * RULER_STEP + CHUNK_MARGIN;
+          const kind = tickKind(first + i);
+          const x = (i - start) * RULER_STEP + 1;
           marks.push(
             <Line
-              key={`l${i}`}
+              key={i}
               x1={x}
               y1={8}
               x2={x}
@@ -200,33 +207,26 @@ const Ticks = memo(function Ticks({
               strokeWidth={kind === 'whole' ? 1.5 : kind === 'half' ? 1.2 : 1}
             />,
           );
-          if (kind === 'whole') {
-            marks.push(
-              <SvgText
-                key={`t${i}`}
-                x={x}
-                y={56}
-                textAnchor="middle"
-                fontSize={12}
-                fontFamily={FONTS.sansSemiBold}
-                fill={colors.muted}
-              >
-                {tickLabel(tenths)}
-              </SvgText>,
-            );
-          }
         }
         return (
           <Svg
             key={start}
             width={svgWidth}
             height={HEIGHT}
-            style={[styles.chunk, { left: pad + start * RULER_STEP - CHUNK_MARGIN }]}
+            style={[styles.chunk, { left: pad + start * RULER_STEP - 1 }]}
           >
             {marks}
           </Svg>
         );
       })}
+      {labels.map(({ i, text }) => (
+        <Text
+          key={`t${i}`}
+          style={[styles.label, { left: pad + i * RULER_STEP - LABEL_WIDTH / 2, color: colors.muted }]}
+        >
+          {text}
+        </Text>
+      ))}
     </>
   );
 });
@@ -234,6 +234,16 @@ const Ticks = memo(function Ticks({
 const styles = StyleSheet.create({
   ruler: { height: HEIGHT },
   chunk: { position: 'absolute', top: 0 },
+  // Inter 600 12 pt, med grunnlinja på 56 (`interLine` gir nettleserens linjeboks).
+  label: {
+    position: 'absolute',
+    top: LABEL_BASELINE - browserBaseline('inter', 12, 15),
+    width: LABEL_WIDTH,
+    ...interLine(12, 15),
+    fontFamily: FONTS.sansSemiBold,
+    textAlign: 'center',
+    fontVariant: ['tabular-nums'],
+  },
   dot: { position: 'absolute', top: 40 - DOT / 2, width: DOT, height: DOT, borderRadius: DOT / 2 },
   center: { position: 'absolute', top: 0.5, width: 3, height: 41, borderRadius: 1.5 },
 });
