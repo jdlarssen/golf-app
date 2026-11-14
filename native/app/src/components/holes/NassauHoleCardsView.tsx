@@ -541,7 +541,8 @@ const styles = StyleSheet.create({
   barEnd: { borderTopRightRadius: 3, borderBottomRightRadius: 3 },
   aloneLine: { marginTop: 6, alignItems: 'flex-end' },
   aloneText: { ...interLine(12, 15), fontFamily: FONTS.sansSemiBold, textAlign: 'right' },
-  stripe: { flexDirection: 'row', gap: 2, marginTop: 12 },
+  // Tegningens 10 + 2 slås sammen til 10 i CSS (marginene kollapser).
+  stripe: { flexDirection: 'row', gap: 2, marginTop: 10 },
   stripeCell: { flex: 1, height: 8, borderRadius: 2 },
   holeCard: { marginTop: 16, paddingTop: 10, paddingHorizontal: 14, paddingBottom: 12 },
   holeHead: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 8 },
@@ -557,7 +558,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   arrowOff: { opacity: 0.4 },
-  playerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 40, borderTopWidth: 1 },
+  // 40 + kanten: CSS legger kanten utenpå `min-height`, Yoga regner den med.
+  playerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 41, borderTopWidth: 1 },
   playerName: { ...interLine(14, 17), fontFamily: FONTS.sans, flex: 1, minWidth: 0 },
   scoreCol: { width: 26, alignItems: 'center' },
   scoreDisc: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
