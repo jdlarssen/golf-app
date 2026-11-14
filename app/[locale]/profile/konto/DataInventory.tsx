@@ -20,9 +20,10 @@ export type DataRow = { id: DataRowId; title: string; body: string };
 /**
  * The card of rows: a title and one or two lines each, read as a description
  * list. It describes, it does nothing, so no row is a link. Same frame and
- * dividers as {@link SettingList}; the title and text match a `SettingRow`'s
- * label and sublabel, so the card sits with the rows below it. The page passes
- * the translated rows in; this reads nothing.
+ * dividers as {@link SettingList}. The title is sans 15/600 and the text 12 px
+ * muted, as in the «Data-forslag» artboard and the app's rows (#2882); the
+ * links below keep the `SettingRow` look. The page passes the translated rows
+ * in; this reads nothing.
  */
 export function DataInventory({ rows }: { rows: readonly DataRow[] }) {
   return (
@@ -34,7 +35,7 @@ export function DataInventory({ rows }: { rows: readonly DataRow[] }) {
             data-testid={`data-row-${row.id}`}
             className="border-t border-border px-5 py-4 first:border-t-0"
           >
-            <dt className="font-serif text-base font-medium text-text">{row.title}</dt>
+            <dt className="font-sans text-[15px] font-semibold text-text">{row.title}</dt>
             <dd className="mt-0.5 text-xs text-muted">{row.body}</dd>
           </div>
         ))}
