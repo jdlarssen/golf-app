@@ -225,7 +225,9 @@ export function SetupStep({
       {hasHcpAllowanceField(mode) ? (
         <Field label={ALLOWANCE_TEXT.legend}>
           {/* #2880: forklaringen over kortene og kortene 52 høye, som `Nyttspill-5-avansert-a`. */}
-          <Text style={ui.muted}>{ALLOWANCE_TEXT.description}</Text>
+          <Text style={[styles.cardDescription, styles.descriptionAboveCards, { color: colors.muted }]}>
+            {ALLOWANCE_TEXT.description}
+          </Text>
           <ChoiceCards
             columns={2}
             minHeight={52}
@@ -284,7 +286,9 @@ export function SetupStep({
           </Field>
           <Field label={TEAM_HANDICAP_TEXT.legend}>
             {/* Forklaringen står under overskriften, før valget, som på nettet. */}
-            <Text style={ui.muted}>{TEAM_HANDICAP_TEXT.description}</Text>
+            <Text style={[styles.cardDescription, styles.descriptionAboveCards, { color: colors.muted }]}>
+              {TEAM_HANDICAP_TEXT.description}
+            </Text>
             <ChoiceCards
               columns={2}
               minHeight={52}
@@ -563,6 +567,8 @@ const styles = StyleSheet.create({
   cardLabel: { ...interLine(14, 17), fontFamily: FONTS.sansSemiBold },
   // Scoring-kortet: overskrift og forklaring i én gruppe, 13 pt med 18,85 i linjen, som artboardene.
   cardIntro: { gap: 2 },
+  // Forklaringen over kortene: 12 pt ned til dem (6 fra gruppa pluss 6 her), som `Nyttspill-5-avansert-a`.
+  descriptionAboveCards: { marginBottom: 6 },
   nestedField: { gap: 6, marginTop: 6 },
   nestedLabel: { marginTop: 0 },
   // Tallfeltet under valgkortene er 50 høyt på tegningen (`ui.input` er 44).

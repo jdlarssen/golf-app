@@ -24,7 +24,9 @@ import { fetchCourses, fetchRosterCandidates, publishGame } from '../data/create
 import { fetchClubOptions } from '../data/clubOptions';
 import { fetchFormatCatalog } from '../data/formatCatalog';
 import { fetchOwnProfile } from '../data/profile';
+import { ALLOWANCE_TEXT } from '../lib/allowanceCopy';
 import { describePendingOthers, PENDING_SELF_NOTE } from '../lib/createGameCopy';
+import { TEAM_HANDICAP_TEXT } from '../lib/formatSetupCopy';
 import type { ScreenProps } from '../navigation';
 import { SessionProvider } from '../session';
 import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
@@ -1170,9 +1172,9 @@ describe('summaryLines — kontingent og premiebord', () => {
 
   // #2880: tallfeltet under kortene er 50 høyt og etiketten har ingen egen toppluft (`Nyttspill-5-avansert-a`).
   it.each([
-    { slug: 'stableford', input: 'create-allowance', label: 'Handicap-andel (%)' },
-    { slug: 'texas_scramble', input: 'create-team-hcp', label: 'Prosent av lagets snitt-handicap' },
-  ])('#2880: $slug har tallfeltet 50 høyt og etiketten uten toppluft', async ({ slug, input, label }) => {
+    { slug: 'stableford', input: 'create-allowance', label: 'Handicap-andel (%)', descriptionText: ALLOWANCE_TEXT.description },
+    { slug: 'texas_scramble', input: 'create-team-hcp', label: 'Prosent av lagets snitt-handicap', descriptionText: TEAM_HANDICAP_TEXT.description },
+  ])('#2880: $slug har tallfeltet 50 høyt og etiketten uten toppluft', async ({ slug, input, label, descriptionText }) => {
     (fetchFormatCatalog as jest.Mock).mockResolvedValueOnce([
       { slug, label: slug, iconKey: slug, isPrimary: false, sortOrder: 10 },
     ]);
@@ -1183,6 +1185,9 @@ describe('summaryLines — kontingent og premiebord', () => {
     const labelText = screen.getAllByText(/./).find((n) => n.props.children === label);
     expect(labelText).toBeTruthy();
     expect(StyleSheet.flatten(labelText!.props.style).marginTop).toBe(0);
+    // Forklaringen over kortene: 13 pt med 18,85 i linjen og 12 pt ned til kortene.
+    const description = screen.getAllByText(/./).find((n) => n.props.children === descriptionText);
+    expect(StyleSheet.flatten(description!.props.style)).toMatchObject({ fontSize: 13, lineHeight: 18.85, marginBottom: 6 });
   });
 
   // #2880: Wolf og Skins, `Nyttspill-2-wolf` og `-skins`: ett kort med scoring, netto valgt fra start.
