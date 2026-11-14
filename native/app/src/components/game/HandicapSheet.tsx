@@ -12,8 +12,9 @@
 // lagre, men ikke mens lagringen pågår. Mens tastaturet er oppe for «Skriv inn
 // tallet», er linjalen skjult og «Lagre» står rett over tastaturet; lukkes
 // tastaturet, kommer linjalen tilbake på det siste gyldige tallet.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -97,6 +98,35 @@ export function HandicapSheet({
     if (!pending) onClose();
   };
 
+  // Dra ned i hodet (grep-streken og tittelen) lukker arket, som i Apples ark. Bare hodet
+  // lytter, så linjalens vannrette dra aldri kan lukke det.
+  const [drag] = useState(() => new Animated.Value(0));
+  const dragFrom = useRef<number | null>(null);
+  const dragged = useRef(0);
+  const dragHandlers = {
+    onTouchStart: (event: { nativeEvent: { pageY: number } }) => {
+      dragFrom.current = event.nativeEvent.pageY;
+      dragged.current = 0;
+    },
+    onTouchMove: (event: { nativeEvent: { pageY: number } }) => {
+      if (dragFrom.current === null) return;
+      dragged.current = Math.max(0, event.nativeEvent.pageY - dragFrom.current);
+      drag.setValue(dragged.current);
+    },
+    onTouchEnd: () => {
+      const far = dragged.current >= DRAG_CLOSE_PT;
+      dragFrom.current = null;
+      dragged.current = 0;
+      if (far && !pending) onClose();
+      Animated.spring(drag, { toValue: 0, useNativeDriver: true, bounciness: 0 }).start();
+    },
+    onTouchCancel: () => {
+      dragFrom.current = null;
+      dragged.current = 0;
+      Animated.spring(drag, { toValue: 0, useNativeDriver: true, bounciness: 0 }).start();
+    },
+  };
+
   const editField = (text: string) => {
     setRaw(text);
     setError(null);
@@ -137,12 +167,16 @@ export function HandicapSheet({
           testID="handicap-sheet-backdrop"
         />
         <KeyboardAvoidingView behavior="padding">
-          <View
-            style={[styles.sheet, { backgroundColor: colors.surface, paddingBottom: bottom }]}
+          <Animated.View
+            style={[
+              styles.sheet,
+              { backgroundColor: colors.surface, paddingBottom: bottom, transform: [{ translateY: drag }] },
+            ]}
             accessibilityViewIsModal
             onAccessibilityEscape={close}
             testID="handicap-sheet"
           >
+            <View style={styles.dragZone} testID="handicap-sheet-drag" {...dragHandlers}>
             <View style={[styles.grabber, { backgroundColor: sheetGrabber(scheme) }]} />
             <View style={styles.head}>
               <View style={styles.headText}>
@@ -162,6 +196,7 @@ export function HandicapSheet({
               >
                 <LukkIcon color={colors.text} size={20} strokeWidth={2} />
               </Pressable>
+            </View>
             </View>
 
             {typing ? (
@@ -252,7 +287,7 @@ export function HandicapSheet({
                 {HANDICAP_SHEET_TEXT.offline}
               </Text>
             ) : null}
-          </View>
+          </Animated.View>
         </KeyboardAvoidingView>
       </View>
     </Modal>
@@ -280,6 +315,9 @@ function Since({
   );
 }
 
+/** Hvor langt ned hodet må dras før arket lukkes. */
+export const DRAG_CLOSE_PT = 100;
+
 const TITLE = fraunces(500, 22, 27);
 const NUMBER = fraunces(600, 52, 52);
 
@@ -293,6 +331,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     gap: 14,
   },
+  dragZone: { gap: 14 },
   grabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3 },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   headText: { flexGrow: 1, flexShrink: 1, minWidth: 0 },

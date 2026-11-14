@@ -191,6 +191,58 @@ describe('arket', () => {
   });
 });
 
+describe('dra ned', () => {
+  async function dragHead(from: number, to: number) {
+    const head = screen.getByTestId('handicap-sheet-drag');
+    await fireEvent(head, 'touchStart', { nativeEvent: { pageY: from } });
+    await fireEvent(head, 'touchMove', { nativeEvent: { pageY: to } });
+    await fireEvent(head, 'touchEnd', { nativeEvent: { pageY: to } });
+  }
+
+  it('lukker arket uten å lagre når hodet dras langt nok ned', async () => {
+    const { onClose, onSave } = await renderSheet();
+
+    await dragHead(100, 100 + 120);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['for kort', 100, 160],
+    ['oppover', 100, 20],
+  ])('lukker ikke når draget er %s', async (_label, from, to) => {
+    const { onClose } = await renderSheet();
+
+    await dragHead(from, to);
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('lukker ikke mens lagringen pågår', async () => {
+    const { onClose } = await renderSheet(14.2, () => new Promise<ProfileSaveResult>(() => undefined));
+    await fireEvent.press(screen.getByRole('button', { name: 'Lagre 14,2' }));
+
+    await dragHead(100, 300);
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe('linjalen', () => {
+  it('får startposisjonen én gang, så en styrt contentOffset ikke hopper midt i en dra', async () => {
+    await renderSheet();
+    const scroll = () => screen.getByTestId('hcp-ruler-scroll', { includeHiddenElements: true });
+    const before = scroll().props.contentOffset;
+    // 14,2 ligger 222 trinn over −8: 222 × 12 pt.
+    expect(before).toEqual({ x: 222 * 12, y: 0 });
+
+    await act1('decrement', 4);
+
+    expect(scroll().props.contentOffset).toEqual(before);
+  });
+});
+
 describe('«Skriv inn tallet»', () => {
   async function openField(stored = 14.2) {
     const result = await renderSheet(stored);

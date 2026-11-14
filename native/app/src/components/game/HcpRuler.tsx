@@ -37,8 +37,8 @@ const HEIGHT = 64;
 /** Tideler per svg-bit: 100 = ti hele tall = 1200 pt. */
 const CHUNK_TENTHS = 100;
 const CHUNK_WIDTH = CHUNK_TENTHS * RULER_TICK_PT;
-/** Luft på hver side i en bit, så en strek på kanten ikke klippes. */
-const EDGE = RULER_TICK_PT / 2;
+/** Luft på hver side i en bit, så en strek eller en tosifret etikett på kanten ikke klippes. */
+const EDGE = RULER_TICK_PT;
 const SLACK = RULER_TICK_PT / 2 + 0.5;
 
 const mod = (n: number, m: number) => ((n % m) + m) % m;
@@ -64,7 +64,10 @@ export function HcpRuler({
   const window = useWindowDimensions();
   const [width, setWidth] = useState(window.width - 40);
   const scrollRef = useRef<ScrollView>(null);
-  const x = useRef(hcpToOffset(value, min));
+  // Startposisjonen leses én gang. Resten flyttes med `scrollTo` i effekten under: en styrt
+  // `contentOffset` ville lagt posisjonen inn i native midt i en dra eller et glid.
+  const [initialOffset] = useState(() => hcpToOffset(value, min));
+  const x = useRef(initialOffset);
   const latest = useRef(value);
 
   const pad = width / 2;
@@ -142,7 +145,7 @@ export function HcpRuler({
         showsHorizontalScrollIndicator={false}
         scrollEventThrottle={16}
         onScroll={onScroll}
-        contentOffset={{ x: hcpToOffset(value, min), y: 0 }}
+        contentOffset={{ x: initialOffset, y: 0 }}
         importantForAccessibility="no-hide-descendants"
         accessibilityElementsHidden
         testID="hcp-ruler-scroll"
@@ -151,7 +154,7 @@ export function HcpRuler({
           {chunks.map((chunk) => (
             <Svg
               key={chunk.key}
-              width={CHUNK_WIDTH}
+              width={CHUNK_WIDTH + 2 * EDGE}
               height={HEIGHT}
               style={{ position: 'absolute', top: 0, left: pad - EDGE + chunk.key * RULER_TICK_PT }}
             >
