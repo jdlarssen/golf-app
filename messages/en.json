@@ -358,8 +358,8 @@
     "friendsSublabel": "Add friends and see their games",
     "friendsBadgeSublabel": "{count, plural, one {1 person wants to be your friend} other {{count} people want to be your friends}}",
     "historikkRow": "My history",
-    "exportRow": "Export my data",
-    "exportSublabel": "Download everything we have stored about you as a JSON file. The data is yours to take with you.",
+    "dataRow": "Your data",
+    "dataRowSublabel": "What we store, and who can see it",
     "deleteRow": "Delete account",
     "logoutButton": "Log out",
     "logoutPending": "Logging out …",
@@ -557,6 +557,11 @@
       "processorsLine": "The services that process the data for us are listed in the privacy policy.",
       "exportRow": "Download your data",
       "exportSublabel": "Your profile, handicap history, games, strokes, reactions, invitations, friends, clubs, notifications, AI answer, cavalcade and ideas in one file."
+    },
+    "dataPage": {
+      "sectionYouDecide": "You decide",
+      "privacyRow": "Privacy policy",
+      "privacySublabel": "The whole text, in plain language"
     }
   },
   "friends": {
