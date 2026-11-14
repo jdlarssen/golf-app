@@ -79,8 +79,8 @@ export function TopplisteYou({ you }: { you: TopplisteYouModel }) {
       style={[styles.card, styles.youCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
       testID="toppliste-you"
     >
-      <View style={[styles.youAvatar, { backgroundColor: colors.youFill }]} accessibilityElementsHidden>
-        <Text style={[styles.youInitials, { color: colors.avatarInk }]}>{you.initials}</Text>
+      <View style={[styles.youAvatar, { backgroundColor: colors.primarySoft }]} accessibilityElementsHidden>
+        <Text style={[styles.youInitials, { color: colors.primary }]}>{you.initials}</Text>
       </View>
       <View style={styles.flex}>
         <Text numberOfLines={1} style={[styles.youTitle, { color: colors.text }]}>
