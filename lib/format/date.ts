@@ -56,6 +56,15 @@ export function formatShortDateNb(iso: string | Date): string {
 }
 
 /**
+ * "22. august" — dag + fullt månedsnavn, uten år (#2297: «Sist oppdatert
+ * 22. august» i handicaparket).
+ */
+export function formatLongDateNb(iso: string | Date): string {
+  const d = iso instanceof Date ? iso : new Date(iso);
+  return `${d.getDate()}. ${MONTH_NAMES_NB_LONG[d.getMonth()]}`;
+}
+
+/**
  * "14. mai 2026" — dag + forkortet måned + år.
  *
  * Brukes der året er meningsfullt (bane-listen, sletting-bekreftelse,

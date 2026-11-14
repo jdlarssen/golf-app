@@ -45,6 +45,7 @@ export const FRAUNCES_FILES = {
   Fraunces600O40: require('../assets/fonts/Fraunces600O40.ttf'),
   Fraunces600O44: require('../assets/fonts/Fraunces600O44.ttf'),
   Fraunces600O48: require('../assets/fonts/Fraunces600O48.ttf'),
+  Fraunces600O52: require('../assets/fonts/Fraunces600O52.ttf'),
   Fraunces600O64: require('../assets/fonts/Fraunces600O64.ttf'),
   FrauncesItalic500O14: require('../assets/fonts/FrauncesItalic500O14.ttf'),
   FrauncesItalic500O36: require('../assets/fonts/FrauncesItalic500O36.ttf'),

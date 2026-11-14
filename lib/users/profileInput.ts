@@ -32,6 +32,15 @@ import { toSignedHcp } from '@/lib/handicap/sign';
 export const HCP_MIN = -10;
 /** Øvre grense for hcp: WHS-taket. */
 export const HCP_MAX = 54;
+/**
+ * Hvor langt handicaplinjalen i appen går på plussiden (#2297): +8,0.
+ *
+ * Bevisst smalere enn {@link HCP_MIN}. Plusshandicap over +8 finnes nesten
+ * ikke, og hvert tidels steg gjør linjalen 12 pt lengre. Det er bare linjalens
+ * stopp: serveren validerer fortsatt mot `HCP_MIN`, og har noen lagret mer enn
+ * +8, går linjalen dit (`rulerMin` i `native/app/src/lib/hcpRuler.ts`).
+ */
+export const HCP_RULER_MIN = -8;
 export const GENDERS = ['mens', 'ladies'] as const;
 export const LEVELS = ['junior', 'normal', 'senior'] as const;
 export type Gender = (typeof GENDERS)[number];

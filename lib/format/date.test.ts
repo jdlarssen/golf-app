@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatShortDateNb, formatShortDateNbWithYear } from './date';
+import { formatLongDateNb, formatShortDateNb, formatShortDateNbWithYear } from './date';
 
 describe('formatShortDateNb', () => {
   it('renders day and short month without year', () => {
@@ -20,6 +20,14 @@ describe('formatShortDateNb', () => {
 
   it('accepts ISO string', () => {
     expect(formatShortDateNb('2026-05-14T12:00:00Z')).toMatch(/^(13|14)\. mai$/);
+  });
+});
+
+describe('formatLongDateNb', () => {
+  it('renders day and full month without year (#2297)', () => {
+    expect(formatLongDateNb(new Date(2026, 7, 22))).toBe('22. august');
+    expect(formatLongDateNb(new Date(2026, 4, 3))).toBe('3. mai');
+    expect(formatLongDateNb(new Date(2026, 11, 24))).toBe('24. desember');
   });
 });
 
