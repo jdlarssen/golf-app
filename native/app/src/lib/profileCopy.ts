@@ -322,7 +322,7 @@ export const DATA_TEXT = {
     },
     email: {
       title: 'E-postadressen',
-      body: 'Vi bruker den til innlogging og varsler. Andre spillere ser ikke hele adressen, bortsett fra den som inviterer deg.',
+      body: 'Vi bruker den til innlogging og varsler. Andre spillere ser ikke hele adressen, bortsett fra når du blir invitert.',
     },
     rounds: {
       title: 'Rundene og slagene dine',
