@@ -6,6 +6,7 @@
 // (✕, hinnen, tilbake, dra ned) lagrer ingenting.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { Keyboard } from 'react-native';
 import type { ProfileSaveResult } from '../../data/profile';
 import { HandicapSheet } from './HandicapSheet';
 
@@ -186,5 +187,79 @@ describe('HandicapSheet', () => {
     expect(onCancel).not.toHaveBeenCalled();
     await drag(400, 520);
     expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('HandicapSheet — tilbake fra feltet (iPhone har ingen Ferdig-tast)', () => {
+  type Listener = () => void;
+  let listeners: Record<string, Listener[]>;
+  let dismiss: jest.SpyInstance;
+  let addListener: jest.SpyInstance;
+
+  beforeEach(() => {
+    listeners = {};
+    addListener = jest.spyOn(Keyboard, 'addListener').mockImplementation(((event: string, cb: Listener) => {
+      (listeners[event] ??= []).push(cb);
+      return { remove: () => (listeners[event] = (listeners[event] ?? []).filter((x) => x !== cb)) };
+    }) as never);
+    dismiss = jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    addListener.mockRestore();
+    dismiss.mockRestore();
+  });
+
+  const keyboardHides = () => act(async () => (listeners.keyboardDidHide ?? []).forEach((cb) => cb()));
+
+  it('et trykk på arket utenfor feltet lukker tastaturet, og linjalen kommer tilbake på det skrevne tallet', async () => {
+    await renderSheet();
+    const sheet = screen.getByTestId('hcp-sheet-body');
+    // Uten feltet tar arket ingen trykk: linjalen og knappene får sine.
+    expect(sheet.props.onStartShouldSetResponder()).toBe(false);
+    await fireEvent.press(screen.getByText('Skriv inn tallet'));
+    await fireEvent.changeText(screen.getByTestId('hcp-sheet-field'), '13,8');
+    expect(screen.getByTestId('hcp-sheet-body').props.onStartShouldSetResponder()).toBe(true);
+    await fireEvent(screen.getByTestId('hcp-sheet-body'), 'responderRelease');
+    expect(dismiss).toHaveBeenCalledTimes(1);
+    // Tastaturet går ned (iOS etter dismiss, Android med tilbake uten blur).
+    await keyboardHides();
+    expect(screen.queryByTestId('hcp-sheet-field')).toBeNull();
+    expect(screen.getByTestId('hcp-ruler')).toBeTruthy();
+    expect(screen.getByTestId('hcp-sheet-number')).toHaveTextContent('13,8');
+    expect(save()).toHaveTextContent('Lagre 13,8');
+  });
+
+  it('går tastaturet ned med et ugyldig felt, står linjalen på siste gyldige tall', async () => {
+    await renderSheet();
+    await fireEvent.press(screen.getByText('Skriv inn tallet'));
+    await fireEvent.changeText(screen.getByTestId('hcp-sheet-field'), '60');
+    await keyboardHides();
+    expect(screen.getByTestId('hcp-sheet-number')).toHaveTextContent('14,2');
+  });
+
+  it('et tomt felt viser ingen «fra sist»', async () => {
+    await renderSheet();
+    await step('decrement', 4);
+    await fireEvent.press(screen.getByText('Skriv inn tallet'));
+    expect(screen.getByTestId('hcp-sheet-from-last')).toHaveTextContent('0,4 fra sist');
+    await fireEvent.changeText(screen.getByTestId('hcp-sheet-field'), '');
+    expect(screen.queryByTestId('hcp-sheet-from-last')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(save()).toBeDisabled();
+  });
+});
+
+describe('HandicapSheet — linjalen står stille mens lagringen pågår', () => {
+  it('verken dra eller skjermleseren flytter tallet som lagres', async () => {
+    const { onSave } = await renderSheet({ result: new Promise<ProfileSaveResult>(() => undefined) });
+    await fireEvent(screen.getByTestId('hcp-ruler'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 0, width: 350, height: 64 } },
+    });
+    await step('decrement', 4);
+    await fireEvent.press(save());
+    expect(onSave).toHaveBeenCalledWith(13.8);
+    expect(screen.getByTestId('hcp-ruler-scroll', { includeHiddenElements: true }).props.scrollEnabled).toBe(false);
+    await step('decrement', 2);
+    expect(screen.getByTestId('hcp-sheet-number')).toHaveTextContent('13,8');
   });
 });
