@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { nameInitials } from '../../../../../lib/names/initials';
 import { FRIENDS_TEXT, friendStatusLine } from '../../lib/friendsCopy';
 import { FONTS, fraunces, sheetGrabber, sheetScrim, TAP, useTheme } from '../../theme';
-import { HakeIcon } from '../icons/Icons';
+import { BetaltHakeIcon } from '../icons/Icons';
 
 export type AvatarTone = 'strong' | 'soft' | 'warm';
 
@@ -164,7 +164,7 @@ function SheetBottomView({ bottom, personId }: { bottom: SheetBottom; personId: 
     case 'sent':
       return (
         <View style={styles.sent} testID="friend-sheet-sent">
-          <HakeIcon size={18} color={colors.successText} />
+          <BetaltHakeIcon size={18} color={colors.successText} />
           <Text style={[styles.sentText, { color: colors.successText }]}>
             {friendStatusLine('requested')?.text}
           </Text>
@@ -366,6 +366,6 @@ const styles = StyleSheet.create({
   errorLine: { fontSize: 15, lineHeight: 20, fontFamily: FONTS.sans, paddingHorizontal: 4 },
   bottomSlot: { minHeight: 48, alignItems: 'center', justifyContent: 'center' },
   // «Venneforespørsel sendt.» står der knappen var: 48 høy, midtstilt.
-  sent: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  sentText: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
+  sent: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  sentText: { fontSize: 15, lineHeight: 19, fontFamily: FONTS.sansSemiBold },
 });
