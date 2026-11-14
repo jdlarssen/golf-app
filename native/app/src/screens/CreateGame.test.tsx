@@ -1145,9 +1145,27 @@ describe('summaryLines — kontingent og premiebord', () => {
     await fireEvent.press(screen.getByTestId('create-publish'));
 
     const [draft] = publishGameMock.mock.calls.at(-1)!;
-    const sent = field === 'hcpAllowancePct' ? draft.hcpAllowancePct : draft.setup[field as 'teamHandicapSumPct'];
+    const sent = field === 'hcpAllowancePct' ? draft.hcpAllowancePct : draft.setup?.[field as 'teamHandicapSumPct'];
     expect(sent).toBe(expected);
     publishGameMock.mockClear();
+  });
+
+  // #2880: handicap-andelen og lag-handicap står som valgkort med netto valgt fra start.
+  it.each([
+    { slug: 'stableford', net: 'create-allowance-netto', gross: 'create-allowance-brutto' },
+    { slug: 'texas_scramble', net: 'create-team-hcp-netto', gross: 'create-team-hcp-brutto' },
+  ])('#2880: $slug viser netto/brutto som valgkort', async ({ slug, net, gross }) => {
+    (fetchFormatCatalog as jest.Mock).mockResolvedValueOnce([
+      { slug, label: slug, iconKey: slug, isPrimary: false, sortOrder: 10 },
+    ]);
+    await renderWizard();
+    await fireEvent.press(await screen.findByTestId(`create-format-${slug}`));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    expect(screen.getByTestId(net).props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId(gross).props.accessibilityState).toMatchObject({ selected: false });
+    await fireEvent.press(screen.getByTestId(gross));
+    expect(screen.getByTestId(gross).props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId(net).props.accessibilityState).toMatchObject({ selected: false });
   });
 
   // #2880: Wolf og Skins, `Nyttspill-2-wolf` og `-skins`: ett kort med scoring, netto valgt fra start.
