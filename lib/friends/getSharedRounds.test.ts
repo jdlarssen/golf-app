@@ -118,7 +118,7 @@ beforeEach(() => {
     // Not counted: you withdrew.
     ...pair(game('g5', { ended_at: '2026-07-02T12:00:00Z' }), { withdrawn_at: '2026-07-02T09:00:00Z' }, {}),
     // Not counted: not finished.
-    ...pair(game('g6', { status: 'in_progress' }), {}, {}),
+    ...pair(game('g6', { status: 'active' }), {}, {}),
     // Not counted: a derived cup single.
     ...pair(game('g7', { source_game_id: 'cup-1' }), {}, {}),
     // Not counted: Kari was not in it.
