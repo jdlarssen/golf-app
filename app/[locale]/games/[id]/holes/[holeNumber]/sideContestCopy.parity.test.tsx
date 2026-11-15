@@ -42,10 +42,18 @@ import { useSideContestText } from './sideContestText';
 // Each check maps the cases through the web and compares with the fixture, so a failure
 // prints the whole case (inputs and expected text), not only the string.
 
+// A PascalCase hook owner, so i18n/serverHelperHooks.test.ts reads the hook calls as
+// rendered (they are: renderHook runs them in a component).
+function HoleWording() {
+  return {
+    text: useSideContestText(),
+    t: useTranslations('holes.sideContest'),
+    g: useTranslations('holes.girContest'),
+  };
+}
+
 describe('the hole page’s side-contest wording is the fixture’s', () => {
-  const text = renderHook(() => useSideContestText()).result.current;
-  const t = renderHook(() => useTranslations('holes.sideContest')).result.current;
-  const g = renderHook(() => useTranslations('holes.girContest')).result.current;
+  const { text, t, g } = renderHook(() => HoleWording()).result.current;
 
   it('the fixed strings', () => {
     // The web's counterpart of every key in the fixture. A new key there has no entry here
