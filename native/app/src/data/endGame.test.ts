@@ -868,3 +868,64 @@ describe('finishRound', () => {
     });
   });
 });
+
+describe('#2283: fetchSideClaimsForFinish', () => {
+  beforeEach(() => {
+    jest.resetModules();
+  });
+
+  it('leser rpc-en og gir fornavnet etter den delte navneregelen', async () => {
+    const { supabase } = mocks();
+    const returns = jest.fn().mockResolvedValue({
+      data: [
+        {
+          category: 'closest_to_pin',
+          hole_number: 7,
+          flight_number: 2,
+          winner_user_id: 'kristian',
+          winner_name: 'Kristian Holm',
+          winner_nickname: null,
+          distance_m: '1.8',
+        },
+        {
+          category: 'longest_drive',
+          hole_number: 9,
+          flight_number: 1,
+          winner_user_id: null,
+          winner_name: null,
+          winner_nickname: null,
+          distance_m: null,
+        },
+      ],
+      error: null,
+    });
+    supabase.rpc.mockReturnValue({ returns });
+    await expect(endGame().fetchSideClaimsForFinish(GAME)).resolves.toEqual([
+      {
+        category: 'closest_to_pin',
+        holeNumber: 7,
+        flightNumber: 2,
+        winnerUserId: 'kristian',
+        winnerFirstName: 'Kristian',
+        distanceM: 1.8,
+      },
+      {
+        category: 'longest_drive',
+        holeNumber: 9,
+        flightNumber: 1,
+        winnerUserId: null,
+        winnerFirstName: null,
+        distanceM: null,
+      },
+    ]);
+    expect(supabase.rpc).toHaveBeenCalledWith('side_claims_for_finish', { p_game_id: GAME });
+  });
+
+  it('kaster ved feil, så boksen sier fra i stedet for å vise ingenting', async () => {
+    const { supabase } = mocks();
+    supabase.rpc.mockReturnValue({
+      returns: jest.fn().mockResolvedValue({ data: null, error: { message: 'bare arrangøren' } }),
+    });
+    await expect(endGame().fetchSideClaimsForFinish(GAME)).rejects.toThrow('fetchSideClaimsForFinish');
+  });
+});

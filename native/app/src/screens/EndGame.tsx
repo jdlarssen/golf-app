@@ -61,7 +61,7 @@ import { ChevronIcon, HakeIcon, LaasIcon } from '../components/icons/Icons';
 import { kickerHeader } from '../components/KickerHeader';
 import { PageTitle } from '../components/PageTitle';
 import { TeeShotOrganizerNoticeLive } from '../components/TeeShotOrganizerNotice';
-import { finishCupRound, finishRound } from '../data/endGame';
+import { fetchSideClaimsForFinish, finishCupRound, finishRound, type FinishClaim } from '../data/endGame';
 import type { BundlePlayer } from '../data/gameBundle';
 import { approveScorecard } from '../data/playerActions';
 import { fetchOwnProfile } from '../data/profile';
@@ -96,6 +96,7 @@ import {
   resultLine,
   slotLabel,
   slotRowLabel,
+  slotRowTitle,
   titleSubtitle,
   unremindableNotes,
 } from '../lib/endGameCopy';
@@ -103,10 +104,13 @@ import {
   activeChoices,
   buildFinishPlan,
   canFinish,
+  claimFlights,
   confirmSummary,
   deliveryCounts,
   finishBlockers,
+  reportsForSlot,
   returnsToList,
+  sideSlots,
   toSideWinners,
   winnerCandidates,
   withdrawUserIds,
@@ -159,6 +163,11 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
   const [expanded, setExpanded] = useState(false);
   const [sheetSlot, setSheetSlot] = useState<FinishSlot | null>(null);
   const isAdmin = useIsAdmin(userId);
+  // #2283: det flightene har meldt inn, bare når en plass har hull.
+  const finishClaims = useFinishClaims(
+    gameId,
+    bundle != null && sideSlots(bundle.game).some((slot) => slot.hole !== null),
+  );
 
   const game = bundle?.game ?? null;
   const gameActive = game !== null && game.status === 'active';
@@ -817,11 +826,13 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
                     onPress={() => {
                       setNotice(null);
                       setSheetSlot(slot);
+                      // Hent på nytt: en flight kan ha meldt inn siden skjermen åpnet.
+                      if (slot.hole !== null) finishClaims.reload();
                     }}
                   >
                     <View style={styles.grow}>
                       <Text style={[styles.slotLabel, { color: colors.muted }]}>
-                        {slotLabel(slot)}
+                        {slotRowTitle(slot)}
                       </Text>
                       {winner ? (
                         <Text style={[styles.slotWinner, { color: colors.text }]}>{winner}</Text>
@@ -843,6 +854,13 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
         candidates={candidates}
         choices={liveChoices}
         withdrawalSupported={plan.withdrawalSupported}
+        reports={
+          sheetSlot === null || finishClaims.claims === null
+            ? null
+            : finishClaims.claims === 'failed'
+              ? 'failed'
+              : reportsForSlot(sheetSlot, finishClaims.claims, claimFlights(bundle.game.gameMode, bundle.players))
+        }
         onPick={(value) => {
           if (sheetSlot) setChoices((prev) => ({ ...prev, [sheetSlot.key]: value }));
         }}
@@ -850,6 +868,40 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
       />
     </View>
   );
+}
+
+/**
+ * #2283: flightenes innmeldinger til kåringsarket (`side_claims_for_finish`).
+ * Henter når skjermen åpnes og igjen når arket åpnes. En feilet henting lar
+ * forrige svar stå; har ingen lyktes, sier boksen fra (`'failed'`). `null` =
+ * ikke hentet ennå, eller spillet har ingen plass med hull.
+ */
+function useFinishClaims(
+  gameId: string,
+  needed: boolean,
+): { claims: FinishClaim[] | 'failed' | null; reload: () => void } {
+  const [claims, setClaims] = useState<FinishClaim[] | 'failed' | null>(null);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+  const reload = useCallback(() => {
+    if (!needed) return;
+    fetchSideClaimsForFinish(gameId)
+      .then((rows) => {
+        if (alive.current) setClaims(rows);
+      })
+      .catch(() => {
+        if (alive.current) setClaims((prev) => (prev === null ? 'failed' : prev));
+      });
+  }, [gameId, needed]);
+  useEffect(() => {
+    reload();
+  }, [reload]);
+  return { claims, reload };
 }
 
 /**

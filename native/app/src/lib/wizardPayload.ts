@@ -145,6 +145,12 @@ export interface GameDraft {
   sideLdCount?: 0 | 1 | 2;
   /** Antall closest-to-pin-HULL, 0–2. */
   sideCtpCount?: 0 | 1 | 2;
+  /**
+   * #2283: hullet for hver plass, `null` = ikke valgt. Bare plassene opp til
+   * antallet sendes, som `side_ld_hole_N`/`side_ctp_hole_N` i nettets skjema.
+   */
+  sideLdHoles?: readonly (number | null)[];
+  sideCtpHoles?: readonly (number | null)[];
   players: DraftPlayer[];
   setup?: ModeSetup;
   /** #2749: startkontingent i hele kroner per spiller. 0 eller tom = ingen. */
@@ -242,6 +248,24 @@ interface PlayerSlot {
   userId: string;
   team: number | null;
   flight: number | null;
+}
+
+/**
+ * #2283: hullene for én kategori etter at plass `position` (1-basert) har fått
+ * `hole`. To plasser i samme kategori kan ikke stå på samme hull (den delte
+ * parseren nekter det, siden flighten melder inn per hull), så har den andre
+ * plassen hullet, mister den det.
+ */
+export function withSlotHole(
+  holes: readonly (number | null)[],
+  position: number,
+  hole: number | null,
+): (number | null)[] {
+  const next = [...holes];
+  while (next.length < position) next.push(null);
+  for (let i = 0; i < next.length; i += 1) if (hole !== null && next[i] === hole) next[i] = null;
+  next[position - 1] = hole;
+  return next;
 }
 
 /**
@@ -394,6 +418,15 @@ export function draftToFormData(draft: GameDraft): WizardFormData {
   form.set('side_tournament_enabled', sideEnabled ? 'true' : 'false');
   form.set('side_ld_count', sideEnabled ? (draft.sideLdCount ?? 0) : 0);
   form.set('side_ctp_count', sideEnabled ? (draft.sideCtpCount ?? 0) : 0);
+  // #2283: hullet for hver plass. Et tomt felt er en plass uten hull.
+  if (sideEnabled) {
+    for (let pos = 1; pos <= (draft.sideLdCount ?? 0); pos += 1) {
+      form.set(`side_ld_hole_${pos}`, draft.sideLdHoles?.[pos - 1] ?? '');
+    }
+    for (let pos = 1; pos <= (draft.sideCtpCount ?? 0); pos += 1) {
+      form.set(`side_ctp_hole_${pos}`, draft.sideCtpHoles?.[pos - 1] ?? '');
+    }
+  }
 
   // Modus-oppsett. Feltene skrives kun når de er satt, så en modus som ikke
   // bruker dem ser en tom form akkurat som på web.

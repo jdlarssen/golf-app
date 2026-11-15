@@ -389,7 +389,43 @@ describe('publishGame', () => {
         side_ld_count: 1,
         side_ctp_count: 2,
         side_disabled_categories: [],
+        // Uten valgte hull: kolonnene står tomme, som før #2283.
+        side_ld_holes: null,
+        side_ctp_holes: null,
       });
+    });
+
+    it('#2283: skriver hullet for hver plass, med null for en plass uten hull', async () => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const gameInsert = queryStub(GAME_ROW);
+      routeFrom({
+        formats: [queryStub(ACTIVE_FORMAT)],
+        games: [gameInsert],
+        game_players: [queryStub(PLAYER_ROWS)],
+      });
+
+      await publish(
+        draft({
+          sideTournamentEnabled: true,
+          sideLdCount: 1,
+          sideCtpCount: 2,
+          sideLdHoles: [9],
+          sideCtpHoles: [null, 7],
+        }),
+      );
+
+      expect(stepArgs(gameInsert, 'insert')[0]![0]).toMatchObject({
+        side_ld_holes: [9],
+        side_ctp_holes: [null, 7],
+      });
+    });
+
+    it('#2283: to plasser på samme hull nektes før noe skrives', async () => {
+      const { routeFrom, queryStub } = mocks();
+      routeFrom({ formats: [queryStub(ACTIVE_FORMAT)] });
+      expect(
+        await publish(draft({ sideTournamentEnabled: true, sideCtpCount: 2, sideCtpHoles: [7, 7] })),
+      ).toEqual({ ok: false, error: 'bad_side_ctp_holes' });
     });
   });
 

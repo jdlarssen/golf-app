@@ -205,6 +205,8 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
     sideTournamentEnabled: false,
     sideLdCount: 0,
     sideCtpCount: 0,
+    sideLdHoles: [],
+    sideCtpHoles: [],
   });
   const [setup, setSetup] = useState<ModeSetup>({});
   const [setupText, setSetupText] = useState<SetupText>({
@@ -490,6 +492,8 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
       sideTournamentEnabled: common.sideTournamentEnabled,
       sideLdCount: common.sideLdCount,
       sideCtpCount: common.sideCtpCount,
+      sideLdHoles: common.sideLdHoles,
+      sideCtpHoles: common.sideCtpHoles,
       players,
       setup: resolvedSetup,
       entryFeeKr: fee.entryFee === '' ? 0 : Number(fee.entryFee),

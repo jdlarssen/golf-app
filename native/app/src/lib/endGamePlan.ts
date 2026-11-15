@@ -19,7 +19,9 @@ import {
   type GameMode,
 } from '../../../../lib/scoring/modes/types';
 import { splitFinishRoster } from '../../../../lib/games/finishGate';
-import type { EndRoundFailure } from '../data/endGame';
+import { isSingleFlightGame } from '../../../../lib/games/flightScope';
+import { holeForSlot, sortClaimsForHole } from '../../../../lib/games/sideContest';
+import type { EndRoundFailure, FinishClaim } from '../data/endGame';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import type { SideWinnerRow } from '../data/sideWinners';
 
@@ -37,6 +39,8 @@ export interface FinishSlot {
   key: string;
   category: SideWinnerRow['category'];
   position: number;
+  /** #2283: hullet plassen spilles på, eller `null` når arrangøren ikke valgte. */
+  hole: number | null;
 }
 
 /** Én spiller uten levert kort, og hva appen faktisk kan gjøre med raden. */
@@ -87,12 +91,79 @@ export function sideSlots(game: BundleGame): FinishSlot[] {
   if (!game.sideTournamentEnabled) return [];
   const slots: FinishSlot[] = [];
   for (let pos = 1; pos <= game.sideLdCount; pos += 1) {
-    slots.push({ key: `ld-${pos}`, category: 'longest_drive', position: pos });
+    slots.push({
+      key: `ld-${pos}`,
+      category: 'longest_drive',
+      position: pos,
+      hole: holeForSlot(game.sideLdHoles, game.sideLdCount, pos),
+    });
   }
   for (let pos = 1; pos <= game.sideCtpCount; pos += 1) {
-    slots.push({ key: `ctp-${pos}`, category: 'closest_to_pin', position: pos });
+    slots.push({
+      key: `ctp-${pos}`,
+      category: 'closest_to_pin',
+      position: pos,
+      hole: holeForSlot(game.sideCtpHoles, game.sideCtpCount, pos),
+    });
   }
   return slots;
+}
+
+/**
+ * #2283: flightene som kan melde inn, som nøklene `side_claim_flight_key` gir:
+ * `[0]` i et spill med én flight (Wolf, eller høyst fire aktive), ellers de
+ * aktive spillernes flightnumre. En spiller uten flight i et større spill kan
+ * ikke melde inn og regnes ikke med.
+ */
+export function claimFlights(gameMode: string, players: readonly BundlePlayer[]): number[] {
+  const flightPlayers = players.map((p) => ({
+    user_id: p.userId,
+    flight_number: p.flightNumber,
+    withdrawn_at: p.withdrawnAt,
+  }));
+  if (isSingleFlightGame(gameMode as GameMode, flightPlayers)) return [0];
+  const flights = new Set<number>();
+  for (const p of players) if (p.withdrawnAt == null && p.flightNumber != null) flights.add(p.flightNumber);
+  return [...flights].sort((a, b) => a - b);
+}
+
+/** Én flights svar i kåringsarket. `name: null` = «Ingen på green/fairway». */
+export interface ReportedLine {
+  flightNumber: number;
+  name: string | null;
+  distanceM: number | null;
+}
+
+export interface SlotReports {
+  hole: number;
+  /** Korteste avstand først, svar uten avstand sist (`sortClaimsForHole`). */
+  lines: ReportedLine[];
+  /** Flightene som ikke har meldt inn på hullet. */
+  missingFlights: number[];
+}
+
+/**
+ * Det flightene har meldt inn for en plass, eller `null` når plassen ikke har
+ * hull (da er kåringen som før). Innmeldingene er nøklet på kategori og hull,
+ * ikke på plass.
+ */
+export function reportsForSlot(
+  slot: FinishSlot,
+  claims: readonly FinishClaim[],
+  flights: readonly number[],
+): SlotReports | null {
+  if (slot.hole === null) return null;
+  const forHole = claims.filter((c) => c.category === slot.category && c.holeNumber === slot.hole);
+  const reported = new Set(forHole.map((c) => c.flightNumber));
+  return {
+    hole: slot.hole,
+    lines: sortClaimsForHole(forHole).map((c) => ({
+      flightNumber: c.flightNumber,
+      name: c.winnerUserId === null ? null : (c.winnerFirstName ?? ''),
+      distanceM: c.distanceM,
+    })),
+    missingFlights: flights.filter((f) => !reported.has(f)),
+  };
 }
 
 /**

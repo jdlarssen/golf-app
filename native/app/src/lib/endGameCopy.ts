@@ -120,6 +120,48 @@ export function slotLabel(slot: FinishSlot): string {
   return fillCopy(SLOT_LABELS[slot.category], { pos: slot.position });
 }
 
+/** #2283: «Nærmest pinnen #1 · hull 7» på raden; uten hull som før. */
+export function slotRowTitle(slot: FinishSlot): string {
+  return slot.hole === null ? slotLabel(slot) : `${slotLabel(slot)} · hull ${slot.hole}`;
+}
+
+/** #2283: kickeren i arket, «Kår vinneren · hull 7». Uten hull som før. */
+export function sheetKickerFor(slot: FinishSlot): string {
+  return slot.hole === null ? END_GAME_TEXT.sheetKicker : `${END_GAME_TEXT.sheetKicker} · hull ${slot.hole}`;
+}
+
+/** #2283: boksen «Meldt inn fra flightene» i kåringsarket (`Sidekonk-kaaring` V1). */
+export const REPORTED_TEXT = {
+  heading: 'Meldt inn fra flightene',
+  readFailed: 'Fikk ikke hentet det flightene har meldt inn.',
+} as const;
+
+/** «Flight 2», eller «Flighten» i et spill med én flight. */
+export function reportedFlight(flightNumber: number): string {
+  return flightNumber === 0 ? 'Flighten' : `Flight ${flightNumber}`;
+}
+
+/** «Flight 2 har ikke meldt inn». */
+export function reportedMissing(flightNumber: number): string {
+  return `${reportedFlight(flightNumber)} har ikke meldt inn`;
+}
+
+/** «Ingen flight har meldt inn på hull 7.» */
+export function reportedNone(hole: number): string {
+  return `Ingen flight har meldt inn på hull ${hole}.`;
+}
+
+/** Navnet på linja: fornavnet, eller «Ingen på green»/«Ingen på fairway». */
+export function reportedName(category: FinishSlot['category'], name: string | null): string {
+  if (name !== null) return name;
+  return category === 'closest_to_pin' ? 'Ingen på green' : 'Ingen på fairway';
+}
+
+/** «1,8 m». */
+export function reportedDistance(distanceM: number): string {
+  return `${distanceM.toFixed(1).replace('.', ',')} m`;
+}
+
 /** Tekstene skjermen viser. Samlet her, ikke strødd i JSX-en. */
 export const END_GAME_TEXT = {
   heading: 'Avslutt runden',

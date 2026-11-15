@@ -4,7 +4,7 @@
 // Type A — ren logikk, ingen render, ingen nett. Skjermen har én render-test
 // (`screens/EndGame.test.tsx`) som beviser koblingen; tallene og grenene her
 // gjentas ikke der.
-import type { EndRoundFailure } from '../data/endGame';
+import type { EndRoundFailure, FinishClaim } from '../data/endGame';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import {
   activeChoices,
@@ -14,6 +14,8 @@ import {
   deliveryCounts,
   finishBlockers,
   returnsToList,
+  claimFlights,
+  reportsForSlot,
   sideSlots,
   toSideWinners,
   winnerCandidates,
@@ -95,6 +97,25 @@ const APPROVED = '2026-09-01T09:30:00.000Z';
 // `needsPeerApproval` er testet i `lib/games/finishGate.test.ts` (#2222).
 
 describe('sideSlots', () => {
+  it('#2283: plassen får hullet arrangøren valgte, og en plass over antallet får ingen', () => {
+    const slots = sideSlots(
+      game({
+        sideTournamentEnabled: true,
+        sideLdCount: 1,
+        sideCtpCount: 2,
+        sideLdHoles: [9, 12],
+        sideCtpHoles: [7, null],
+      }),
+    );
+    expect(slots.map((s) => [s.key, s.hole])).toEqual([
+      ['ld-1', 9],
+      ['ctp-1', 7],
+      ['ctp-2', null],
+    ]);
+    // En eldre bufret bundle uten feltene: ingen hull, som før.
+    expect(sideSlots(game({ sideTournamentEnabled: true, sideCtpCount: 1 }))[0].hole).toBeNull();
+  });
+
   it('gir ingen slots når sideturneringen er av — også med tellere satt', () => {
     expect(
       sideSlots(game({ sideTournamentEnabled: false, sideLdCount: 2 })),
@@ -107,9 +128,9 @@ describe('sideSlots', () => {
         game({ sideTournamentEnabled: true, sideLdCount: 2, sideCtpCount: 1 }),
       ),
     ).toEqual([
-      { key: 'ld-1', category: 'longest_drive', position: 1 },
-      { key: 'ld-2', category: 'longest_drive', position: 2 },
-      { key: 'ctp-1', category: 'closest_to_pin', position: 1 },
+      { key: 'ld-1', category: 'longest_drive', position: 1, hole: null },
+      { key: 'ld-2', category: 'longest_drive', position: 2, hole: null },
+      { key: 'ctp-1', category: 'closest_to_pin', position: 1, hole: null },
     ]);
   });
 
@@ -505,4 +526,52 @@ describe('returnsToList', () => {
       expect(returnsToList(reason)).toBe(expected);
     },
   );
+});
+
+describe('#2283: det flightene har meldt inn', () => {
+  const claim = (over: Partial<FinishClaim>): FinishClaim => ({
+    category: 'closest_to_pin',
+    holeNumber: 7,
+    flightNumber: 1,
+    winnerUserId: 'marte',
+    winnerFirstName: 'Marte',
+    distanceM: null,
+    ...over,
+  });
+  const ctp = { key: 'ctp-1', category: 'closest_to_pin', position: 1, hole: 7 } as const;
+
+  it('flightene er nøklene rpc-ene bruker: [0] med én flight, ellers de aktives flightnumre', () => {
+    const four = [1, 2, 3, 4].map((n) => player({ userId: `p${n}`, flightNumber: n % 2 }));
+    expect(claimFlights('stableford', four)).toEqual([0]);
+    const eight = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => player({ userId: `p${n}`, flightNumber: n <= 4 ? 1 : 2 }));
+    expect(claimFlights('stableford', eight)).toEqual([1, 2]);
+    expect(claimFlights('wolf', eight)).toEqual([0]);
+    // En trukket spiller teller ikke, og en uten flight kan ikke melde inn.
+    const odd = [...eight, player({ userId: 'x', flightNumber: 3, withdrawnAt: '2026-11-15' }), player({ userId: 'y' })];
+    expect(claimFlights('stableford', odd)).toEqual([1, 2]);
+  });
+
+  it('kortest avstand først, svar uten avstand sist, og flighter som mangler', () => {
+    const claims = [
+      claim({ flightNumber: 1, winnerFirstName: 'Marte', distanceM: 2.4 }),
+      claim({ flightNumber: 2, winnerUserId: 'kristian', winnerFirstName: 'Kristian', distanceM: 1.8 }),
+      claim({ flightNumber: 3, winnerUserId: null, winnerFirstName: null }),
+      claim({ category: 'longest_drive', flightNumber: 4 }),
+      claim({ holeNumber: 8, flightNumber: 4 }),
+    ];
+    expect(reportsForSlot(ctp, claims, [1, 2, 3, 4])).toEqual({
+      hole: 7,
+      lines: [
+        { flightNumber: 2, name: 'Kristian', distanceM: 1.8 },
+        { flightNumber: 1, name: 'Marte', distanceM: 2.4 },
+        { flightNumber: 3, name: null, distanceM: null },
+      ],
+      missingFlights: [4],
+    });
+  });
+
+  it('en plass uten hull har ingen innmeldinger, og ingen innmelding gir tom liste', () => {
+    expect(reportsForSlot({ ...ctp, hole: null }, [claim({})], [1])).toBeNull();
+    expect(reportsForSlot(ctp, [], [1, 2])).toEqual({ hole: 7, lines: [], missingFlights: [1, 2] });
+  });
 });

@@ -120,6 +120,8 @@ jest.mock('../supabase', () => require('../test/supabaseMock'));
 jest.mock('../data/endGame', () => ({
   finishRound: jest.fn(async () => ({ ok: true, alreadyFinished: false })),
   finishCupRound: jest.fn(async () => ({ ok: true, alreadyFinished: false })),
+  // #2283: ingen flight har meldt inn, med mindre testen sier noe annet.
+  fetchSideClaimsForFinish: jest.fn(async () => []),
 }));
 jest.mock('../data/gameBundle', () => ({
   loadGameBundle: jest.fn(async () => mockBundle),
@@ -255,6 +257,50 @@ describe('EndGame', () => {
     jest.clearAllMocks();
     landed.length = 0;
     mockFocus.all.clear();
+  });
+
+  it('#2283: plassen viser hullet, og arket det flightene har meldt inn, uten forhåndsvalg', async () => {
+    const { fetchSideClaimsForFinish } = require('../data/endGame') as { fetchSideClaimsForFinish: jest.Mock };
+    fetchSideClaimsForFinish.mockResolvedValue([
+      { category: 'closest_to_pin', holeNumber: 7, flightNumber: 1, winnerUserId: MATE, winnerFirstName: 'Marte', distanceM: 2.4 },
+      { category: 'closest_to_pin', holeNumber: 7, flightNumber: 2, winnerUserId: 'k', winnerFirstName: 'Kristian', distanceM: 1.8 },
+      { category: 'longest_drive', holeNumber: 9, flightNumber: 1, winnerUserId: mockMe, winnerFirstName: 'Meg', distanceM: null },
+    ]);
+    const eight = [mockMe, MATE, 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'].map((userId, i) =>
+      player({ userId, flightNumber: i < 4 ? 1 : 2, submittedAt: '2026-09-01T09:00:00.000Z' }),
+    );
+    setBundle(eight, {
+      sideTournamentEnabled: true,
+      sideLdCount: 1,
+      sideCtpCount: 2,
+      sideLdHoles: [9],
+      sideCtpHoles: [7, null],
+    });
+    await renderScreen();
+
+    expect(screen.getByTestId('end-game-slot-ld-1')).toHaveTextContent('Lengste drive #1 · hull 9', { exact: false });
+    expect(screen.getByTestId('end-game-slot-ctp-1')).toHaveTextContent('Nærmest pinnen #1 · hull 7', { exact: false });
+    expect(screen.getByTestId('end-game-slot-ctp-2')).toHaveTextContent('Nærmest pinnen #2', { exact: false });
+
+    await fireEvent.press(screen.getByTestId('end-game-slot-ctp-1'));
+    expect(screen.getByText('Kår vinneren · hull 7')).toBeTruthy();
+    const box = screen.getByTestId('end-game-reports-ctp-1');
+    expect(box).toHaveTextContent('Meldt inn fra flightene', { exact: false });
+    // Kortest først, og ingen vinner er valgt på forhånd.
+    expect(screen.getByTestId('end-game-report-ctp-1-2')).toHaveTextContent('Flight 2Kristian1,8 m');
+    expect(screen.getByTestId('end-game-report-ctp-1-1')).toHaveTextContent('Flight 1Marte2,4 m');
+    expect(screen.getByTestId(`end-game-slot-ctp-1-${MATE}`).props.accessibilityState.checked).toBe(false);
+    await fireEvent.press(screen.getByTestId('end-game-sheet-close'));
+
+    await fireEvent.press(screen.getByTestId('end-game-slot-ld-1'));
+    expect(screen.getByTestId('end-game-report-ld-1-missing-2')).toHaveTextContent('Flight 2 har ikke meldt inn');
+    await fireEvent.press(screen.getByTestId('end-game-sheet-close'));
+
+    // En plass uten hull er som før: ingen boks.
+    await fireEvent.press(screen.getByTestId('end-game-slot-ctp-2'));
+    expect(screen.queryByTestId('end-game-reports-ctp-2')).toBeNull();
+    expect(screen.getByText('Kår vinneren')).toBeTruthy();
+    fetchSideClaimsForFinish.mockResolvedValue([]);
   });
 
   it('kvitterer ut manglende kort, kårer slotene og sender alt inn i skrivingen', async () => {

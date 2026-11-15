@@ -36,6 +36,14 @@ import {
   slotRowLabel,
   titleSubtitle,
   unremindableNotes,
+  REPORTED_TEXT,
+  reportedDistance,
+  reportedFlight,
+  reportedMissing,
+  reportedName,
+  reportedNone,
+  sheetKickerFor,
+  slotRowTitle,
 } from './endGameCopy';
 import { describeRosterFailure } from './rosterCopy';
 import { WEB_LINK_TEXT } from './webLink';
@@ -165,10 +173,10 @@ describe('slotLabel', () => {
     // plass», blir sideturneringens poeng feil: hver slot gir 2p til én
     // spiller, og samme spiller kan ta begge.
     expect(
-      slotLabel({ key: 'ld-2', category: 'longest_drive', position: 2 }),
+      slotLabel({ key: 'ld-2', category: 'longest_drive', position: 2, hole: null }),
     ).toBe('Lengste drive #2');
     expect(
-      slotLabel({ key: 'ctp-1', category: 'closest_to_pin', position: 1 }),
+      slotLabel({ key: 'ctp-1', category: 'closest_to_pin', position: 1, hole: null }),
     ).toBe('Nærmest pinnen #1');
   });
 });
@@ -419,7 +427,7 @@ describe('tilgjengelighets-etikettene', () => {
   });
 
   it('leser slot-raden med vinneren, eller ber om et valg', () => {
-    const slot = { key: 'ctp-1', category: 'closest_to_pin', position: 1 } as const;
+    const slot = { key: 'ctp-1', category: 'closest_to_pin', position: 1, hole: null } as const;
     expect(slotRowLabel(slot, 'Kristian Holm')).toBe(
       'Nærmest pinnen #1: Kristian Holm. Endre vinner',
     );
@@ -444,5 +452,30 @@ describe('toppen og tittelen', () => {
     expect(countHeading(END_GAME_TEXT.unapprovedHeading, 1)).toBe('Venter på godkjenning · 1');
     expect(allDeliveredLine(8)).toBe('8 av 8 kort er levert');
     expect(ofTotal(8)).toBe('av 8');
+  });
+});
+
+describe('#2283: hullet ved plassen og innmeldingene', () => {
+  const withHole = { key: 'ctp-1', category: 'closest_to_pin', position: 1, hole: 7 } as const;
+  const without = { key: 'ctp-2', category: 'closest_to_pin', position: 2, hole: null } as const;
+
+  it('raden og kickeren har hullet; uten hull som før', () => {
+    expect(slotRowTitle(withHole)).toBe('Nærmest pinnen #1 · hull 7');
+    expect(slotRowTitle(without)).toBe('Nærmest pinnen #2');
+    expect(sheetKickerFor(withHole)).toBe('Kår vinneren · hull 7');
+    expect(sheetKickerFor(without)).toBe('Kår vinneren');
+  });
+
+  it('linjene i boksen', () => {
+    expect(REPORTED_TEXT.heading).toBe('Meldt inn fra flightene');
+    expect(reportedFlight(2)).toBe('Flight 2');
+    expect(reportedFlight(0)).toBe('Flighten');
+    expect(reportedMissing(2)).toBe('Flight 2 har ikke meldt inn');
+    expect(reportedNone(7)).toBe('Ingen flight har meldt inn på hull 7.');
+    expect(reportedName('closest_to_pin', null)).toBe('Ingen på green');
+    expect(reportedName('longest_drive', null)).toBe('Ingen på fairway');
+    expect(reportedName('closest_to_pin', 'Marte')).toBe('Marte');
+    expect(reportedDistance(1.8)).toBe('1,8 m');
+    expect(reportedDistance(3)).toBe('3,0 m');
   });
 });
