@@ -2,11 +2,17 @@ import { describe, expect, it } from 'vitest';
 import type { CupNamedPlayerRow } from './cupRoster';
 import {
   buildCupSideReports,
+  girBoxView,
+  girReportsFor,
+  slotBoxView,
+  slotReportsFor,
   type BuildCupSideReportsInput,
   type CupGirClaimRow,
+  type CupGirReport,
   type CupReportAward,
   type CupReportGame,
   type CupSideClaimRow,
+  type CupSlotReports,
 } from './cupSideReports';
 
 // Type A (#2283, E1): what the cup's matches reported, joined to the cup's
@@ -268,5 +274,130 @@ describe('buildCupSideReports: GIR', () => {
 describe('buildCupSideReports: no awards', () => {
   it('is empty', () => {
     expect(build({ awards: [] })).toEqual({ slots: [], gir: [] });
+  });
+});
+
+// The presentation rules both surfaces read (AGENTS.md trap 4: a rule has one home). The web's
+// `SideAwardsPanel`/`CupReportedBoxes` and the app's `CupSideAwards`/`cupManageCopy` only render
+// what these return; each surface's own test proves it calls them.
+describe('slotReportsFor / girReportsFor: the lookup a surface does for one award', () => {
+  const reports = build({
+    awards: [CTP3, LD9, { kind: 'ld', holeNumber: 3 }, GIR5, { kind: 'gir', holeNumber: 7, maxPerTeam: 3 }],
+  });
+
+  it('nothing read is no box: null, and undefined for a server that does not send the reports', () => {
+    expect(slotReportsFor(null, 'ctp', 3)).toBeNull();
+    expect(slotReportsFor(undefined, 'ctp', 3)).toBeNull();
+    expect(girReportsFor(null, 5)).toBeNull();
+    expect(girReportsFor(undefined, 5)).toBeNull();
+  });
+
+  it('a failed read stays failed, for every award', () => {
+    expect(slotReportsFor('failed', 'ctp', 3)).toBe('failed');
+    expect(girReportsFor('failed', 5)).toBe('failed');
+  });
+
+  it('finds the slot by kind and hole: closest to pin and longest drive on one hole are not mixed up', () => {
+    expect(slotReportsFor(reports, 'ctp', 3)).toBe(reports.slots[0]);
+    expect(slotReportsFor(reports, 'ld', 3)).toBe(reports.slots[2]);
+    expect(slotReportsFor(reports, 'ld', 9)).toBe(reports.slots[1]);
+    expect(slotReportsFor(reports, 'ctp', 3)).toMatchObject({ kind: 'ctp', holeNumber: 3 });
+    expect(slotReportsFor(reports, 'ld', 3)).toMatchObject({ kind: 'ld', holeNumber: 3 });
+  });
+
+  it('finds the GIR hole by number', () => {
+    expect(girReportsFor(reports, 5)).toBe(reports.gir[0]);
+    expect(girReportsFor(reports, 7)).toBe(reports.gir[1]);
+  });
+
+  it('a hole that is not among the reports is no box', () => {
+    expect(slotReportsFor(reports, 'ctp', 9)).toBeNull();
+    expect(slotReportsFor({ slots: [], gir: [] }, 'ctp', 3)).toBeNull();
+    expect(girReportsFor(reports, 6)).toBeNull();
+    expect(girReportsFor({ slots: [], gir: [] }, 5)).toBeNull();
+  });
+});
+
+describe('slotBoxView: what the box under a closest-to-pin or longest-drive award shows', () => {
+  const reported = build({ sideClaims: [side({ game_id: 'g1', winner_user_id: 'marte', distance_m: 2.4 })] }).slots[0];
+  const unreported = build().slots[0];
+
+  it('a failed read is its own view', () => {
+    expect(slotBoxView('failed')).toEqual({ kind: 'failed' });
+  });
+
+  it('missing matches show only once some match has answered', () => {
+    expect(slotBoxView(reported)).toEqual({
+      kind: 'lines',
+      lines: [{ gameId: 'g1', matchLabel: 'Four-ball 1', name: 'Marte', distanceM: 2.4 }],
+      missing: [{ gameId: 'g2', matchLabel: 'Four-ball 2' }],
+    });
+  });
+
+  it('nothing reported is none, and the matches that have not reported are not carried along', () => {
+    expect(unreported.missing).toHaveLength(2);
+    expect(slotBoxView(unreported)).toEqual({ kind: 'none' });
+  });
+
+  it('every match having answered leaves nothing missing', () => {
+    const both = build({
+      sideClaims: [
+        side({ game_id: 'g1', winner_user_id: 'marte', distance_m: 2.4 }),
+        side({ game_id: 'g2', winner_user_id: null }),
+      ],
+    }).slots[0];
+    const view = slotBoxView(both);
+    expect(view.kind).toBe('lines');
+    expect(view).toMatchObject({ missing: [] });
+    expect(view.kind === 'lines' && view.lines.map((line) => line.name)).toEqual(['Marte', null]);
+  });
+
+  it('an answer of «no one» is still an answer: it opens the list of missing matches', () => {
+    const noOne: CupSlotReports = {
+      kind: 'ctp',
+      holeNumber: 3,
+      lines: [{ gameId: 'g1', matchLabel: 'Four-ball 1', name: null, distanceM: null }],
+      missing: [{ gameId: 'g2', matchLabel: 'Four-ball 2' }],
+    };
+    expect(slotBoxView(noOne)).toMatchObject({ kind: 'lines', missing: [{ gameId: 'g2', matchLabel: 'Four-ball 2' }] });
+  });
+});
+
+describe('girBoxView: what the box under the two GIR counters shows', () => {
+  const sums = (over: Partial<CupGirReport> = {}): CupGirReport => ({
+    ...build({ girClaims: [gir('g1', 'jonas', true), gir('g1', 'tore', true)] }).gir[0],
+    ...over,
+  });
+
+  it('a failed read is its own view', () => {
+    expect(girBoxView('failed')).toEqual({ kind: 'failed' });
+  });
+
+  it('nothing reported is none: the zero reported matches, whatever else the report holds', () => {
+    const unreported = build().gir[0];
+    expect(unreported.reportedMatches).toBe(0);
+    expect(unreported.missing).toHaveLength(2);
+    expect(girBoxView(unreported)).toEqual({ kind: 'none' });
+  });
+
+  it('once some match has reported: both teams, the max, and the matches that have not', () => {
+    const reported = build({ girClaims: [gir('g1', 'jonas', true), gir('g1', 'tore', true), gir('g1', 'marte', true), gir('g1', 'kari', false)] }).gir[0];
+    expect(girBoxView(reported)).toEqual({
+      kind: 'teams',
+      team1: { count: 2, names: ['Jonas', 'Marte'], overMax: false },
+      team2: { count: 1, names: ['Tore'], overMax: false },
+      maxPerTeam: 2,
+      missing: [{ gameId: 'g2', matchLabel: 'Four-ball 2' }],
+    });
+  });
+
+  it('a match that reported zero hits has reported: the teams show, as 0', () => {
+    const view = girBoxView(build({ girClaims: [gir('g1', 'jonas', false), gir('g1', 'tore', false)] }).gir[0]);
+    expect(view).toMatchObject({ kind: 'teams', team1: { count: 0, names: [] }, team2: { count: 0, names: [] } });
+  });
+
+  it('the over-max flag comes through from the report, so the surface never compares counts itself', () => {
+    const over = sums({ team1: { count: 3, names: ['Jonas', 'Marte', 'Sigrid'], overMax: true } });
+    expect(girBoxView(over)).toMatchObject({ kind: 'teams', team1: { overMax: true }, team2: { overMax: false } });
   });
 });

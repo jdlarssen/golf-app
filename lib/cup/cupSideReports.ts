@@ -16,8 +16,15 @@
  * report on the hole» is `cupMatchReportsHole`. This file only joins them to
  * the cup's matches.
  *
+ * What a box shows is decided here too, once (AGENTS.md trap 4): which award
+ * a report belongs to (`slotReportsFor`, `girReportsFor`) and whether the box
+ * lists the matches, says «Ingen kamper har meldt inn ennå.» or says the read
+ * failed (`slotBoxView`, `girBoxView`). The web's `SideAwardsPanel` and
+ * `CupReportedBoxes` and the app's `CupSideAwards` and `cupManageCopy` only
+ * render what these return.
+ *
  * Pure. The read is `loadCupSideReports`. Relative imports only: the app
- * imports the types from `native/app/src/`.
+ * imports this file from `native/app/src/`.
  */
 
 import { buildCupRoster, type CupRosterPlayer } from './cupRoster';
@@ -205,4 +212,81 @@ export function buildCupSideReports(input: BuildCupSideReportsInput): CupSideRep
   }
 
   return { slots, gir };
+}
+
+/**
+ * The report for one closest-to-pin or longest-drive award. `null` = no box:
+ * nothing was read (`sideReports` is null, or a server that predates the
+ * reports does not send them) or the hole is not among the reports.
+ */
+export function slotReportsFor(
+  sideReports: CupSideReportsResult | undefined,
+  kind: 'ctp' | 'ld',
+  holeNumber: number,
+): CupSlotReports | 'failed' | null {
+  if (sideReports == null) return null;
+  if (sideReports === 'failed') return 'failed';
+  return sideReports.slots.find((slot) => slot.kind === kind && slot.holeNumber === holeNumber) ?? null;
+}
+
+/** The report for one GIR hole; `null` = no box, as for `slotReportsFor`. */
+export function girReportsFor(
+  sideReports: CupSideReportsResult | undefined,
+  holeNumber: number,
+): CupGirReport | 'failed' | null {
+  if (sideReports == null) return null;
+  if (sideReports === 'failed') return 'failed';
+  return sideReports.gir.find((hole) => hole.holeNumber === holeNumber) ?? null;
+}
+
+/** What the box under a closest-to-pin or longest-drive award shows. */
+export type CupSlotBoxView =
+  /** The read did not work: one sentence, and the organiser registers as before. */
+  | { kind: 'failed' }
+  /** No match has answered: one sentence, and the matches are not named. */
+  | { kind: 'none' }
+  /** One line per answer, then the matches that have not answered. */
+  | { kind: 'lines'; lines: CupSlotReportLine[]; missing: CupReportMatch[] };
+
+/**
+ * The two rules of the box: a match that has not reported is only worth naming
+ * once some match has (so `missing` is only carried with lines), and when none
+ * has, the box is the one sentence instead of a list of every match.
+ */
+export function slotBoxView(reports: CupSlotReports | 'failed'): CupSlotBoxView {
+  if (reports === 'failed') return { kind: 'failed' };
+  if (reports.lines.length === 0) return { kind: 'none' };
+  return { kind: 'lines', lines: reports.lines, missing: reports.missing };
+}
+
+/** What the box under both GIR counters shows. */
+export type CupGirBoxView =
+  | { kind: 'failed' }
+  /** No match has reported on the hole: one sentence. */
+  | { kind: 'none' }
+  /** One line per team, then the matches that have not reported. */
+  | {
+      kind: 'teams';
+      team1: CupGirTeamReport;
+      team2: CupGirTeamReport;
+      /** «Maks per lag»: shown beside a team whose `overMax` is set. */
+      maxPerTeam: number;
+      missing: CupReportMatch[];
+    };
+
+/**
+ * As `slotBoxView`: nothing reported (`reportedMatches === 0`) is one sentence,
+ * and the matches that have not reported are only named once some has. A match
+ * that reported no hits has reported: its teams show, as 0.
+ */
+export function girBoxView(reports: CupGirReport | 'failed'): CupGirBoxView {
+  if (reports === 'failed') return { kind: 'failed' };
+  if (reports.reportedMatches === 0) return { kind: 'none' };
+  return {
+    kind: 'teams',
+    team1: reports.team1,
+    team2: reports.team2,
+    maxPerTeam: reports.maxPerTeam,
+    missing: reports.missing,
+  };
 }

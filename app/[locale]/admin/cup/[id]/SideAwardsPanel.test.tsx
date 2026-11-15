@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { SideAwardsPanel } from './SideAwardsPanel';
 import type { CupSideAwardSnapshot } from '@/lib/cup/getCupSnapshot';
-import type { CupSideReports } from '@/lib/cup/cupSideReports';
+import { girReportsFor, slotReportsFor, type CupSideReports } from '@/lib/cup/cupSideReports';
 
 // Type C render-test per docs/test-discipline.md — verifiserer at panelet
 // veksler mellom redigerbar oppsett-visning og read-only-recap basert på
@@ -21,6 +21,13 @@ vi.mock('@/lib/cup/sideAwardActions', () => ({
 vi.mock('@/i18n/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));
+
+// The real lookups, wrapped so «ett hjem»-testen kan se at panelet kaller dem (som
+// `endGamePlan.test.ts` gjør i appen). Alt annet i testfila går gjennom den ekte funksjonen.
+vi.mock('@/lib/cup/cupSideReports', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/cup/cupSideReports')>();
+  return { ...actual, slotReportsFor: vi.fn(actual.slotReportsFor), girReportsFor: vi.fn(actual.girReportsFor) };
+});
 
 const AWARDS: CupSideAwardSnapshot[] = [
   { id: 'a1', kind: 'ctp', holeNumber: 4, points: 2, slot: 1, slotCount: 1, winnerUserId: null, winnerTeam: null, noWinner: false },
@@ -193,7 +200,7 @@ describe('SideAwardsPanel: det kampene har meldt inn', () => {
   it('en boks per innslag: kampen som avsender, vinneren, avstanden, og «Ingen på fairway»', () => {
     renderPanel(REPORTS);
 
-    const ctp = screen.getByTestId('side-reports-ctp-3');
+    const ctp = screen.getByTestId('side-reports-c1');
     expect(within(ctp).getByText('Meldt inn fra kampene')).toBeInTheDocument();
     const rows = within(ctp).getAllByRole('listitem');
     // Shortest distance first, as the sender reads it: the match, the winner, the distance.
@@ -204,7 +211,7 @@ describe('SideAwardsPanel: det kampene har meldt inn', () => {
     expect(rows[1]).toHaveTextContent('Marte');
     expect(rows[1]).toHaveTextContent('2,4 m');
 
-    const ld = within(screen.getByTestId('side-reports-ld-9')).getAllByRole('listitem');
+    const ld = within(screen.getByTestId('side-reports-c2')).getAllByRole('listitem');
     expect(ld[0]).toHaveTextContent('Jonas');
     expect(ld[1]).toHaveTextContent('Four-ball 2');
     expect(ld[1]).toHaveTextContent('Ingen på fairway');
@@ -213,7 +220,7 @@ describe('SideAwardsPanel: det kampene har meldt inn', () => {
   it('GIR: én boks under begge tellerne, ett lag per linje, over maks i advarselsfarge', () => {
     renderPanel(REPORTS);
 
-    const boxes = screen.getAllByTestId('side-reports-gir-5');
+    const boxes = screen.getAllByTestId('side-reports-c3');
     expect(boxes).toHaveLength(1);
     const red = within(boxes[0]).getByTestId('side-reports-gir-team1');
     expect(red).toHaveTextContent('Rød: 3 (Jonas, Marte, Sigrid) · maks 2 GIR');
@@ -251,9 +258,9 @@ describe('SideAwardsPanel: det kampene har meldt inn', () => {
       ],
       gir: [{ ...REPORTS.gir[0], reportedMatches: 1, missing: [{ gameId: 'g2', matchLabel: 'Four-ball 2' }] }],
     });
-    expect(screen.getByTestId('side-reports-ctp-3')).toHaveTextContent('Four-ball 2 har ikke meldt inn');
-    expect(screen.getByTestId('side-reports-ld-9')).toHaveTextContent('Match har ikke meldt inn');
-    expect(screen.getByTestId('side-reports-gir-5')).toHaveTextContent('Four-ball 2 har ikke meldt inn');
+    expect(screen.getByTestId('side-reports-c1')).toHaveTextContent('Four-ball 2 har ikke meldt inn');
+    expect(screen.getByTestId('side-reports-c2')).toHaveTextContent('Match har ikke meldt inn');
+    expect(screen.getByTestId('side-reports-c3')).toHaveTextContent('Four-ball 2 har ikke meldt inn');
   });
 
   it('ingen har meldt inn: «Ingen kamper har meldt inn ennå.» i hver boks, uten navngitte kamper', () => {
@@ -264,7 +271,7 @@ describe('SideAwardsPanel: det kampene har meldt inn', () => {
       ],
       gir: [{ ...REPORTS.gir[0], team1: { count: 0, names: [], overMax: false }, team2: { count: 0, names: [], overMax: false }, reportedMatches: 0, missing: [{ gameId: 'g1', matchLabel: 'Four-ball 1' }] }],
     });
-    for (const id of ['side-reports-ctp-3', 'side-reports-ld-9', 'side-reports-gir-5']) {
+    for (const id of ['side-reports-c1', 'side-reports-c2', 'side-reports-c3']) {
       expect(screen.getByTestId(id)).toHaveTextContent('Ingen kamper har meldt inn ennå.');
       expect(screen.getByTestId(id)).not.toHaveTextContent('har ikke meldt inn');
     }
@@ -272,7 +279,7 @@ describe('SideAwardsPanel: det kampene har meldt inn', () => {
 
   it('lesefeil: samme linje som avslutt-siden sier, med «kampene», og registreringen virker', () => {
     renderPanel('failed');
-    for (const id of ['side-reports-ctp-3', 'side-reports-ld-9', 'side-reports-gir-5']) {
+    for (const id of ['side-reports-c1', 'side-reports-c2', 'side-reports-c3']) {
       expect(screen.getByTestId(id)).toHaveTextContent('Fikk ikke hentet det kampene har meldt inn.');
     }
     expect(screen.getAllByTestId('side-award-winner-select')).toHaveLength(2);
@@ -286,6 +293,56 @@ describe('SideAwardsPanel: det kampene har meldt inn', () => {
       expect(screen.queryByRole('group', { name: 'Meldt inn fra kampene' })).not.toBeInTheDocument();
       unmount();
     }
+  });
+
+  it('to vinner-plasser på samme hull: hver boks har sin egen test-id (kåringens id), og hver velger peker på sin boks', () => {
+    const slotted: CupSideAwardSnapshot[] = [
+      { id: 'b1', kind: 'ctp', holeNumber: 4, points: 2, slot: 1, slotCount: 2, winnerUserId: null, winnerTeam: null, noWinner: false },
+      { id: 'b2', kind: 'ctp', holeNumber: 4, points: 2, slot: 2, slotCount: 2, winnerUserId: null, winnerTeam: null, noWinner: false },
+      { id: 'b3', kind: 'gir', holeNumber: 3, points: 1.5, maxPerTeam: 3, team1Count: null, team2Count: null },
+    ];
+    const sideReports: CupSideReports = {
+      slots: [
+        {
+          kind: 'ctp',
+          holeNumber: 4,
+          lines: [{ gameId: 'g1', matchLabel: 'Four-ball 1', name: 'Marte', distanceM: 2.4 }],
+          missing: [],
+        },
+      ],
+      gir: [{ ...REPORTS.gir[0], holeNumber: 3 }],
+    };
+    render(<SideAwardsPanel {...CUP_PROPS} initialAwards={slotted} sideReports={sideReports} />);
+
+    // Én boks per vinner-plass: ikke to like test-id-er for «ctp, hull 4».
+    expect(screen.getAllByRole('group', { name: 'Meldt inn fra kampene' })).toHaveLength(3);
+    const first = screen.getByTestId('side-reports-b1');
+    const second = screen.getByTestId('side-reports-b2');
+    expect(first).not.toBe(second);
+    expect(first).toHaveTextContent('Marte');
+    expect(second).toHaveTextContent('Marte');
+    const [firstSelect, secondSelect] = screen.getAllByTestId('side-award-winner-select');
+    expect(firstSelect).toHaveAttribute('aria-describedby', first.id);
+    expect(secondSelect).toHaveAttribute('aria-describedby', second.id);
+    expect(first.id).not.toBe(second.id);
+    expect(screen.getByTestId('side-reports-b3')).toBeInTheDocument();
+  });
+
+  it('panelet bruker de delte oppslagene: hullet slås opp med kåringens type og hull, og svaret er det boksen viser', () => {
+    vi.mocked(slotReportsFor).mockClear();
+    vi.mocked(girReportsFor).mockClear();
+    // Første oppslag (ctp, hull 3) svarer «feilet» selv om rapporten har linjer: boksen følger oppslaget.
+    vi.mocked(slotReportsFor).mockReturnValueOnce('failed');
+    renderPanel(REPORTS);
+
+    expect(slotReportsFor).toHaveBeenCalledWith(REPORTS, 'ctp', 3);
+    expect(slotReportsFor).toHaveBeenCalledWith(REPORTS, 'ld', 9);
+    expect(girReportsFor).toHaveBeenCalledWith(REPORTS, 5);
+    expect(screen.getByTestId('side-reports-c1')).toHaveTextContent('Fikk ikke hentet det kampene har meldt inn.');
+    expect(screen.getByTestId('side-reports-c1')).not.toHaveTextContent('Kristian');
+    // De to andre går gjennom den ekte funksjonen.
+    expect(screen.getByTestId('side-reports-c2')).toHaveTextContent('Jonas');
+    expect(screen.getByTestId('side-reports-c3')).toHaveTextContent('Rød: 3');
   });
 
   it('ingenting forhåndsutfylt: velgerne og tellerne står tomme, og registrer er låst til arrangøren svarer', () => {

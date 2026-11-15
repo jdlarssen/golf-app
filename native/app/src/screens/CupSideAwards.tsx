@@ -10,7 +10,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { AppCupManageView, AppCupSideAward } from '../../../../lib/cup/appCupManageView';
-import type { CupGirReport, CupSideReportsResult, CupSlotReports } from '../../../../lib/cup/cupSideReports';
+import { girReportsFor, slotReportsFor, type CupGirReport, type CupSlotReports } from '../../../../lib/cup/cupSideReports';
 import { PICKER_VISIBLE_ROWS, pickerRows } from '../../../../lib/league/pickerRows';
 import { CupOption } from '../components/cup/CupOption';
 import { GirReportsBox, SlotReportsBox } from '../components/cup/CupReportedBoxes';
@@ -36,29 +36,6 @@ type GirAward = Extract<AppCupSideAward, { kind: 'gir' }>;
 
 /** «Ingen kvalifiserte». Kan aldri kollidere med en uuid, som på nettet. */
 const NONE = 'none';
-
-/**
- * Rapporten for ett hull. `null` = ingen boks: ingenting ble lest (`sideReports`
- * er null, eller tjeneren sender den ikke) eller hullet står ikke i rapporten.
- */
-function slotReportsFor(
-  sideReports: CupSideReportsResult | undefined,
-  kind: 'ctp' | 'ld',
-  holeNumber: number,
-): CupSlotReports | 'failed' | null {
-  if (!sideReports) return null;
-  if (sideReports === 'failed') return 'failed';
-  return sideReports.slots.find((slot) => slot.kind === kind && slot.holeNumber === holeNumber) ?? null;
-}
-
-function girReportsFor(
-  sideReports: CupSideReportsResult | undefined,
-  holeNumber: number,
-): CupGirReport | 'failed' | null {
-  if (!sideReports) return null;
-  if (sideReports === 'failed') return 'failed';
-  return sideReports.gir.find((hole) => hole.holeNumber === holeNumber) ?? null;
-}
 
 export function CupSideAwards({ route }: ScreenProps<'CupSideAwards'>) {
   const { colors, ui } = useTheme();

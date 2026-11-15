@@ -6,7 +6,13 @@ import type {
   AppCupSideAward,
   AppCupWithdrawalMatch,
 } from '../../../../lib/cup/appCupManageView';
-import type { CupGirReport, CupReportMatch, CupSlotReports } from '../../../../lib/cup/cupSideReports';
+import {
+  girBoxView,
+  slotBoxView,
+  type CupGirReport,
+  type CupReportMatch,
+  type CupSlotReports,
+} from '../../../../lib/cup/cupSideReports';
 import { MAX_PERSONAL_CUP_PLAYERS } from '../../../../lib/cup/limits';
 import { formatMessage } from './kavalkadeCopy';
 import { CUP_TEXT, matchStatusLabel } from './cupCopy';
@@ -337,21 +343,26 @@ export type ReportedSlotBox = {
 /**
  * Boksen under nærmest pinnen og lengste drive. Kampene som ikke har meldt inn,
  * nevnes først når en kamp har det: ellers er det én setning, ikke en liste med
- * alle kampene. Samme regel som nettets `SlotReportedBox`.
+ * alle kampene. Regelen bor i `slotBoxView` (`lib/cup/cupSideReports.ts`), den
+ * samme som nettets `SlotReportedBox` leser; her står bare teksten.
  */
 export function reportedSlotBox(kind: 'ctp' | 'ld', reports: CupSlotReports | 'failed'): ReportedSlotBox {
-  if (reports === 'failed') return { lines: [], missing: [], empty: SIDE_REPORTED_TEXT.readFailed };
-  const lines = reports.lines.map(
-    (line): ReportedSlotLine => ({
-      key: line.gameId,
-      sender: reportedSender(line),
-      name: line.name ?? REPORTED_NO_ONE[kind],
-      answered: line.name !== null,
-      distance: line.distanceM === null ? null : reportedDistance(line.distanceM),
-    }),
-  );
-  if (lines.length === 0) return { lines, missing: [], empty: SIDE_REPORTED_TEXT.none };
-  return { lines, missing: reportedMissingLines(reports.missing), empty: null };
+  const view = slotBoxView(reports);
+  if (view.kind === 'failed') return { lines: [], missing: [], empty: SIDE_REPORTED_TEXT.readFailed };
+  if (view.kind === 'none') return { lines: [], missing: [], empty: SIDE_REPORTED_TEXT.none };
+  return {
+    lines: view.lines.map(
+      (line): ReportedSlotLine => ({
+        key: line.gameId,
+        sender: reportedSender(line),
+        name: line.name ?? REPORTED_NO_ONE[kind],
+        answered: line.name !== null,
+        distance: line.distanceM === null ? null : reportedDistance(line.distanceM),
+      }),
+    ),
+    missing: reportedMissingLines(view.missing),
+    empty: null,
+  };
 }
 
 /** Ett lags linje under GIR-tellerne: «Rød:» står fet, resten står etter. */
@@ -374,24 +385,27 @@ export type ReportedGirBox = {
 /**
  * Boksen under begge GIR-tellerne: et lag per linje, summen over alle kampene og
  * hvem som traff. Over «maks per lag» står tallet likevel, med taket ved siden av.
+ * Hva boksen viser (lagene, én setning eller feil) avgjøres av `girBoxView`
+ * (`lib/cup/cupSideReports.ts`), den samme som nettets `GirReportedBox` leser.
  */
 export function reportedGirBox(
   reports: CupGirReport | 'failed',
   team1Name: string,
   team2Name: string,
 ): ReportedGirBox {
-  if (reports === 'failed') return { teams: [], missing: [], empty: SIDE_REPORTED_TEXT.readFailed };
-  if (reports.reportedMatches === 0) return { teams: [], missing: [], empty: SIDE_REPORTED_TEXT.none };
+  const view = girBoxView(reports);
+  if (view.kind === 'failed') return { teams: [], missing: [], empty: SIDE_REPORTED_TEXT.readFailed };
+  if (view.kind === 'none') return { teams: [], missing: [], empty: SIDE_REPORTED_TEXT.none };
   const team = (key: 'team1' | 'team2', name: string): ReportedGirTeam => {
-    const sum = reports[key];
+    const sum = view[key];
     const over = sum.overMax === true;
     const who = sum.names.length > 0 ? ` (${sum.names.join(', ')})` : '';
-    const max = over ? ` · ${formatMessage(REPORTED_GIR_MAX, { max: reports.maxPerTeam })}` : '';
+    const max = over ? ` · ${formatMessage(REPORTED_GIR_MAX, { max: view.maxPerTeam })}` : '';
     return { key, label: `${name}:`, rest: ` ${sum.count}${who}${max}`, over };
   };
   return {
     teams: [team('team1', team1Name), team('team2', team2Name)],
-    missing: reportedMissingLines(reports.missing),
+    missing: reportedMissingLines(view.missing),
     empty: null,
   };
 }

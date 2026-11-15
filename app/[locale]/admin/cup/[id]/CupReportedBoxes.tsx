@@ -2,7 +2,13 @@ import type { ReactNode } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { AppLocale } from '@/i18n/routing';
 import { formatDistance } from '@/lib/i18n/format';
-import type { CupGirReport, CupReportMatch, CupSlotReports } from '@/lib/cup/cupSideReports';
+import {
+  girBoxView,
+  slotBoxView,
+  type CupGirReport,
+  type CupReportMatch,
+  type CupSlotReports,
+} from '@/lib/cup/cupSideReports';
 
 /**
  * «Meldt inn fra kampene» in the cup's «Etter runden» (#2283, drawing V4): what
@@ -12,7 +18,13 @@ import type { CupGirReport, CupReportMatch, CupSlotReports } from '@/lib/cup/cup
  * sits inside a white card. Nothing here picks a winner or fills a counter in.
  *
  * The data is `buildCupSideReports` (`lib/cup/cupSideReports.ts`), the one the
- * app's manage view carries too.
+ * app's manage view carries too, and so is what the box shows: `slotBoxView`
+ * and `girBoxView` decide between the lines, the one sentence and the failed
+ * read, and whether the matches that have not reported are named. This file
+ * only renders the view.
+ *
+ * `testKey` is the award's id: two winner slots on one hole share their kind
+ * and hole, and each box needs a test id of its own.
  */
 
 /** Under a closest-to-pin or longest-drive select: one line per match, then the matches that have not reported. */
@@ -32,9 +44,10 @@ export function SlotReportedBox({
   const locale = useLocale() as AppLocale;
   const matchName = (match: CupReportMatch) => match.matchLabel ?? tCup('matchFallback');
 
+  const view = slotBoxView(reports);
   const rows: { key: string; node: ReactNode; className: string }[] = [];
-  if (reports !== 'failed') {
-    for (const line of reports.lines) {
+  if (view.kind === 'lines') {
+    for (const line of view.lines) {
       rows.push({
         key: `line-${line.gameId}`,
         className: 'flex items-baseline gap-2.5 py-2',
@@ -57,18 +70,15 @@ export function SlotReportedBox({
         ),
       });
     }
-    // A match that has not reported is only worth naming once some match has.
-    if (reports.lines.length > 0) {
-      for (const match of reports.missing) {
-        rows.push({
-          key: `missing-${match.gameId}`,
-          className: 'py-2 text-sm leading-5 text-muted',
-          node: t('reportedMissing', { match: matchName(match) }),
-        });
-      }
+    for (const match of view.missing) {
+      rows.push({
+        key: `missing-${match.gameId}`,
+        className: 'py-2 text-sm leading-5 text-muted',
+        node: t('reportedMissing', { match: matchName(match) }),
+      });
     }
   }
-  const empty = reports === 'failed' ? t('reportedReadFailed') : rows.length === 0 ? t('reportedNone') : null;
+  const empty = view.kind === 'failed' ? t('reportedReadFailed') : view.kind === 'none' ? t('reportedNone') : null;
 
   return (
     <div
@@ -120,23 +130,24 @@ export function GirReportedBox({
   const tCup = useTranslations('cup');
   const matchName = (match: CupReportMatch) => match.matchLabel ?? tCup('matchFallback');
 
+  const view = girBoxView(reports);
   const lineClass = 'text-[13px] leading-[18px]';
   let body: ReactNode;
-  if (reports === 'failed') {
+  if (view.kind === 'failed') {
     body = <p className={`${lineClass} text-muted`}>{t('reportedReadFailed')}</p>;
-  } else if (reports.reportedMatches === 0) {
+  } else if (view.kind === 'none') {
     body = <p className={`${lineClass} text-muted`}>{t('reportedNone')}</p>;
   } else {
     const teams = [
-      { key: 'team1', name: team1Name, sum: reports.team1 },
-      { key: 'team2', name: team2Name, sum: reports.team2 },
+      { key: 'team1', name: team1Name, sum: view.team1 },
+      { key: 'team2', name: team2Name, sum: view.team2 },
     ];
     body = (
       <>
         {teams.map(({ key, name, sum }) => {
           const over = sum.overMax;
           const who = sum.names.length > 0 ? ` (${sum.names.join(', ')})` : '';
-          const max = over ? ` · ${t('reportedGirMax', { max: reports.maxPerTeam })}` : '';
+          const max = over ? ` · ${t('reportedGirMax', { max: view.maxPerTeam })}` : '';
           return (
             <p key={key} data-testid={`side-reports-gir-${key}`} className={`${lineClass} ${over ? 'text-warning-text' : 'text-muted'}`}>
               <span className="font-semibold text-text">{name}:</span> {sum.count}
@@ -145,7 +156,7 @@ export function GirReportedBox({
             </p>
           );
         })}
-        {reports.missing.map((match) => (
+        {view.missing.map((match) => (
           <p key={match.gameId} className={`${lineClass} text-muted`}>
             {t('reportedMissing', { match: matchName(match) })}
           </p>

@@ -14,7 +14,13 @@ import {
 import { groupSideAwardRows, type SideAwardConfigInput } from '@/lib/cup/sideAwardRows';
 import { formatPoints } from '@/lib/cup/formatPoints';
 import type { CupSideAwardSnapshot } from '@/lib/cup/getCupSnapshot';
-import type { CupGirReport, CupSideReportsResult, CupSlotReports } from '@/lib/cup/cupSideReports';
+import {
+  girReportsFor,
+  slotReportsFor,
+  type CupGirReport,
+  type CupSideReportsResult,
+  type CupSlotReports,
+} from '@/lib/cup/cupSideReports';
 import { GirReportedBox, SlotReportedBox } from './CupReportedBoxes';
 
 /**
@@ -326,27 +332,6 @@ export function SideAwardsPanel({
   );
 }
 
-/**
- * What the matches reported for one closest-to-pin or longest-drive hole.
- * `null` = no box: nothing was read (`sideReports` null) or the hole is not
- * among the reports.
- */
-function slotReportsFor(
-  sideReports: CupSideReportsResult,
-  kind: 'ctp' | 'ld',
-  holeNumber: number,
-): CupSlotReports | 'failed' | null {
-  if (sideReports === null) return null;
-  if (sideReports === 'failed') return 'failed';
-  return sideReports.slots.find((slot) => slot.kind === kind && slot.holeNumber === holeNumber) ?? null;
-}
-
-function girReportsFor(sideReports: CupSideReportsResult, holeNumber: number): CupGirReport | 'failed' | null {
-  if (sideReports === null) return null;
-  if (sideReports === 'failed') return 'failed';
-  return sideReports.gir.find((hole) => hole.holeNumber === holeNumber) ?? null;
-}
-
 function SideAwardWinnerRow({
   tournamentId,
   award,
@@ -440,7 +425,7 @@ function SideAwardWinnerRow({
       {reports !== null && (
         <SlotReportedBox
           id={boxId}
-          testKey={`${award.kind}-${award.holeNumber}`}
+          testKey={award.id}
           kind={award.kind}
           reports={reports}
         />
@@ -574,7 +559,7 @@ function GirCountsRow({
       {reports !== null && (
         <GirReportedBox
           id={boxId}
-          testKey={`gir-${award.holeNumber}`}
+          testKey={award.id}
           reports={reports}
           team1Name={team1Name}
           team2Name={team2Name}
