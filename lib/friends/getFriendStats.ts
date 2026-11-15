@@ -10,12 +10,44 @@ import { friendStatsFromRows, type FriendStats, type SharedGame } from './friend
  * smaller slices: at most 150 uuids per request, under the 200 measured to
  * work (#2214: 200 ok, 400 fails).
  */
-const CO_PLAYER_GAME_CHUNK = 50;
+export const CO_PLAYER_GAME_CHUNK = 50;
 
 type MyGameRow = {
   game_id: string;
   games: { id: string; name: string; scheduled_tee_off_at: string | null; ended_at: string | null } | null;
 };
+
+/**
+ * Your own rows in the games that count as a round (#2381): finished and
+ * non-derived, the rule `getFinishedGamesForUser` uses (#1449), and not one
+ * you withdrew from (#2267). One home for that rule: «N runder sammen»
+ * (`getFriendStats`) and the friend page's list (`getSharedRounds`) both read
+ * through here, so the count and the list cannot drift apart.
+ *
+ * `select` must embed `games!inner(…)`, since the filters are on the game.
+ * Throws on a query error.
+ */
+export async function readMyFinishedGames<T extends { game_id: string }>(
+  userId: string,
+  select: string,
+  context: string,
+): Promise<T[]> {
+  const admin = getAdminClient();
+  return selectAllRows(
+    (from, to) =>
+      admin
+        .from('game_players')
+        .select(select)
+        .eq('user_id', userId)
+        .is('withdrawn_at', null)
+        .eq('games.status', 'finished')
+        .is('games.source_game_id', null)
+        .order('game_id')
+        .range(from, to)
+        .overrideTypes<T[], { merge: false }>(),
+    context,
+  );
+}
 
 /**
  * Shared rounds between `userId` and each of `otherIds` (#2256), for the app's
@@ -37,19 +69,9 @@ export async function getFriendStats(
   if (ids.length === 0) return new Map();
   const admin = getAdminClient();
 
-  // Finished, non-derived: the rule `getFinishedGamesForUser` uses (#1449).
-  const mine = await selectAllRows(
-    (from, to) =>
-      admin
-        .from('game_players')
-        .select('game_id, games!inner(id, name, scheduled_tee_off_at, ended_at)')
-        .eq('user_id', userId)
-        .is('withdrawn_at', null)
-        .eq('games.status', 'finished')
-        .is('games.source_game_id', null)
-        .order('game_id')
-        .range(from, to)
-        .returns<MyGameRow[]>(),
+  const mine = await readMyFinishedGames<MyGameRow>(
+    userId,
+    'game_id, games!inner(id, name, scheduled_tee_off_at, ended_at)',
     'getFriendStats my games',
   );
   const games: SharedGame[] = mine
