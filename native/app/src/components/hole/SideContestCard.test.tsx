@@ -110,6 +110,19 @@ describe('SideContestCard', () => {
       'Lagret av Tore. Alle i flighten kan endre.',
     );
 
+    // Avstanden kan skrives, med komma, og lagres når feltet forlates.
+    const input = screen.getByTestId('side-contest-closest_to_pin-distance-input');
+    await fireEvent(input, 'focus');
+    await fireEvent.changeText(screen.getByTestId('side-contest-closest_to_pin-distance-input'), '2,4');
+    await fireEvent(screen.getByTestId('side-contest-closest_to_pin-distance-input'), 'endEditing');
+    expect(recordMock).toHaveBeenLastCalledWith(expect.objectContaining({ winnerUserId: 'marte', distanceM: 2.4 }));
+    // Et ugyldig tall lagres ikke, og feltet viser det som står.
+    recordMock.mockClear();
+    await fireEvent(screen.getByTestId('side-contest-closest_to_pin-distance-input'), 'focus');
+    await fireEvent.changeText(screen.getByTestId('side-contest-closest_to_pin-distance-input'), '120');
+    await fireEvent(screen.getByTestId('side-contest-closest_to_pin-distance-input'), 'endEditing');
+    expect(recordMock).not.toHaveBeenCalled();
+
     // «Ingen på green» tar bort avstanden.
     await fireEvent.press(screen.getByTestId('side-contest-closest_to_pin-line-none'));
     expect(recordMock).toHaveBeenCalledWith(expect.objectContaining({ winnerUserId: null, distanceM: null }));
