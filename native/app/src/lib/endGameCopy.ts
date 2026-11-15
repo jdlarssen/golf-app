@@ -505,11 +505,16 @@ export function approveOnBehalfLabel(name: string): string {
   return fillCopy(APPROVE_ON_BEHALF_LABEL, { name });
 }
 
-/** «Nærmest pinnen #1: Kristian Holm. Endre vinner» / «Nærmest pinnen #1. Velg vinner». */
+/**
+ * «Nærmest pinnen #1: Kristian Holm. Endre vinner» / «Nærmest pinnen #1. Velg vinner».
+ * #2283: med hull «Nærmest pinnen #1, hull 7. Velg vinner», så skjermleseren hører
+ * det raden viser.
+ */
 export function slotRowLabel(slot: FinishSlot, winner: string | null): string {
+  const name = slot.hole === null ? slotLabel(slot) : `${slotLabel(slot)}, hull ${slot.hole}`;
   return winner === null
-    ? fillCopy(SLOT_ROW_OPEN, { slot: slotLabel(slot) })
-    : fillCopy(SLOT_ROW_CHOSEN, { slot: slotLabel(slot), name: winner });
+    ? fillCopy(SLOT_ROW_OPEN, { slot: name })
+    : fillCopy(SLOT_ROW_CHOSEN, { slot: name, name: winner });
 }
 
 /** «Godkjenn kortet til Kari? Du står som den som godkjente.» */
