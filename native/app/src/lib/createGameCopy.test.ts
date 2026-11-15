@@ -21,6 +21,12 @@ import {
   describePendingOthers,
   describeTeeCount,
   PENDING_SELF_NOTE,
+  SIDE_HOLE_TEXT,
+  sideHoleRowA11y,
+  sideHoleRowLabel,
+  sideHoleSheetIntro,
+  sideHoleSheetTitle,
+  sideHoleValue,
 } from './createGameCopy';
 
 const wizardErrors = source.wizard.errors as Record<string, string>;
@@ -166,5 +172,28 @@ describe('tellingene i veiviseren (#2709)', () => {
     expect(describeTeeCount(1)).toBe('1 tee');
     expect(describeTeeCount(0)).toBe('0 teer');
     expect(describeTeeCount(4)).toBe('4 teer');
+  });
+});
+
+describe('#2283: hull for sideturneringen (Sidekonk-oppsett O1)', () => {
+  it('raden heter som tegningen, med nummer bare når det er to plasser', () => {
+    expect(sideHoleRowLabel('longest_drive', 1, 1)).toBe('Hull for lengste drive');
+    expect(sideHoleRowLabel('closest_to_pin', 2, 2)).toBe('Hull for nærmest pinnen 2');
+    expect(sideHoleValue(7)).toBe('Hull 7');
+    expect(SIDE_HOLE_TEXT.pick).toBe('Velg hull');
+    expect(sideHoleRowA11y('closest_to_pin', 1, 2, 7)).toBe('Hull for nærmest pinnen 1: hull 7');
+    expect(sideHoleRowA11y('closest_to_pin', 2, 2, null)).toBe('Hull for nærmest pinnen 2: ikke valgt');
+  });
+
+  it('arket har kicker, tittel og linje som tegningen', () => {
+    expect(SIDE_HOLE_TEXT.sheetKicker).toBe('Sideturnering');
+    expect(sideHoleSheetTitle('closest_to_pin', 2, 2)).toBe('Nærmest pinnen 2');
+    expect(sideHoleSheetTitle('longest_drive', 1, 1)).toBe('Lengste drive');
+    expect(sideHoleSheetIntro('closest_to_pin')).toBe('Velg hullet der flighten melder inn hvem som lå nærmest.');
+    expect(sideHoleSheetIntro('longest_drive')).toBe('Velg hullet der flighten melder inn hvem som slo lengst.');
+    expect(SIDE_HOLE_TEXT.later).toBe('Velg hull senere');
+    expect(SIDE_HOLE_TEXT.note).toBe(
+      'Velger du hull, melder flighten inn på hullet. Uten hull kårer du vinneren når runden er ferdig.',
+    );
   });
 });

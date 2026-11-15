@@ -12,13 +12,23 @@
 //
 // Lista ruller inne i kortet, så «Ingen kvalifiserte» står fast under den også
 // i en klubbrunde med 150 spillere.
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BundlePlayer } from '../../data/gameBundle';
 import { displayName } from '../../lib/display';
-import { END_GAME_TEXT, slotLabel } from '../../lib/endGameCopy';
-import { NO_WINNER, type FinishSlot } from '../../lib/endGamePlan';
+import {
+  END_GAME_TEXT,
+  REPORTED_TEXT,
+  reportedDistance,
+  reportedFlight,
+  reportedMissing,
+  reportedName,
+  reportedNone,
+  sheetKickerFor,
+  slotLabel,
+} from '../../lib/endGameCopy';
+import { NO_WINNER, type FinishSlot, type SlotReports } from '../../lib/endGamePlan';
 import { FONTS, fraunces, interLine, sheetScrim, TAP, useTheme } from '../../theme';
 import { HakeIcon, LukkIcon } from '../icons/Icons';
 
@@ -30,6 +40,7 @@ export function WinnerSheet({
   candidates,
   choices,
   withdrawalSupported,
+  reports,
   onPick,
   onClose,
 }: {
@@ -40,6 +51,11 @@ export function WinnerSheet({
   choices: Readonly<Record<string, string>>;
   /** Fotnoten om trukne er bare sann i formatene med frafall (beslutning 8). */
   withdrawalSupported: boolean;
+  /**
+   * #2283: det flightene har meldt inn for plassens hull. `null` = plassen har
+   * ikke hull (ingen boks, som før), `'failed'` = hentingen feilet.
+   */
+  reports?: SlotReports | 'failed' | null;
   onPick: (value: string) => void;
   onClose: () => void;
 }) {
@@ -92,7 +108,7 @@ export function WinnerSheet({
           <View style={styles.head}>
             <View style={styles.headText}>
               <Text style={[styles.kicker, { color: colors.accentText }]}>
-                {END_GAME_TEXT.sheetKicker}
+                {sheetKickerFor(shown)}
               </Text>
               <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header">
                 {slotLabel(shown)}
@@ -111,6 +127,7 @@ export function WinnerSheet({
           <View style={styles.introBox}>
             <Text style={[styles.intro, { color: colors.muted }]}>{END_GAME_TEXT.sheetIntro}</Text>
           </View>
+          {reports && shown.hole !== null ? <ReportedBox slot={shown} reports={reports} /> : null}
 
           <View
             style={[styles.list, { borderColor: colors.border, backgroundColor: colors.surface }]}
@@ -198,6 +215,67 @@ export function WinnerSheet({
   );
 }
 
+/**
+ * #2283: «Meldt inn fra flightene» (`Sidekonk-kaaring` V1). Bare til å lese:
+ * ingenting er valgt på forhånd, og arrangøren velger selv i lista under.
+ */
+function ReportedBox({ slot, reports }: { slot: FinishSlot; reports: SlotReports | 'failed' }) {
+  const { colors } = useTheme();
+  const rows: { key: string; node: ReactNode }[] = [];
+  if (reports !== 'failed') {
+    for (const line of reports.lines) {
+      rows.push({
+        key: `line-${line.flightNumber}`,
+        node: (
+          <View style={styles.reportLine} testID={`end-game-report-${slot.key}-${line.flightNumber}`}>
+            <Text style={[styles.reportFlight, { color: colors.muted }]}>{reportedFlight(line.flightNumber)}</Text>
+            <Text style={[styles.reportName, { color: colors.text }]}>{reportedName(slot.category, line.name)}</Text>
+            {line.distanceM !== null ? (
+              <Text style={[styles.reportDistance, { color: colors.text }]}>{reportedDistance(line.distanceM)}</Text>
+            ) : null}
+          </View>
+        ),
+      });
+    }
+    if (reports.lines.length > 0) {
+      for (const flight of reports.missingFlights) {
+        rows.push({
+          key: `missing-${flight}`,
+          node: (
+            <Text style={[styles.reportMissing, { color: colors.muted }]} testID={`end-game-report-${slot.key}-missing-${flight}`}>
+              {reportedMissing(flight)}
+            </Text>
+          ),
+        });
+      }
+    }
+  }
+  const empty = reports === 'failed' ? REPORTED_TEXT.readFailed : rows.length === 0 ? reportedNone(reports.hole) : null;
+  return (
+    <View
+      style={[styles.reportBox, { backgroundColor: colors.surface }]}
+      accessibilityLabel={REPORTED_TEXT.heading}
+      testID={`end-game-reports-${slot.key}`}
+    >
+      <Text style={[styles.reportHeading, { color: colors.muted }]} accessibilityRole="header">
+        {REPORTED_TEXT.heading}
+      </Text>
+      {empty !== null ? (
+        <Text style={[styles.reportEmpty, { color: colors.muted }]}>{empty}</Text>
+      ) : (
+        rows.map((row, index) => (
+          <View
+            key={row.key}
+            style={index > 0 ? { borderTopWidth: 1, borderTopColor: colors.divider } : undefined}
+          >
+            {row.node}
+          </View>
+        ))
+      )}
+    </View>
+  );
+}
+
 /** Radioknappen: tom ring, eller grønn ring med prikk når den er valgt. */
 function Radio({ checked }: { checked: boolean }) {
   const { colors } = useTheme();
@@ -252,6 +330,22 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   introBox: { marginTop: 6, marginBottom: 12, marginHorizontal: 4 },
+  // #2283 (`Sidekonk-kaaring` V1): boksen over lista, uten ramme.
+  reportBox: {
+    marginHorizontal: 4,
+    marginBottom: 12,
+    paddingTop: 10,
+    paddingHorizontal: 12,
+    paddingBottom: 4,
+    borderRadius: 12,
+  },
+  reportHeading: { ...interLine(12, 15), fontFamily: FONTS.sansSemiBold },
+  reportLine: { flexDirection: 'row', alignItems: 'baseline', gap: 10, paddingVertical: 8 },
+  reportFlight: { ...interLine(13, 18), fontFamily: FONTS.sans, width: 64, flexShrink: 0 },
+  reportName: { ...interLine(15, 20), fontFamily: FONTS.sansSemiBold, flex: 1, minWidth: 0 },
+  reportDistance: { ...interLine(15, 20), fontFamily: FONTS.sans, fontVariant: ['tabular-nums'], flexShrink: 0 },
+  reportMissing: { ...interLine(14, 20), fontFamily: FONTS.sans, paddingVertical: 8 },
+  reportEmpty: { ...interLine(14, 20, { multiline: true }), fontFamily: FONTS.sans, paddingTop: 8 },
   intro: { ...interLine(14, 19.6, { multiline: true }), fontFamily: FONTS.sans },
   list: { borderWidth: 1, borderRadius: 16, overflow: 'hidden', flexShrink: 1 },
   row: {

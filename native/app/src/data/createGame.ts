@@ -536,6 +536,11 @@ export async function publishGame(
     side_tournament_enabled: side.enabled,
     side_ld_count: side.ldCount,
     side_ctp_count: side.ctpCount,
+    // #2283: hullet for hver plass; `null` = ingen hull valgt (som før). En
+    // plass uten hull er et null-element, som `games_side_holes_valid` tillater;
+    // den genererte typen (`int[]`) kjenner ikke null-elementer, derav castene.
+    side_ld_holes: side.ldHoles as number[] | null,
+    side_ctp_holes: side.ctpHoles as number[] | null,
     side_disabled_categories: side.disabledCategories,
     // Publisering setter 'scheduled', ikke 'active'. Runden startes for seg
     // («Start runden nå»), og banehandicapene fryses først da — derfor

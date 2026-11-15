@@ -14,7 +14,7 @@
 import { isStablefordFamily } from '../../../../../lib/scoring/modes/types';
 import { settlementUnitKeyFor } from '../../../../../lib/scoring/settlement';
 import { SHOW_SETTLEMENT_IN_APP } from '../../../../../lib/launchRules';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   ALLOWANCE_TEXT,
@@ -36,10 +36,12 @@ import { defaultTeamHandicapPct } from '../../../../../lib/games/formatSetupDefa
 import { TEAM_FORMAT_TEAM_SIZES } from '../../../../../lib/games/teamFormatLimits';
 import { averagePctToSumPct, sumPctToAveragePct } from '../../../../../lib/games/teamHandicapUnit';
 import { SETTLEMENT_TEXT } from '../../lib/settlementCopy';
-import { effectiveTeamSize, isScrambleFamily, type ModeSetup } from '../../lib/wizardPayload';
+import { effectiveTeamSize, isScrambleFamily, withSlotHole, type ModeSetup } from '../../lib/wizardPayload';
 import { FONTS, fraunces, interLine, useTheme } from '../../theme';
 import { FeeAndPrizes, type FeeDraft } from './FeeAndPrizes';
 import { ChoiceCards, Chips, Field, ToggleRow } from './primitives';
+import { SideHoleRow, SideHoleSheet, type SideHoleSlot } from './SideHolePicker';
+import { SIDE_HOLE_TEXT, type SideHoleCategory } from '../../lib/createGameCopy';
 
 /** Fellesfeltene, samlet så skjermen kan sende dem videre som én bit. */
 export interface CommonSetup {
@@ -49,6 +51,12 @@ export interface CommonSetup {
   sideTournamentEnabled: boolean;
   sideLdCount: 0 | 1 | 2;
   sideCtpCount: 0 | 1 | 2;
+  /**
+   * #2283: hullet for hver plass, `null` = ikke valgt. Plassene over antallet
+   * leses aldri, så et senket antall trenger ikke å rydde lista.
+   */
+  sideLdHoles: (number | null)[];
+  sideCtpHoles: (number | null)[];
 }
 
 /** Talltekstene som ikke kan bo i `ModeSetup` uten å miste mellomtilstanden. */
@@ -151,6 +159,36 @@ export function SetupStep({
   onFee: (patch: Partial<FeeDraft>) => void;
 }) {
   const { colors, ui } = useTheme();
+  // #2283: plassen hullarket er åpent for, eller `null`.
+  const [holeSlot, setHoleSlot] = useState<SideHoleSlot | null>(null);
+  const holesOf = (category: SideHoleCategory) =>
+    category === 'longest_drive' ? common.sideLdHoles : common.sideCtpHoles;
+  // Tegningen sperrer ikke hullet den andre plassen har; det flyttes hit
+  // (`withSlotHole`).
+  const pickHole = (slot: SideHoleSlot, hole: number | null) => {
+    const next = withSlotHole(holesOf(slot.category), slot.position, hole);
+    onCommon(slot.category === 'longest_drive' ? { sideLdHoles: next } : { sideCtpHoles: next });
+  };
+  const holeRows = (category: SideHoleCategory, count: number, holes: readonly (number | null)[]) =>
+    count > 0 ? (
+      <View style={styles.holeRows}>
+        {Array.from({ length: count }, (_, i) => i + 1).map((position) => (
+          <SideHoleRow
+            key={position}
+            category={category}
+            position={position}
+            count={count}
+            hole={holes[position - 1] ?? null}
+            onPress={() => setHoleSlot({ category, position, count })}
+          />
+        ))}
+      </View>
+    ) : null;
+  const sideHoleNote = (
+    <Text style={[styles.sideHoleNote, { color: colors.muted }]} testID="create-side-hole-note">
+      {SIDE_HOLE_TEXT.note}
+    </Text>
+  );
   const stablefordFamily = isStablefordFamily(mode);
   const scoringSetup = mode === 'wolf' ? WOLF_SETUP_TEXT : mode === 'skins' ? SKINS_SETUP_TEXT : null;
   // Om formatet spiller om penger, og i hvilken enhet, er den delte regelen
@@ -534,6 +572,8 @@ export function SetupStep({
               onChange={(sideLdCount) => onCommon({ sideLdCount })}
               options={COUNT_OPTIONS('ld')}
             />
+            {holeRows('longest_drive', common.sideLdCount, common.sideLdHoles)}
+            {common.sideLdCount > 0 && common.sideCtpCount === 0 ? sideHoleNote : null}
           </Field>
           <Field label="Nærmest pinnen: antall hull">
             <Chips
@@ -541,7 +581,15 @@ export function SetupStep({
               onChange={(sideCtpCount) => onCommon({ sideCtpCount })}
               options={COUNT_OPTIONS('ctp')}
             />
+            {holeRows('closest_to_pin', common.sideCtpCount, common.sideCtpHoles)}
+            {common.sideCtpCount > 0 ? sideHoleNote : null}
           </Field>
+          <SideHoleSheet
+            slot={holeSlot}
+            value={holeSlot ? (holesOf(holeSlot.category)[holeSlot.position - 1] ?? null) : null}
+            onPick={(hole) => holeSlot && pickHole(holeSlot, hole)}
+            onClose={() => setHoleSlot(null)}
+          />
         </>
       ) : null}
 
@@ -560,6 +608,9 @@ export function SetupStep({
 }
 
 const styles = StyleSheet.create({
+  // #2283 (`Sidekonk-oppsett` O1): radene står 4 under brikkene og 8 fra hverandre.
+  holeRows: { gap: 8, marginTop: 4 },
+  sideHoleNote: { ...interLine(14, 17, { multiline: true }), fontFamily: FONTS.sans },
   // Kortet rundt shamble- og Patsome-oppsettet: 16 fra kanten (skjermen har
   // 20), 14 luft og 12 mellom radene, som artboardene.
   setupCard: { marginHorizontal: -4, borderWidth: 1, borderRadius: 16, padding: 14, gap: 12 },

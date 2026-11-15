@@ -168,3 +168,52 @@ export function describeMissingTeams(count: number): string {
 export function describeTeeCount(count: number): string {
   return count === 1 ? '1 tee' : `${count} teer`;
 }
+
+// -----------------------------------------------------------------------------
+// #2283: hull for sideturneringen (`Sidekonk-oppsett` O1 på designlerretet)
+// -----------------------------------------------------------------------------
+
+export type SideHoleCategory = 'longest_drive' | 'closest_to_pin';
+
+const SIDE_HOLE_NAME: Record<SideHoleCategory, { lower: string; title: string }> = {
+  longest_drive: { lower: 'lengste drive', title: 'Lengste drive' },
+  closest_to_pin: { lower: 'nærmest pinnen', title: 'Nærmest pinnen' },
+};
+
+export const SIDE_HOLE_TEXT = {
+  pick: 'Velg hull',
+  later: 'Velg hull senere',
+  sheetKicker: 'Sideturnering',
+  close: 'Lukk',
+  note: 'Velger du hull, melder flighten inn på hullet. Uten hull kårer du vinneren når runden er ferdig.',
+  grid: 'Hull',
+} as const;
+
+/** «Hull for lengste drive» med én plass, «Hull for nærmest pinnen 2» med to. */
+export function sideHoleRowLabel(category: SideHoleCategory, position: number, count: number): string {
+  const base = `Hull for ${SIDE_HOLE_NAME[category].lower}`;
+  return count > 1 ? `${base} ${position}` : base;
+}
+
+/** «Hull 7». */
+export function sideHoleValue(hole: number): string {
+  return `Hull ${hole}`;
+}
+
+/** Skjermleseren på raden: «Hull for nærmest pinnen 1: hull 7» / «…: ikke valgt». */
+export function sideHoleRowA11y(category: SideHoleCategory, position: number, count: number, hole: number | null): string {
+  return `${sideHoleRowLabel(category, position, count)}: ${hole === null ? 'ikke valgt' : `hull ${hole}`}`;
+}
+
+/** Tittelen i arket: «Nærmest pinnen 2», eller bare «Lengste drive» med én plass. */
+export function sideHoleSheetTitle(category: SideHoleCategory, position: number, count: number): string {
+  const title = SIDE_HOLE_NAME[category].title;
+  return count > 1 ? `${title} ${position}` : title;
+}
+
+/** Linja under tittelen i arket. */
+export function sideHoleSheetIntro(category: SideHoleCategory): string {
+  return category === 'closest_to_pin'
+    ? 'Velg hullet der flighten melder inn hvem som lå nærmest.'
+    : 'Velg hullet der flighten melder inn hvem som slo lengst.';
+}

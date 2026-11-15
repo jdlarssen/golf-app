@@ -30,6 +30,7 @@ import {
   teeOffInstant,
   type DraftPlayer,
   type GameDraft,
+  withSlotHole,
 } from './wizardPayload';
 import { WizardFormData, asSharedFormData } from './wizardFormData';
 
@@ -537,6 +538,31 @@ describe('feltnavn webben er fasit for', () => {
     expect(form.get('side_ctp_count')).toBe('0');
   });
 
+  it('#2283: sender hullet for hver plass opp til antallet, og tomt felt for en plass uten hull', () => {
+    const form = draftToFormData(
+      draft({
+        gameMode: 'stableford',
+        sideTournamentEnabled: true,
+        sideLdCount: 1,
+        sideCtpCount: 2,
+        sideLdHoles: [9, 12],
+        sideCtpHoles: [7],
+      }),
+    );
+    expect(form.get('side_ld_hole_1')).toBe('9');
+    // Plass 2 for lengste drive er over antallet: aldri sendt.
+    expect(form.has('side_ld_hole_2')).toBe(false);
+    expect(form.get('side_ctp_hole_1')).toBe('7');
+    expect(form.get('side_ctp_hole_2')).toBe('');
+  });
+
+  it('#2283: sender ingen hull når sideturneringen står av', () => {
+    const form = draftToFormData(
+      draft({ gameMode: 'stableford', sideTournamentEnabled: false, sideCtpCount: 1, sideCtpHoles: [7] }),
+    );
+    expect(form.has('side_ctp_hole_1')).toBe(false);
+  });
+
   it('bærer LD-/CTP-tellerne når bryteren står på', () => {
     const form = draftToFormData(
       draft({
@@ -976,5 +1002,20 @@ describe('påmeldingen (#2840 del 4)', () => {
     expect(rosterForRegistration(players, { mode: 'manual_approval', type: 'team' })).toEqual([]);
     expect(rosterForRegistration(players, { mode: 'invite_only', type: 'team' })).toEqual(players);
     expect(rosterForRegistration(players, { mode: 'open', type: 'solo' })).toEqual(players);
+  });
+});
+
+describe('#2283: withSlotHole', () => {
+  it('setter hullet for plassen, og fyller plassene før med null', () => {
+    expect(withSlotHole([], 2, 7)).toEqual([null, 7]);
+    expect(withSlotHole([9], 1, 12)).toEqual([12]);
+  });
+
+  it('flytter et hull den andre plassen har, i stedet for å gi to like', () => {
+    expect(withSlotHole([7, null], 2, 7)).toEqual([null, 7]);
+  });
+
+  it('«Velg hull senere» tømmer bare plassen', () => {
+    expect(withSlotHole([7, 3], 1, null)).toEqual([null, 3]);
   });
 });

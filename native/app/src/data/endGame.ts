@@ -51,6 +51,7 @@ import {
   NoRowsAffectedError,
 } from '../../../../lib/supabase/affectedRows';
 import { isSideWinnerNotActive } from '../../../../lib/games/sideWinnerGuard';
+import { playerFirstName } from '../../../../lib/names/playerName';
 import { finishGate, stampsFromRow } from '../../../../lib/games/finishGate';
 import { currentDeviceUserId, supabase } from '../supabase';
 import { withdrawPlayer } from './rosterActions';
@@ -592,4 +593,60 @@ export async function finishCupRound(
   const result = await finishCupMatch(cupId, gameId, allowMissing);
   if (result.ok) return { ok: true, alreadyFinished: result.alreadyFinished === true };
   return { ok: false, reason: CUP_ROUND_FAILURES[result.reason] ?? 'db' };
+}
+
+// -----------------------------------------------------------------------------
+// #2283: det flightene har meldt inn, til kåringsarket
+// -----------------------------------------------------------------------------
+
+/** Én flights svar på ett hull, slik arrangøren ser det på avslutt-skjermen. */
+export interface FinishClaim {
+  category: SideWinnerRow['category'];
+  holeNumber: number;
+  /** 0 i et spill med én flight (`side_claim_flight_key`). */
+  flightNumber: number;
+  /** `null` = «Ingen på green/fairway». */
+  winnerUserId: string | null;
+  /** Fornavnet, etter den delte navneregelen. `null` når ingen vant. */
+  winnerFirstName: string | null;
+  distanceM: number | null;
+}
+
+interface FinishClaimRow {
+  category: string;
+  hole_number: number;
+  flight_number: number;
+  winner_user_id: string | null;
+  winner_name: string | null;
+  winner_nickname: string | null;
+  distance_m: number | string | null;
+}
+
+/**
+ * Alle flightenes svar i spillet (`side_claims_for_finish`). Rpc-en krever at
+ * du er arrangør eller admin; appen har ingen service role. Navnene kommer rå,
+ * og hvilket som vises, avgjør den delte `playerFirstName`.
+ *
+ * @throws {Error} når rpc-en feiler. Tom liste betyr at ingen har meldt inn.
+ */
+export async function fetchSideClaimsForFinish(gameId: string): Promise<FinishClaim[]> {
+  const { data, error } = await supabase
+    .rpc('side_claims_for_finish', { p_game_id: gameId })
+    .returns<FinishClaimRow[]>();
+  if (error) throw new Error(`fetchSideClaimsForFinish: ${error.message}`);
+  return (data ?? []).flatMap((row) => {
+    if (row.category !== 'closest_to_pin' && row.category !== 'longest_drive') return [];
+    const distance = row.distance_m == null ? null : Number(row.distance_m);
+    return [
+      {
+        category: row.category,
+        holeNumber: row.hole_number,
+        flightNumber: row.flight_number,
+        winnerUserId: row.winner_user_id,
+        winnerFirstName:
+          row.winner_user_id == null ? null : playerFirstName({ name: row.winner_name, nickname: row.winner_nickname }),
+        distanceM: distance != null && Number.isFinite(distance) ? distance : null,
+      },
+    ];
+  });
 }
