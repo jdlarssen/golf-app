@@ -6,7 +6,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { AppCupManageView, AppCupSideAward } from '../../../../lib/cup/appCupManageView';
-import type { CupSideReportsResult } from '../../../../lib/cup/cupSideReports';
+import { girReportsFor, slotReportsFor, type CupSideReportsResult } from '../../../../lib/cup/cupSideReports';
 import { registerGirCounts, registerSideAwardWinner } from '../data/cupManage';
 import type { ScreenProps } from '../navigation';
 import { CupSideAwards } from './CupSideAwards';
@@ -17,6 +17,11 @@ jest.mock('../data/cupManage', () => ({
   registerGirCounts: jest.fn(async () => ({ ok: true })),
   registerSideAwardWinner: jest.fn(async () => ({ ok: true })),
 }));
+// De ekte oppslagene, pakket inn så testen kan se at skjermen kaller dem (som `endGamePlan.test.ts`).
+jest.mock('../../../../lib/cup/cupSideReports', () => {
+  const actual = jest.requireActual('../../../../lib/cup/cupSideReports');
+  return { ...actual, slotReportsFor: jest.fn(actual.slotReportsFor), girReportsFor: jest.fn(actual.girReportsFor) };
+});
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 let mockScheme: 'light' | 'dark' = 'light';
 jest.mock('react-native/Libraries/Utilities/useColorScheme', () => ({
@@ -424,6 +429,29 @@ describe('det kampene har meldt inn (#2283, V3)', () => {
     answer({ ok: true, view: room(awards, 'active', null) });
     await refocus();
     expect(screen.queryByText('Meldt inn fra kampene')).toBeNull();
+  });
+
+  it('skjermen bruker de delte oppslagene: kåringens type og hull slås opp, og svaret er det boksen viser', async () => {
+    const actual = jest.requireActual('../../../../lib/cup/cupSideReports') as typeof import('../../../../lib/cup/cupSideReports');
+    // Nærmest pinnen svarer «feilet» selv om rapporten har linjer: boksen følger oppslaget.
+    jest
+      .mocked(slotReportsFor)
+      .mockImplementation((result, kind, hole) => (kind === 'ctp' ? 'failed' : actual.slotReportsFor(result, kind, hole)));
+    try {
+      answer({ ok: true, view: room(awards, 'active', reports) });
+      await renderAwards();
+
+      expect(slotReportsFor).toHaveBeenCalledWith(reports, 'ctp', 7);
+      expect(slotReportsFor).toHaveBeenCalledWith(reports, 'ld', 9);
+      expect(girReportsFor).toHaveBeenCalledWith(reports, 12);
+      expect(screen.getByTestId('side-reports-empty-ctp')).toHaveTextContent('Fikk ikke hentet det kampene har meldt inn.');
+      expect(screen.queryByTestId('side-reports-line-ctp-g2')).toBeNull();
+      // De to andre går gjennom den ekte funksjonen.
+      expect(screen.getByTestId('side-reports-line-ld-g1')).toHaveTextContent('Four-ball 1Jonas');
+      expect(screen.getByTestId('side-reports-team1-gir')).toHaveTextContent(/^Team Nord: 3/);
+    } finally {
+      jest.mocked(slotReportsFor).mockImplementation(actual.slotReportsFor);
+    }
   });
 
   it('et hull som ikke står i rapporten, får ingen boks', async () => {

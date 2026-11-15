@@ -1,5 +1,7 @@
 // #2752: ordlyden er nettets der de to sier det samme, og hver kode har en setning.
 import type { AppCupWithdrawalMatch } from '../../../../lib/cup/appCupManageView';
+import { girBoxView, slotBoxView } from '../../../../lib/cup/cupSideReports';
+import { CUP_GIR_BOX_CASES, CUP_REPORTED_FIXED, CUP_SLOT_BOX_CASES } from '../../../../lib/cup/cupSideReportsCopyCases';
 import { MAX_PERSONAL_CUP_PLAYERS } from '../../../../lib/cup/limits';
 import {
   FINISH_APP_TEXT,
@@ -12,6 +14,8 @@ import {
   manageLoadFailureText,
   matchFinishFailureText,
   missingAwardsLine,
+  reportedGirBox,
+  reportedSlotBox,
   sideAwardFailureText,
   sideAwardTitle,
   manageNoticeText,
@@ -21,6 +25,12 @@ import {
 } from './cupManageCopy';
 import { CUP_TEXT } from './cupCopy';
 import source from '../../../../messages/no.json';
+
+// De ekte avgjørelsene, pakket inn så testen kan se at appen kaller dem og tegner svaret (som `endGamePlan.test.ts`).
+jest.mock('../../../../lib/cup/cupSideReports', () => {
+  const actual = jest.requireActual('../../../../lib/cup/cupSideReports');
+  return { ...actual, slotBoxView: jest.fn(actual.slotBoxView), girBoxView: jest.fn(actual.girBoxView) };
+});
 
 const web = source.cup;
 
@@ -253,5 +263,64 @@ describe('sidepoeng og avslutning (#2752)', () => {
         team2Count: null,
       }),
     ).toBe('GIR · hull 12');
+  });
+});
+
+// #2283: hva boksen under en kåring viser avgjøres i `lib/cup/cupSideReports.ts` (`slotBoxView`,
+// `girBoxView`), den samme som nettet leser. Her står koblingen: appen spør den og tegner svaret,
+// uten en regel av eget. Ordlyden er låst i `cupSideReportsCopy.parity.test.ts`.
+describe('boksene «Meldt inn fra kampene» bruker de delte avgjørelsene', () => {
+  const slotCase = CUP_SLOT_BOX_CASES.find((c) => c.title === 'one answer, one match that has not answered')!;
+  const girCase = CUP_GIR_BOX_CASES.find((c) => c.empty === null)!;
+
+  beforeEach(() => {
+    jest.mocked(slotBoxView).mockClear();
+    jest.mocked(girBoxView).mockClear();
+  });
+
+  it('nærmest pinnen og lengste drive: spør slotBoxView og tegner svaret', () => {
+    reportedSlotBox(slotCase.kind, slotCase.reports);
+    expect(slotBoxView).toHaveBeenCalledWith(slotCase.reports);
+
+    // «Ingen har meldt inn» er visningens avgjørelse, ikke appens: rapporten har linjer likevel.
+    jest.mocked(slotBoxView).mockReturnValueOnce({ kind: 'none' });
+    expect(reportedSlotBox(slotCase.kind, slotCase.reports)).toEqual({
+      lines: [],
+      missing: [],
+      empty: CUP_REPORTED_FIXED.none,
+    });
+
+    // Og kampene som mangler, er de visningen bærer med seg, ikke rapportens.
+    jest.mocked(slotBoxView).mockReturnValueOnce({
+      kind: 'lines',
+      lines: [],
+      missing: [{ gameId: 'g9', matchLabel: 'Four-ball 9' }],
+    });
+    const shown = reportedSlotBox('ctp', { kind: 'ctp', holeNumber: 3, lines: [], missing: [] });
+    expect(shown.missing.map((m) => m.text)).toEqual(['Four-ball 9 har ikke meldt inn']);
+    expect(shown.empty).toBeNull();
+  });
+
+  it('GIR: spør girBoxView og tegner svaret', () => {
+    if (girCase.reports === 'failed') throw new Error('fixture case is a failed read');
+    reportedGirBox(girCase.reports, girCase.team1Name, girCase.team2Name);
+    expect(girBoxView).toHaveBeenCalledWith(girCase.reports);
+
+    jest.mocked(girBoxView).mockReturnValueOnce({ kind: 'none' });
+    expect(reportedGirBox(girCase.reports, girCase.team1Name, girCase.team2Name)).toEqual({
+      teams: [],
+      missing: [],
+      empty: CUP_REPORTED_FIXED.none,
+    });
+
+    jest.mocked(girBoxView).mockReturnValueOnce({
+      kind: 'teams',
+      team1: girCase.reports.team1,
+      team2: girCase.reports.team2,
+      maxPerTeam: girCase.reports.maxPerTeam,
+      missing: [{ gameId: 'g9', matchLabel: 'Four-ball 9' }],
+    });
+    const shown = reportedGirBox({ ...girCase.reports, missing: [] }, girCase.team1Name, girCase.team2Name);
+    expect(shown.missing.map((m) => m.text)).toEqual(['Four-ball 9 har ikke meldt inn']);
   });
 });
