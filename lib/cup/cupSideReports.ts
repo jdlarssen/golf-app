@@ -75,6 +75,11 @@ export type CupGirTeamReport = {
   count: number;
   /** One entry per ball that counted: the first names on it, «Ole/Kari» for a shared ball. */
   names: string[];
+  /**
+   * More than «maks per lag» was reported. The one home of that rule: the web panel
+   * and the app box both read this flag and show « · maks N GIR» in warning colour.
+   */
+  overMax: boolean;
 };
 
 /** What the matches reported for one GIR hole. */
@@ -161,6 +166,7 @@ export function buildCupSideReports(input: BuildCupSideReportsInput): CupSideRep
       const team = (side: typeof sum.team1): CupGirTeamReport => ({
         count: side.count,
         names: side.balls.map((ball) => ball.map(shortName).filter((name) => name !== '').join('/')),
+        overMax: side.count > award.maxPerTeam,
       });
       gir.push({
         holeNumber: award.holeNumber,

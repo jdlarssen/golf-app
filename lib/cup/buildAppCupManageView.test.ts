@@ -127,8 +127,8 @@ describe('det kampene har meldt inn (#2283)', () => {
       {
         holeNumber: 5,
         maxPerTeam: 2,
-        team1: { count: 3, names: ['Jonas', 'Marte', 'Sigrid'] },
-        team2: { count: 1, names: ['Tore'] },
+        team1: { count: 3, names: ['Jonas', 'Marte', 'Sigrid'], overMax: true },
+        team2: { count: 1, names: ['Tore'], overMax: false },
         reportedMatches: 2,
         missing: [],
       },

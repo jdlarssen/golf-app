@@ -134,7 +134,7 @@ export function GirReportedBox({
     body = (
       <>
         {teams.map(({ key, name, sum }) => {
-          const over = sum.count > reports.maxPerTeam;
+          const over = sum.overMax;
           const who = sum.names.length > 0 ? ` (${sum.names.join(', ')})` : '';
           const max = over ? ` · ${t('reportedGirMax', { max: reports.maxPerTeam })}` : '';
           return (

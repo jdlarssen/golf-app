@@ -179,8 +179,8 @@ export const CUP_GIR_BOX_CASES: CupGirBoxCase[] = [
     reports: {
       holeNumber: 5,
       maxPerTeam: 2,
-      team1: { count: 1, names: ['Jonas'] },
-      team2: { count: 0, names: [] },
+      team1: { count: 1, names: ['Jonas'], overMax: false },
+      team2: { count: 0, names: [], overMax: false },
       reportedMatches: 1,
       missing: [{ gameId: 'g2', matchLabel: 'Four-ball 2' }],
     },
@@ -198,8 +198,8 @@ export const CUP_GIR_BOX_CASES: CupGirBoxCase[] = [
     reports: {
       holeNumber: 5,
       maxPerTeam: 2,
-      team1: { count: 3, names: ['Jonas', 'Marte', 'Sigrid'] },
-      team2: { count: 1, names: ['Tore'] },
+      team1: { count: 3, names: ['Jonas', 'Marte', 'Sigrid'], overMax: true },
+      team2: { count: 1, names: ['Tore'], overMax: false },
       reportedMatches: 2,
       missing: [],
     },
@@ -217,8 +217,8 @@ export const CUP_GIR_BOX_CASES: CupGirBoxCase[] = [
     reports: {
       holeNumber: 5,
       maxPerTeam: 2,
-      team1: { count: 2, names: ['Jonas', 'Marte'] },
-      team2: { count: 2, names: ['Tore', 'Kari'] },
+      team1: { count: 2, names: ['Jonas', 'Marte'], overMax: false },
+      team2: { count: 2, names: ['Tore', 'Kari'], overMax: false },
       reportedMatches: 2,
       missing: [],
     },
@@ -236,8 +236,8 @@ export const CUP_GIR_BOX_CASES: CupGirBoxCase[] = [
     reports: {
       holeNumber: 12,
       maxPerTeam: 3,
-      team1: { count: 1, names: ['Ole/Kari'] },
-      team2: { count: 4, names: ['Tore', 'Siri', 'Per', 'Eva'] },
+      team1: { count: 1, names: ['Ole/Kari'], overMax: false },
+      team2: { count: 4, names: ['Tore', 'Siri', 'Per', 'Eva'], overMax: true },
       reportedMatches: 1,
       missing: [{ gameId: 'g3', matchLabel: null }],
     },
@@ -255,8 +255,8 @@ export const CUP_GIR_BOX_CASES: CupGirBoxCase[] = [
     reports: {
       holeNumber: 5,
       maxPerTeam: 2,
-      team1: { count: 0, names: [] },
-      team2: { count: 0, names: [] },
+      team1: { count: 0, names: [], overMax: false },
+      team2: { count: 0, names: [], overMax: false },
       reportedMatches: 0,
       missing: [
         { gameId: 'g1', matchLabel: 'Four-ball 1' },

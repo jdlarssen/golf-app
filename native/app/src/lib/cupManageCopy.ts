@@ -384,7 +384,7 @@ export function reportedGirBox(
   if (reports.reportedMatches === 0) return { teams: [], missing: [], empty: SIDE_REPORTED_TEXT.none };
   const team = (key: 'team1' | 'team2', name: string): ReportedGirTeam => {
     const sum = reports[key];
-    const over = sum.count > reports.maxPerTeam;
+    const over = sum.overMax === true;
     const who = sum.names.length > 0 ? ` (${sum.names.join(', ')})` : '';
     const max = over ? ` · ${formatMessage(REPORTED_GIR_MAX, { max: reports.maxPerTeam })}` : '';
     return { key, label: `${name}:`, rest: ` ${sum.count}${who}${max}`, over };

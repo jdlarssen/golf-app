@@ -274,8 +274,8 @@ describe('det kampene har meldt inn (#2283, V3)', () => {
       {
         holeNumber: 12,
         maxPerTeam: 2,
-        team1: { count: 3, names: ['Jonas', 'Marte', 'Sigrid'] },
-        team2: { count: 1, names: ['Tore'] },
+        team1: { count: 3, names: ['Jonas', 'Marte', 'Sigrid'], overMax: true },
+        team2: { count: 1, names: ['Tore'], overMax: false },
         reportedMatches: 2,
         missing: [],
       },
@@ -353,8 +353,8 @@ describe('det kampene har meldt inn (#2283, V3)', () => {
           {
             holeNumber: 12,
             maxPerTeam: 2,
-            team1: { count: 0, names: [] },
-            team2: { count: 0, names: [] },
+            team1: { count: 0, names: [], overMax: false },
+            team2: { count: 0, names: [], overMax: false },
             reportedMatches: 0,
             missing: [{ gameId: 'g1', matchLabel: 'Four-ball 1' }],
           },
@@ -385,8 +385,8 @@ describe('det kampene har meldt inn (#2283, V3)', () => {
           {
             holeNumber: 12,
             maxPerTeam: 4,
-            team1: { count: 1, names: ['Jonas'] },
-            team2: { count: 0, names: [] },
+            team1: { count: 1, names: ['Jonas'], overMax: false },
+            team2: { count: 0, names: [], overMax: false },
             reportedMatches: 1,
             missing: [{ gameId: 'g2', matchLabel: 'Four-ball 2' }],
           },
