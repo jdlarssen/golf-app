@@ -5,6 +5,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { ComponentProps } from 'react';
+import { StyleSheet } from 'react-native';
 import { recordSideClaim } from '../../data/sideClaims';
 import { SideContestCard } from './SideContestCard';
 
@@ -171,6 +172,70 @@ describe('SideContestCard', () => {
     );
     await fireEvent.press(screen.getByTestId('side-contest-closest_to_pin'));
     expect(screen.queryByTestId('side-contest-closest_to_pin-sheet')).toBeNull();
+  });
+
+  it('raske trykk: valget står til siste lagring er ferdig, og neste trykk regner fra det', async () => {
+    const answers: ((result: { ok: true }) => void)[] = [];
+    recordMock.mockImplementation(() => new Promise((resolve) => answers.push(resolve)));
+    const p = props();
+    const view = await render(<SideContestCard {...p} />);
+    await fireEvent.press(screen.getByTestId('side-contest-closest_to_pin'));
+    await fireEvent.press(screen.getByTestId('side-contest-closest_to_pin-line-marte'));
+    await fireEvent.press(screen.getByTestId('side-contest-closest_to_pin-distance-plus'));
+    await fireEvent.press(screen.getByTestId('side-contest-closest_to_pin-distance-plus'));
+    expect(screen.getByTestId('side-contest-closest_to_pin-distance-input').props.value).toBe('1,0');
+
+    // Første lagring lander, og hentingen gir serverens svar fra den: Marte uten avstand.
+    await act(async () => answers[0]({ ok: true }));
+    const first = {
+      category: 'closest_to_pin' as const,
+      holeNumber: 7,
+      winnerUserId: 'marte',
+      distanceM: null,
+      enteredBy: 'me',
+      updatedAt: '2026-11-15T10:00:01Z',
+    };
+    await view.rerender(<SideContestCard {...p} claim={first} />);
+    // To lagringer står fortsatt i kø: feltet viser siste trykk, ikke serverens mellomsvar.
+    expect(screen.getByTestId('side-contest-closest_to_pin-distance-input').props.value).toBe('1,0');
+    expect(screen.getByTestId('side-contest-closest_to_pin-subtitle')).toHaveTextContent('Marte · 1,0 m');
+
+    await fireEvent.press(screen.getByTestId('side-contest-closest_to_pin-distance-plus'));
+    for (let i = 1; i < 4; i++) {
+      await act(async () => answers[i]?.({ ok: true }));
+    }
+    expect(recordMock.mock.calls.map(([write]) => write.distanceM)).toEqual([null, 0.5, 1, 1.5]);
+  });
+
+  it('en feil fra en tidligere lagring forsvinner når en senere lagring går gjennom', async () => {
+    const answers: ((result: Awaited<ReturnType<typeof recordSideClaim>>) => void)[] = [];
+    recordMock.mockImplementation(() => new Promise((resolve) => answers.push(resolve)));
+    await render(<SideContestCard {...props()} />);
+    await fireEvent.press(screen.getByTestId('side-contest-closest_to_pin'));
+    await fireEvent.press(screen.getByTestId('side-contest-closest_to_pin-line-jonas'));
+    // Marte trykkes mens Jonas fortsatt lagres. Jonas feiler, Marte går gjennom.
+    await fireEvent.press(screen.getByTestId('side-contest-closest_to_pin-line-marte'));
+    await act(async () => answers[0]({ ok: false, error: 'db_error' }));
+    await act(async () => answers[1]({ ok: true }));
+    expect(screen.queryByTestId('side-contest-closest_to_pin-sheet-notice')).toBeNull();
+    expect(screen.getByTestId('side-contest-closest_to_pin-line-marte').props.accessibilityState.checked).toBe(true);
+  });
+
+  it('svaret i raden står i tekstfargen, poenglinja og feilen i den dempede', async () => {
+    const claim = {
+      category: 'closest_to_pin' as const,
+      holeNumber: 7,
+      winnerUserId: 'marte',
+      distanceM: 2.5,
+      enteredBy: 'tore',
+      updatedAt: 't',
+    };
+    const { PALETTES } = require('../../theme') as typeof import('../../theme');
+    const view = await render(<SideContestCard {...props({ claim })} />);
+    const color = () => StyleSheet.flatten(screen.getByTestId('side-contest-closest_to_pin-subtitle').props.style).color;
+    expect(color()).toBe(PALETTES.light.text);
+    await view.rerender(<SideContestCard {...props({ claim: null })} />);
+    expect(color()).toBe(PALETTES.light.muted);
   });
 
   it('lengste drive i cup: kampen, poengene og ingen avstand', async () => {

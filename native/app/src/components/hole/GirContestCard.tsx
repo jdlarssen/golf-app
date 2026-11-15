@@ -80,6 +80,8 @@ export function GirContestCard({
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<ReadonlyMap<string, Pending>>(new Map());
   const [error, setError] = useState<string | null>(null);
+  // Lagringer som er sendt eller venter i køen.
+  const [inFlight, setInFlight] = useState(0);
 
   const alive = useRef(true);
   useEffect(() => {
@@ -89,20 +91,24 @@ export function GirContestCard({
     };
   }, []);
   const chain = useRef<Promise<void>>(Promise.resolve());
+  const latest = useRef(0);
 
   const loaded = claims !== undefined;
   const server = new Map((claims ?? []).map((row) => [row.userId, row]));
 
-  /** Treffet for én spiller: trykket så lenge serveren ikke har noe nyere. */
+  /**
+   * Treffet for én spiller: trykket mens lagringer står i kø, og ellers så
+   * lenge serveren ikke har noe nyere.
+   */
+  const pressLive = (userId: string, press: Pending) =>
+    inFlight > 0 || press.base === (server.get(userId)?.updatedAt ?? null);
   const hitOf = (userId: string): boolean | null => {
     const row = server.get(userId);
     const press = pending.get(userId);
-    if (press && press.base === (row?.updatedAt ?? null)) return press.hit;
+    if (press && pressLive(userId, press)) return press.hit;
     return row ? row.hit : null;
   };
-  const pressedLive = [...pending.entries()].some(
-    ([userId, press]) => press.base === (server.get(userId)?.updatedAt ?? null),
-  );
+  const pressedLive = [...pending.entries()].some(([userId, press]) => pressLive(userId, press));
 
   const ballHit = (ball: GirBallLine) => ball.userIds.some((userId) => hitOf(userId) === true);
   const ballReported = (ball: GirBallLine) => ball.userIds.some((userId) => hitOf(userId) !== null);
@@ -139,26 +145,34 @@ export function GirContestCard({
   }
 
   const save = (userIds: readonly string[], hit: boolean) => {
+    const mySave = ++latest.current;
     setPending((prev) => {
       const next = new Map(prev);
       for (const userId of userIds) next.set(userId, { hit, base: server.get(userId)?.updatedAt ?? null });
       return next;
     });
     setError(null);
+    setInFlight((n) => n + 1);
     chain.current = chain.current.then(async () => {
-      const result = await recordGirClaims({ gameId, holeNumber, userIds, hit });
-      if (!alive.current) return;
-      if (result.ok) {
-        await refresh();
-        return;
+      try {
+        const result = await recordGirClaims({ gameId, holeNumber, userIds, hit });
+        if (!alive.current) return;
+        if (result.ok) {
+          await refresh();
+          // Siste trykk er lagret: en feil fra et tidligere trykk gjelder ikke lenger.
+          if (alive.current && mySave === latest.current) setError(null);
+          return;
+        }
+        setError(describeSideClaimFailure(result.error, contest));
+        // Ballen hopper tilbake til det serveren har, om ingen har trykket på den siden.
+        setPending((prev) => {
+          const next = new Map(prev);
+          for (const userId of userIds) if (next.get(userId)?.hit === hit) next.delete(userId);
+          return next;
+        });
+      } finally {
+        if (alive.current) setInFlight((n) => n - 1);
       }
-      setError(describeSideClaimFailure(result.error, contest));
-      // Ballen hopper tilbake til det serveren har.
-      setPending((prev) => {
-        const next = new Map(prev);
-        for (const userId of userIds) if (next.get(userId)?.hit === hit) next.delete(userId);
-        return next;
-      });
     });
   };
 

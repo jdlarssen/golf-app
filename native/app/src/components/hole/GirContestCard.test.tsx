@@ -2,7 +2,7 @@
 // trykk lagrer bare den ballen, «Ingen traff greenen» setter alle til bommet,
 // og en foursomes-side er én linje.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { ComponentProps } from 'react';
 import { recordGirClaims } from '../../data/sideClaims';
 import { GirContestCard } from './GirContestCard';
@@ -142,6 +142,25 @@ describe('GirContestCard', () => {
     await fireEvent.press(screen.getByTestId('side-contest-gir-line-side-2'));
     expect(recordMock).toHaveBeenCalledWith({ gameId: 'game-1', holeNumber: 5, userIds: ['tore', 'kari'], hit: true });
     expect(screen.getByTestId('side-contest-gir-subtitle')).toHaveTextContent('1 av 2 traff');
+  });
+
+  it('raske trykk: av og på igjen står til siste lagring er ferdig', async () => {
+    const answers: ((result: { ok: true }) => void)[] = [];
+    recordMock.mockImplementation(() => new Promise((resolve) => answers.push(resolve)));
+    const p = props();
+    const view = await render(<GirContestCard {...p} />);
+    await fireEvent.press(screen.getByTestId('side-contest-gir'));
+    await fireEvent.press(screen.getByTestId('side-contest-gir-line-marte'));
+    await fireEvent.press(screen.getByTestId('side-contest-gir-line-marte'));
+    expect(screen.getByTestId('side-contest-gir-line-marte').props.accessibilityState.checked).toBe(false);
+
+    // Første lagring lander, og hentingen gir serverens mellomsvar: Marte traff.
+    await act(async () => answers[0]({ ok: true }));
+    await view.rerender(<GirContestCard {...p} claims={[row('u-x', false, 't0'), row('marte', true, 't1', 'me')]} />);
+    expect(screen.getByTestId('side-contest-gir-line-marte').props.accessibilityState.checked).toBe(false);
+
+    await act(async () => answers[1]({ ok: true }));
+    expect(recordMock.mock.calls.map(([write]) => write.hit)).toEqual([true, false]);
   });
 
   it('uten nett er linjene sperret', async () => {

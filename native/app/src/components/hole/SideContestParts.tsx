@@ -62,7 +62,10 @@ export function ContestRow({
 }) {
   const { colors } = useTheme();
   const disabled = state === 'offline' || state === 'failed';
-  const subtitleColor = state === 'offline' ? colors.warningText : colors.muted;
+  // Tegningen: svaret står i tekstfargen, poenglinja og «Fikk ikke hentet» i
+  // den dempede, og «Uten nett» i varselfargen.
+  const subtitleColor =
+    state === 'offline' ? colors.warningText : state === 'answered' ? colors.text : colors.muted;
   return (
     <Pressable
       onPress={onPress}
@@ -130,10 +133,11 @@ export function ContestSheet({
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
 
-  // iOS har ingen live region: en ny feil eller status leses opp med en
-  // kunngjøring. Android leser `accessibilityLiveRegion` under.
+  // iOS har ingen live region: et nytt varsel (uten nett, feil) eller en ny
+  // status leses opp med en kunngjøring. Android leser `accessibilityLiveRegion`
+  // under.
   const announced = useRef<string | null>(null);
-  const spoken = notice?.kind === 'error' ? notice.text : status;
+  const spoken = notice ? notice.text : status;
   useEffect(() => {
     if (!open) {
       announced.current = null;
