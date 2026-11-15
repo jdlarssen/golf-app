@@ -4,8 +4,15 @@
 // Her står bare det skjermen gjør med dem: lederkortet (bare når én har plass 1,
 // på alle tre fanene), «Du er på …»-linja, strekene mot lederen, medaljene på
 // plass 1–3 og tekstene i hver tilstand. Ren, så skjermen bare tegner.
+import { formatLongDateNb, formatShortDateNb } from '../../../../lib/format/date';
+import {
+  ACHIEVEMENT_MARKS,
+  RARE_MOMENT_MARK_KEY,
+  type RareMomentKind,
+} from '../../../../lib/stats/achievementMarks';
 import type {
   AeresbrettMe,
+  AeresbrettMoment,
   AeresbrettRow,
   AeresbrettView,
 } from '../../../../lib/stats/appAeresbrettView';
@@ -158,4 +165,92 @@ export function buildTopplisteModel(
   const own = board.rows.find((row) => row.isViewer);
   const initials = own?.initials ?? opts.selfInitials ?? '?';
   return { kind: 'board', subtitle, leader, you: youModel(tab, board.me, initials, view), rows };
+}
+
+/** Kortet viser så mange rader før «Vis alle N». */
+export const MOMENTS_VISIBLE = 5;
+
+const MOMENT_KIND_KEY = {
+  hole_in_one: 'momentHoleInOne',
+  albatross: 'momentAlbatross',
+  eagle: 'momentEagle',
+} as const satisfies Record<RareMomentKind, 'momentHoleInOne' | 'momentAlbatross' | 'momentEagle'>;
+
+export type MomentRowModel = {
+  /** «1», «−3» eller «−2», golfens eget tall i ringen. */
+  mark: string;
+  name: string;
+  isViewer: boolean;
+  /** «Hole-in-one», «Albatross», «Eagle». */
+  shot: string;
+  /** « · hull 7 på Bogstad». */
+  where: string;
+  /** «12. jun». */
+  date: string;
+  /** «Hole-in-one, Jonas B., hull 7 på Bogstad, 12. juni», og «, deg» på din egen rad. */
+  spoken: string;
+};
+
+export type MomentsModel = {
+  title: string;
+  subtitle: string;
+  /** `failed`: bare kortet sier fra. `empty`: ingen slag. `list`: radene. */
+  state: 'failed' | 'empty' | 'list';
+  emptyText: string;
+  rows: MomentRowModel[];
+  total: number;
+  /** «Vis alle N» eller «Vis færre»; `null` når alle radene alt står der. */
+  toggleLabel: string | null;
+};
+
+/** `YYYY-MM-DD` som en lokal dato, så dag og måned ikke flytter seg med tidssonen. */
+function localDate(playedOn: string): Date {
+  const [year, month, day] = playedOn.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function momentRow(m: AeresbrettMoment): MomentRowModel {
+  const shot = topplisteT(MOMENT_KIND_KEY[m.kind]);
+  const date = localDate(m.playedOn);
+  const course = m.courseName;
+  const spoken = course
+    ? topplisteT('momentSpoken', { kind: shot, name: m.name, hole: m.hole, course, date: formatLongDateNb(date) })
+    : topplisteT('momentSpokenNoCourse', { kind: shot, name: m.name, hole: m.hole, date: formatLongDateNb(date) });
+  return {
+    mark: ACHIEVEMENT_MARKS[RARE_MOMENT_MARK_KEY[m.kind]],
+    name: m.name,
+    isViewer: m.isViewer,
+    shot,
+    where: course
+      ? topplisteT('momentWhere', { hole: m.hole, course })
+      : topplisteT('momentWhereNoCourse', { hole: m.hole }),
+    date: formatShortDateNb(date),
+    spoken: m.isViewer ? `${spoken}, ${topplisteT('youSpoken')}` : spoken,
+  };
+}
+
+/**
+ * «Sjeldne slag i 2026»-kortet, likt under alle tre fanene. `null` når ingen sesong er kjent
+ * (da står bare «Ingen runder ennå»). Rekkefølgen og grensen på fem rader er
+ * `buildAeresbrettView` sin og `MOMENTS_VISIBLE`; her står bare tilstandene og tekstene.
+ */
+export function buildMomentsModel(view: AeresbrettView, expanded: boolean): MomentsModel | null {
+  if (view.seasonYear === null) return null;
+  const year = view.seasonYear;
+  const base = {
+    title: topplisteT('momentsTitle', { year }),
+    subtitle: topplisteT('momentsSubtitle'),
+    emptyText: view.seasonOver ? topplisteT('momentsNoneOver', { year }) : topplisteT('momentsNone'),
+  };
+  if (view.moments === null) return { ...base, state: 'failed', rows: [], total: 0, toggleLabel: null };
+  const total = view.moments.length;
+  if (total === 0) return { ...base, state: 'empty', rows: [], total, toggleLabel: null };
+  const shown = expanded ? view.moments : view.moments.slice(0, MOMENTS_VISIBLE);
+  const toggleLabel =
+    total <= MOMENTS_VISIBLE
+      ? null
+      : expanded
+        ? topplisteT('momentsShowLess')
+        : topplisteT('momentsShowAll', { count: total });
+  return { ...base, state: 'list', rows: shown.map(momentRow), total, toggleLabel };
 }

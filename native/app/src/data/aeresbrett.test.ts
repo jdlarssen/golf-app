@@ -28,6 +28,9 @@ const VIEW = {
     birdies: { rows: [ROW], me: { place: 2, count: 3, toTop5: null } },
     rounds: { rows: [ROW], me: null },
   },
+  moments: [
+    { kind: 'eagle', name: 'Marte L.', initials: 'ML', isViewer: false, hole: 7, courseName: 'Bogstad', playedOn: '2026-06-12' },
+  ],
 };
 
 beforeEach(() => {
@@ -58,10 +61,33 @@ describe('fetchAeresbrett', () => {
         birdies: null,
         rounds: { rows: [], me: null },
       },
+      moments: [],
     };
     respondWith(200, empty);
 
     expect(await aeresbrett().fetchAeresbrett()).toEqual({ ok: true, view: empty });
+  });
+
+  it('keeps a failed strokes read (moments null) as it is', async () => {
+    const failed = { ...VIEW, boards: { ...VIEW.boards, birdies: null }, moments: null };
+    respondWith(200, failed);
+
+    expect(await aeresbrett().fetchAeresbrett()).toEqual({ ok: true, view: failed });
+  });
+
+  it('treats a moment without a valid date or kind as a failure, never as half a card', async () => {
+    respondWith(200, { ...VIEW, moments: [{ ...VIEW.moments[0], playedOn: '12. juni' }] });
+    expect(await aeresbrett().fetchAeresbrett()).toEqual({ ok: false, reason: 'failed' });
+    respondWith(200, { ...VIEW, moments: [{ ...VIEW.moments[0], kind: 'birdie' }] });
+    expect(await aeresbrett().fetchAeresbrett()).toEqual({ ok: false, reason: 'failed' });
+  });
+
+  it('treats a 200 without the moments list as a failure', async () => {
+    const { moments: _moments, ...rest } = VIEW;
+    void _moments;
+    respondWith(200, rest);
+
+    expect(await aeresbrett().fetchAeresbrett()).toEqual({ ok: false, reason: 'failed' });
   });
 
   it('treats a 200 without the three boards as a failure, never as a board', async () => {

@@ -11,6 +11,8 @@
 //  - Uten nett og feil: kort med «Prøv igjen», uten faner og uten sesong.
 //  - Ingen runder ennå: skogkort, uten faner.
 //  - Bare birdie-lesingen feilet: fanene står, og «Birdies» viser sitt eget kort.
+//  - Under lista står «Sjeldne slag i {år}», likt under alle tre fanene (PR 4): hole-in-one,
+//    albatross og eagle i sesongen, fem rader og «Vis alle N». Feiler slagene, sier bare kortet fra.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,8 +26,9 @@ import {
   TopplisteTabs,
   TopplisteYou,
 } from '../components/toppliste/TopplisteParts';
+import { TopplisteMoments } from '../components/toppliste/TopplisteMoments';
 import { fetchAeresbrett } from '../data/aeresbrett';
-import { buildTopplisteModel, type TopplisteTab } from '../lib/toppliste';
+import { buildMomentsModel, buildTopplisteModel, type TopplisteTab } from '../lib/toppliste';
 import { TOPPLISTE_TEXT } from '../lib/topplisteCopy';
 import type { ScreenProps } from '../navigation';
 import { fraunces, interLine, useTheme } from '../theme';
@@ -64,12 +67,27 @@ export function Toppliste({ route }: ScreenProps<'Toppliste'>) {
   const insets = useSafeAreaInsets();
   const { load, retry } = useToppliste();
   const [tab, setTab] = useState<TopplisteTab>('wins');
+  const [momentsOpen, setMomentsOpen] = useState(false);
   const selfInitials = route.params?.selfInitials;
 
   const model = useMemo(
     () => (load.state === 'ready' ? buildTopplisteModel(load.view, tab, { selfInitials }) : null),
     [load, tab, selfInitials],
   );
+
+  // «Sjeldne slag» er likt under alle tre fanene og følger ikke valgt fane.
+  const moments = useMemo(
+    () => (load.state === 'ready' ? buildMomentsModel(load.view, momentsOpen) : null),
+    [load, momentsOpen],
+  );
+  const momentsCard = moments ? (
+    <TopplisteMoments
+      model={moments}
+      expanded={momentsOpen}
+      onToggle={() => setMomentsOpen((open) => !open)}
+      onRetry={retry}
+    />
+  ) : null;
 
   return (
     <ScrollView
@@ -130,6 +148,7 @@ export function Toppliste({ route }: ScreenProps<'Toppliste'>) {
               <TopplisteList rows={model.rows} />
             </>
           ) : null}
+          {momentsCard}
         </>
       )}
     </ScrollView>
