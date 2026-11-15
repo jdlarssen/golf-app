@@ -93,23 +93,23 @@ describe('useSideClaims', () => {
     expect(fetchSideClaims).toHaveBeenLastCalledWith('g', 9);
   });
 
-  it('refresh gir tilbake det som ble hentet, og null når hentingen feilet', async () => {
+  it('løpenumrene: snapshotSeq er hentingen som står, startedSeq den siste som gikk ut', async () => {
     fetchSideClaims.mockResolvedValueOnce([]);
     const { result } = await renderHook(() => useSideClaims('g', 7, { side: true, gir: false }));
     await waitFor(() => expect(result.current.side).toEqual([]));
+    expect(result.current.snapshotSeq).toBe(1);
+    expect(result.current.startedSeq()).toBe(1);
+
+    // En henting som feiler, går ut (2), men endrer ikke det som står.
+    fetchSideClaims.mockRejectedValueOnce(new Error('nett'));
+    await act(() => result.current.refresh());
+    expect(result.current.startedSeq()).toBe(2);
+    expect(result.current.snapshotSeq).toBe(1);
 
     fetchSideClaims.mockResolvedValueOnce([CLAIM]);
-    let fresh: unknown;
-    await act(async () => {
-      fresh = await result.current.refresh();
-    });
-    expect(fresh).toEqual({ side: [CLAIM], gir: undefined });
-
-    fetchSideClaims.mockRejectedValueOnce(new Error('nett'));
-    await act(async () => {
-      fresh = await result.current.refresh();
-    });
-    expect(fresh).toBeNull();
+    await act(() => result.current.refresh());
+    expect(result.current.snapshotSeq).toBe(3);
+    expect(result.current.side).toEqual([CLAIM]);
   });
 
   it('nyeste henting vinner når to svar krysser hverandre', async () => {

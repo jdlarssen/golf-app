@@ -14,16 +14,16 @@
 //
 // Flightnøkkelen kan bytte midt i runden (#2891, arrangøren flytter deg). Kortet
 // kaller derfor `refresh` hver gang arket åpnes, ikke bare når skjermen lastes.
+//
+// Hver henting får et løpenummer når den går ut. `snapshotSeq` er nummeret på
+// hentingen som står på skjermen, og `startedSeq()` nummeret på den siste som
+// har gått ut. Kortene bruker dem til å holde et lagret trykk til det kommer et
+// svar fra en henting som startet etter lagringen (eierens valg B, 15.11):
+// serveren er fasit, men et trykk flimrer ikke tilbake fordi én henting feilet.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchGirClaims, fetchSideClaims, type GirClaim, type SideClaim } from '../data/sideClaims';
 import { CHOICES_POLL_MS } from './useChoices';
-
-/** Det én henting fant. Kortene bruker den til å vite hva serveren har etter egen lagring. */
-export interface SideClaimsSnapshot {
-  side?: SideClaim[];
-  gir?: GirClaim[];
-}
 
 export interface SideClaimsState {
   /** `undefined` = ikke hentet for dette hullet ennå. Tom liste er et svar. */
@@ -31,12 +31,16 @@ export interface SideClaimsState {
   gir: GirClaim[] | undefined;
   /** Siste henting feilet, og ingen har lyktes for hullet. Raden sier fra. */
   failed: boolean;
-  /** Henter på nytt og gir tilbake det som ble hentet, eller `null` når hentingen feilet. */
-  refresh: () => Promise<SideClaimsSnapshot | null>;
+  refresh: () => Promise<void>;
+  /** Løpenummeret til hentingen som står nå; 0 før noen har lyktes for hullet. */
+  snapshotSeq: number;
+  /** Løpenummeret til den siste hentingen som har gått ut. */
+  startedSeq: () => number;
 }
 
 interface Fetched {
   hole: number;
+  seq: number;
   side: SideClaim[] | undefined;
   gir: GirClaim[] | undefined;
 }
@@ -66,8 +70,8 @@ export function useSideClaims(
   const appliedSeq = useRef(0);
   const succeededHole = useRef<number | null>(null);
 
-  const refresh = useCallback(async (): Promise<SideClaimsSnapshot | null> => {
-    if (!enabled) return null;
+  const refresh = useCallback(async () => {
+    if (!enabled) return;
     const mySeq = ++seq.current;
     const hole = holeNumber;
     try {
@@ -75,20 +79,19 @@ export function useSideClaims(
         need.side ? fetchSideClaims(gameId, hole) : Promise.resolve(undefined),
         need.gir ? fetchGirClaims(gameId, hole) : Promise.resolve(undefined),
       ]);
-      if (alive.current && mySeq > appliedSeq.current) {
-        appliedSeq.current = mySeq;
-        succeededHole.current = hole;
-        setFetched({ hole, side, gir });
-        setFailedHole(null);
-      }
-      return { side, gir };
+      if (!alive.current || mySeq <= appliedSeq.current) return;
+      appliedSeq.current = mySeq;
+      succeededHole.current = hole;
+      setFetched({ hole, seq: mySeq, side, gir });
+      setFailedHole(null);
     } catch {
       // Forrige svar for hullet står. Har ingen henting lyktes for hullet,
       // sier raden «Fikk ikke hentet».
       if (alive.current && succeededHole.current !== hole) setFailedHole(hole);
-      return null;
     }
   }, [enabled, gameId, holeNumber, need.gir, need.side]);
+
+  const startedSeq = useCallback(() => seq.current, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -105,5 +108,7 @@ export function useSideClaims(
     gir: current?.gir,
     failed: current == null && failedHole === holeNumber,
     refresh,
+    snapshotSeq: current?.seq ?? 0,
+    startedSeq,
   };
 }

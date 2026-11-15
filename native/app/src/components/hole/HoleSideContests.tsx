@@ -117,6 +117,8 @@ export function HoleSideContests({
             online={online}
             savedByName={nameOf}
             refresh={claims.refresh}
+            snapshotSeq={claims.snapshotSeq}
+            startedSeq={claims.startedSeq}
           />
         ) : (
           <SideContestCard
@@ -135,6 +137,8 @@ export function HoleSideContests({
             online={online}
             savedByName={nameOf}
             refresh={claims.refresh}
+            snapshotSeq={claims.snapshotSeq}
+            startedSeq={claims.startedSeq}
           />
         ),
       )}
