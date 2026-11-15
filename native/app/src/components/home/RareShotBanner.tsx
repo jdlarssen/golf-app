@@ -106,6 +106,7 @@ export function RareShotBanner({ onOpen }: { onOpen: () => void }) {
   );
 }
 
+// Linjehøydene er tegningens (gruppe 11, målt i DOM-en: 15, 19 og 17), så kortet blir 81 høyt.
 const styles = StyleSheet.create({
   pressed: { opacity: 0.6 },
   // 8 pt luft under, som Kavalkade-banneret.
@@ -134,12 +135,12 @@ const styles = StyleSheet.create({
   open: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 },
   text: { flex: 1, minWidth: 0, gap: 2 },
   line: { flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0 },
-  shot: { ...interLine(12, 18), fontFamily: FONTS.sansSemiBold, flexShrink: 1 },
+  shot: { ...interLine(12, 15), fontFamily: FONTS.sansSemiBold, flexShrink: 1 },
   more: { flexShrink: 0, height: 18, paddingHorizontal: 7, borderRadius: 999, justifyContent: 'center' },
   moreText: { ...interLine(11, 18), fontFamily: FONTS.sansSemiBold, fontVariant: ['tabular-nums'] },
-  name: { ...interLine(15, 20), fontFamily: FONTS.sansSemiBold, flexShrink: 1, minWidth: 0 },
+  name: { ...interLine(15, 19), fontFamily: FONTS.sansSemiBold, flexShrink: 1, minWidth: 0 },
   you: { flexShrink: 0, height: 20, paddingHorizontal: 8, borderRadius: 999, justifyContent: 'center' },
   youText: { ...interLine(12, 20), fontFamily: FONTS.sansSemiBold },
-  where: interLine(13, 18),
+  where: interLine(13, 17),
   close: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 });
