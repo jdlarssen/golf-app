@@ -119,7 +119,7 @@ export function SideHoleSheet({
             </Pressable>
           </View>
           <Text style={[styles.intro, { color: colors.muted }]}>{sideHoleSheetIntro(slot.category)}</Text>
-          <View style={styles.grid} accessibilityLabel={SIDE_HOLE_TEXT.grid}>
+          <View style={styles.grid}>
             {ROWS.map((row) => (
               <View key={row[0]} style={styles.gridRow}>
                 {row.map((hole) => {

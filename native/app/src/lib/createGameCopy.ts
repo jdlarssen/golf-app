@@ -186,7 +186,6 @@ export const SIDE_HOLE_TEXT = {
   sheetKicker: 'Sideturnering',
   close: 'Lukk',
   note: 'Velger du hull, melder flighten inn på hullet. Uten hull kårer du vinneren når runden er ferdig.',
-  grid: 'Hull',
 } as const;
 
 /** «Hull for lengste drive» med én plass, «Hull for nærmest pinnen 2» med to. */
