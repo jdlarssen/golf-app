@@ -62,7 +62,8 @@ export function TopplisteMoments({
       style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
       testID="toppliste-moments"
     >
-      <View style={[styles.head, { borderBottomColor: colors.divider }]}>
+      {/* Med rader har toppen en skillelinje under seg; i «Ingen ennå» og feilen (tegningen) står meldingen rett under. */}
+      <View style={model.state === 'list' ? [styles.head, styles.headRule, { borderBottomColor: colors.divider }] : styles.head}>
         <Text numberOfLines={1} accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
           {model.title}
         </Text>
@@ -124,7 +125,8 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.6 },
   // 20 pt luft under lista; kortet er likt under alle tre fanene.
   card: { marginHorizontal: 16, marginTop: 20, borderWidth: 1, borderRadius: 16, overflow: 'hidden' },
-  head: { paddingTop: 14, paddingHorizontal: 14, paddingBottom: 12, borderBottomWidth: 1 },
+  head: { paddingTop: 14, paddingHorizontal: 14 },
+  headRule: { paddingBottom: 12, borderBottomWidth: 1 },
   title: fraunces(600, 18, 23),
   subtitle: { ...interLine(13, 16), marginTop: 2 },
 
