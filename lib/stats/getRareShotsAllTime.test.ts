@@ -42,7 +42,7 @@ const player = (gameId: string, userId: string) => ({
   user_id: userId,
   tee_gender: 'mens',
   withdrawn_at: null,
-  users: { is_guest: false, name: userId === 'u-marte' ? 'Marte Larsen' : 'Per Knutsen', nickname: null },
+  users: { is_guest: false, deleted_at: null, name: userId === 'u-marte' ? 'Marte Larsen' : 'Per Knutsen', nickname: null },
 });
 
 beforeEach(() => {
@@ -82,6 +82,18 @@ describe('getRareShotsAllTime', () => {
       .filter((op) => op.table === 'scores')
       .flatMap((op) => op.filters.filter((f) => f.op === 'in').flatMap((f) => f.value as string[]));
     expect(scoreGameIds).not.toContain('g-scr');
+  });
+
+  it('leaves out a deleted account, whose earlier «no» to sharing is gone with it', async () => {
+    tables.game_players = [
+      player('g-2024', 'u-per'),
+      { ...player('g-2026', 'u-marte'), users: { is_guest: false, deleted_at: '2026-10-01T00:00:00Z', name: 'Slettet bruker', nickname: null } },
+    ];
+
+    const result = await getRareShotsAllTime();
+
+    expect(result.moments.map((m) => m.userId)).toEqual(['u-per']);
+    expect(result.names.map(([id]) => id)).toEqual(['u-per']);
   });
 
   it('with no finished game reads nothing more', async () => {
