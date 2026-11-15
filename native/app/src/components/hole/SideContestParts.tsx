@@ -434,7 +434,9 @@ export function DistanceField({
               style={[styles.distanceInput, { color: colors.text }]}
               testID={`${testID}-input`}
             />
-            <Text style={[styles.metre, { color: colors.muted }]}>{SIDE_CONTEST_TEXT.metre}</Text>
+            <View style={styles.metreBox}>
+              <Text style={[styles.metre, { color: colors.muted }]}>{SIDE_CONTEST_TEXT.metre}</Text>
+            </View>
           </View>
           <StepButton
             plus
@@ -588,13 +590,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Tegningen setter tallet og «m» på samme grunnlinje. Et tekstfelt har ingen
+  // grunnlinje i flex, så «m» flyttes ned: feltet sentrerer Fraunces 20 i 44
+  // (grunnlinja ~29 ned), og Inter 13 i en 16-linje har grunnlinja 13 ned.
   distanceValue: {
     width: 64,
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'flex-start',
     justifyContent: 'center',
     gap: 3,
   },
+  metreBox: { marginTop: 16 },
   // Feltet er 44 høyt; tallet står midt i det, uten linjeboksens marger.
   distanceInput: {
     fontFamily: frauncesFamily(600, 20),
