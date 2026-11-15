@@ -21,6 +21,15 @@ import { PIN_GATE_MAX_PINS, PIN_GATE_WINDOW_DAYS } from '@/lib/geo/pinRules';
 import type { LatLng } from '@/lib/geo/distance';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
+import { readHoleClaims, type HoleClaimsNeed } from '@/lib/games/sideClaims';
+import {
+  contestsForHole,
+  CUP_SIDE_AWARD_SELECT,
+  toCupSideAwards,
+  type CupSideAward,
+  type CupSideAwardRow,
+} from '@/lib/games/sideContest';
+import { sideHolesConfigFor } from './holeSideContest';
 
 /** Cookie-basert per-request-klient (typet via helperen, jf. #844). */
 type ServerClient = Awaited<ReturnType<typeof getServerClient>>;
@@ -49,6 +58,71 @@ export type HoleFetchModes = {
   isPatsome: boolean;
 };
 
+/** The cup's side awards (CTP, LD, GIR holes), or `ok: false` when the read failed. */
+export type CupSideAwardsRead = { ok: true; awards: CupSideAward[] } | { ok: false; error: unknown };
+
+/**
+ * #2283: the holes where the cup has closest to pin, longest drive or GIR.
+ * Read with the user's own session: `tournament_side_awards` has a SELECT policy
+ * for every signed-in user, and `CUP_SIDE_AWARD_SELECT` leaves out the winner
+ * and the counters, so a hole shows nothing from the other matches (#1495).
+ * Never throws: it runs inside the render wave, where a thrown error would fell
+ * the whole hole page for a card that is secondary.
+ */
+export async function readCupSideAwards(
+  supabase: Pick<ServerClient, 'from'>,
+  tournamentId: string,
+): Promise<CupSideAwardsRead> {
+  try {
+    const { data, error } = await supabase
+      .from('tournament_side_awards')
+      .select(CUP_SIDE_AWARD_SELECT)
+      .eq('tournament_id', tournamentId)
+      .in('kind', ['ctp', 'ld', 'gir'])
+      .returns<CupSideAwardRow[]>();
+    if (error) return { ok: false, error };
+    return { ok: true, awards: toCupSideAwards(data ?? []) };
+  } catch (error) {
+    return { ok: false, error };
+  }
+}
+
+/**
+ * #2283: what the render wave has to read for the side contests on this hole.
+ *
+ *  - A derived game (`source_game_id`) has no contests (`contestsForHole`).
+ *  - Without a cup, the game's own slots say whether this hole is a contest hole
+ *    before anything is read: no slot here, no reads at all, so a normal round
+ *    costs no extra query. Only closest to pin and longest drive exist there.
+ *  - In a cup, the awards decide the hole, and they are read in the same wave as
+ *    the claims instead of ahead of them. A hole that turns out not to be a
+ *    contest hole discards the claims: two cheap reads on a primary-key prefix
+ *    against a waterfall on every hole page of a cup match.
+ *  - Claims are read only for someone who may report (`canReport`): RLS shows a
+ *    withdrawn player nothing, and an empty answer would read as «ingen har meldt inn».
+ */
+export function planSideContestReads(
+  game: Pick<
+    GameForHole,
+    | 'side_ld_count'
+    | 'side_ctp_count'
+    | 'side_ld_holes'
+    | 'side_ctp_holes'
+    | 'source_game_id'
+    | 'tournament_id'
+  >,
+  holeNumber: number,
+  canReport: boolean,
+): { awards: boolean; claims: HoleClaimsNeed | null } {
+  if (game.source_game_id != null) return { awards: false, claims: null };
+  const inCup = game.tournament_id != null;
+  if (!inCup && contestsForHole(sideHolesConfigFor(game), null, holeNumber).length === 0) {
+    return { awards: false, claims: null };
+  }
+  // GIR exists only in a cup (0237): the game's own side tournament has no such category.
+  return { awards: inCup, claims: canReport ? { side: true, gir: inCup } : null };
+}
+
 export async function fetchHolePageData(args: {
   supabase: ServerClient;
   gameId: string;
@@ -71,6 +145,11 @@ export async function fetchHolePageData(args: {
   flightFormerRowOwnerIds: string[];
   siblingMatch: SegmentSibling | null;
   modes: HoleFetchModes;
+  /**
+   * #2283: an active round, and I am an active player with a claim flight
+   * (`sideClaimFlightKey`). Decides whether the hole's claims are read.
+   */
+  canReportSideClaims: boolean;
 }) {
   const {
     supabase,
@@ -85,8 +164,10 @@ export async function fetchHolePageData(args: {
     flightFormerRowOwnerIds,
     siblingMatch,
     modes,
+    canReportSideClaims,
   } = args;
   const { isWolf, isSkins, isBBB, isPatsome } = modes;
+  const sideReads = planSideContestReads(game, holeNumber, canReportSideClaims);
 
   // Round 2 — ONE Promise.all wave with everything the page needs up front:
   // course name, hole row, flight scores, the user's completed holes, plus the
@@ -111,6 +192,8 @@ export async function fetchHolePageData(args: {
     patsomeTeeStarterRes,
     greenPinsRes,
     siblingTeamRes,
+    cupAwardsRes,
+    holeClaimsRes,
   ] = await Promise.all([
       game.course_id
         ? supabase.from('courses').select('name').eq('id', game.course_id).maybeSingle<{ name: string }>()
@@ -235,6 +318,15 @@ export async function fetchHolePageData(args: {
             .eq('team_number', siblingMatch.myTeamNumber)
             .returns<{ user_id: string; withdrawn_at: string | null }[]>()
         : Promise.resolve({ data: null, error: null }),
+      // #2283: the cup's side holes and this hole's claims (own flight under
+      // RLS). Neither can fell the page: a failed read is a value
+      // (`ok: false`), and the card says «Fikk ikke hentet».
+      sideReads.awards && game.tournament_id
+        ? readCupSideAwards(supabase, game.tournament_id)
+        : Promise.resolve(null),
+      sideReads.claims
+        ? readHoleClaims(supabase, { gameId, holeNumber, need: sideReads.claims })
+        : Promise.resolve(null),
     ]);
   const courseName = courseNameRes.data?.name ?? null;
 
@@ -256,6 +348,8 @@ export async function fetchHolePageData(args: {
     patsomeTeeStarterRes,
     greenPinsRes,
     siblingTeamRes,
+    cupAwardsRes,
+    holeClaimsRes,
   };
 }
 

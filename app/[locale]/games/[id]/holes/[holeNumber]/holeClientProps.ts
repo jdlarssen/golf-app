@@ -9,6 +9,8 @@
 
 import type { LatLng } from '@/lib/geo/distance';
 import type { HoleParByGender } from '@/lib/games/parDisplay';
+import type { GirClaim, SideClaim } from '@/lib/games/sideClaims';
+import type { HoleContest } from '@/lib/games/sideContest';
 import type { HoleSegment } from '@/lib/scoring';
 import type { RoundRobinConstellationPlayer } from '@/lib/scoring/modes/roundRobin';
 import type {
@@ -76,6 +78,58 @@ export type HoleStripSibling = {
   /** #2067: withdrawn teammates over there whose entered holes still count. */
   formerTeamRowOwnerIds: string[];
   scoredHoles: number[] | null;
+};
+
+/**
+ * #2283 (part D): a player in my claim flight, as the side contest sheet needs
+ * them. `players` on `HoleClientProps` are the score cards, one per team in the
+ * team-collapsed modes, so they cannot stand in for this.
+ */
+export type SideContestPlayer = {
+  userId: string;
+  /** The name in the sheet (`playerName`, #2813), else the unknown-player text. */
+  name: string;
+  /** The row's name: the first name, the full name when another here shares it (#2286). */
+  shortName: string;
+  initial: string;
+  /** The side in a matchplay or team format, for the GIR balls (`girBallsForGame`). */
+  teamNumber: number | null;
+  /** Withdrawn after a report may name them. No line in the sheet, but the name still resolves. */
+  withdrawn: boolean;
+};
+
+/**
+ * What the server read of the flight's reports on this hole. `failed` = the
+ * read did not succeed and nothing is known («Fikk ikke hentet»); `side`/`gir`
+ * are then undefined. An empty list is a real answer: nobody has reported.
+ * A table the hole does not report into (`claimsNeeded`) is undefined too.
+ */
+export type SideContestClaimsSnapshot = {
+  failed: boolean;
+  side: SideClaim[] | undefined;
+  gir: GirClaim[] | undefined;
+};
+
+/**
+ * #2283 (part D): the side contests on this hole. Null on a hole without one,
+ * and on a game that cannot have them, so a normal round carries nothing.
+ */
+export type HoleSideContestProps = {
+  /** At most one per category, in card order: closest to pin, longest drive, GIR. */
+  contests: HoleContest[];
+  /**
+   * An active round, and I am an active player with a claim flight
+   * (`sideClaimFlightKey`, the rpc's own rule). False for a withdrawn player:
+   * the rpcs answer `not_player`, and the app shows no row at all then.
+   */
+  canReport: boolean;
+  /** Null when I cannot report: the read is skipped, RLS would show me nothing. */
+  claims: SideContestClaimsSnapshot | null;
+  /**
+   * Everyone in my claim flight, withdrawn ones included and flagged. Names
+   * the winners and `entered_by` («Lagret av Tore»). Empty when I cannot report.
+   */
+  players: SideContestPlayer[];
 };
 
 export interface HoleClientProps {
@@ -259,6 +313,8 @@ export interface HoleClientProps {
    * setting; the picker is not shown then.
    */
   teeShots?: { minimum: number; teams: TeeShotPickerTeam[] } | null;
+  /** Se `HoleSideContestProps` (#2283). Null = hullet har ingen sidekonkurranse. */
+  sideContest?: HoleSideContestProps | null;
   players: ClientPlayer[];
 }
 
@@ -286,6 +342,7 @@ export type ResolvedHoleClientProps = HoleClientProps &
       | 'holeStripSibling'
       | 'broBridge'
       | 'teeShots'
+      | 'sideContest'
     >
   >;
 
@@ -309,6 +366,7 @@ export function resolveHoleClientProps(
     holeStripSibling = null,
     broBridge = null,
     teeShots = null,
+    sideContest = null,
   } = props;
   return {
     ...props,
@@ -327,5 +385,6 @@ export function resolveHoleClientProps(
     holeStripSibling,
     broBridge,
     teeShots,
+    sideContest,
   };
 }
