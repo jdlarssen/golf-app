@@ -101,6 +101,7 @@ import { kickerHeader } from '../components/KickerHeader';
 import { BingoBangoBongoCard } from '../components/hole/BingoBangoBongoCard';
 import { FlightRow } from '../components/hole/FlightRow';
 import { HoleHero } from '../components/hole/HoleHero';
+import { HoleSideContests } from '../components/hole/HoleSideContests';
 import { HoleStrip } from '../components/hole/HoleStrip';
 import { PatsomeSegmentBanner } from '../components/hole/PatsomeSegmentBanner';
 import {
@@ -1010,6 +1011,19 @@ function HoleView({
             onSaved={refreshChoices}
           />
         ) : null}
+
+        {/* #2283 (Sidekonk-hullet H1): sidekonkurransen på hullet, under Wolf
+            og over flighthodet. Raden åpner arket der flighten melder inn. */}
+        <HoleSideContests
+          gameId={gameId}
+          holeNumber={holeNumber}
+          userId={userId}
+          bundle={bundle}
+          roster={roster}
+          flight={flight}
+          par={par}
+          online={online}
+        />
 
         </View>
 

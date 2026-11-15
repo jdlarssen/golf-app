@@ -185,6 +185,8 @@ const FIELD_COMPONENTS: Record<string, { host: string; scrollTestID: string } | 
   'components/approve/RejectSheet.tsx': 'modal',
   // #2297: «Skriv inn tallet» i handicaparket, samme oppbygning.
   'components/game/HandicapSheet.tsx': 'modal',
+  // #2283: «Hvor nær?» i arket for nærmest pinnen på hullet, samme oppbygning.
+  'components/hole/SideContestParts.tsx': 'modal',
   // #2675: søkefeltet over medspillerlista og over markørvalget.
   'components/PickerSearch.tsx': { host: 'screens/LeagueRoundStart.tsx', scrollTestID: 'round-start-scroll' },
   // #2840: lagnavnet og søket i lagskjemaet, i skjemaets eget rullefelt.

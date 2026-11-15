@@ -261,6 +261,13 @@ jest.mock('../data/syncWorker', () => ({
   drainQueue: jest.fn(async () => ({ pushed: 0, rejected: 0, errored: 0, abandoned: 0 })),
 }));
 jest.mock('../data/syncTriggers', () => require('../test/syncTriggersMock'));
+// #2283: innmeldingene på hullet. Ingen har meldt inn ennå.
+jest.mock('../data/sideClaims', () => ({
+  fetchSideClaims: jest.fn(async () => []),
+  fetchGirClaims: jest.fn(async () => []),
+  recordSideClaim: jest.fn(async () => ({ ok: true })),
+  recordGirClaims: jest.fn(async () => ({ ok: true })),
+}));
 jest.mock('../data/db', () => ({
   getDb: jest.fn(async () => ({})),
   listScoresForGame: jest.fn(async () => mockState.scores),
@@ -1096,6 +1103,39 @@ describe('Hole', () => {
       strokes: 4,
       enteredBy: 'me',
     });
+  });
+
+  it('sidekonkurransen (#2283): raden står bare på konkurransehullene, under hullhodet og over flighten', async () => {
+    mockState.bundle = {
+      ...mockSoloBundle,
+      game: {
+        ...mockSoloBundle.game,
+        sideTournamentEnabled: true,
+        sideCtpCount: 1,
+        sideLdCount: 1,
+        sideCtpHoles: [7],
+        sideLdHoles: [9],
+      },
+    };
+    const { fetchSideClaims } = require('../data/sideClaims') as { fetchSideClaims: jest.Mock };
+
+    await renderHole(7);
+    await waitFor(() => expect(screen.getByTestId('side-contest-closest_to_pin')).toBeTruthy());
+    expect(screen.queryByTestId('side-contest-longest_drive')).toBeNull();
+    expect(fetchSideClaims).toHaveBeenCalledWith(GAME_ID, 7);
+    // Raden står i hullsidens rullefelt (rekkefølgen er målt i simulatoren).
+    expect(within(screen.getByTestId('hole-scroll')).getByTestId('side-contests')).toBeTruthy();
+    await screen.unmount();
+
+    await renderHole(9);
+    await waitFor(() => expect(screen.getByTestId('side-contest-longest_drive')).toBeTruthy());
+    await screen.unmount();
+
+    fetchSideClaims.mockClear();
+    await renderHole(6);
+    await waitFor(() => expect(screen.getByTestId('flight-count')).toBeTruthy());
+    expect(screen.queryByTestId('side-contests')).toBeNull();
+    expect(fetchSideClaims).not.toHaveBeenCalled();
   });
 
   it('kapteinen har slettet kontoen: hullet viser verdien hans, og «+» skriver til den nye eieren', async () => {

@@ -405,6 +405,78 @@ export const LukkIcon = (props: IconProps) => (
   </LineIcon>
 );
 
+// #2283: sidekonkurransen på hullet (`Sidekonk-kortet` og `Sidekonk-gir` på
+// designlerretet). Geometrien er tegningens, strek 2.
+
+/** Nærmest pinnen: flagget med ballen ved foten. */
+export const PinnenIcon = ({ strokeWidth = 2, ...props }: IconProps) => (
+  <LineIcon strokeWidth={strokeWidth} {...props}>
+    <Path d="M6 21V4" />
+    <Path d="M6 4l9 3.5L6 11" />
+    <Circle cx="16" cy="19" r="2" />
+  </LineIcon>
+);
+
+/** Lengste drive: ballen som går i bue over bakken. */
+export const DriveIcon = ({ strokeWidth = 2, ...props }: IconProps) => (
+  <LineIcon strokeWidth={strokeWidth} {...props}>
+    <Path d="M3 21h18" />
+    <Circle cx="5.5" cy="16.5" r="2" />
+    <Path d="M8 14.5C11 9 15.5 6.8 21 7.5" />
+    <Path d="M17.6 4.6L21 7.5l-2.9 3.3" />
+  </LineIcon>
+);
+
+/** GIR: greenen med flagget. */
+export const GirIcon = ({ strokeWidth = 2, ...props }: IconProps) => (
+  <LineIcon strokeWidth={strokeWidth} {...props}>
+    <Ellipse cx="12" cy="18" rx="9" ry="3.5" />
+    <Path d="M12 18V4" />
+    <Path d="M12 4l6 2.5L12 9" />
+  </LineIcon>
+);
+
+/** Uten nett: wifi med strek over. */
+export const UtenNettIcon = ({ strokeWidth = 2, ...props }: IconProps) => (
+  <LineIcon strokeWidth={strokeWidth} {...props}>
+    <Path d="M2 8.8a15 15 0 0 1 4.2-2.6" />
+    <Path d="M10.7 5.1A15 15 0 0 1 22 8.8" />
+    <Path d="M5 12.6a10 10 0 0 1 5.2-2.6" />
+    <Path d="M16.9 10.7A10 10 0 0 1 19 12.6" />
+    <Path d="M8.5 16.4a5 5 0 0 1 7 0" />
+    <Path d="M12 20h.01" />
+    <Path d="M3 3l18 18" />
+  </LineIcon>
+);
+
+/** Feil: sirkel med utropstegn («Fikk ikke hentet», «Fikk ikke lagret»). */
+export const FeilIcon = ({ strokeWidth = 2, ...props }: IconProps) => (
+  <LineIcon strokeWidth={strokeWidth} {...props}>
+    <Circle cx="12" cy="12" r="9" />
+    <Path d="M12 7.5v5" />
+    <Path d="M12 16.2h.01" />
+  </LineIcon>
+);
+
+/** Strek i den stiplede ringen foran «Ingen på green». */
+export const IngenIcon = ({ strokeWidth = 2, ...props }: IconProps) => (
+  <LineIcon strokeWidth={strokeWidth} {...props}>
+    <Path d="M7 12h10" />
+  </LineIcon>
+);
+
+/** − og + på avstanden (strek 2,2). */
+export const AvstandIcon = ({
+  plus,
+  strokeWidth = 2.2,
+  ...props
+}: IconProps & { plus: boolean }) => (
+  <LineIcon strokeWidth={strokeWidth} {...props}>
+    <Path d="M6 12h12" />
+    {plus ? <Path d="M12 6v12" /> : null}
+  </LineIcon>
+);
+
 /** Hengelåsen (#2578, lås-linja på bekreft-siden): «noe låses». */
 export const LaasIcon = (props: IconProps) => (
   <LineIcon {...props}>
