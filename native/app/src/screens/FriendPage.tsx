@@ -246,12 +246,18 @@ export function FriendPage({ navigation, route }: ScreenProps<'FriendPage'>) {
         </>
       ) : kind === null ? (
         friendsLoad.state === 'failed' ? (
-          <FailureCard line={failureLine(friendsLoad.reason)} onRetry={retry} />
+          <>
+            <HcpOnly hcp={hcp} />
+            <FailureCard line={failureLine(friendsLoad.reason)} onRetry={retry} />
+          </>
         ) : (
           <Loading />
         )
       ) : friendsLoad.state === 'failed' && outcome === null ? (
-        <FailureCard line={failureLine(friendsLoad.reason)} onRetry={retry} />
+        <>
+          <HcpOnly hcp={hcp} />
+          <FailureCard line={failureLine(friendsLoad.reason)} onRetry={retry} />
+        </>
       ) : (
         <NotFriendYet
           values={friendPageValues(
@@ -544,6 +550,22 @@ function NotFriendYet({
         {FRIEND_PAGE_TEXT.becomeFriendsHint}
       </Text>
     </>
+  );
+}
+
+/**
+ * Uten lista vet ikke siden forholdet, men handicapet fra ligaen står i ruta:
+ * det står som én rad, som i tegning 18 og 19, over kortet med «Prøv igjen».
+ */
+function HcpOnly({ hcp }: { hcp: number | null }) {
+  if (hcp === null) return null;
+  const value = friendPageValues({ hcp, stats: null }, new Date()).hcp;
+  return value === null ? null : (
+    <View style={styles.rowsSlot}>
+      <RowsCard>
+        <SheetRow label={FRIENDS_TEXT.sheetHcp} value={value} testID="friend-page-hcp" />
+      </RowsCard>
+    </View>
   );
 }
 
