@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { claimFlightKeys } from './sideContest';
 import {
+  answersOrNone,
+  reportedBoxView,
   reportsForSlot,
   toSideClaimReports,
   type SideClaimReport,
   type SideClaimReportRow,
+  type SlotReports,
 } from './sideClaimReports';
 
 // Type A: the rule the web's finish pages and the app's finish screen share.
@@ -159,5 +162,64 @@ describe('toSideClaimReports', () => {
       { winnerUserId: 'kristian', winner: { name: 'Kristian Holm', nickname: null } },
     ]);
     expect(winnerName).toHaveBeenCalledWith('kristian', rows[0]);
+  });
+});
+
+describe('answersOrNone: the one box rule for the finish and the cup', () => {
+  it('no answer is one sentence, even with senders missing', () => {
+    expect(answersOrNone([], ['Flight 2'])).toEqual({ kind: 'none' });
+  });
+  it('with an answer, the lines and the missing senders both show', () => {
+    expect(answersOrNone(['Marte'], ['Flight 2'])).toEqual({ kind: 'lines', lines: ['Marte'], missing: ['Flight 2'] });
+  });
+});
+
+describe('reportedBoxView: what the box «Meldt inn fra flightene» shows', () => {
+  const answered = reportsForSlot(ctp, [claim({ flightNumber: 2, distanceM: 2.4 })], [1, 2, 3], roster)!;
+  const unanswered = reportsForSlot(ctp, [], [1, 2], roster)!;
+
+  it('a failed read is its own view', () => {
+    expect(reportedBoxView('failed')).toEqual({ kind: 'failed' });
+  });
+
+  it('missing flights show only once some flight has answered', () => {
+    expect(reportedBoxView(answered)).toEqual({
+      kind: 'lines',
+      lines: [{ flightNumber: 2, name: 'Marte', distanceM: 2.4 }],
+      missingFlights: [1, 3],
+    });
+  });
+
+  it('nothing reported is none, with the hole, and the flights that have not reported are not carried along', () => {
+    expect(unanswered.missingFlights).toEqual([1, 2]);
+    expect(reportedBoxView(unanswered)).toEqual({ kind: 'none', hole: 7 });
+  });
+
+  it('every flight having answered leaves nothing missing', () => {
+    const both = reportsForSlot(ctp, [claim({ flightNumber: 1 }), claim({ flightNumber: 2 })], [1, 2], roster)!;
+    expect(reportedBoxView(both)).toMatchObject({ kind: 'lines', missingFlights: [] });
+  });
+
+  it('an answer of «no one on the green» is still an answer: it opens the list of missing flights', () => {
+    const noOne = reportsForSlot(ctp, [claim({ flightNumber: 1, winnerUserId: null, winner: null })], [1, 2], roster)!;
+    expect(reportedBoxView(noOne)).toEqual({
+      kind: 'lines',
+      lines: [{ flightNumber: 1, name: null, distanceM: null }],
+      missingFlights: [2],
+    });
+  });
+
+  it('a single-flight game is the same: key 0 answered, nothing missing; key 0 silent, the one sentence', () => {
+    expect(reportedBoxView(reportsForSlot(ctp, [claim({ flightNumber: 0 })], [0], roster)!)).toMatchObject({
+      kind: 'lines',
+      missingFlights: [],
+    });
+    expect(reportedBoxView(reportsForSlot(ctp, [], [0], roster)!)).toEqual({ kind: 'none', hole: 7 });
+  });
+
+  it('decides on the lines, not on the flights: a report with lines but no flight list still lists', () => {
+    const hand: SlotReports = { hole: 4, lines: [{ flightNumber: 1, name: 'Kari', distanceM: null }], missingFlights: [] };
+    expect(reportedBoxView(hand)).toEqual({ kind: 'lines', lines: hand.lines, missingFlights: [] });
+    expect(reportedBoxView({ hole: 4, lines: [], missingFlights: [] })).toEqual({ kind: 'none', hole: 4 });
   });
 });

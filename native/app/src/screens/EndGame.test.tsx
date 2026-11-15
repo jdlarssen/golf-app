@@ -35,6 +35,7 @@ import { finishCupRound, finishRound } from '../data/endGame';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import { refreshGameBundle } from '../data/gameBundle';
 import { approveScorecard } from '../data/playerActions';
+import { reportedBoxView } from '../../../../lib/games/sideClaimReports';
 import { fetchReminderPreview, sendReminder } from '../data/remind';
 import type { ReminderFailure } from '../data/remind';
 import { fetchOwnProfile } from '../data/profile';
@@ -117,6 +118,12 @@ function setBundle(
 }
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+// Den ekte avgjørelsen, pakket inn så testen kan se at arket kaller den og tegner svaret
+// (som `endGamePlan.test.ts`). Alt annet i filen går gjennom den ekte funksjonen.
+jest.mock('../../../../lib/games/sideClaimReports', () => {
+  const actual = jest.requireActual('../../../../lib/games/sideClaimReports');
+  return { ...actual, reportedBoxView: jest.fn(actual.reportedBoxView) };
+});
 jest.mock('../data/endGame', () => ({
   finishRound: jest.fn(async () => ({ ok: true, alreadyFinished: false })),
   finishCupRound: jest.fn(async () => ({ ok: true, alreadyFinished: false })),
@@ -301,6 +308,45 @@ describe('EndGame', () => {
     expect(screen.queryByTestId('end-game-reports-ctp-2')).toBeNull();
     expect(screen.getByText('Kår vinneren')).toBeTruthy();
     fetchSideClaimsForFinish.mockResolvedValue([]);
+  });
+
+  it('#2283: boksen i arket bruker den delte reportedBoxView, og tegner svaret uten regel av eget', async () => {
+    const actual = jest.requireActual('../../../../lib/games/sideClaimReports') as typeof import('../../../../lib/games/sideClaimReports');
+    const { fetchSideClaimsForFinish } = require('../data/endGame') as { fetchSideClaimsForFinish: jest.Mock };
+    // Flight 1 har meldt inn; rapporten har altså en linje.
+    fetchSideClaimsForFinish.mockResolvedValue([
+      { category: 'closest_to_pin', holeNumber: 7, flightNumber: 1, winnerUserId: MATE, winner: { name: 'Marte Lie', nickname: null }, distanceM: 2.4 },
+    ]);
+    const eight = [mockMe, MATE, 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'].map((userId, i) =>
+      player({ userId, flightNumber: i < 4 ? 1 : 2, submittedAt: '2026-09-01T09:00:00.000Z' }),
+    );
+    setBundle(eight, { sideTournamentEnabled: true, sideLdCount: 0, sideCtpCount: 1, sideCtpHoles: [7] });
+    await renderScreen();
+
+    try {
+      // Visningen sier «ingen har meldt inn»: den ene setningen, selv om rapporten har en linje.
+      jest.mocked(reportedBoxView).mockImplementation(() => ({ kind: 'none', hole: 12 }));
+      await fireEvent.press(screen.getByTestId('end-game-slot-ctp-1'));
+      expect(reportedBoxView).toHaveBeenCalledWith(expect.objectContaining({ hole: 7 }));
+      expect(screen.getByTestId('end-game-reports-ctp-1')).toHaveTextContent('Ingen flight har meldt inn på hull 12.', { exact: false });
+      expect(screen.queryByTestId('end-game-report-ctp-1-1')).toBeNull();
+      await fireEvent.press(screen.getByTestId('end-game-sheet-close'));
+
+      // Og flighter som mangler er de visningen bærer med seg, ikke rapportens.
+      jest.mocked(reportedBoxView).mockImplementation(() => ({ kind: 'lines', lines: [], missingFlights: [4] }));
+      await fireEvent.press(screen.getByTestId('end-game-slot-ctp-1'));
+      expect(screen.getByTestId('end-game-report-ctp-1-missing-4')).toHaveTextContent('Flight 4 har ikke meldt inn');
+      expect(screen.queryByTestId('end-game-report-ctp-1-1')).toBeNull();
+      await fireEvent.press(screen.getByTestId('end-game-sheet-close'));
+
+      // «Feilet» er visningens også.
+      jest.mocked(reportedBoxView).mockImplementation(() => ({ kind: 'failed' }));
+      await fireEvent.press(screen.getByTestId('end-game-slot-ctp-1'));
+      expect(screen.getByTestId('end-game-reports-ctp-1')).toHaveTextContent('Fikk ikke hentet', { exact: false });
+    } finally {
+      jest.mocked(reportedBoxView).mockImplementation(actual.reportedBoxView);
+      fetchSideClaimsForFinish.mockResolvedValue([]);
+    }
   });
 
   it('#2283: et tregt svar fra da skjermen åpnet legger seg ikke over et nyere, og en rask feil sletter det ikke', async () => {

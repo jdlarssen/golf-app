@@ -15,6 +15,7 @@
 import { useState, type ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { reportedBoxView } from '../../../../../lib/games/sideClaimReports';
 import type { BundlePlayer } from '../../data/gameBundle';
 import { displayName } from '../../lib/display';
 import {
@@ -218,12 +219,15 @@ export function WinnerSheet({
 /**
  * #2283: «Meldt inn fra flightene» (`Sidekonk-kaaring` V1). Bare til å lese:
  * ingenting er valgt på forhånd, og arrangøren velger selv i lista under.
+ * Hva boksen viser avgjøres av `reportedBoxView` (`lib/games/sideClaimReports.ts`),
+ * den samme som nettets avslutt-side leser; her står bare tegningen.
  */
 function ReportedBox({ slot, reports }: { slot: FinishSlot; reports: SlotReports | 'failed' }) {
   const { colors } = useTheme();
+  const view = reportedBoxView(reports);
   const rows: { key: string; node: ReactNode }[] = [];
-  if (reports !== 'failed') {
-    for (const line of reports.lines) {
+  if (view.kind === 'lines') {
+    for (const line of view.lines) {
       rows.push({
         key: `line-${line.flightNumber}`,
         node: (
@@ -237,20 +241,19 @@ function ReportedBox({ slot, reports }: { slot: FinishSlot; reports: SlotReports
         ),
       });
     }
-    if (reports.lines.length > 0) {
-      for (const flight of reports.missingFlights) {
-        rows.push({
-          key: `missing-${flight}`,
-          node: (
-            <Text style={[styles.reportMissing, { color: colors.muted }]} testID={`end-game-report-${slot.key}-missing-${flight}`}>
-              {reportedMissing(flight)}
-            </Text>
-          ),
-        });
-      }
+    for (const flight of view.missingFlights) {
+      rows.push({
+        key: `missing-${flight}`,
+        node: (
+          <Text style={[styles.reportMissing, { color: colors.muted }]} testID={`end-game-report-${slot.key}-missing-${flight}`}>
+            {reportedMissing(flight)}
+          </Text>
+        ),
+      });
     }
   }
-  const empty = reports === 'failed' ? REPORTED_TEXT.readFailed : rows.length === 0 ? reportedNone(reports.hole) : null;
+  const empty =
+    view.kind === 'failed' ? REPORTED_TEXT.readFailed : view.kind === 'none' ? reportedNone(view.hole) : null;
   return (
     <View
       style={[styles.reportBox, { backgroundColor: colors.surface }]}

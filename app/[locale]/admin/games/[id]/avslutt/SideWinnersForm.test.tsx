@@ -1,7 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { SideWinnersForm } from './SideWinnersForm';
 import type { SideSlotView } from '@/lib/games/finishSideSlots';
+import { reportedBoxView } from '@/lib/games/sideClaimReports';
+
+// The real decision, wrapped so «ett hjem»-testen kan se at skjemaet kaller den (som
+// `CupReportedBoxes.test.tsx`). Alt annet i filen går gjennom den ekte funksjonen.
+vi.mock('@/lib/games/sideClaimReports', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/games/sideClaimReports')>();
+  return { ...actual, reportedBoxView: vi.fn(actual.reportedBoxView) };
+});
 
 /**
  * #1567: db_winners er en databaseskrivefeil, ikke en valideringsfeil — men
@@ -178,5 +186,42 @@ describe('SideWinnersForm: det flightene har meldt inn (#2283)', () => {
       expect(select.value).toBe('');
       expect(select).toBeRequired();
     }
+  });
+
+  // What the box shows is decided by `reportedBoxView` (rules tested in
+  // `lib/games/sideClaimReports.test.ts`). This proves the form asks it and renders the answer,
+  // so a rule cannot grow back in this file.
+  describe('the box renders the shared view', () => {
+    beforeEach(() => {
+      vi.mocked(reportedBoxView).mockClear();
+    });
+    const one = { ...props, ldCount: 0, ctpCount: 1 };
+
+    it('asks reportedBoxView with the reports of the slot', () => {
+      render(<SideWinnersForm {...one} ctpSlots={[ctp1]} />);
+      expect(reportedBoxView).toHaveBeenCalledWith(ctp1.reports);
+    });
+
+    it('shows the one sentence, with the hole the view carries, however many lines the report holds', () => {
+      vi.mocked(reportedBoxView).mockReturnValueOnce({ kind: 'none', hole: 12 });
+      render(<SideWinnersForm {...one} ctpSlots={[ctp1]} />);
+      const box = screen.getByTestId('side-reports-ctp-1');
+      expect(within(box).queryByRole('listitem')).toBeNull();
+      expect(within(box).getByText('Ingen flight har meldt inn på hull 12.')).toBeInTheDocument();
+    });
+
+    it('names exactly the flights the view carries: it has no rule of its own for «missing»', () => {
+      // A report with no lines, and a view that nevertheless lists a missing flight.
+      vi.mocked(reportedBoxView).mockReturnValueOnce({ kind: 'lines', lines: [], missingFlights: [3] });
+      render(<SideWinnersForm {...one} ctpSlots={[{ hole: 7, reports: { hole: 7, lines: [], missingFlights: [] } }]} />);
+      const rows = within(screen.getByTestId('side-reports-ctp-1')).getAllByRole('listitem');
+      expect(rows.map((r) => r.textContent)).toEqual(['Flight 3 har ikke meldt inn']);
+    });
+
+    it('shows the failed-read line when the view says failed, whatever the report holds', () => {
+      vi.mocked(reportedBoxView).mockReturnValueOnce({ kind: 'failed' });
+      render(<SideWinnersForm {...one} ctpSlots={[ctp1]} />);
+      expect(within(screen.getByTestId('side-reports-ctp-1')).getByText('Fikk ikke hentet det flightene har meldt inn.')).toBeInTheDocument();
+    });
   });
 });
