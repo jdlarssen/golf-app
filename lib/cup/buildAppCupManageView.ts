@@ -6,6 +6,7 @@ import { cupProgress } from './cupRoomRows';
 import { isNotStartedCupMatch } from './cupWithdrawalOutcome';
 import { matchBlocksOneTapFinish } from './matchSubmissionStatus';
 import { unregisteredSideAwards } from './sideAwardsRegistered';
+import type { CupSideReportsResult } from './cupSideReports';
 import type { CupSnapshot } from './getCupSnapshot';
 
 type Match = CupSnapshot['leaderboard']['matches'][number];
@@ -44,10 +45,14 @@ function nameLookup(snapshot: CupSnapshot, unknownLabel: string) {
  * show: who can be withdrawn or brought back, the matches that have not started,
  * and the play-on choice. A pure function of the snapshot, so a test reads the
  * same rules the screen gets. The gate is in the route.
+ *
+ * `sideReports` is what the matches reported for the side awards
+ * (`loadCupSideReports`): read in the route, after the gate, with the admin
+ * client, and passed through untouched so this stays a function of its input.
  */
 export function buildAppCupManageView(
   snapshot: CupSnapshot,
-  opts: { unknownLabel: string },
+  opts: { unknownLabel: string; sideReports: CupSideReportsResult },
 ): AppCupManageView {
   const { tournament, leaderboard, roster } = snapshot;
   const nameOf = nameLookup(snapshot, opts.unknownLabel);
@@ -135,6 +140,7 @@ export function buildAppCupManageView(
             noWinner: award.noWinner,
           },
     ),
+    sideReports: opts.sideReports,
     finish: {
       progress: cupProgress(leaderboard),
       missingAwards: unregisteredSideAwards(snapshot.sideAwards).map((award) => ({

@@ -50,6 +50,7 @@ const core = vi.hoisted(() => ({
   getCupSnapshot: vi.fn(),
   getCupCandidatePlayers: vi.fn(),
   loadCupWithdrawalContext: vi.fn(),
+  loadCupSideReports: vi.fn(),
 }));
 vi.mock('@/lib/cup/withdrawalCore', () => ({
   withdrawCupPlayerCore: core.withdrawCupPlayerCore,
@@ -69,6 +70,7 @@ vi.mock('@/lib/cup/getCupCandidatePlayers', () => ({
 vi.mock('@/lib/cup/cupWithdrawalContext', () => ({
   loadCupWithdrawalContext: core.loadCupWithdrawalContext,
 }));
+vi.mock('@/lib/cup/loadCupSideReports', () => ({ loadCupSideReports: core.loadCupSideReports }));
 
 import { NextRequest } from 'next/server';
 import { GET as manage } from './manage/route';
@@ -150,6 +152,7 @@ beforeEach(() => {
   currentToken = 'token-sjef';
   asManager();
   core.getCupSnapshot.mockResolvedValue(snapshot);
+  core.loadCupSideReports.mockResolvedValue(null);
   core.getCupCandidatePlayers.mockResolvedValue([]);
   core.loadCupWithdrawalContext.mockResolvedValue({
     tournament: snapshot.tournament,
@@ -191,6 +194,7 @@ describe.each(MANAGER_ROUTES)('porten: %s', (_name, call) => {
       core.swapCupMatchPlayerCore,
       core.getCupSnapshot,
       core.loadCupWithdrawalContext,
+      core.loadCupSideReports,
     ]) {
       expect(fn).not.toHaveBeenCalled();
     }
@@ -208,6 +212,63 @@ describe.each(MANAGER_ROUTES)('porten: %s', (_name, call) => {
 
   it('arrangøren slipper inn', async () => {
     expect((await call()).status).toBe(200);
+  });
+});
+
+describe('det kampene har meldt inn (#2283)', () => {
+  const AWARD = {
+    id: 'a1',
+    kind: 'ctp',
+    holeNumber: 3,
+    points: 2,
+    slot: 1,
+    slotCount: 1,
+    winnerUserId: null,
+    winnerTeam: null,
+    noWinner: false,
+  };
+  const withAwards = { ...snapshot, sideAwards: [AWARD] } as unknown as CupSnapshot;
+  const REPORTS = {
+    slots: [
+      {
+        kind: 'ctp',
+        holeNumber: 3,
+        lines: [{ gameId: GAME, matchLabel: 'Singel 1', name: 'Ola', distanceM: 1.8 }],
+        missing: [],
+      },
+    ],
+    gir: [],
+  };
+
+  it('står i kroppen, lest etter porten for denne cupen og dens sidepoeng', async () => {
+    core.getCupSnapshot.mockResolvedValue(withAwards);
+    core.loadCupSideReports.mockResolvedValue(REPORTS);
+    const res = await manage(request('token-sjef', `/api/cup/${CUP}/manage`), cupParams);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.sideReports).toEqual(REPORTS);
+    // Counters and winners are the organiser's own: the view still carries them as they were.
+    expect(body.sideAwards).toEqual([
+      { id: 'a1', kind: 'ctp', holeNumber: 3, points: 2, slot: 1, slotCount: 1, winnerUserId: null, noWinner: false },
+    ]);
+    expect(core.loadCupSideReports).toHaveBeenCalledWith({
+      tournamentId: CUP,
+      status: 'active',
+      awards: [AWARD],
+    });
+  });
+
+  it('en cup uten sidepoeng: null i kroppen', async () => {
+    const res = await manage(request('token-sjef', `/api/cup/${CUP}/manage`), cupParams);
+    expect((await res.json()).sideReports).toBeNull();
+  });
+
+  it('en lesing som feilet er «failed» i kroppen, ikke en 500', async () => {
+    core.getCupSnapshot.mockResolvedValue(withAwards);
+    core.loadCupSideReports.mockResolvedValue('failed');
+    const res = await manage(request('token-sjef', `/api/cup/${CUP}/manage`), cupParams);
+    expect(res.status).toBe(200);
+    expect((await res.json()).sideReports).toBe('failed');
   });
 });
 

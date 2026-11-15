@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildAppCupManageView, buildAppCupSwapCandidates } from './buildAppCupManageView';
 import type { CupSnapshot } from './getCupSnapshot';
+import type { CupSideReportsResult } from './cupSideReports';
 
 /** Type A (#2752): det «Styr cupen» og byttet får vite, ren funksjon av snapshotet. */
 
@@ -41,7 +42,8 @@ const snapshot = (
     sideAwards,
   }) as unknown as CupSnapshot;
 
-const view = (snap: CupSnapshot) => buildAppCupManageView(snap, { unknownLabel: 'Ukjent spiller' });
+const view = (snap: CupSnapshot, sideReports: CupSideReportsResult = null) =>
+  buildAppCupManageView(snap, { unknownLabel: 'Ukjent spiller', sideReports });
 
 describe('avslutningen', () => {
   const ctp = (id: string, over: Record<string, unknown> = {}) => ({
@@ -108,6 +110,46 @@ describe('avslutningen', () => {
       { gameId: 'levert', label: 'levert', side1: 'Ola', side2: 'Kari', blocksFinish: false },
       { gameId: 'mangler', label: 'mangler', side1: 'Ola', side2: 'Kari', blocksFinish: true },
     ]);
+  });
+});
+
+describe('det kampene har meldt inn (#2283)', () => {
+  const reports: CupSideReportsResult = {
+    slots: [
+      {
+        kind: 'ctp',
+        holeNumber: 3,
+        lines: [{ gameId: 'a', matchLabel: 'Four-ball 1', name: 'Marte', distanceM: 2.4 }],
+        missing: [{ gameId: 'b', matchLabel: null }],
+      },
+    ],
+    gir: [
+      {
+        holeNumber: 5,
+        maxPerTeam: 2,
+        team1: { count: 3, names: ['Jonas', 'Marte', 'Sigrid'] },
+        team2: { count: 1, names: ['Tore'] },
+        reportedMatches: 2,
+        missing: [],
+      },
+    ],
+  };
+
+  it('følger med som de er, og telleren og vinneren er uberørt', () => {
+    const awards = [
+      { id: 'g1', kind: 'gir', holeNumber: 5, points: 1.5, maxPerTeam: 2, team1Count: null, team2Count: null },
+    ];
+    const body = view(snapshot('active', [match('a', { status: 'active' })], [], awards), reports);
+    expect(body.sideReports).toEqual(reports);
+    expect(body.sideAwards).toEqual([
+      { id: 'g1', kind: 'gir', holeNumber: 5, points: 1.5, maxPerTeam: 2, team1Count: null, team2Count: null },
+    ]);
+    // Plain JSON: the route sends it and the app reads it back unchanged.
+    expect(JSON.parse(JSON.stringify(body)).sideReports).toEqual(reports);
+  });
+
+  it.each([null, 'failed' as const])('%s følger også med', (marker) => {
+    expect(view(snapshot('active', [match('a')]), marker).sideReports).toBe(marker);
   });
 });
 

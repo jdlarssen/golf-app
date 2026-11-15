@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useId, useState, useTransition } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { Card } from '@/components/ui/Card';
@@ -14,6 +14,8 @@ import {
 import { groupSideAwardRows, type SideAwardConfigInput } from '@/lib/cup/sideAwardRows';
 import { formatPoints } from '@/lib/cup/formatPoints';
 import type { CupSideAwardSnapshot } from '@/lib/cup/getCupSnapshot';
+import type { CupGirReport, CupSideReportsResult, CupSlotReports } from '@/lib/cup/cupSideReports';
+import { GirReportedBox, SlotReportedBox } from './CupReportedBoxes';
 
 /**
  * Sidepoeng-panel for cup-admin-detaljen (#1441 D9, #1489 slots + GIR). Ett
@@ -27,7 +29,10 @@ import type { CupSideAwardSnapshot } from '@/lib/cup/getCupSnapshot';
  *  - **Registrering** («Etter runden») — ctp/ld: én vinner-dropdown per
  *    slot-rad, nummerert «(1 av 3)» når raden har søsken. gir: to tallfelt
  *    (én per lag) som skriver `registerGirCounts`. Synlig når cupen er
- *    `active`/`finished` OG minst ett innslag finnes.
+ *    `active`/`finished` OG minst ett innslag finnes. Under hver vinner-
+ *    dropdown og de to GIR-feltene står «Meldt inn fra kampene» (#2283, V4):
+ *    det kampene har meldt inn, bare til å lese. Ingenting fylles ut for
+ *    arrangøren.
  *
  * Plassert på cup-admin-detaljen (ikke i generer-wizarden): sidepoeng er
  * cup-dag-bredt og uavhengig av match-batchen (egen server-action, egen
@@ -57,6 +62,12 @@ type Props = {
    * winner is worked out again from the points, so the panel says so.
    */
   cupFinished?: boolean;
+  /**
+   * #2283 (V4): what the matches reported (`loadCupSideReports`). `'failed'` =
+   * the read did not work, the boxes say so and registering is as before.
+   * `null` or missing = no boxes.
+   */
+  sideReports?: CupSideReportsResult;
 };
 
 /** Snapshot-rader → config-rader for redigerbar state og låst recap. */
@@ -85,6 +96,7 @@ export function SideAwardsPanel({
   configEditable,
   showWinnerRegistration,
   cupFinished = false,
+  sideReports = null,
 }: Props) {
   const t = useTranslations('cup.sideAwards');
   const locale = useLocale();
@@ -295,6 +307,7 @@ export function SideAwardsPanel({
                   award={a}
                   team1Name={team1Name}
                   team2Name={team2Name}
+                  reports={girReportsFor(sideReports, a.holeNumber)}
                 />
               ) : (
                 <SideAwardWinnerRow
@@ -302,6 +315,7 @@ export function SideAwardsPanel({
                   tournamentId={tournamentId}
                   award={a}
                   rosterOptions={rosterOptions}
+                  reports={slotReportsFor(sideReports, a.kind, a.holeNumber)}
                 />
               ),
             )}
@@ -312,17 +326,41 @@ export function SideAwardsPanel({
   );
 }
 
+/**
+ * What the matches reported for one closest-to-pin or longest-drive hole.
+ * `null` = no box: nothing was read (`sideReports` null) or the hole is not
+ * among the reports.
+ */
+function slotReportsFor(
+  sideReports: CupSideReportsResult,
+  kind: 'ctp' | 'ld',
+  holeNumber: number,
+): CupSlotReports | 'failed' | null {
+  if (sideReports === null) return null;
+  if (sideReports === 'failed') return 'failed';
+  return sideReports.slots.find((slot) => slot.kind === kind && slot.holeNumber === holeNumber) ?? null;
+}
+
+function girReportsFor(sideReports: CupSideReportsResult, holeNumber: number): CupGirReport | 'failed' | null {
+  if (sideReports === null) return null;
+  if (sideReports === 'failed') return 'failed';
+  return sideReports.gir.find((hole) => hole.holeNumber === holeNumber) ?? null;
+}
+
 function SideAwardWinnerRow({
   tournamentId,
   award,
   rosterOptions,
+  reports,
 }: {
   tournamentId: string;
   award: Extract<CupSideAwardSnapshot, { kind: 'ctp' | 'ld' }>;
   rosterOptions: SideAwardRosterOption[];
+  reports: CupSlotReports | 'failed' | null;
 }) {
   const t = useTranslations('cup.sideAwards');
   const router = useRouter();
+  const boxId = useId();
   // Tre tilstander i én select-verdi (#1530): '' = ikke tastet ennå,
   // NONE_VALUE = «ingen vant», ellers spillerens id. Sentinel-strengen kan
   // aldri kollidere med en uuid.
@@ -370,6 +408,7 @@ function SideAwardWinnerRow({
           <select
             aria-label={t('winnerLabel')}
             data-testid="side-award-winner-select"
+            aria-describedby={reports !== null ? boxId : undefined}
             value={winnerId}
             onChange={(e) => {
               setWinnerId(e.target.value);
@@ -398,6 +437,14 @@ function SideAwardWinnerRow({
           </button>
         </div>
       </div>
+      {reports !== null && (
+        <SlotReportedBox
+          id={boxId}
+          testKey={`${award.kind}-${award.holeNumber}`}
+          kind={award.kind}
+          reports={reports}
+        />
+      )}
       {error && (
         <p role="alert" className="text-xs text-danger mt-2">
           {error}
@@ -422,15 +469,21 @@ function GirCountsRow({
   award,
   team1Name,
   team2Name,
+  reports,
 }: {
   tournamentId: string;
   award: Extract<CupSideAwardSnapshot, { kind: 'gir' }>;
   team1Name: string;
   team2Name: string;
+  reports: CupGirReport | 'failed' | null;
 }) {
   const t = useTranslations('cup.sideAwards');
   const locale = useLocale();
   const router = useRouter();
+  const boxId = useId();
+  // One box under both counters (V4): the sum is per team, so each counter
+  // is described by the same box. Never a prefill: the counters stay as typed.
+  const describedBy = reports !== null ? boxId : undefined;
   const [team1, setTeam1] = useState(award.team1Count === null ? '' : String(award.team1Count));
   const [team2, setTeam2] = useState(award.team2Count === null ? '' : String(award.team2Count));
   const [isSaving, startSaving] = useTransition();
@@ -479,6 +532,7 @@ function GirCountsRow({
           <input
             type="number"
             data-testid="gir-count-team1"
+            aria-describedby={describedBy}
             min={0}
             max={award.maxPerTeam}
             step={1}
@@ -495,6 +549,7 @@ function GirCountsRow({
           <input
             type="number"
             data-testid="gir-count-team2"
+            aria-describedby={describedBy}
             min={0}
             max={award.maxPerTeam}
             step={1}
@@ -516,6 +571,15 @@ function GirCountsRow({
           {isSaving ? t('registeringPending') : t('registerButton')}
         </button>
       </div>
+      {reports !== null && (
+        <GirReportedBox
+          id={boxId}
+          testKey={`gir-${award.holeNumber}`}
+          reports={reports}
+          team1Name={team1Name}
+          team2Name={team2Name}
+        />
+      )}
       {error && (
         <p role="alert" className="text-xs text-danger mt-2">
           {error}

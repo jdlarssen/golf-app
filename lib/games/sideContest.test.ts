@@ -4,6 +4,7 @@ import {
   categoryForCupKind,
   claimFlightKeys,
   contestsForHole,
+  cupMatchReportsHole,
   girBallsForGame,
   girQuestionForPar,
   holeForSlot,
@@ -416,5 +417,16 @@ describe('sumGirClaimsByTeam', () => {
     const sum = sumGirClaimsByTeam(5, [], [derived, back9]);
     expect(sum.missingGameIds).toEqual([]);
     expect(sum.reportedGameIds).toEqual([]);
+  });
+});
+
+describe('cupMatchReportsHole', () => {
+  it('a host match reports on every hole of its segment, and a derived game on none', () => {
+    expect(cupMatchReportsHole({ sourceGameId: null, holeSegment: 'full' }, 18)).toBe(true);
+    expect(cupMatchReportsHole({ sourceGameId: null, holeSegment: 'front9' }, 9)).toBe(true);
+    expect(cupMatchReportsHole({ sourceGameId: null, holeSegment: 'front9' }, 10)).toBe(false);
+    expect(cupMatchReportsHole({ sourceGameId: null, holeSegment: 'back9' }, 10)).toBe(true);
+    expect(cupMatchReportsHole({ sourceGameId: null, holeSegment: 'back9' }, 9)).toBe(false);
+    expect(cupMatchReportsHole({ sourceGameId: 'host', holeSegment: 'full' }, 5)).toBe(false);
   });
 });

@@ -356,10 +356,25 @@ export type GirHoleSum = {
 };
 
 /**
+ * Whether a cup match is where the hole's claims are made: never a derived
+ * game (0151, it keeps no strokes of its own), and not a match whose half of a
+ * split cup day does not include the hole. The one rule for «has this match
+ * not reported yet?»: the GIR sums and the organiser's closest-to-pin and
+ * longest-drive boxes both ask it.
+ */
+export function cupMatchReportsHole(
+  game: Pick<GirSumGame, 'sourceGameId' | 'holeSegment'>,
+  holeNumber: number,
+): boolean {
+  if (game.sourceGameId != null) return false;
+  return holesForSegment([{ number: holeNumber }], game.holeSegment).length > 0;
+}
+
+/**
  * What the matches reported for one GIR hole, per cup team. The team comes
- * from `buildCupRoster`, the same lookup `getCupSnapshot` uses. A derived game
- * and a match whose half of a split cup day (0151) does not include the hole
- * neither report nor count as missing.
+ * from `buildCupRoster`, the same lookup `getCupSnapshot` uses. A match that
+ * does not report on the hole (`cupMatchReportsHole`) neither reports nor
+ * counts as missing.
  *
  * This is shown beside the organiser's own counter, never written into it.
  */
@@ -381,8 +396,7 @@ export function sumGirClaimsByTeam(
   };
 
   for (const game of games) {
-    if (game.sourceGameId != null) continue;
-    if (holesForSegment([{ number: holeNumber }], game.holeSegment).length === 0) continue;
+    if (!cupMatchReportsHole(game, holeNumber)) continue;
 
     const hits = new Map<string, boolean>();
     for (const claim of claims) {

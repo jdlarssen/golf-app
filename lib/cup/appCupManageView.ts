@@ -7,6 +7,7 @@
  * file by relative path.
  */
 import type { AppCupMatchStatus, AppCupStatus } from './appCupView';
+import type { CupSideReportsResult } from './cupSideReports';
 
 /** A fourball where a partner can play on alone. `pending`: nobody has answered. */
 export type AppCupPlayOnChoice = {
@@ -79,6 +80,16 @@ export type AppCupManageView = {
   /** The matches that have not started, in the cup's order. */
   matches: AppCupManageMatch[];
   sideAwards: AppCupSideAward[];
+  /**
+   * #2283 (V3): what the matches reported for the side awards, for «Meldt inn
+   * fra kampene» under each award and under the GIR counters. `null`: nothing
+   * to report on (no awards, or the cup has not started). `'failed'`: the
+   * server could not read it, and the screen says so while registering works
+   * as before. The counters and winners stay the organiser's own: this is text.
+   * The route always sends it; it is optional in the type because the app can
+   * read a response from a server that has not deployed it yet (read as `null`).
+   */
+  sideReports?: CupSideReportsResult;
   /** What stands between the cup and its finish. */
   finish: {
     progress: { played: number; total: number };
