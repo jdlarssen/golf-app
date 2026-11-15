@@ -254,7 +254,6 @@ function ReportedBox({ slot, reports }: { slot: FinishSlot; reports: SlotReports
   return (
     <View
       style={[styles.reportBox, { backgroundColor: colors.surface }]}
-      accessibilityLabel={REPORTED_TEXT.heading}
       testID={`end-game-reports-${slot.key}`}
     >
       <Text style={[styles.reportHeading, { color: colors.muted }]} accessibilityRole="header">
