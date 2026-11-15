@@ -21,7 +21,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppLeagueRound, AppLeagueView } from '../../../../lib/league/appLeagueView';
 import { OpenRoundCard, type RoundAction } from '../components/league/OpenRoundCard';
 import { RoundList } from '../components/league/RoundList';
-import { LeaguePersonSheet } from '../components/league/LeaguePersonSheet';
 import { SimSettingsCard } from '../components/league/SimSettingsCard';
 import { StandingsTable } from '../components/league/StandingsTable';
 import { LeagueLoadFailed, LeagueLoading } from '../components/league/LeagueStates';
@@ -46,6 +45,7 @@ import {
   settingsHeading,
 } from '../lib/leagueCopy';
 import type { ScreenProps } from '../navigation';
+import { nameInitials } from '../../../../lib/names/initials';
 import { FONTS, fraunces, interLine, TAP, useTheme } from '../theme';
 
 export function League(props: ScreenProps<'League'>) {
@@ -81,8 +81,6 @@ function LeagueRoom({ navigation, route }: ScreenProps<'League'>) {
   // refen stopper trykk nummer to før det.
   const [joining, setJoining] = useState(false);
   const [selfError, setSelfError] = useState<string | null>(null);
-  // #2878: navnet i tabellen som er trykket på, og som arket åpnes for.
-  const [personId, setPersonId] = useState<string | null>(null);
   const joinInFlight = useRef(false);
 
   const load = useCallback(async () => {
@@ -146,15 +144,21 @@ function LeagueRoom({ navigation, route }: ScreenProps<'League'>) {
   const queues = markerQueues(view.rounds, me.userId, me.isOrganizer);
   const markerRows = queues.forMarker;
   const organizerRows = queues.forOrganizer;
-  const sheetParticipant = view.participants.find((p) => p.userId === personId);
-  const sheetPerson = sheetParticipant
-    ? {
-        userId: sheetParticipant.userId,
-        name: participantLabel(sheetParticipant, view.participants),
-        fullName: sheetParticipant.fullName,
-        hcpIndex: sheetParticipant.hcpIndex,
-      }
-    : null;
+  // #2381: et navn i tabellen åpner vennesiden, med navnet og handicapet ligaen har.
+  const self = view.participants.find((p) => p.userId === me.userId);
+  const openPerson = (userId: string) => {
+    const person = view.participants.find((p) => p.userId === userId);
+    if (!person) return;
+    // `push`, ikke `openOrReturn`: siden gjelder én person, og `userId` er
+    // ikke blant nøklene `backTo` kjenner en skjerm igjen på.
+    navigation.push('FriendPage', {
+      userId,
+      name: person.fullName ?? participantLabel(person, view.participants),
+      hcp: person.hcpIndex,
+      from: 'league',
+      selfInitials: self ? nameInitials(self.fullName ?? self.name) : null,
+    });
+  };
   const openMarker = (a: QueuedCard) =>
     openOrReturn(navigation, 'MarkerApprove', { leagueId, gameId: a.gameId, userId: a.userId });
 
@@ -257,9 +261,8 @@ function LeagueRoom({ navigation, route }: ScreenProps<'League'>) {
         view={view}
         now={now}
         onOpenCard={(card) => openOrReturn(navigation, 'LeagueCard', { leagueId, ...card })}
-        onOpenPerson={setPersonId}
+        onOpenPerson={openPerson}
       />
-      <LeaguePersonSheet person={sheetPerson} onClose={() => setPersonId(null)} />
 
       <SectionHead title={LEAGUE_TEXT.rounds} />
       <RoundList view={view} now={now} />

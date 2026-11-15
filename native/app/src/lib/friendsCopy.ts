@@ -11,7 +11,7 @@
 // dialog), linjene for nett og lasting (webben kan ikke være offline), og
 // feilene fra invitasjonen, som webben i dag ikke viser noe sted
 // (`?invite_error=` på `/profile` leses ikke, se PR-en). Det samme gjelder
-// arket som åpnes fra en venn (#2256). Heltekortet «Få med gjengen» og
+// vennesiden (#2381). Heltekortet «Få med gjengen» og
 // underlinjene med tallene har webben også fått (#2267): de faste tekstene
 // speiles under, og funksjonene med tall har samme ordlyd som webbens
 // ICU-meldinger (`friends.roundsTogether`, `friends.lastPlayed*` …).
@@ -23,7 +23,7 @@ import {
   formatShortDateNb,
   formatShortDateNbWithYear,
 } from '../../../../lib/format/date';
-import type { FriendStats } from '../data/friends';
+import type { FriendRecord, FriendRound, FriendRoundBadge, FriendStats } from '../data/friends';
 import type { WebApiFailure } from '../data/webApi';
 import { PROFILE_TEXT, formatHcpNb } from './profileCopy';
 
@@ -64,12 +64,11 @@ export const FRIENDS_TEXT = {
   sortedByLastPlayed: 'Sist spilt først',
 
   // --- App-egent ----------------------------------------------------------
-  /** Arket som åpnes fra en venn. */
+  /** Radene på vennesiden for en som ikke er venn (#2381). */
   sheetHcp: 'Handicap',
   sheetRounds: 'Runder sammen',
   sheetLastPlayed: 'Sist spilt',
-  sheetClose: 'Lukk',
-  /** Et tall arket ikke har: handicap uten ferdig profil, eller tall som ikke kunne leses. */
+  /** Et tall siden ikke har: handicap uten ferdig profil, eller tall som ikke kunne leses. */
   sheetNone: '–',
   /**
    * Plassholderen i e-postfeltet. Webbens plassholder står på et domene som
@@ -80,7 +79,7 @@ export const FRIENDS_TEXT = {
   loadFailed: 'Fikk ikke hentet vennene dine. Prøv igjen.',
   offline: 'Du må være på nett for å se vennene dine. Koble til og prøv igjen.',
   retry: 'Prøv igjen',
-  /** #2878: ligaarket til en annen spiller. «Vil bli venn med deg» og «Godta» er webbens (over). */
+  /** #2878, #2381: vennesiden for en som ikke er venn. «Vil bli venn med deg» og «Godta» er webbens (over). */
   addFriendLabel: 'Legg til venn',
   addFriendPending: 'Sender …',
   friendsLine: 'Dere er venner',
@@ -304,11 +303,21 @@ export function friendRowA11yLabel(name: string, sub: string | null): string {
   return sub ? `${shown}, ${sub}` : shown;
 }
 
-/** Arkets tre tall. En strek der tallet mangler. */
-export function friendSheetValues(
+/** Skjermleserens navn på en rad i Venner som åpner vennesiden (#2381): «Åpne Kari». */
+export function openPersonA11yLabel(name: string): string {
+  return `Åpne ${name || FRIENDS_TEXT.someoneFallback}`;
+}
+
+/**
+ * Radene på vennesiden for en som ikke er venn (#2381): handicap, runder
+ * sammen og sist spilt, som ligaarket hadde. `hcp` er `null` når siden ikke
+ * har noe handicap å vise (åpnet fra Venner, eller ligaen mangler det), og da
+ * står det ingen handicaprad. En strek der tallene ikke kunne leses.
+ */
+export function friendPageValues(
   friend: { hcp: number | null; stats: FriendStats | null },
   now: Date,
-): { hcp: string; rounds: string; lastPlayed: string } {
+): { hcp: string | null; rounds: string; lastPlayed: string } {
   const { stats } = friend;
   const none = FRIENDS_TEXT.sheetNone;
   let lastPlayed: string = none;
@@ -318,8 +327,120 @@ export function friendSheetValues(
       : stats.lastGameName;
   }
   return {
-    hcp: friend.hcp !== null ? formatHcpNb(friend.hcp) : none,
+    hcp: friend.hcp !== null ? formatHcpNb(friend.hcp) : null,
     rounds: stats ? String(stats.roundsTogether) : none,
     lastPlayed,
   };
+}
+
+// --- Vennesiden (#2381), tegning C «Dere to» ---------------------------------
+// App-egent: webben har ingen venneside.
+
+export const FRIEND_PAGE_TEXT = {
+  /** Ordet i toppen og pila sin etikett, etter hvor siden ble åpnet. */
+  kickerFriends: 'Venner',
+  kickerLeague: 'Liga',
+  backToFriends: 'Tilbake til Venner',
+  backToLeague: 'Tilbake til ligaen',
+  headToHead: 'Mot hverandre',
+  you: 'Du',
+  youAhead: 'Du foran',
+  sameTeam: 'På lag',
+  tied: 'Likt',
+  noHeadToHead: 'Dere har ikke spilt mot hverandre ennå.',
+  teamRoundsDontCount: 'Runder der dere var på samme lag, teller ikke.',
+  becomeFriendsHint: 'Blir dere venner, ser du her hvordan det har gått mellom dere.',
+  noRoundsTogether: 'Dere har ingen runder sammen ennå.',
+} as const;
+
+/** Toppen på vennesiden: «Venner» eller «Liga», og pila tilbake dit. */
+export function friendPageTopBar(from: 'friends' | 'league'): { kicker: string; backLabel: string } {
+  return from === 'friends'
+    ? { kicker: FRIEND_PAGE_TEXT.kickerFriends, backLabel: FRIEND_PAGE_TEXT.backToFriends }
+    : { kicker: FRIEND_PAGE_TEXT.kickerLeague, backLabel: FRIEND_PAGE_TEXT.backToLeague };
+}
+
+/** Fornavnet («Kristian» av «Kristian Holm»), til merket og stillingen. */
+export function firstNameOf(name: string): string {
+  return name.trim().split(/\s+/)[0] || FRIENDS_TEXT.someoneFallback;
+}
+
+/** Linja under navnet for en venn: «Dere er venner · handicap 12,4», uten handicap uten tallet. */
+export function friendPageSubline(hcp: number | null): string {
+  return hcp !== null ? `${FRIENDS_TEXT.friendsLine} · handicap ${formatHcpNb(hcp)}` : FRIENDS_TEXT.friendsLine;
+}
+
+/** «Runder sammen · 7» over lista. */
+export function roundsListTitle(count: number): string {
+  return `${FRIENDS_TEXT.sheetRounds} · ${count}`;
+}
+
+/** «Vis alle 7» under de fire siste. */
+export function showAllRounds(count: number): string {
+  return `Vis alle ${count}`;
+}
+
+/** Merket på en runde: «Du foran», «Kristian foran», «På lag», «Likt». */
+export function roundBadgeLabel(badge: FriendRoundBadge, name: string): string {
+  switch (badge) {
+    case 'you_ahead':
+      return FRIEND_PAGE_TEXT.youAhead;
+    case 'them_ahead':
+      return `${firstNameOf(name)} foran`;
+    case 'same_team':
+      return FRIEND_PAGE_TEXT.sameTeam;
+    case 'tied':
+      return FRIEND_PAGE_TEXT.tied;
+  }
+}
+
+/** Linja under rundenavnet: «sist lørdag · Stableford». */
+export function roundRowSubline(round: Pick<FriendRound, 'playedAt' | 'modeLabel'>, now: Date): string {
+  const parts: string[] = [];
+  if (round.playedAt) parts.push(lastPlayedLabel(round.playedAt, now));
+  if (round.modeLabel) parts.push(round.modeLabel);
+  return parts.join(' · ');
+}
+
+function roundsWord(count: number): string {
+  return count === 1 ? '1 runde' : `${count} runder`;
+}
+
+/** Tallordet foran «endte likt»: tegningen skriver én til ti med bokstaver. */
+const TIED_WORDS = ['Én', 'To', 'Tre', 'Fire', 'Fem', 'Seks', 'Sju', 'Åtte', 'Ni', 'Ti'] as const;
+
+/**
+ * Setningen om like runder bak lederlinja. Over ti står tallet inne i
+ * setningen, så den heller ikke da begynner med et siffer.
+ */
+function tiedSentence(tied: number): string | null {
+  if (tied <= 0) return null;
+  const word = TIED_WORDS[tied - 1];
+  return word ? `${word} endte likt.` : `Av dem endte ${tied} likt.`;
+}
+
+/**
+ * Lederlinja under streken: «Du leder etter 5 runder mot hverandre.»,
+ * «Kristian leder …» eller «Dere står likt …», med de like rundene bak.
+ * `null` uten runder mot hverandre.
+ */
+export function headToHeadLine(record: FriendRecord, name: string): string | null {
+  if (record.played === 0) return null;
+  const after = `etter ${roundsWord(record.played)} mot hverandre.`;
+  const lead =
+    record.youAhead > record.themAhead
+      ? `Du leder ${after}`
+      : record.themAhead > record.youAhead
+        ? `${firstNameOf(name)} leder ${after}`
+        : `Dere står likt ${after}`;
+  const tied = tiedSentence(record.tied);
+  return tied ? `${lead} ${tied}` : lead;
+}
+
+/** Skjermleserens versjon av stillingen: «Du 3, Kristian 2, 1 likt». */
+export function headToHeadA11yLabel(record: FriendRecord, name: string): string {
+  const first = firstNameOf(name);
+  if (record.played === 0) return `${FRIEND_PAGE_TEXT.you} og ${first}, ingen runder mot hverandre`;
+  const score = `${FRIEND_PAGE_TEXT.you} ${record.youAhead}, ${first} ${record.themAhead}`;
+  return record.tied > 0 ? `${score}, ${record.tied} likt` : score;
 }

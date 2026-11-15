@@ -17,25 +17,36 @@ import type { WebApiFailure } from '../data/webApi';
 import { isFinishedSentence } from '../test/copy';
 import {
   FRIEND_LINK_TEXT,
+  FRIEND_PAGE_TEXT,
   FRIENDS_TEXT,
+  firstNameOf,
   friendLinkConnectCard,
+  friendPageSubline,
+  friendPageTopBar,
+  friendPageValues,
   friendRowA11yLabel,
-  friendSheetValues,
   friendStatusLine,
   friendSubline,
   friendsFailureLine,
   friendsTopBar,
   friendsSectionTitle,
   friendsSubtitle,
+  headToHeadA11yLabel,
+  headToHeadLine,
   incomingSubline,
   inviteButton,
   inviteFailureLine,
   invitePrompt,
   invitedLine,
   lastPlayedLabel,
+  openPersonA11yLabel,
   personActionA11yLabel,
   removeConfirmMessage,
+  roundBadgeLabel,
+  roundRowSubline,
+  roundsListTitle,
   roundsSubline,
+  showAllRounds,
 } from './friendsCopy';
 
 const web = source.friends;
@@ -222,17 +233,91 @@ describe('overskriften og underlinjene (designet)', () => {
     expect(friendRowA11yLabel('', null)).toBe(web.someoneFallback);
   });
 
-  it('fyller arket, med en strek der tallet mangler', () => {
+  it('fyller radene på vennesiden, uten handicaprad uten handicap og med en strek der tallet mangler', () => {
     const stats = { roundsTogether: 8, lastPlayedAt: at(8, 26), lastGameName: 'Onsdagsgolfen' };
-    expect(friendSheetValues({ hcp: 9.4, stats }, NOW)).toEqual({
+    expect(friendPageValues({ hcp: 9.4, stats }, NOW)).toEqual({
       hcp: '9,4',
       rounds: '8',
       lastPlayed: 'Onsdagsgolfen, sist lørdag',
     });
-    expect(friendSheetValues({ hcp: null, stats: null }, NOW)).toEqual({
-      hcp: '–',
+    expect(friendPageValues({ hcp: null, stats: null }, NOW)).toEqual({
+      hcp: null,
       rounds: '–',
       lastPlayed: '–',
     });
+  });
+});
+
+// #2381: vennesiden, tegning C «Dere to».
+describe('vennesiden', () => {
+  const NOW = new Date(2026, 8, 30, 12, 0);
+  const at = (month: number, day: number) => new Date(2026, month, day, 18, 0).toISOString();
+  const record =(youAhead: number, themAhead: number, tied = 0) => ({
+    played: youAhead + themAhead + tied,
+    youAhead,
+    themAhead,
+    tied,
+  });
+
+  it.each(Object.entries(FRIEND_PAGE_TEXT))('«%s» er en ferdig tekst', (_key, text) => {
+    expect(isFinishedSentence(text)).toBe(true);
+  });
+
+  it('har toppen etter hvor siden ble åpnet', () => {
+    expect(friendPageTopBar('friends')).toEqual({ kicker: 'Venner', backLabel: 'Tilbake til Venner' });
+    expect(friendPageTopBar('league')).toEqual({ kicker: 'Liga', backLabel: 'Tilbake til ligaen' });
+  });
+
+  it('bruker fornavnet i merket, med reserven uten navn', () => {
+    expect(firstNameOf('Kristian Holm')).toBe('Kristian');
+    expect(firstNameOf('  Kari  ')).toBe('Kari');
+    expect(firstNameOf('')).toBe(web.someoneFallback);
+    expect(roundBadgeLabel('them_ahead', 'Kristian Holm')).toBe('Kristian foran');
+    expect(roundBadgeLabel('you_ahead', 'Kristian Holm')).toBe('Du foran');
+    expect(roundBadgeLabel('same_team', 'Kristian Holm')).toBe('På lag');
+    expect(roundBadgeLabel('tied', 'Kristian Holm')).toBe('Likt');
+  });
+
+  it('skriver undertittelen med og uten handicap', () => {
+    expect(friendPageSubline(12.4)).toBe('Dere er venner · handicap 12,4');
+    expect(friendPageSubline(null)).toBe('Dere er venner');
+  });
+
+  it('har tittelen, «Vis alle» og linja under rundenavnet', () => {
+    expect(roundsListTitle(7)).toBe('Runder sammen · 7');
+    expect(showAllRounds(7)).toBe('Vis alle 7');
+    expect(roundRowSubline({ playedAt: at(8, 26), modeLabel: 'Stableford' }, NOW)).toBe('sist lørdag · Stableford');
+    expect(roundRowSubline({ playedAt: null, modeLabel: 'Stableford' }, NOW)).toBe('Stableford');
+  });
+
+  it('sier hvem som leder, i entall og flertall', () => {
+    expect(headToHeadLine(record(3, 2), 'Kristian Holm')).toBe('Du leder etter 5 runder mot hverandre.');
+    expect(headToHeadLine(record(0, 1), 'Kristian Holm')).toBe('Kristian leder etter 1 runde mot hverandre.');
+    expect(headToHeadLine(record(2, 2), 'Kristian Holm')).toBe('Dere står likt etter 4 runder mot hverandre.');
+    expect(headToHeadLine(record(0, 0), 'Kristian Holm')).toBeNull();
+  });
+
+  it('legger de like rundene bak lederlinja med bokstaver fra én til ti', () => {
+    expect(headToHeadLine(record(3, 2, 1), 'Kristian Holm')).toBe(
+      'Du leder etter 6 runder mot hverandre. Én endte likt.',
+    );
+    const words = ['Én', 'To', 'Tre', 'Fire', 'Fem', 'Seks', 'Sju', 'Åtte', 'Ni', 'Ti'];
+    words.forEach((word, i) => {
+      expect(headToHeadLine(record(0, 0, i + 1), 'Kari')).toMatch(new RegExp(` ${word} endte likt\\.$`));
+    });
+  });
+
+  it('skriver over ti like runder uten å begynne setningen med et siffer', () => {
+    expect(headToHeadLine(record(1, 0, 11), 'Kari')).toBe(
+      'Du leder etter 12 runder mot hverandre. Av dem endte 11 likt.',
+    );
+  });
+
+  it('gir stillingen og radene et navn skjermleseren kan si', () => {
+    expect(headToHeadA11yLabel(record(3, 2), 'Kristian Holm')).toBe('Du 3, Kristian 2');
+    expect(headToHeadA11yLabel(record(3, 2, 1), 'Kristian Holm')).toBe('Du 3, Kristian 2, 1 likt');
+    expect(headToHeadA11yLabel(record(0, 0), 'Kristian Holm')).toBe('Du og Kristian, ingen runder mot hverandre');
+    expect(openPersonA11yLabel('Sindre Vik')).toBe('Åpne Sindre Vik');
+    expect(openPersonA11yLabel('')).toBe(`Åpne ${web.someoneFallback}`);
   });
 });

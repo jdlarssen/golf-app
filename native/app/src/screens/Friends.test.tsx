@@ -5,21 +5,23 @@
 // og hvilken sti og kropp hver handling sender, er `data/friends.test.ts`
 // sitt. Her låses koblingene bare en render kan bekrefte: seksjonene står når
 // det finnes noe i dem, knappene kaller riktig handling og lista hentes på
-// nytt, en venn åpner arket med tallene og «Fjern venn» spør først,
-// «På e-post» viser feltet, en ukjent adresse gir tilbudet om invitasjon, og
-// uten nett står linja om tilkobling.
+// nytt, alle radene åpner vennesiden (#2381) mens knappene ikke gjør det,
+// lista hentes på nytt når du kommer tilbake, «På e-post» viser feltet, en
+// ukjent adresse gir tilbudet om invitasjon, og uten nett står linja om
+// tilkobling.
 //
 // Tre renders og ikke én: full liste, tom liste og uten nett er tilstander
 // skjermen ikke kan være i samtidig (samme grunn som Profile.test.tsx).
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { Alert, Share, type AlertButton } from 'react-native';
+import { Share } from 'react-native';
 import {
   addFriendByEmail,
   fetchFriends,
   inviteFriend,
   removeFriend,
   respondToFriendRequest,
+  sendFriendRequest,
 } from '../data/friends';
 import { FRIENDS_TEXT, friendStatusLine, invitedLine } from '../lib/friendsCopy';
 import type { ScreenProps } from '../navigation';
@@ -38,6 +40,14 @@ jest.mock('../data/friends', () => ({
   removeFriend: jest.fn(),
   inviteFriend: jest.fn(),
 }));
+// Fokuset kjøres som en effekt, og testen kan fokusere skjermen igjen (som League.test.tsx).
+let mockFocus: () => void = () => {};
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (callback: () => void) => {
+    mockFocus = callback;
+    require('react').useEffect(callback, [callback]);
+  },
+}));
 jest.mock('../lib/webLink', () => ({
   ...jest.requireActual('../lib/webLink'),
   webUrl: (path: string) => ({ ok: true, url: `https://staging.example${path}` }),
@@ -46,6 +56,7 @@ jest.mock('../lib/webLink', () => ({
 const fetchFriendsMock = fetchFriends as jest.Mock;
 const respondMock = respondToFriendRequest as jest.Mock;
 const removeMock = removeFriend as jest.Mock;
+const sendMock = sendFriendRequest as jest.Mock;
 const addByEmailMock = addFriendByEmail as jest.Mock;
 const inviteMock = inviteFriend as jest.Mock;
 
@@ -66,14 +77,17 @@ const FULL = {
 };
 const EMPTY = { friends: [], incoming: [], outgoing: [], suggestions: [], friendCode: null };
 
-async function renderScreen() {
-  await render(<Friends {...({ navigation: {}, route: {} } as unknown as ScreenProps<'Friends'>)} />);
+async function renderScreen(params?: { selfInitials?: string }) {
+  const push = jest.fn();
+  await render(
+    <Friends {...({ navigation: { push }, route: { params } } as unknown as ScreenProps<'Friends'>)} />,
+  );
+  return { push };
 }
 
 describe('Friends', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -107,21 +121,7 @@ describe('Friends', () => {
     }
   });
 
-  // #1954 D3 (evaluator runde 1): venne-arket er en Modal i bunnen; «Lukk»
-  // skal stå over navigasjonslinja.
-  it('venne-arket ender over systemlinja', async () => {
-    fetchFriendsMock.mockResolvedValue({ ok: true, data: FULL });
-    setBottomInset(48);
-    try {
-      await renderScreen();
-      await fireEvent.press(await screen.findByTestId('friends-open-kari'));
-      expect(screen.getByTestId('friend-sheet')).toHaveStyle({ paddingBottom: 36 + 48 });
-    } finally {
-      setBottomInset(0);
-    }
-  });
-
-  it('viser seksjonene, godtar, åpner arket, spør før den fjerner og deler lenka', async () => {
+  it('viser seksjonene, godtar, trekker tilbake og deler lenka', async () => {
     fetchFriendsMock.mockResolvedValue({ ok: true, data: FULL });
     respondMock.mockResolvedValue({ ok: true, status: 'accepted' });
     removeMock.mockResolvedValue({ ok: true, status: 'removed' });
@@ -144,31 +144,78 @@ describe('Friends', () => {
     // Lista hentes på nytt etter handlingen.
     expect(fetchFriendsMock).toHaveBeenCalledTimes(2);
 
-    // En venn åpner arket med tallene; «Fjern venn» der spør først, og bare
-    // «Fjern venn» i dialogen fjerner.
-    await fireEvent.press(screen.getByTestId('friends-open-kari'));
-    expect(screen.getByTestId('friend-sheet-hcp')).toHaveTextContent('9,4', { exact: false });
-    expect(screen.getByTestId('friend-sheet-rounds')).toHaveTextContent('8', { exact: false });
-    await fireEvent.press(screen.getByTestId('friends-remove-kari'));
-    expect(removeMock).not.toHaveBeenCalled();
-    const [, , buttons, options] = (Alert.alert as unknown as jest.Mock).mock.calls[0] as [
-      string,
-      string,
-      AlertButton[],
-      { cancelable: boolean },
-    ];
-    expect(buttons.map((b) => b.text)).toEqual([FRIENDS_TEXT.cancelLabel, FRIENDS_TEXT.removeConfirmLabel]);
-    expect(options.cancelable).toBe(false);
     await act(async () => {
-      buttons[1].onPress?.();
+      fireEvent.press(screen.getByTestId('friends-withdraw-per'));
     });
-    expect(removeMock).toHaveBeenCalledWith('kari');
-    expect(screen.queryByTestId('friend-sheet')).toBeNull();
+    expect(removeMock).toHaveBeenCalledWith('per');
 
     await act(async () => {
       fireEvent.press(screen.getByTestId('friends-share-link'));
     });
     expect(share).toHaveBeenCalledWith({ message: 'https://staging.example/venner/legg-til/KODE123' });
+  });
+
+  // #2381: alle radene åpner vennesiden, med «Venner» som tilbake-ord.
+  it('en venn, en forespørsel, et forslag og en sendt forespørsel åpner vennesiden', async () => {
+    fetchFriendsMock.mockResolvedValue({ ok: true, data: FULL });
+    const { push } = await renderScreen({ selfInitials: 'SA' });
+    await screen.findByTestId('friends-list');
+
+    const cases = [
+      ['kari', { name: 'Kari', hcp: 9.4, relation: 'friend' }],
+      ['ola', { name: 'Ola', hcp: null, relation: 'incoming' }],
+      ['siri', { name: 'Siri', hcp: null, relation: 'none' }],
+      ['per', { name: 'Per', hcp: null, relation: 'outgoing' }],
+    ] as const;
+    for (const [id, expected] of cases) {
+      push.mockClear();
+      await fireEvent.press(screen.getByTestId(`friends-open-${id}`));
+      expect(push).toHaveBeenCalledWith('FriendPage', {
+        userId: id,
+        from: 'friends',
+        selfInitials: 'SA',
+        ...expected,
+      });
+    }
+    expect(screen.getByLabelText('Åpne Ola')).toBeTruthy();
+    expect(screen.getByLabelText('Åpne Siri')).toBeTruthy();
+    expect(screen.getByLabelText('Åpne Per')).toBeTruthy();
+  });
+
+  it('knappene ved siden av navnet gjør det de gjorde, og åpner ikke siden', async () => {
+    fetchFriendsMock.mockResolvedValue({ ok: true, data: FULL });
+    respondMock.mockResolvedValue({ ok: true, status: 'declined' });
+    sendMock.mockResolvedValue({ ok: true, status: 'requested' });
+    removeMock.mockResolvedValue({ ok: true, status: 'removed' });
+    const { push } = await renderScreen();
+    await screen.findByTestId('friends-list');
+
+    for (const button of ['friends-decline-ola', 'friends-add-siri', 'friends-withdraw-per', 'friends-accept-ola']) {
+      await act(async () => {
+        fireEvent.press(screen.getByTestId(button));
+      });
+    }
+    expect(respondMock).toHaveBeenCalledWith('req-1', false);
+    expect(respondMock).toHaveBeenCalledWith('req-1', true);
+    expect(sendMock).toHaveBeenCalledWith('siri');
+    expect(removeMock).toHaveBeenCalledWith('per');
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('henter lista på nytt når du kommer tilbake fra vennesiden, ikke ved første visning', async () => {
+    fetchFriendsMock.mockResolvedValue({ ok: true, data: FULL });
+    await renderScreen();
+    await screen.findByTestId('friends-list');
+    expect(fetchFriendsMock).toHaveBeenCalledTimes(1);
+
+    const withoutOla = { ...FULL, incoming: [], friends: [...FULL.friends, { id: 'ola', name: 'Ola', hcp: null, stats: NONE }] };
+    fetchFriendsMock.mockResolvedValue({ ok: true, data: withoutOla });
+    await act(async () => {
+      mockFocus();
+    });
+    expect(fetchFriendsMock).toHaveBeenCalledTimes(2);
+    expect(screen.queryByTestId('friends-incoming')).toBeNull();
+    expect(screen.getByTestId('friends-open-ola')).toBeTruthy();
   });
 
   it('viser tomtilstanden, og tilbyr invitasjon når adressen ikke er på Tørny', async () => {

@@ -14,8 +14,12 @@
 // **Uten nett** står en linje om at venner krever tilkobling, med «Prøv
 // igjen». Handlingene legges aldri i en kø.
 //
-// **En venn åpner et lite ark** med tallene og «Fjern venn». «Fjern venn»
-// spør først med en dialog; en egen venneside kommer senere i en egen sak.
+// **Alle radene åpner vennesiden** (#2381, `FriendPage`): en venn, navnet i en
+// forespørsel, et forslag og en sendt forespørsel. Knappene til høyre er
+// søsken av trykkflaten, så «Godta», ✕, «+ Legg til» og «Trekk tilbake» gjør
+// det de gjorde og åpner ikke siden. «Fjern venn» bor på siden. Kommer du
+// tilbake derfra, hentes lista på nytt, så en godtatt eller fjernet venn står
+// riktig uten at du drar for å oppdatere.
 //
 // **Delingen** åpner telefonens delearke med lenka (`Share.share`, ingen ny
 // modul). Adressen bygges med `webUrl`, så butikkbygget deler tornygolf.no.
@@ -28,11 +32,11 @@
 // heltekortet er den varme (`onStrongWarm`), den stiplede ringen er tegnet
 // (iOS stipler en `border` grovere enn nettleseren), og tallene i
 // underlinjene har vanlige, ikke faste, sifferbredder.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   Share,
@@ -50,14 +54,13 @@ import {
   respondToFriendRequest,
   sendFriendRequest,
   type FriendActionResult,
-  type FriendItem,
+  type FriendPerson,
   type FriendsData,
 } from '../data/friends';
 import type { WebApiFailure } from '../data/webApi';
 import {
   FRIENDS_TEXT,
   friendRowA11yLabel,
-  friendSheetValues,
   friendStatusLine,
   friendSubline,
   friendsFailureLine,
@@ -68,17 +71,18 @@ import {
   inviteFailureLine,
   invitePrompt,
   invitedLine,
+  openPersonA11yLabel,
   personActionA11yLabel,
-  removeConfirmMessage,
   roundsSubline,
   type StatusLine,
 } from '../lib/friendsCopy';
 import { describeWebLinkFailure, friendLinkPath, webUrl } from '../lib/webLink';
 import { PageTitle } from '../components/PageTitle';
-import { Avatar, FriendSheet, Pill, RowsCard } from '../components/friends/FriendSheet';
+import { Avatar, Pill, RowsCard, type AvatarTone } from '../components/friends/FriendParts';
 import { ChevronIcon } from '../components/icons/Icons';
 import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
 import type { ScreenProps } from '../navigation';
+import type { FriendPageRelation } from './FriendPage';
 import { FONTS, fraunces, interLine, TAP, useTheme } from '../theme';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 
@@ -91,7 +95,7 @@ function toLoadState(result: Awaited<ReturnType<typeof fetchFriends>>): LoadStat
   return result.ok ? { state: 'ready', data: result.data } : { state: 'failed', reason: result.reason };
 }
 
-export function Friends({ route }: ScreenProps<'Friends'>) {
+export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
   const { ui, colors } = useTheme();
   const bottomInset = useBottomInsetUnlessKeyboard();
   const selfInitials = route.params?.selfInitials ?? null;
@@ -107,7 +111,6 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
   const [email, setEmail] = useState('');
   const [emailOpen, setEmailOpen] = useState(false);
   const [shareNote, setShareNote] = useState<string | null>(null);
-  const [sheetFriend, setSheetFriend] = useState<FriendItem | null>(null);
 
   // Første henting bor i effekten, med avbrudd hvis skjermen lukkes først.
   // Etter en handling og ved «Prøv igjen» hentes lista med `reload`.
@@ -128,6 +131,36 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
     const next = toLoadState(await fetchFriends());
     setLoad((prev) => (next.state === 'failed' && prev.state === 'ready' ? prev : next));
   }, []);
+
+  // #2381: tilbake fra vennesiden henter lista på nytt (godta og fjern skjer
+  // der). Første visning hentes alt i effekten over.
+  const focusedBefore = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (!focusedBefore.current) {
+        focusedBefore.current = true;
+        return;
+      }
+      void reload();
+    }, [reload]),
+  );
+
+  /** Vennesiden for en i lista. `hcp` bare for venner, som lista har det. */
+  const openPerson = useCallback(
+    (person: FriendPerson, relation: FriendPageRelation, hcp: number | null = null) => {
+      // `push`, ikke `openOrReturn`: siden gjelder én person, og `userId` er
+      // ikke blant nøklene `backTo` kjenner en skjerm igjen på.
+      navigation.push('FriendPage', {
+        userId: person.id,
+        name: person.name,
+        hcp,
+        from: 'friends',
+        relation,
+        selfInitials,
+      });
+    },
+    [navigation, selfInitials],
+  );
 
   /** Kjør én handling, vis svarlinja og hent lista på nytt. */
   const run = useCallback(
@@ -184,30 +217,6 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
       setLine({ text: inviteFailureLine(result.status), tone: 'error' });
     }
   }, [inviteEmail]);
-
-  const onRemove = useCallback(
-    (friend: FriendItem) => {
-      // To knapper, og dialogen kan ikke avvises: svaret skal komme fra en av dem.
-      // Arket står til svaret kommer, så «Avbryt» fører tilbake dit.
-      Alert.alert(
-        FRIENDS_TEXT.removeConfirmLabel,
-        removeConfirmMessage(friend.name),
-        [
-          { text: FRIENDS_TEXT.cancelLabel, style: 'cancel' },
-          {
-            text: FRIENDS_TEXT.removeConfirmLabel,
-            style: 'destructive',
-            onPress: () => {
-              setSheetFriend(null);
-              void run(`remove:${friend.id}`, () => removeFriend(friend.id));
-            },
-          },
-        ],
-        { cancelable: false },
-      );
-    },
-    [run],
-  );
 
   const onShare = useCallback(async (code: string) => {
     setShareNote(null);
@@ -424,8 +433,14 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
                 key={r.requestId}
                 style={[styles.requestCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
               >
-                <Avatar name={r.name} tone="soft" />
-                <NameBlock name={r.name} sub={incomingSubline(r.stats)} />
+                <PersonLink
+                  name={r.name}
+                  tone="soft"
+                  sub={incomingSubline(r.stats)}
+                  disabled={locked}
+                  onPress={() => openPerson(r, 'incoming')}
+                  testID={`friends-open-${r.id}`}
+                />
                 <Pill
                   label={FRIENDS_TEXT.acceptLabel}
                   pendingLabel={FRIENDS_TEXT.acceptPending}
@@ -480,27 +495,45 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
                     key={s.id}
                     style={[styles.suggestionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   >
-                    <Avatar name={s.name} tone="warm" />
-                    <View>
-                      <Text style={[styles.suggestionName, { color: colors.text }]} numberOfLines={1}>
-                        {s.name || FRIENDS_TEXT.someoneFallback}
-                      </Text>
-                      {sub ? (
-                        <Text style={[styles.sub, { color: colors.muted }]} numberOfLines={1}>
-                          {sub}
-                        </Text>
-                      ) : null}
-                    </View>
-                    <Pill
-                      tone="outline"
-                      label={`+ ${FRIENDS_TEXT.addEmailButton}`}
-                      pendingLabel={FRIENDS_TEXT.addEmailPending}
-                      pending={busy === `add:${s.id}`}
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={openPersonA11yLabel(s.name)}
                       disabled={locked}
-                      onPress={() => void run(`add:${s.id}`, () => sendFriendRequest(s.id))}
-                      accessibilityLabel={personActionA11yLabel(FRIENDS_TEXT.addEmailButton, s.name)}
-                      testID={`friends-add-${s.id}`}
-                    />
+                      onPress={() => openPerson(s, 'none')}
+                      style={({ pressed }) => [styles.suggestionLink, pressed ? styles.pressed : null]}
+                      testID={`friends-open-${s.id}`}
+                    >
+                      <Avatar name={s.name} tone="warm" />
+                      <View>
+                        <View style={styles.nameWithArrow}>
+                          <Text
+                            style={[styles.suggestionName, styles.shrinkName, { color: colors.text }]}
+                            numberOfLines={1}
+                          >
+                            {s.name || FRIENDS_TEXT.someoneFallback}
+                          </Text>
+                          <OpenArrow />
+                        </View>
+                        {sub ? (
+                          <Text style={[styles.sub, { color: colors.muted }]} numberOfLines={1}>
+                            {sub}
+                          </Text>
+                        ) : null}
+                      </View>
+                    </Pressable>
+                    {/* «+ Legg til» nederst, så knappene står på linje også når et kort ikke har underlinje. */}
+                    <View style={styles.suggestionButton}>
+                      <Pill
+                        tone="outline"
+                        label={`+ ${FRIENDS_TEXT.addEmailButton}`}
+                        pendingLabel={FRIENDS_TEXT.addEmailPending}
+                        pending={busy === `add:${s.id}`}
+                        disabled={locked}
+                        onPress={() => void run(`add:${s.id}`, () => sendFriendRequest(s.id))}
+                        accessibilityLabel={personActionA11yLabel(FRIENDS_TEXT.addEmailButton, s.name)}
+                        testID={`friends-add-${s.id}`}
+                      />
+                    </View>
                   </View>
                 );
               })}
@@ -531,17 +564,13 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
                     accessibilityRole="button"
                     accessibilityLabel={friendRowA11yLabel(f.name, sub)}
                     disabled={locked}
-                    onPress={() => setSheetFriend(f)}
+                    onPress={() => openPerson(f, 'friend', f.hcp)}
                     style={({ pressed }) => [styles.personRow, pressed ? styles.pressed : null]}
                     testID={`friends-open-${f.id}`}
                   >
                     <Avatar name={f.name} tone="strong" />
                     <NameBlock name={f.name} sub={sub} />
-                    {busy === `remove:${f.id}` ? (
-                      <ActivityIndicator color={colors.primary} />
-                    ) : (
-                      <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} />
-                    )}
+                    <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} />
                   </Pressable>
                 );
               })}
@@ -555,8 +584,14 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
             <RowsCard>
               {outgoing.map((r) => (
                 <View key={r.requestId} style={styles.personRow}>
-                  <Avatar name={r.name} tone="soft" />
-                  <NameBlock name={r.name} sub={roundsSubline(r.stats)} />
+                  <PersonLink
+                    name={r.name}
+                    tone="soft"
+                    sub={roundsSubline(r.stats)}
+                    disabled={locked}
+                    onPress={() => openPerson(r, 'outgoing')}
+                    testID={`friends-open-${r.id}`}
+                  />
                   <Pill
                     tone="outline"
                     label={FRIENDS_TEXT.withdrawLabel}
@@ -573,28 +608,68 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
           </View>
         ) : null}
       </ScrollView>
-
-      <FriendSheet
-        person={
-          sheetFriend
-            ? { id: sheetFriend.id, name: sheetFriend.name, avatarTone: 'strong', rows: friendSheetValues(sheetFriend, now) }
-            : null
-        }
-        bottom={{ kind: 'remove', onRemove: () => sheetFriend && onRemove(sheetFriend) }}
-        onClose={() => setSheetFriend(null)}
-      />
     </>
   );
 }
 
-/** Navnet og underlinja, med plass til knappene til høyre. */
-function NameBlock({ name, sub }: { name: string; sub: string | null }) {
+/** Pila etter navnet: raden åpner vennesiden (#2381). 14 pt i `primary`, som i designet. */
+function OpenArrow() {
   const { colors } = useTheme();
+  return <ChevronIcon direction="right" color={colors.primary} size={14} strokeWidth={2.2} />;
+}
+
+/**
+ * Sirkelen og navnet i en forespørsel eller en sendt forespørsel, som én
+ * trykkflate til vennesiden (#2381). Knappene til høyre står utenfor den.
+ */
+function PersonLink({
+  name,
+  tone,
+  sub,
+  disabled,
+  onPress,
+  testID,
+}: {
+  name: string;
+  tone: AvatarTone;
+  sub: string | null;
+  disabled: boolean;
+  onPress: () => void;
+  testID: string;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={openPersonA11yLabel(name)}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [styles.personLink, pressed ? styles.pressed : null]}
+      testID={testID}
+    >
+      <Avatar name={name} tone={tone} />
+      <NameBlock name={name} sub={sub} arrow />
+    </Pressable>
+  );
+}
+
+/** Navnet og underlinja, med plass til knappene til høyre. */
+function NameBlock({ name, sub, arrow = false }: { name: string; sub: string | null; arrow?: boolean }) {
+  const { colors } = useTheme();
+  const nameText = (
+    <Text style={[styles.name, arrow ? styles.shrinkName : null, { color: colors.text }]} numberOfLines={1}>
+      {name || FRIENDS_TEXT.someoneFallback}
+    </Text>
+  );
   return (
     <View style={styles.flexText}>
-      <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
-        {name || FRIENDS_TEXT.someoneFallback}
-      </Text>
+      {arrow ? (
+        <View style={styles.nameWithArrow}>
+          {nameText}
+          <OpenArrow />
+        </View>
+      ) : (
+        nameText
+      )}
       {sub ? (
         // To linjer, som designet: «Spilte med deg i …» bryter heller enn å kuttes.
         // Vanlige sifferbredder, som i designet.
@@ -699,6 +774,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   suggestionName: { fontSize: 14, fontFamily: FONTS.sansSemiBold },
+  // #2381: sirkelen og navnet i forslagskortet er én trykkflate, med 8 som kortets gap.
+  suggestionLink: { gap: 8 },
+  suggestionButton: { marginTop: 'auto' },
+  // Pila står rett etter navnet (4 imellom); et langt navn kuttes, pila blir.
+  nameWithArrow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  shrinkName: { flexShrink: 1 },
+  personLink: { flex: 1, minWidth: 0, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 12 },
 
   personRow: {
     flexDirection: 'row',

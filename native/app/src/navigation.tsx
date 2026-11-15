@@ -54,7 +54,7 @@ import { JOIN_TEXT, PLAYERS_TEXT, REMOVE_TEXT, SETUP_APP_TEXT } from './lib/cupS
 import { FINISH_TEXT, MANAGE_APP_TEXT, SIDE_AWARD_TEXT, SWAP_TEXT, WITHDRAW_TEXT, type CupManageNotice } from './lib/cupManageCopy';
 import { LEAGUE_CARD_TEXT, LEAGUE_JOIN_TEXT, LEAGUE_TEXT } from './lib/leagueCopy';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
-import { FRIEND_LINK_TEXT, FRIENDS_TEXT, friendsTopBar } from './lib/friendsCopy';
+import { FRIEND_LINK_TEXT, FRIENDS_TEXT, friendPageTopBar, friendsTopBar } from './lib/friendsCopy';
 import { HISTORY_TEXT } from './lib/historyCopy';
 import { KAVALKADE_TEXT } from './lib/kavalkadeCopy';
 import { PROFILE_TEXT } from './lib/profileCopy';
@@ -71,6 +71,7 @@ import { PaymentStatus } from './screens/PaymentStatus';
 import { BETALING_TEXT } from './lib/paymentCopy';
 import { FriendLink } from './screens/FriendLink';
 import { Friends } from './screens/Friends';
+import { FriendPage, type FriendPageRelation } from './screens/FriendPage';
 import { Inbox } from './screens/Inbox';
 import { GameHome } from './screens/GameHome';
 import { Hole } from './screens/Hole';
@@ -200,6 +201,21 @@ export type RootStackParamList = {
    * varsel, `from: 'notification'` (#2759).
    */
   Friends: { selfInitials?: string; from?: 'friendLink' | 'notification' } | undefined;
+  /**
+   * Vennesiden (#2381), fra Venner eller et navn i ligatabellen. Navnet og
+   * handicapet er det lista du trykket i viste, så toppen står uten nett.
+   * `hcp` er ligaens handicap, eller vennens fra Venner; `null` for en som
+   * ikke er venn åpnet fra Venner. `relation` er lista personen sto i (Venner
+   * vet det, ligaen ikke). `selfInitials` er sirkelen «Du» i «Mot hverandre».
+   */
+  FriendPage: {
+    userId: string;
+    name: string;
+    hcp: number | null;
+    from: 'friends' | 'league';
+    relation?: FriendPageRelation;
+    selfInitials?: string | null;
+  };
   /** Innboksen (#2759), fra knappen på Hjem. */
   Inbox: undefined;
   /**
@@ -585,6 +601,17 @@ export function RootNavigator() {
             // #2627: fra «Bli venn med …» nevner ikke toppen Profil.
             const top = friendsTopBar(route.params?.from);
             return kickerHeader(top.kicker, FRIENDS_TEXT.heading, { backLabel: top.backLabel });
+          }}
+        />
+        {/* Vennesiden (#2381): «Venner» eller «Liga» i toppen, og pila tilbake dit. */}
+        <Stack.Screen
+          name="FriendPage"
+          component={FriendPage}
+          options={({ route }) => {
+            const top = friendPageTopBar(route.params.from);
+            return kickerHeader(top.kicker, route.params.name || FRIENDS_TEXT.someoneFallback, {
+              backLabel: top.backLabel,
+            });
           }}
         />
         {/* «Bli venn med …» (#2627): «LEGG TIL VENN» i toppen, som nettsiden,
