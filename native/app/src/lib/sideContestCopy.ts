@@ -6,8 +6,6 @@
 // I en cup står «kampen» der et vanlig spill sier «flighten»: kampen er
 // flighten (`side_claim_flight_key` gir 0 i en kamp med høyst fire spillere).
 import {
-  CLAIM_DISTANCE_MAX_M,
-  CLAIM_DISTANCE_MIN_M,
   girQuestionForPar,
   type HoleContest,
   type HoleContestCategory,
@@ -156,18 +154,8 @@ export function girAnswer(hits: number, balls: number, allMissed: boolean): stri
 }
 
 /** Steget på − og +. */
-export const DISTANCE_STEP_M = 0.5;
-
-/**
- * Avstanden etter et trykk på − eller +, eller `null` når trykket ville gått
- * utenfor 0,1–99,9 m. Fra tomt felt gir + første steget (0,5 m).
- */
-export function stepDistance(current: number | null, direction: -1 | 1): number | null {
-  if (current == null) return direction === 1 ? DISTANCE_STEP_M : null;
-  const next = Math.round((current + direction * DISTANCE_STEP_M) * 10) / 10;
-  if (next < CLAIM_DISTANCE_MIN_M || next > CLAIM_DISTANCE_MAX_M) return null;
-  return next;
-}
+// Avstandssteget bor i `lib/games/sideContest.ts`, det samme nettets felt bruker.
+export { DISTANCE_STEP_M, stepDistance } from '../../../../lib/games/sideContest';
 
 /**
  * Hva spilleren får vite når en innmelding ikke ble lagret. Valget hopper

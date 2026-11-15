@@ -17,11 +17,11 @@
  *     so «Fikk ikke hentet» never shows up as «ingen har meldt inn».
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '@/lib/database.types';
+import type { Database } from '../database.types';
 import type { HoleContest, SideContestCategory } from './sideContest';
 
-const SIDE_CLAIM_SELECT = 'category, hole_number, winner_user_id, distance_m, entered_by, updated_at';
-const GIR_CLAIM_SELECT = 'hole_number, user_id, hit, entered_by, updated_at';
+export const SIDE_CLAIM_SELECT = 'category, hole_number, winner_user_id, distance_m, entered_by, updated_at';
+export const GIR_CLAIM_SELECT = 'hole_number, user_id, hit, entered_by, updated_at';
 
 /** The flight's answer for one category on a hole. `winnerUserId: null` = «Ingen på …». */
 export interface SideClaim {
@@ -57,11 +57,11 @@ function isSideCategory(category: string): category is SideContestCategory {
   return category === 'closest_to_pin' || category === 'longest_drive';
 }
 
-type SideClaimRow = Pick<
+export type SideClaimRow = Pick<
   Database['public']['Tables']['game_side_claims']['Row'],
   'category' | 'hole_number' | 'winner_user_id' | 'distance_m' | 'entered_by' | 'updated_at'
 >;
-type GirClaimRow = Pick<
+export type GirClaimRow = Pick<
   Database['public']['Tables']['game_gir_claims']['Row'],
   'hole_number' | 'user_id' | 'hit' | 'entered_by' | 'updated_at'
 >;

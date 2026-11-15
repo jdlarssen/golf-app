@@ -20,56 +20,34 @@
 //
 // Nettets hullside leser de samme tabellene uten cache, så appen trenger ingen
 // `refreshWebCache` etter en skriving.
+import {
+  GIR_CLAIM_SELECT,
+  readRpcAnswer,
+  SIDE_CLAIM_SELECT,
+  toGirClaims,
+  toSideClaims,
+  type GirClaim,
+  type GirClaimRow,
+  type SideClaim,
+  type SideClaimRow,
+  type SideClaimWriteResult,
+} from '../../../../lib/games/sideClaims';
 import type { SideContestCategory } from '../../../../lib/games/sideContest';
 import { currentDeviceUserId, supabase } from '../supabase';
+
+// Typene, radmappingen og rpc-svaret bor i `lib/games/sideClaims.ts`, de samme
+// nettets hullside bruker.
+export type {
+  GirClaim,
+  SideClaim,
+  SideClaimCode,
+  SideClaimFailure,
+  SideClaimWriteResult,
+} from '../../../../lib/games/sideClaims';
 
 // -----------------------------------------------------------------------------
 // Henting
 // -----------------------------------------------------------------------------
-
-const SIDE_CLAIM_SELECT = 'category, hole_number, winner_user_id, distance_m, entered_by, updated_at';
-const GIR_CLAIM_SELECT = 'hole_number, user_id, hit, entered_by, updated_at';
-
-/** Rå PostgREST-fasong. `distance_m` er `numeric(3,1)`. */
-interface SideClaimRow {
-  category: string;
-  hole_number: number;
-  winner_user_id: string | null;
-  distance_m: number | string | null;
-  entered_by: string;
-  updated_at: string;
-}
-
-interface GirClaimRow {
-  hole_number: number;
-  user_id: string;
-  hit: boolean;
-  entered_by: string;
-  updated_at: string;
-}
-
-/** Flightens svar for én kategori på ett hull. `winnerUserId: null` = «Ingen på …». */
-export interface SideClaim {
-  category: SideContestCategory;
-  holeNumber: number;
-  winnerUserId: string | null;
-  distanceM: number | null;
-  enteredBy: string;
-  updatedAt: string;
-}
-
-/** Én spillers GIR på ett hull. Ingen rad = ikke meldt inn; `hit: false` = bommet. */
-export interface GirClaim {
-  holeNumber: number;
-  userId: string;
-  hit: boolean;
-  enteredBy: string;
-  updatedAt: string;
-}
-
-function isSideCategory(category: string): category is SideContestCategory {
-  return category === 'closest_to_pin' || category === 'longest_drive';
-}
 
 /**
  * Flightens svar om nærmest pinnen og lengste drive på hullet.
@@ -85,22 +63,7 @@ export async function fetchSideClaims(gameId: string, holeNumber: number): Promi
     .returns<SideClaimRow[]>();
 
   if (error) throw new Error(`fetchSideClaims: ${error.message}`);
-
-  return (data ?? []).flatMap((row) => {
-    // CHECK-en holder kategorien innenfor de to; en ukjent hoppes over.
-    if (!isSideCategory(row.category)) return [];
-    const distance = row.distance_m == null ? null : Number(row.distance_m);
-    return [
-      {
-        category: row.category,
-        holeNumber: row.hole_number,
-        winnerUserId: row.winner_user_id,
-        distanceM: distance != null && Number.isFinite(distance) ? distance : null,
-        enteredBy: row.entered_by,
-        updatedAt: row.updated_at,
-      },
-    ];
-  });
+  return toSideClaims(data ?? []);
 }
 
 /**
@@ -117,48 +80,20 @@ export async function fetchGirClaims(gameId: string, holeNumber: number): Promis
     .returns<GirClaimRow[]>();
 
   if (error) throw new Error(`fetchGirClaims: ${error.message}`);
-
-  return (data ?? []).map((row) => ({
-    holeNumber: row.hole_number,
-    userId: row.user_id,
-    hit: row.hit,
-    enteredBy: row.entered_by,
-    updatedAt: row.updated_at,
-  }));
+  return toGirClaims(data ?? []);
 }
 
 // -----------------------------------------------------------------------------
 // Skriving
 // -----------------------------------------------------------------------------
 
-/**
- * Kodene rpc-ene svarer med når de ikke skrev noe (0237):
- *
- *  - `not_player`   — du er trukket, ikke med, eller uten flight i et større spill.
- *  - `not_active`   — runden pågår ikke (avsluttet mens du sto på hullet).
- *  - `no_slot`      — hullet er ikke et konkurransehull.
- *  - `wrong_flight` — spilleren er ikke i flighten din.
- *  - `bad_distance` — avstanden er utenfor 0,1–99,9 m, eller gjelder ikke kategorien.
- */
-export type SideClaimCode = 'not_player' | 'not_active' | 'no_slot' | 'wrong_flight' | 'bad_distance';
-
-const CODES: readonly SideClaimCode[] = ['not_player', 'not_active', 'no_slot', 'wrong_flight', 'bad_distance'];
-
-/**
- * Hvorfor en innmelding ikke ble lagret. `db_error` er alt rpc-en ikke svarte
- * på: nettbrudd, serverfeil, et svar vi ikke kjenner. Svaret til spilleren er
- * da «prøv igjen».
- */
-export type SideClaimFailure = SideClaimCode | 'not_authenticated' | 'db_error';
-
-export type SideClaimWriteResult = { ok: true } | { ok: false; error: SideClaimFailure };
-
-function readRpcAnswer(result: { data: unknown; error: unknown }): SideClaimWriteResult {
-  if (result.error) return { ok: false, error: 'db_error' };
-  if (result.data === 'ok') return { ok: true };
-  const code = CODES.find((c) => c === result.data);
-  return { ok: false, error: code ?? 'db_error' };
-}
+// Kodene rpc-ene svarer med når de ikke skrev noe (0237, `SideClaimCode`):
+//
+//  - `not_player`   — du er trukket, ikke med, eller uten flight i et større spill.
+//  - `not_active`   — runden pågår ikke (avsluttet mens du sto på hullet).
+//  - `no_slot`      — hullet er ikke et konkurransehull.
+//  - `wrong_flight` — spilleren er ikke i flighten din.
+//  - `bad_distance` — avstanden er utenfor 0,1–99,9 m, eller gjelder ikke kategorien.
 
 export interface SideClaimWrite {
   gameId: string;

@@ -10,8 +10,6 @@ import type { AppLocale } from '@/i18n/routing';
 import { formatNumber, intlLocaleTag } from '@/lib/i18n/format';
 import type { SideClaimFailure } from '@/lib/games/sideClaims';
 import {
-  CLAIM_DISTANCE_MAX_M,
-  CLAIM_DISTANCE_MIN_M,
   girQuestionForPar,
   type GirQuestionKey,
   type HoleContest,
@@ -19,20 +17,8 @@ import {
   type SideContestCategory,
 } from '@/lib/games/sideContest';
 
-/** The step on − and +. */
-export const DISTANCE_STEP_M = 0.5;
-
-/**
- * The distance after a tap on − or +, or `null` when the tap would leave
- * 0,1–99,9 m. From an empty field, + gives the first step (0,5 m). Rounded to
- * one decimal so a run of taps never drifts (0.1 + 0.2).
- */
-export function stepDistance(current: number | null, direction: -1 | 1): number | null {
-  if (current == null) return direction === 1 ? DISTANCE_STEP_M : null;
-  const next = Math.round((current + direction * DISTANCE_STEP_M) * 10) / 10;
-  if (next < CLAIM_DISTANCE_MIN_M || next > CLAIM_DISTANCE_MAX_M) return null;
-  return next;
-}
+// The distance step lives in lib/games/sideContest.ts, the one the app's field uses too.
+export { DISTANCE_STEP_M, stepDistance } from '@/lib/games/sideContest';
 
 /** One decimal with the locale's separator: «2,5» in Norwegian, «2.5» in English. */
 export function formatDistance(distanceM: number, locale: AppLocale): string {

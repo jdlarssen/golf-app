@@ -207,6 +207,22 @@ export function parseClaimDistance(raw: string): ClaimDistanceResult {
   return { ok: true, distanceM };
 }
 
+/** One tap on − or + in the distance field. */
+export const DISTANCE_STEP_M = 0.5;
+
+/**
+ * The distance after a tap on − or +, or `null` when the tap would leave
+ * CLAIM_DISTANCE_MIN_M–MAX_M. From an empty field, + gives the first step.
+ * Rounded to one decimal so a run of taps never drifts (0.1 + 0.2). The app's
+ * and the web's distance fields both step with this.
+ */
+export function stepDistance(current: number | null, direction: -1 | 1): number | null {
+  if (current == null) return direction === 1 ? DISTANCE_STEP_M : null;
+  const next = Math.round((current + direction * DISTANCE_STEP_M) * 10) / 10;
+  if (next < CLAIM_DISTANCE_MIN_M || next > CLAIM_DISTANCE_MAX_M) return null;
+  return next;
+}
+
 /**
  * The flights' reports for one hole, in the order the organiser reads them:
  * the shortest distance first, then reports without one (also «Ingen på
@@ -255,6 +271,22 @@ export function sideClaimFlightKey(
   const me = players.find((p) => p.user_id === userId && p.withdrawn_at == null);
   if (!me) return null;
   return isSingleFlightGame(gameMode, [...players]) ? 0 : me.flight_number;
+}
+
+/**
+ * Every key a flight reports under in this game: the distinct
+ * `sideClaimFlightKey` of the active players, ascending. `[0]` in a
+ * single-flight game; a withdrawn player or one without a flight in a bigger
+ * game adds none. The finish uses it to name the flights that have not
+ * reported, so it can never disagree with the key a flight saves under.
+ */
+export function claimFlightKeys(gameMode: GameMode, players: readonly FlightPlayer[]): number[] {
+  const keys = new Set<number>();
+  for (const p of players) {
+    const key = sideClaimFlightKey(gameMode, players, p.user_id);
+    if (key !== null) keys.add(key);
+  }
+  return [...keys].sort((a, b) => a - b);
 }
 
 /** A player as the GIR card needs it. */

@@ -15,6 +15,7 @@ import {
   sideStatus,
   stepDistance,
 } from './sideContestCopy';
+import * as sharedSideContest from '../../../../lib/games/sideContest';
 
 const gameCtp = { category: 'closest_to_pin', source: 'game' } as const;
 const gameLd = { category: 'longest_drive', source: 'game' } as const;
@@ -134,5 +135,11 @@ describe('describeSideClaimFailure', () => {
 
   it.each(['not_authenticated', 'not_active', 'no_slot', 'bad_distance'] as const)('har tekst for %s', (code) => {
     expect(describeSideClaimFailure(code, gameCtp)).toMatch(/\.$/);
+  });
+});
+
+describe('#2283: avstandssteget har ett hjem', () => {
+  it('appens stepDistance er den nettets felt bruker, i lib/games', () => {
+    expect(stepDistance).toBe(sharedSideContest.stepDistance);
   });
 });

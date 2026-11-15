@@ -33,6 +33,7 @@ import {
   withSlotHole,
 } from './wizardPayload';
 import { WizardFormData, asSharedFormData } from './wizardFormData';
+import * as sharedSlotHoles from '../../../../lib/games/sideSlotHoles';
 
 const COURSE = 'course-1';
 const TEE = 'tee-1';
@@ -1017,5 +1018,11 @@ describe('#2283: withSlotHole', () => {
 
   it('«Velg hull senere» tømmer bare plassen', () => {
     expect(withSlotHole([7, 3], 1, null)).toEqual([null, 3]);
+  });
+});
+
+describe('#2283: flytteregelen for hull har ett hjem', () => {
+  it('appens withSlotHole er den nettets oppsett bruker, i lib/games', () => {
+    expect(withSlotHole).toBe(sharedSlotHoles.withSlotHole);
   });
 });
