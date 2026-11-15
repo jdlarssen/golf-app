@@ -52,7 +52,7 @@ Any game can carry a side tournament next to the main result. Turn it on and it 
 
 The package counts things like the best net front and back nine, King of the par 3s, 4s and 5s, and most birdies and eagles. It also hands out named badges: Turkey for three birdies in a row, Solid for five, and Snowman for a blow-up hole (that last one costs you points).
 
-Then there are the two hole contests, longest drive and closest to the pin, with up to two of each. Those winners can't be read off the scorecard, so you pick them yourself when you end the game.
+Then there are the two hole contests, longest drive and closest to the pin, with up to two of each. Those winners can't be read off the scorecard, so you pick them yourself when you end the game. Give a contest a hole when you set up the game, and each flight reports its winner on that hole, from the app or the web; you then pick the winner with the flights' reports in front of you. In a cup, the flights can also report greens in regulation.
 
 ## Stack
 
