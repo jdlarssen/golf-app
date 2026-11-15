@@ -71,3 +71,42 @@ export async function savePushPreferences(
     return { ok: false };
   }
 }
+
+/**
+ * #2894: «Del sjeldne slag med alle» (`share_rare_shots`, migrasjon 0238), i samme rad.
+ * Ingen rad betyr ja. Kaster ved lesefeil, så bryteren aldri viser et gjettet valg.
+ */
+export async function fetchOwnRareShotSharing(userId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('notification_preferences')
+    .select('share_rare_shots')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw new Error(`[pushPreferences] lesingen av delingen feilet: ${error.message}`);
+  return data ? data.share_rare_shots : true;
+}
+
+/**
+ * Lagrer delingsvalget alene. Upserten sender bare `share_rare_shots`, så PostgREST
+ * oppdaterer bare den kolonnen, og varselvalgene står. Finnes ingen rad, får de andre
+ * kolonnene standardverdiene. Raden leses tilbake (felle 2). Kaster aldri.
+ */
+export async function saveRareShotSharing(
+  userId: string,
+  share: boolean,
+): Promise<SavePushPreferencesResult> {
+  try {
+    const { data, error } = await supabase
+      .from('notification_preferences')
+      .upsert({ user_id: userId, share_rare_shots: share }, { onConflict: 'user_id' })
+      .select('user_id');
+    if (error || !data || data.length === 0) {
+      console.error('[pushPreferences] delingen ble ikke lagret', error ?? 'null rader');
+      return { ok: false };
+    }
+    return { ok: true };
+  } catch (err) {
+    console.error('[pushPreferences] delingen ble ikke lagret', err);
+    return { ok: false };
+  }
+}

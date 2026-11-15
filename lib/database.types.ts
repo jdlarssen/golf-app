@@ -1761,18 +1761,21 @@ export type Database = {
         Row: {
           muted_groups: string[]
           quiet_hours: boolean
+          share_rare_shots: boolean
           updated_at: string
           user_id: string
         }
         Insert: {
           muted_groups?: string[]
           quiet_hours?: boolean
+          share_rare_shots?: boolean
           updated_at?: string
           user_id: string
         }
         Update: {
           muted_groups?: string[]
           quiet_hours?: boolean
+          share_rare_shots?: boolean
           updated_at?: string
           user_id?: string
         }
