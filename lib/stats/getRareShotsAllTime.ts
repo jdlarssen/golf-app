@@ -3,6 +3,7 @@ import { unstable_cache } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { selectAllRows } from '@/lib/supabase/selectAllRows';
 import { chunks } from '@/lib/stats/chunks';
+import { BOARD_USER_COLUMNS, leftOffTheBoards, type BoardUser } from '@/lib/stats/boardPlayers';
 import { COURSE_HOLES_SELECT, type CourseHoleRow } from '@/lib/supabase/queryFragments';
 import type { GameMode, ScoringGender } from '@/lib/scoring/modes/types';
 import { isAereslisteKind } from '@/lib/stats/aeresliste';
@@ -24,7 +25,7 @@ type PlayerRow = {
   user_id: string;
   tee_gender: ScoringGender | null;
   withdrawn_at: string | null;
-  users: { is_guest: boolean; deleted_at: string | null; name: string | null; nickname: string | null } | null;
+  users: (BoardUser & { name: string | null; nickname: string | null }) | null;
 };
 
 type CourseHoleWithCourse = CourseHoleRow & { course_id: string };
@@ -109,7 +110,7 @@ export const getRareShotsAllTime = unstable_cache(
         (from, to) =>
           supabase
             .from('game_players')
-            .select('game_id, user_id, tee_gender, withdrawn_at, users!game_players_user_id_fkey(is_guest, deleted_at, name, nickname)')
+            .select(`game_id, user_id, tee_gender, withdrawn_at, users!game_players_user_id_fkey(${BOARD_USER_COLUMNS}, name, nickname)`)
             .in('game_id', withLow)
             .order('game_id')
             .order('user_id')
@@ -123,10 +124,8 @@ export const getRareShotsAllTime = unstable_cache(
           userId: p.user_id,
           teeGender: p.tee_gender,
           withdrawn: p.withdrawn_at != null,
-          // A deleted account is left out like a guest: `anonymize_user` renames it «Slettet
-          // bruker» and drops its `notification_preferences` row, so an earlier «no» to
-          // sharing is gone and the list would show «Slettet B.» for good.
-          isGuest: (p.users?.is_guest ?? false) || p.users?.deleted_at != null,
+          // A guest or a deleted account is never on the list (`leftOffTheBoards`).
+          isGuest: leftOffTheBoards(p.users),
         });
         if (p.users?.name && !names.has(p.user_id)) names.set(p.user_id, p.users.name);
         if (p.users?.nickname && !nicknames.has(p.user_id)) nicknames.set(p.user_id, p.users.nickname);

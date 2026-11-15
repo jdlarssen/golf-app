@@ -5,6 +5,7 @@ import { selectAllRows } from '@/lib/supabase/selectAllRows';
 import { osloYearWindow } from '@/lib/format/osloCalendar';
 import { osloParts } from '@/lib/format/teeOff';
 import { chunks } from '@/lib/stats/chunks';
+import { BOARD_USER_COLUMNS, leftOffTheBoards, type BoardUser } from '@/lib/stats/boardPlayers';
 import { buildModeResultForGame } from '@/lib/scoring/buildModeResultForGame';
 import {
   computeResultSummaries,
@@ -38,11 +39,10 @@ type GamePlayerRow = {
   user_id: string;
   withdrawn_at: string | null;
   result_summary: ResultSummary | null;
-  users: {
+  users: (BoardUser & {
     name: string | null;
     nickname: string | null;
-    is_guest: boolean;
-  } | null;
+  }) | null;
 };
 
 /**
@@ -166,7 +166,7 @@ export const getFinishedGameWins = unstable_cache(
             supabase
               .from('game_players')
               .select(
-                'game_id, user_id, withdrawn_at, result_summary, users!game_players_user_id_fkey(name, nickname, is_guest)',
+                `game_id, user_id, withdrawn_at, result_summary, users!game_players_user_id_fkey(name, nickname, ${BOARD_USER_COLUMNS})`,
               )
               .in('game_id', ids)
               .order('game_id')
@@ -183,10 +183,12 @@ export const getFinishedGameWins = unstable_cache(
     // resultater påvirkes ikke. Gjeste-uids trengs likevel for å rense
     // fallback-VINNERNE (en gjest kan ha vunnet spillet).
     const allPlayersRaw = playersRaw;
+    // #2894: a deleted account is left off the same way (`leftOffTheBoards`), so the
+    // tabs never show «Slettet B.».
     const guestUserIds = new Set(
-      allPlayersRaw.filter((p) => p.users?.is_guest).map((p) => p.user_id),
+      allPlayersRaw.filter((p) => leftOffTheBoards(p.users)).map((p) => p.user_id),
     );
-    const allPlayers = allPlayersRaw.filter((p) => !p.users?.is_guest);
+    const allPlayers = allPlayersRaw.filter((p) => !leftOffTheBoards(p.users));
 
     const playersByGame = groupBy(allPlayers, (p) => p.game_id);
 
