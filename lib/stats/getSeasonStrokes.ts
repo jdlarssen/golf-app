@@ -3,6 +3,7 @@ import { unstable_cache } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { selectAllRows } from '@/lib/supabase/selectAllRows';
 import { chunks } from '@/lib/stats/chunks';
+import { BOARD_USER_COLUMNS, leftOffTheBoards, type BoardUser } from '@/lib/stats/boardPlayers';
 import { osloYearWindow } from '@/lib/format/osloCalendar';
 import { COURSE_HOLES_SELECT, type CourseHoleRow } from '@/lib/supabase/queryFragments';
 import type { GameMode, ScoringGender } from '@/lib/scoring/modes/types';
@@ -29,7 +30,7 @@ type PlayerRow = {
   user_id: string;
   tee_gender: ScoringGender | null;
   withdrawn_at: string | null;
-  users: { is_guest: boolean } | null;
+  users: BoardUser | null;
 };
 
 type CourseHoleWithCourse = CourseHoleRow & { course_id: string };
@@ -91,7 +92,7 @@ export const getSeasonStrokes = unstable_cache(
         (from, to) =>
           supabase
             .from('game_players')
-            .select('game_id, user_id, tee_gender, withdrawn_at, users!game_players_user_id_fkey(is_guest)')
+            .select(`game_id, user_id, tee_gender, withdrawn_at, users!game_players_user_id_fkey(${BOARD_USER_COLUMNS})`)
             .in('game_id', ids)
             .order('game_id')
             .order('user_id')
@@ -105,7 +106,8 @@ export const getSeasonStrokes = unstable_cache(
           userId: p.user_id,
           teeGender: p.tee_gender,
           withdrawn: p.withdrawn_at != null,
-          isGuest: p.users?.is_guest ?? false,
+          // A guest or a deleted account counts for nobody (`leftOffTheBoards`, #2894).
+          isGuest: leftOffTheBoards(p.users),
         });
       }
       scores.push(
