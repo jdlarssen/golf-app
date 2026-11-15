@@ -3104,6 +3104,66 @@
         "unknown": "Something went wrong. Please try again."
       },
       "teeHint": "{name} tees off"
+    },
+    "sideContest": {
+      "report": "Report",
+      "rowGame": "Side contest",
+      "kickerGame": "Side contest · hole {hole}",
+      "kickerCup": "Side points · hole {hole} · {points}",
+      "pointsToTeam": "+{points} pts to the team",
+      "pointsPerGir": "+{points} pts per GIR",
+      "rowOffline": "Offline. Report later.",
+      "rowFetchFailed": "Couldn't load. Trying again.",
+      "sheetOffline": "You're offline. Come back to this hole and report once you have signal.",
+      "distanceLabel": "How close?",
+      "metre": "m",
+      "metreField": "Metres",
+      "shorter": "0.5 metres shorter",
+      "longer": "0.5 metres longer",
+      "done": "Done",
+      "close": "Close",
+      "you": "You",
+      "groupGame": "flight",
+      "groupCup": "match",
+      "title": {
+        "closest_to_pin": "Closest to the pin",
+        "longest_drive": "Longest drive",
+        "gir": "GIR"
+      },
+      "none": {
+        "closest_to_pin": "No one on the green",
+        "longest_drive": "No one on the fairway",
+        "gir": "No one hit the green"
+      },
+      "questionClosestToPin": "Who in the {group} was closest to the pin after the tee shot?",
+      "questionLongestDrive": "Who in the {group} drove the farthest down the fairway?",
+      "statusSharedGame": "Your answer is shared with the whole flight. The organiser picks the winner at the end.",
+      "statusSharedCup": "Your answer is shared with the match. The organiser picks the winner at the end.",
+      "savedByMe": "Saved by you.",
+      "savedByName": "Saved by {name}.",
+      "savedUnknown": "Saved.",
+      "anyoneCanChange": "Everyone in the {group} can change it.",
+      "answerWithDistance": "{name} · {distance} {unit}",
+      "failure": {
+        "notAuthenticated": "You're signed out. Sign in again.",
+        "notActive": "The round has ended. Nothing more can be registered.",
+        "notPlayer": "You're no longer in the {group}, so the answer was not saved.",
+        "wrongFlight": "That player is no longer in your {group}, so the answer was not saved.",
+        "noSlot": "This hole no longer has a side contest, so the answer was not saved.",
+        "badDistance": "The distance must be between 0.1 and 99.9 metres.",
+        "dbError": "Couldn't save. Check your connection and try again."
+      }
+    },
+    "girContest": {
+      "questionAfterTeeShot": "Who was on the green after the tee shot?",
+      "questionOnTwo": "Who was on the green in two shots?",
+      "questionOnThree": "Who was on the green in three shots?",
+      "questionOnFour": "Who was on the green in four shots?",
+      "tapAllWhoHit": "Tap everyone who hit it.",
+      "answer": "{hits} of {balls} hit",
+      "sharedWithMatch": "Your answer is shared with the match.",
+      "maxPerTeam": "Each team scores for at most {max}.",
+      "oneBall": "The team plays one ball, so it counts once."
     }
   },
   "leaderboard": {

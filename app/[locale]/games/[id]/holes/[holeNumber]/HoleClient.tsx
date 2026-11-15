@@ -34,6 +34,7 @@ import {
 } from '@/lib/games/holeScope';
 import { WolfChoiceModal } from './WolfChoiceModal';
 import { BingoBangoBongoEntry } from './BingoBangoBongoEntry';
+import { HoleSideContests } from './HoleSideContests';
 import {
   resolveHoleClientProps,
   type HoleClientProps,
@@ -183,6 +184,7 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
     holeStripSibling,
     broBridge,
     teeShots,
+    sideContest,
     players,
   } = resolveHoleClientProps(rawProps);
 
@@ -546,6 +548,19 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
       />
 
       <div style={listStyle}>
+        {/* #2283: the side contests are the first thing in the content, above
+            the flight (H2). Only for a player the rpcs would accept a report
+            from; a withdrawn player or one without a flight sees nothing. */}
+        {sideContest?.canReport && (
+          <HoleSideContests
+            gameId={gameId}
+            holeNumber={currentHole}
+            gameMode={gameMode}
+            par={par}
+            myUserId={myUserId}
+            sideContest={sideContest}
+          />
+        )}
         {usesRail ? (
           <HoleFlightList
             cards={cards}
