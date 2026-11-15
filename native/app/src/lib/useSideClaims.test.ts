@@ -93,6 +93,25 @@ describe('useSideClaims', () => {
     expect(fetchSideClaims).toHaveBeenLastCalledWith('g', 9);
   });
 
+  it('refresh gir tilbake det som ble hentet, og null når hentingen feilet', async () => {
+    fetchSideClaims.mockResolvedValueOnce([]);
+    const { result } = await renderHook(() => useSideClaims('g', 7, { side: true, gir: false }));
+    await waitFor(() => expect(result.current.side).toEqual([]));
+
+    fetchSideClaims.mockResolvedValueOnce([CLAIM]);
+    let fresh: unknown;
+    await act(async () => {
+      fresh = await result.current.refresh();
+    });
+    expect(fresh).toEqual({ side: [CLAIM], gir: undefined });
+
+    fetchSideClaims.mockRejectedValueOnce(new Error('nett'));
+    await act(async () => {
+      fresh = await result.current.refresh();
+    });
+    expect(fresh).toBeNull();
+  });
+
   it('nyeste henting vinner når to svar krysser hverandre', async () => {
     let releaseOld: (value: unknown) => void = () => undefined;
     fetchSideClaims.mockReturnValueOnce(new Promise((resolve) => (releaseOld = resolve)));
