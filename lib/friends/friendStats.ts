@@ -26,7 +26,8 @@ export type SharedGame = {
   endedAt: string | null;
 };
 
-function playedAt(game: SharedGame): string | null {
+/** A round's date: its planned tee-off, else its end; `null` when neither parses. */
+export function playedAt(game: Pick<SharedGame, 'scheduledTeeOffAt' | 'endedAt'>): string | null {
   const iso = game.scheduledTeeOffAt ?? game.endedAt;
   return iso != null && !Number.isNaN(Date.parse(iso)) ? iso : null;
 }

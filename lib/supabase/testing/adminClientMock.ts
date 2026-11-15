@@ -97,6 +97,8 @@ export interface QueryChain extends PromiseLike<QueryResponse> {
   limit(count: number): QueryChain;
   range(from: number, to: number): QueryChain;
   returns(): QueryChain;
+  /** Typing only (postgrest-js `overrideTypes`), a no-op at runtime. */
+  overrideTypes(): QueryChain;
   single(): QueryChain;
   maybeSingle(): QueryChain;
 }
@@ -187,6 +189,7 @@ export function createAdminClientMock(opts: {
         return api;
       },
       returns: () => api,
+      overrideTypes: () => api,
       single: () => {
         op.single = true;
         return api;
