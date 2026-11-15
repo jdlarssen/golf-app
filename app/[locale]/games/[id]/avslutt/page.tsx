@@ -28,6 +28,7 @@ import type { GameStatus } from '@/lib/games/status';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { splitFinishRoster, stampsFromRow } from '@/lib/games/finishGate';
+import { loadSideSlotViews } from '@/lib/games/finishSideSlots';
 import {
   SideWinnersForm,
   type PlayerOption,
@@ -121,7 +122,7 @@ export default async function CreatorAvsluttPage({
   const { data: game } = await supabase
     .from('games')
     .select(
-      'id, name, status, require_peer_approval, game_mode, mode_config, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name)',
+      'id, name, status, require_peer_approval, game_mode, mode_config, side_tournament_enabled, side_ld_count, side_ctp_count, side_ld_holes, side_ctp_holes, courses(name)',
     )
     .eq('id', gameId)
     .single<{
@@ -135,6 +136,9 @@ export default async function CreatorAvsluttPage({
       side_tournament_enabled: boolean;
       side_ld_count: number;
       side_ctp_count: number;
+      // #2283: the hole for each slot, for the label and the flights' reports.
+      side_ld_holes: (number | null)[] | null;
+      side_ctp_holes: (number | null)[] | null;
       courses: { name: string } | null;
     }>();
 
@@ -295,6 +299,10 @@ export default async function CreatorAvsluttPage({
     );
   } else if (sideOn) {
     const action = endGameWithSideWinners.bind(null, gameId, missing.length > 0);
+    // #2283: the hole of each slot and what the flights reported for it, read
+    // after the gate above; a failed read shows a line in the box, never
+    // breaks the finish.
+    const sideSlots = await loadSideSlotViews(gameId, game, gamePlayers);
     body = (
       <div className="space-y-4 px-1">
         {missingList}
@@ -304,6 +312,8 @@ export default async function CreatorAvsluttPage({
           ldCount={game.side_ld_count}
           ctpCount={game.side_ctp_count}
           players={playerOptions}
+          ldSlots={sideSlots.ld}
+          ctpSlots={sideSlots.ctp}
           action={action}
           // roster_changed has its own banner above every branch; passing it
           // on would also render SideWinnersForm's DB-error banner.

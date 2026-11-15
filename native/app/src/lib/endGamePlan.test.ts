@@ -23,6 +23,13 @@ import {
   NO_WINNER,
 } from './endGamePlan';
 import * as sharedSideContest from '../../../../lib/games/sideContest';
+import * as sharedReports from '../../../../lib/games/sideClaimReports';
+
+// Wraps the real function so «ett hjem»-testen kan se at appen kaller den, uten at noe annet endres.
+jest.mock('../../../../lib/games/sideClaimReports', () => {
+  const actual = jest.requireActual('../../../../lib/games/sideClaimReports');
+  return { ...actual, reportsForSlot: jest.fn(actual.reportsForSlot) };
+});
 
 const ME = 'user-me';
 const MATE = 'user-mate';
@@ -611,5 +618,48 @@ describe('#2283: flight-regelen har ett hjem', () => {
         expect(claimFlights(mode, roster)).toEqual(sharedSideContest.claimFlightKeys(mode, flightPlayers));
       }
     }
+  });
+});
+
+describe('#2283: rapport-regelen har ett hjem', () => {
+  it('reportsForSlot svarer det samme som lib/games/sideClaimReports, som nettets avslutt-side leser', () => {
+    const claim = (over: Partial<FinishClaim>): FinishClaim => ({
+      category: 'closest_to_pin',
+      holeNumber: 7,
+      flightNumber: 1,
+      winnerUserId: 'marte',
+      winner: { name: 'Marte Lie', nickname: null },
+      distanceM: null,
+      ...over,
+    });
+    const roster = [
+      { userId: 'marte', name: 'Marte Lie' },
+      { userId: 'marte-b', name: 'Marte Berg' },
+      { userId: 'kristian', name: 'Kristian Holm' },
+    ];
+    const claims = [
+      claim({ flightNumber: 1, distanceM: 2.4 }),
+      claim({ flightNumber: 2, winnerUserId: 'kristian', winner: { name: 'Kristian Holm', nickname: null }, distanceM: 1.8 }),
+      claim({ flightNumber: 3, winnerUserId: null, winner: null }),
+      claim({ flightNumber: 4, winnerUserId: 'n', winner: { name: null, nickname: 'Kalle' } }),
+      claim({ category: 'longest_drive', flightNumber: 5 }),
+      claim({ holeNumber: 8, flightNumber: 5 }),
+    ];
+    const slots = [
+      { key: 'ctp-1', category: 'closest_to_pin', position: 1, hole: 7 },
+      { key: 'ld-1', category: 'longest_drive', position: 1, hole: 7 },
+      { key: 'ctp-2', category: 'closest_to_pin', position: 2, hole: null },
+    ] as const;
+    for (const slot of slots) {
+      const shared = jest.mocked(sharedReports.reportsForSlot);
+      shared.mockClear();
+      const fromApp = reportsForSlot(slot, claims, [1, 2, 3, 4, 5], roster);
+      // Appen kaller den delte regelen med det den fikk, og gir svaret uendret tilbake.
+      expect(shared).toHaveBeenCalledTimes(1);
+      expect(shared).toHaveBeenCalledWith(slot, claims, [1, 2, 3, 4, 5], roster);
+      expect(fromApp).toEqual(shared.mock.results[0].value);
+    }
+    // Ikke bare to like tomme svar: raden som er sortert og navngitt kommer fra den delte regelen.
+    expect(reportsForSlot(slots[0], claims, [1, 2, 3, 4, 5], roster)?.lines.map((l) => l.flightNumber)).toEqual([2, 1, 3, 4]);
   });
 });
