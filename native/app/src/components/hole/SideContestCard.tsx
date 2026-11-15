@@ -5,20 +5,17 @@
 // til slutt. Ett trykk på en linje lagrer for hele flighten (`record_side_claim`),
 // alle i flighten kan endre, og siste trykk gjelder. «Ferdig» lukker bare.
 //
-// Valget vises med en gang. Hvert trykk får et lagringsnummer, og trykket står
-// til dets egen lagring er ferdig. Deretter står det så lenge serveren har det
-// svaret lagringen ga (eller, når hentingen etterpå feilet, det serveren viste
-// da), og viker for et nyere svar, for eksempel en kamerats retting. Det hopper
-// tilbake hvis lagringen feiler. Lagringene går én om gangen, så raske trykk på
-// + aldri lander i feil rekkefølge, og hvert trykk regner fra forrige trykk, ikke
-// fra et mellomsvar fra serveren.
-//
-// Arket henter på nytt hver gang det åpnes: flightnøkkelen kan bytte midt i
-// runden (#2891), og en kamerat kan ha meldt inn siden siste poll.
+// Serveren er fasit (eierens valg B, 15.11). Et trykk vises med en gang og
+// gjelder bare mens dets egen lagring pågår: det siste trykket som ennå ikke er
+// lagret, vinner over det serveren har. Er lagringen ferdig, holdes trykket til
+// det kommer et svar fra en henting som startet etter lagringen, så det ikke
+// flimrer tilbake fordi én henting feilet. Deretter viser kortet serveren, også
+// når en kamerat skrev rett etter deg. Feiler lagringen, hopper valget tilbake.
+// Lagringene går én om gangen, så raske trykk på + aldri lander i feil
+// rekkefølge, og hvert trykk regner fra forrige trykk.
 import { useEffect, useRef, useState } from 'react';
 import type { HoleContest, SideContestCategory } from '../../../../../lib/games/sideContest';
 import { recordSideClaim, type SideClaim } from '../../data/sideClaims';
-import type { SideClaimsSnapshot } from '../../lib/useSideClaims';
 import {
   contestPointsLine,
   contestTitle,
@@ -55,10 +52,11 @@ export interface ContestPlayer {
 type Answer = { winnerUserId: string | null; distanceM: number | null };
 
 /**
- * Et trykk: lagringsnummeret, og `updatedAt` det gjelder over. Til lagringen er
- * ferdig er det serverens svar da trykket kom; etterpå svaret lagringen ga.
+ * Et trykk og lagringsnummeret dets. `holdUntil` er `null` mens lagringen
+ * pågår; etterpå løpenummeret til siste henting som gikk ut før lagringen var
+ * ferdig, og trykket gjelder til et nyere svar står på skjermen.
  */
-type Pending = Answer & { save: number; base: string | null };
+type Pending = Answer & { save: number; holdUntil: number | null };
 
 export function SideContestCard({
   gameId,
@@ -71,6 +69,8 @@ export function SideContestCard({
   online,
   savedByName,
   refresh,
+  snapshotSeq,
+  startedSeq,
 }: {
   gameId: string;
   holeNumber: number;
@@ -84,14 +84,15 @@ export function SideContestCard({
   online: boolean;
   /** Fornavnet til den som lagret, for «Lagret av Tore». */
   savedByName: (userId: string) => string | null;
-  /** Henter på nytt; gir det som ble hentet, eller `null` når hentingen feilet. */
-  refresh: () => Promise<SideClaimsSnapshot | null | void>;
+  refresh: () => Promise<void>;
+  /** Løpenummeret til hentingen som står nå (`useSideClaims`). */
+  snapshotSeq: number;
+  /** Løpenummeret til den siste hentingen som har gått ut. */
+  startedSeq: () => number;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Høyeste lagringsnummer som er ferdig (lagringene går i rekkefølge).
-  const [settled, setSettled] = useState(0);
 
   const alive = useRef(true);
   useEffect(() => {
@@ -104,15 +105,7 @@ export function SideContestCard({
   const latest = useRef(0);
 
   const category = contest.category;
-  const serverUpdatedAt = claim?.updatedAt ?? null;
-  // Det serveren viser nå, lest når en lagring er ferdig og hentingen feilet.
-  const shownUpdatedAt = useRef(serverUpdatedAt);
-  useEffect(() => {
-    shownUpdatedAt.current = serverUpdatedAt;
-  }, [serverUpdatedAt]);
-  // Trykket gjelder til dets egen lagring er ferdig, og deretter så lenge
-  // serveren ikke har noe nyere enn svaret lagringen ga.
-  const live = pending && (pending.save > settled || pending.base === serverUpdatedAt) ? pending : null;
+  const live = pending && (pending.holdUntil === null || snapshotSeq <= pending.holdUntil) ? pending : null;
   const answer: Answer | null = live ?? (claim ? { winnerUserId: claim.winnerUserId, distanceM: claim.distanceM } : null);
   const loaded = claim !== undefined;
 
@@ -148,37 +141,29 @@ export function SideContestCard({
 
   const save = (next: Answer) => {
     const mySave = ++latest.current;
-    setPending({ ...next, save: mySave, base: serverUpdatedAt });
+    setPending({ ...next, save: mySave, holdUntil: null });
     setError(null);
     chain.current = chain.current.then(async () => {
-      try {
-        const result = await recordSideClaim({
-          gameId,
-          category,
-          holeNumber,
-          winnerUserId: next.winnerUserId,
-          distanceM: next.winnerUserId == null ? null : next.distanceM,
-        });
-        if (!alive.current) return;
-        if (result.ok) {
-          const fresh = await refresh();
-          if (!alive.current) return;
-          // Trykket gjelder nå over svaret lagringen ga. Feilet hentingen, over
-          // det serveren viser: da står trykket til pollen henter noe nyere.
-          const base = fresh
-            ? (fresh.side?.find((c) => c.category === category)?.updatedAt ?? null)
-            : shownUpdatedAt.current;
-          setPending((p) => (p && p.save === mySave ? { ...p, base } : p));
-          // Siste trykk er lagret: en feil fra et tidligere trykk gjelder ikke lenger.
-          if (mySave === latest.current) setError(null);
-          return;
-        }
-        setError(describeSideClaimFailure(result.error, contest));
-        // Valget hopper tilbake til det serveren har, om ingen har trykket siden.
-        setPending((p) => (p && p.save === mySave ? null : p));
-      } finally {
-        if (alive.current) setSettled((n) => Math.max(n, mySave));
+      const result = await recordSideClaim({
+        gameId,
+        category,
+        holeNumber,
+        winnerUserId: next.winnerUserId,
+        distanceM: next.winnerUserId == null ? null : next.distanceM,
+      });
+      if (!alive.current) return;
+      if (result.ok) {
+        // Lagret: trykket står til en henting som starter nå eller senere har svart.
+        const holdUntil = startedSeq();
+        setPending((p) => (p && p.save === mySave ? { ...p, holdUntil } : p));
+        // Siste trykk er lagret: en feil fra et tidligere trykk gjelder ikke lenger.
+        if (mySave === latest.current) setError(null);
+        await refresh();
+        return;
       }
+      setError(describeSideClaimFailure(result.error, contest));
+      // Valget hopper tilbake til det serveren har, om ingen har trykket siden.
+      setPending((p) => (p && p.save === mySave ? null : p));
     });
   };
 

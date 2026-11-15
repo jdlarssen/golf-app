@@ -1,211 +1,234 @@
 // #2283: GIR-raden og arket i cup (Type C). Hver ball er en av/på-linje, et
 // trykk lagrer bare den ballen, «Ingen traff greenen» setter alle til bommet,
 // og en foursomes-side er én linje.
+//
+// Kortet kjøres gjennom den ekte `useSideClaims` mot en falsk server
+// (`test/sideClaimsServer.ts`). Serveren er fasit (eierens valg B, 15.11): et
+// trykk gjelder mens lagringen pågår, og til en henting som startet etterpå har
+// svart, per ball.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import type { ComponentProps } from 'react';
-import { recordGirClaims } from '../../data/sideClaims';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { useEffect, type ComponentProps } from 'react';
+import { useSideClaims } from '../../lib/useSideClaims';
+import { resetServer, server, sideClaimsModule, writeGirAs } from '../../test/sideClaimsServer';
 import { GirContestCard } from './GirContestCard';
 
+// `useSideClaims` drar inn polle-intervallet fra `useChoices`, som drar inn klienten.
+jest.mock('../../supabase', () => require('../../test/supabaseMock'));
 jest.mock('react-native-safe-area-context', () => require('../../test/safeAreaMock').safeAreaMock());
-jest.mock('../../data/sideClaims', () => ({
-  recordGirClaims: jest.fn(async () => ({ ok: true })),
+jest.mock('../../data/sideClaims', () => require('../../test/sideClaimsServer').sideClaimsModule);
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (callback: () => void) => {
+    const { useEffect: effect } = require('react') as typeof import('react');
+    effect(callback, [callback]);
+  },
 }));
 
-const recordMock = recordGirClaims as jest.MockedFunction<typeof recordGirClaims>;
-
-const ball = (id: string, label: string, initials: string) => ({
-  key: id,
-  userIds: [id],
-  label,
-  faces: [{ initials }],
-});
-
+const ball = (id: string, label: string, initials: string) => ({ key: id, userIds: [id], label, faces: [{ initials }] });
 const FOURBALL = [
   ball('me', 'Deg', 'JB'),
   ball('marte', 'Marte Lie', 'ML'),
   ball('tore', 'Tore Lunde', 'TL'),
   ball('kari', 'Kari Nilsen', 'KN'),
 ];
-
+const SIDES = [
+  { key: 'side-1', userIds: ['me', 'marte'], label: 'Deg og Marte', faces: [{ initials: 'JB' }, { initials: 'ML' }] },
+  { key: 'side-2', userIds: ['tore', 'kari'], label: 'Tore og Kari', faces: [{ initials: 'TL' }, { initials: 'KN' }] },
+];
 const NAMES: Record<string, string> = { marte: 'Marte', tore: 'Tore', kari: 'Kari' };
 
-function props(over: Partial<ComponentProps<typeof GirContestCard>> = {}): ComponentProps<typeof GirContestCard> {
-  return {
-    gameId: 'game-1',
-    holeNumber: 5,
-    par: 4,
-    contest: { category: 'gir', source: 'cup', points: 1.5, maxPerTeam: 2 },
-    balls: FOURBALL,
-    oneBallPerSide: false,
-    meId: 'me',
-    claims: [],
-    failed: false,
-    online: true,
-    savedByName: (id: string) => NAMES[id] ?? null,
-    refresh: jest.fn(async () => undefined),
-    ...over,
-  };
+type HarnessProps = Partial<Pick<ComponentProps<typeof GirContestCard>, 'balls' | 'oneBallPerSide' | 'online'>>;
+
+/** Pollen: samme henting som intervallet i `useSideClaims`. */
+const harness: { poll: () => Promise<void> } = { poll: async () => undefined };
+
+function Harness({ balls = FOURBALL, oneBallPerSide = false, online = true }: HarnessProps) {
+  const claims = useSideClaims('game-1', 5, { side: false, gir: true });
+  useEffect(() => {
+    harness.poll = claims.refresh;
+  });
+  return (
+    <GirContestCard
+      gameId="game-1"
+      holeNumber={5}
+      par={4}
+      contest={{ category: 'gir', source: 'cup', points: 1.5, maxPerTeam: 2 }}
+      balls={balls}
+      oneBallPerSide={oneBallPerSide}
+      meId="me"
+      claims={claims.gir}
+      failed={claims.failed}
+      online={online}
+      savedByName={(id) => NAMES[id] ?? null}
+      refresh={claims.refresh}
+      snapshotSeq={claims.snapshotSeq}
+      startedSeq={claims.startedSeq}
+    />
+  );
 }
 
-const row = (userId: string, hit: boolean, updatedAt = '2026-11-15T10:00:00Z', enteredBy = 'tore') => ({
-  holeNumber: 5,
-  userId,
-  hit,
-  enteredBy,
-  updatedAt,
-});
+const ID = 'side-contest-gir';
+const record = sideClaimsModule.recordGirClaims;
+const checked = (key: string) => screen.getByTestId(`${ID}-line-${key}`).props.accessibilityState.checked;
+const subtitle = () => screen.getByTestId(`${ID}-subtitle`);
+
+async function renderLoaded(props: HarnessProps = {}) {
+  const view = await render(<Harness {...props} />);
+  await waitFor(() => expect(sideClaimsModule.fetchGirClaims).toHaveBeenCalled());
+  await act(async () => undefined);
+  return view;
+}
+
+async function openSheet() {
+  await fireEvent.press(screen.getByTestId(ID));
+}
 
 beforeEach(() => {
-  recordMock.mockReset();
-  recordMock.mockResolvedValue({ ok: true });
+  resetServer();
+  jest.clearAllMocks();
 });
 
 describe('GirContestCard', () => {
   it('to trykk lagrer to treff, hver ball for seg, og «Ingen traff greenen» setter alle til bommet', async () => {
-    await render(<GirContestCard {...props()} />);
-    expect(screen.getByTestId('side-contest-gir-subtitle')).toHaveTextContent('+1,5 p per GIR');
+    await renderLoaded();
+    expect(subtitle()).toHaveTextContent('+1,5 p per GIR');
 
-    await fireEvent.press(screen.getByTestId('side-contest-gir'));
+    await openSheet();
     expect(screen.getByText('Sidepoeng · hull 5 · +1,5 p per GIR')).toBeTruthy();
     expect(screen.getByText('Hvem var på greenen på to slag? Trykk på alle som traff.')).toBeTruthy();
+    expect(screen.getByTestId(`${ID}-line-marte`).props.accessibilityRole).toBe('checkbox');
 
-    const marte = screen.getByTestId('side-contest-gir-line-marte');
-    expect(marte.props.accessibilityRole).toBe('checkbox');
-    await fireEvent.press(marte);
-    await fireEvent.press(screen.getByTestId('side-contest-gir-line-tore'));
+    await fireEvent.press(screen.getByTestId(`${ID}-line-marte`));
+    await fireEvent.press(screen.getByTestId(`${ID}-line-tore`));
+    expect(record).toHaveBeenNthCalledWith(1, { gameId: 'game-1', holeNumber: 5, userIds: ['marte'], hit: true });
+    expect(record).toHaveBeenNthCalledWith(2, { gameId: 'game-1', holeNumber: 5, userIds: ['tore'], hit: true });
+    expect(checked('marte')).toBe(true);
+    expect(checked('tore')).toBe(true);
+    expect(checked('kari')).toBe(false);
+    expect(subtitle()).toHaveTextContent('2 av 4 traff');
+    expect(screen.getByTestId(`${ID}-sheet-status`)).toHaveTextContent('Lagret av deg. Hvert lag får poeng for høyst 2.');
 
-    expect(recordMock).toHaveBeenNthCalledWith(1, { gameId: 'game-1', holeNumber: 5, userIds: ['marte'], hit: true });
-    expect(recordMock).toHaveBeenNthCalledWith(2, { gameId: 'game-1', holeNumber: 5, userIds: ['tore'], hit: true });
-    expect(screen.getByTestId('side-contest-gir-line-marte').props.accessibilityState.checked).toBe(true);
-    expect(screen.getByTestId('side-contest-gir-line-tore').props.accessibilityState.checked).toBe(true);
-    expect(screen.getByTestId('side-contest-gir-line-kari').props.accessibilityState.checked).toBe(false);
-    expect(screen.getByTestId('side-contest-gir-subtitle')).toHaveTextContent('2 av 4 traff');
-    expect(screen.getByTestId('side-contest-gir-sheet-status')).toHaveTextContent(
-      'Lagret av deg. Hvert lag får poeng for høyst 2.',
-    );
-
-    await fireEvent.press(screen.getByTestId('side-contest-gir-line-none'));
-    expect(recordMock).toHaveBeenLastCalledWith({
+    await fireEvent.press(screen.getByTestId(`${ID}-line-none`));
+    expect(record).toHaveBeenLastCalledWith({
       gameId: 'game-1',
       holeNumber: 5,
       userIds: ['me', 'marte', 'tore', 'kari'],
       hit: false,
     });
-    expect(screen.getByTestId('side-contest-gir-line-none').props.accessibilityState.checked).toBe(true);
-    expect(screen.getByTestId('side-contest-gir-subtitle')).toHaveTextContent('Ingen traff greenen');
+    expect(checked('none')).toBe(true);
+    expect(subtitle()).toHaveTextContent('Ingen traff greenen');
 
     // Et nytt trykk på en ball som traff, tar treffet bort igjen.
-    await fireEvent.press(screen.getByTestId('side-contest-gir-line-me'));
-    expect(recordMock).toHaveBeenLastCalledWith(expect.objectContaining({ userIds: ['me'], hit: true }));
-    await fireEvent.press(screen.getByTestId('side-contest-gir-line-me'));
-    expect(recordMock).toHaveBeenLastCalledWith(expect.objectContaining({ userIds: ['me'], hit: false }));
+    await fireEvent.press(screen.getByTestId(`${ID}-line-me`));
+    expect(record).toHaveBeenLastCalledWith(expect.objectContaining({ userIds: ['me'], hit: true }));
+    await fireEvent.press(screen.getByTestId(`${ID}-line-me`));
+    expect(record).toHaveBeenLastCalledWith(expect.objectContaining({ userIds: ['me'], hit: false }));
   });
 
   it('leser det kampen har meldt inn, og hvem som lagret sist', async () => {
-    const claims = [
-      row('marte', true, '2026-11-15T10:00:00Z', 'kari'),
-      row('tore', true, '2026-11-15T10:02:00Z', 'tore'),
-      row('kari', false, '2026-11-15T10:01:00Z', 'kari'),
-    ];
-    await render(<GirContestCard {...props({ claims })} />);
-    expect(screen.getByTestId('side-contest-gir-subtitle')).toHaveTextContent('2 av 4 traff');
-    await fireEvent.press(screen.getByTestId('side-contest-gir'));
-    expect(screen.getByTestId('side-contest-gir-sheet-status')).toHaveTextContent(
-      'Lagret av Tore. Hvert lag får poeng for høyst 2.',
-    );
-    expect(screen.getByTestId('side-contest-gir-line-none').props.accessibilityState.checked).toBe(false);
+    writeGirAs('kari', { holeNumber: 5, userIds: ['marte'], hit: true });
+    writeGirAs('kari', { holeNumber: 5, userIds: ['kari'], hit: false });
+    writeGirAs('tore', { holeNumber: 5, userIds: ['tore'], hit: true });
+    await renderLoaded();
+    expect(subtitle()).toHaveTextContent('2 av 4 traff');
+    await openSheet();
+    expect(screen.getByTestId(`${ID}-sheet-status`)).toHaveTextContent('Lagret av Tore. Hvert lag får poeng for høyst 2.');
+    expect(checked('none')).toBe(false);
   });
 
   it('ballen hopper tilbake når lagringen feiler', async () => {
-    recordMock.mockResolvedValueOnce({ ok: false, error: 'db_error' });
-    await render(<GirContestCard {...props()} />);
-    await fireEvent.press(screen.getByTestId('side-contest-gir'));
-    await fireEvent.press(screen.getByTestId('side-contest-gir-line-kari'));
-    expect(screen.getByTestId('side-contest-gir-line-kari').props.accessibilityState.checked).toBe(false);
-    expect(screen.getByTestId('side-contest-gir-sheet-notice')).toHaveTextContent(
-      'Fikk ikke lagret. Sjekk nettet og prøv igjen.',
-    );
+    server.holdWrites = true;
+    await renderLoaded();
+    await openSheet();
+    await fireEvent.press(screen.getByTestId(`${ID}-line-kari`));
+    expect(checked('kari')).toBe(true);
+    await act(async () => server.heldWrites[0].release({ ok: false, error: 'db_error' }));
+    expect(checked('kari')).toBe(false);
+    expect(screen.getByTestId(`${ID}-sheet-notice`)).toHaveTextContent('Fikk ikke lagret. Sjekk nettet og prøv igjen.');
   });
 
   it('foursomes: én linje per side, og et trykk sender begge på siden', async () => {
-    const balls = [
-      { key: 'side-1', userIds: ['me', 'marte'], label: 'Deg og Marte', faces: [{ initials: 'JB' }, { initials: 'ML' }] },
-      { key: 'side-2', userIds: ['tore', 'kari'], label: 'Tore og Kari', faces: [{ initials: 'TL' }, { initials: 'KN' }] },
-    ];
-    await render(<GirContestCard {...props({ balls, oneBallPerSide: true })} />);
-    await fireEvent.press(screen.getByTestId('side-contest-gir'));
+    await renderLoaded({ balls: SIDES, oneBallPerSide: true });
+    await openSheet();
     expect(screen.getByText('Deg og Marte')).toBeTruthy();
-    expect(screen.getByTestId('side-contest-gir-sheet-status')).toHaveTextContent(
+    expect(screen.getByTestId(`${ID}-sheet-status`)).toHaveTextContent(
       'Svaret deles med kampen. Laget spiller én ball, så det teller én gang.',
     );
-    await fireEvent.press(screen.getByTestId('side-contest-gir-line-side-2'));
-    expect(recordMock).toHaveBeenCalledWith({ gameId: 'game-1', holeNumber: 5, userIds: ['tore', 'kari'], hit: true });
-    expect(screen.getByTestId('side-contest-gir-subtitle')).toHaveTextContent('1 av 2 traff');
+    await fireEvent.press(screen.getByTestId(`${ID}-line-side-2`));
+    expect(record).toHaveBeenCalledWith({ gameId: 'game-1', holeNumber: 5, userIds: ['tore', 'kari'], hit: true });
+    expect(subtitle()).toHaveTextContent('1 av 2 traff');
   });
 
-  it('raske trykk: av og på igjen står til siste lagring er ferdig', async () => {
-    const answers: ((result: { ok: true }) => void)[] = [];
-    recordMock.mockImplementation(() => new Promise((resolve) => answers.push(resolve)));
-    const p = props();
-    const view = await render(<GirContestCard {...p} />);
-    await fireEvent.press(screen.getByTestId('side-contest-gir'));
-    await fireEvent.press(screen.getByTestId('side-contest-gir-line-marte'));
-    await fireEvent.press(screen.getByTestId('side-contest-gir-line-marte'));
-    expect(screen.getByTestId('side-contest-gir-line-marte').props.accessibilityState.checked).toBe(false);
-
-    // Første lagring lander, og hentingen gir serverens mellomsvar: Marte traff.
-    await act(async () => answers[0]({ ok: true }));
-    await view.rerender(<GirContestCard {...p} claims={[row('u-x', false, 't0'), row('marte', true, 't1', 'me')]} />);
-    expect(screen.getByTestId('side-contest-gir-line-marte').props.accessibilityState.checked).toBe(false);
-
-    await act(async () => answers[1]({ ok: true }));
-    expect(recordMock.mock.calls.map(([write]) => write.hit)).toEqual([true, false]);
+  it('raske trykk (G1): av og på igjen står til siste lagring er ferdig', async () => {
+    server.holdWrites = true;
+    await renderLoaded();
+    await openSheet();
+    await fireEvent.press(screen.getByTestId(`${ID}-line-marte`));
+    await fireEvent.press(screen.getByTestId(`${ID}-line-marte`));
+    expect(checked('marte')).toBe(false);
+    // Første lagring lander, og hentingen etterpå viser Marte som truffet.
+    await act(async () => server.heldWrites[0].release());
+    expect(checked('marte')).toBe(false);
+    await act(async () => server.heldWrites[1].release());
+    expect(checked('marte')).toBe(false);
+    expect(record.mock.calls.map(([w]) => w.hit)).toEqual([true, false]);
   });
 
-  it('en kamerats retting står når du lagrer en annen ball', async () => {
-    const answers: ((result: { ok: true }) => void)[] = [];
-    recordMock.mockImplementation(() => new Promise((resolve) => answers.push(resolve)));
-    const marteHit = [row('marte', true, 't1', 'me')];
-    const refresh = jest.fn().mockResolvedValueOnce({ gir: marteHit });
-    const p = props({ refresh });
-    const view = await render(<GirContestCard {...p} />);
-    await fireEvent.press(screen.getByTestId('side-contest-gir'));
-    await fireEvent.press(screen.getByTestId('side-contest-gir-line-marte'));
-    await act(async () => answers[0]({ ok: true }));
-    await view.rerender(<GirContestCard {...p} claims={marteHit} />);
-
+  it('en kamerats retting står når du lagrer en annen ball (G2)', async () => {
+    await renderLoaded();
+    await openSheet();
+    await fireEvent.press(screen.getByTestId(`${ID}-line-marte`));
+    expect(checked('marte')).toBe(true);
     // Tore retter Marte til bommet, og pollen henter det.
-    await view.rerender(<GirContestCard {...p} claims={[row('marte', false, 't2', 'tore')]} />);
+    writeGirAs('tore', { holeNumber: 5, userIds: ['marte'], hit: false });
+    await act(() => harness.poll());
+    expect(checked('marte')).toBe(false);
     // Du huker av Tore. Mens den lagringen pågår, står Marte som bommet.
-    await fireEvent.press(screen.getByTestId('side-contest-gir-line-tore'));
-    expect(screen.getByTestId('side-contest-gir-line-marte').props.accessibilityState.checked).toBe(false);
-    expect(screen.getByTestId('side-contest-gir-subtitle')).toHaveTextContent('1 av 4 traff');
-    await act(async () => answers[1]({ ok: true }));
+    server.holdWrites = true;
+    await fireEvent.press(screen.getByTestId(`${ID}-line-tore`));
+    expect(checked('marte')).toBe(false);
+    expect(subtitle()).toHaveTextContent('1 av 4 traff');
+    await act(async () => server.heldWrites[0].release());
+    expect(checked('marte')).toBe(false);
   });
 
-  it('en feil midt i køen tar ikke et senere trykk på samme ball', async () => {
-    const answers: ((result: Awaited<ReturnType<typeof recordGirClaims>>) => void)[] = [];
-    recordMock.mockImplementation(() => new Promise((resolve) => answers.push(resolve)));
-    await render(<GirContestCard {...props()} />);
-    await fireEvent.press(screen.getByTestId('side-contest-gir'));
+  it('en feil midt i køen tar ikke et senere trykk på samme ball (G3)', async () => {
+    server.holdWrites = true;
+    await renderLoaded();
+    await openSheet();
     // På, av, på igjen. Den første lagringen feiler.
-    for (let i = 0; i < 3; i++) await fireEvent.press(screen.getByTestId('side-contest-gir-line-marte'));
-    await act(async () => answers[0]({ ok: false, error: 'db_error' }));
-    expect(screen.getByTestId('side-contest-gir-line-marte').props.accessibilityState.checked).toBe(true);
-    await act(async () => answers[1]({ ok: true }));
-    await act(async () => answers[2]({ ok: true }));
-    expect(recordMock.mock.calls.map(([write]) => write.hit)).toEqual([true, false, true]);
+    for (let i = 0; i < 3; i++) await fireEvent.press(screen.getByTestId(`${ID}-line-marte`));
+    await act(async () => server.heldWrites[0].release({ ok: false, error: 'db_error' }));
+    expect(checked('marte')).toBe(true);
+    await act(async () => server.heldWrites[1].release());
+    await act(async () => server.heldWrites[2].release());
+    expect(record.mock.calls.map(([w]) => w.hit)).toEqual([true, false, true]);
+    expect(checked('marte')).toBe(true);
+    expect(screen.queryByTestId(`${ID}-sheet-notice`)).toBeNull();
+  });
+
+  it('en kamerat skriver samme ball mellom din lagring og hentingen (G7): kameratens svar står', async () => {
+    server.holdWrites = true;
+    await renderLoaded();
+    await openSheet();
+    await fireEvent.press(screen.getByTestId(`${ID}-line-marte`));
+    await act(async () => {
+      server.heldWrites[0].release();
+      writeGirAs('tore', { holeNumber: 5, userIds: ['marte'], hit: false });
+    });
+    expect(checked('marte')).toBe(false);
+    expect(screen.getByTestId(`${ID}-sheet-status`)).toHaveTextContent('Lagret av Tore. Hvert lag får poeng for høyst 2.');
+    await act(() => harness.poll());
+    expect(checked('marte')).toBe(false);
   });
 
   it('uten nett er linjene sperret', async () => {
-    const p = props();
-    const view = await render(<GirContestCard {...p} />);
-    await fireEvent.press(screen.getByTestId('side-contest-gir'));
-    await view.rerender(<GirContestCard {...p} online={false} />);
-    const line = screen.getByTestId('side-contest-gir-line-marte');
+    const view = await renderLoaded();
+    await openSheet();
+    await view.rerender(<Harness online={false} />);
+    const line = screen.getByTestId(`${ID}-line-marte`);
     expect(line.props.accessibilityState).toEqual({ checked: false, disabled: true });
     await fireEvent.press(line);
-    expect(recordMock).not.toHaveBeenCalled();
+    expect(record).not.toHaveBeenCalled();
   });
 });
