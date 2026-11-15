@@ -1048,7 +1048,14 @@
         "sideTournamentDesc": "Points for longest drive and closest to the pin.",
         "sideLdLegend": "Number of longest drive winners",
         "sideCtpLegend": "Number of closest-to-pin winners",
-        "sideLockedNote": "Cannot be changed after the game has started."
+        "sideLockedNote": "Cannot be changed after the game has started.",
+        "sideLdHoleLabel": "Hole for longest drive",
+        "sideLdHoleLabelNumbered": "Hole for longest drive {position}",
+        "sideCtpHoleLabel": "Hole for closest to the pin",
+        "sideCtpHoleLabelNumbered": "Hole for closest to the pin {position}",
+        "sideHoleLater": "Choose hole later",
+        "sideHoleOption": "Hole {hole}",
+        "sideHoleNote": "If you choose a hole, the flight reports in on it. Without one, you pick the winner when the round is finished."
       },
       "registration": {
         "heading": "Registration",

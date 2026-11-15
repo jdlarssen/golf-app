@@ -72,6 +72,8 @@ export type PersistedInitialValues = Pick<
   | 'side_tournament_enabled'
   | 'side_ld_count'
   | 'side_ctp_count'
+  | 'side_ld_holes'
+  | 'side_ctp_holes'
   | 'player_genders'
   | 'extra_players'
   | 'players'
@@ -250,6 +252,10 @@ export function wizardDraftFromState({
       side_tournament_enabled: state.sideEnabled,
       side_ld_count: state.sideLdCount,
       side_ctp_count: state.sideCtpCount,
+      // #2283: optional, so an older draft without them reads as no holes, and
+      // WIZARD_DRAFT_VERSION stays. The hook seeds them through normalizeSlotHoles.
+      side_ld_holes: state.sideLdHoles,
+      side_ctp_holes: state.sideCtpHoles,
       player_genders: state.playerGenders,
       extra_players: state.extraPlayers,
       players: state.selectedPlayerIds.map((pid) => ({

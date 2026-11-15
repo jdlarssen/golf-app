@@ -28,7 +28,7 @@ import type { StartType } from './startType';
  * `editGameInitialValues.test.ts` checks it against the update's columns.
  */
 export const EDIT_FORM_COLUMNS =
-  'id, name, status, course_id, courses(name), tee_box_id, scheduled_tee_off_at, start_type, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type, let_friends_skip_gate, entry_fee_kr, payment_link, prizes';
+  'id, name, status, course_id, courses(name), tee_box_id, scheduled_tee_off_at, start_type, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_ld_holes, side_ctp_holes, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type, let_friends_skip_gate, entry_fee_kr, payment_link, prizes';
 
 /**
  * What both edit pages select: the form's columns plus the club, cup and league
@@ -60,6 +60,11 @@ export type EditGameRow = {
   side_tournament_enabled: boolean;
   side_ld_count: number;
   side_ctp_count: number;
+  // #2283 — the hole per slot (`int[]`, an element may be null). Optional: the
+  // edit pages select them, and the rematch row carries them over from the
+  // cached game read; a row without them (a test literal) reads as no holes.
+  side_ld_holes?: (number | null)[] | null;
+  side_ctp_holes?: (number | null)[] | null;
   // v1.2.0 — `text[]` på DB-siden. Vi narrow til SideCategoryId[] etter load.
   side_disabled_categories: string[];
   // Epic #41 — modus + JSONB-config. Mode-lock-guarden i edit-actions
@@ -201,6 +206,8 @@ export function buildEditInitialValues(
     side_tournament_enabled: game.side_tournament_enabled,
     side_ld_count: game.side_ld_count,
     side_ctp_count: game.side_ctp_count,
+    side_ld_holes: game.side_ld_holes,
+    side_ctp_holes: game.side_ctp_holes,
     // v1.2.0 — pre-populer kategori-velgeren med det som ligger lagret. For
     // spill opprettet før migrasjon 0026 vil dette være et tomt array (DB
     // default), som tilsvarer Full pakke; vi respekterer det heller enn å

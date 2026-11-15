@@ -88,6 +88,7 @@ import { isScrambleFamily, isStablefordFamily, type GameMode } from '@/lib/scori
 import { MIN_TEE_SHOTS_FIELD, formatTracksTeeShots } from '@/lib/games/teeShots';
 import { hcpAllowanceInPlay } from '@/lib/games/hcpAllowance';
 import { PRIZE_SLOTS, prizeFieldName } from '@/lib/games/prizes';
+import { holeForSlot } from '@/lib/games/sideContest';
 import { IntentSelector } from './IntentSelector';
 import { FormatGrid } from './FormatGrid';
 import { FormatGuideSheet } from '@/components/FormatGuideSheet';
@@ -1635,6 +1636,8 @@ function FormDataInputs({
     sideEnabled,
     sideLdCount,
     sideCtpCount,
+    sideLdHoles,
+    sideCtpHoles,
     scoreVisibility,
     lockScoreVisibility,
   } = state;
@@ -1675,6 +1678,10 @@ function FormDataInputs({
         <>
           <input type="hidden" name="side_ld_count" value={String(sideLdCount)} />
           <input type="hidden" name="side_ctp_count" value={String(sideCtpCount)} />
+          {/* #2283: the hole per slot, slots up to the count only; empty = «Velg
+              hull senere». A slot the count has dropped sends nothing. */}
+          <SlotHoleInputs prefix="side_ld_hole_" count={sideLdCount} holes={sideLdHoles} />
+          <SlotHoleInputs prefix="side_ctp_hole_" count={sideCtpCount} holes={sideCtpHoles} />
         </>
       )}
       <input type="hidden" name="game_mode" value={gameMode} />
@@ -1912,6 +1919,35 @@ function FormDataInputs({
         state.inviteEmails.slice(0, inviteEmailCount).map((email) => (
           <input key={email} type="hidden" name="invite_email" value={email} />
         ))}
+    </>
+  );
+}
+
+/**
+ * #2283: `side_ld_hole_N`/`side_ctp_hole_N` for slot 1…count, value empty for
+ * a slot without a hole. Slots past the count are not emitted at all, so a
+ * lowered count sends nothing for the dropped slot (`holeForSlot` is the same
+ * rule the database reads with).
+ */
+function SlotHoleInputs({
+  prefix,
+  count,
+  holes,
+}: {
+  prefix: 'side_ld_hole_' | 'side_ctp_hole_';
+  count: number;
+  holes: readonly (number | null)[];
+}) {
+  return (
+    <>
+      {Array.from({ length: count }, (_, i) => i + 1).map((position) => (
+        <input
+          key={position}
+          type="hidden"
+          name={`${prefix}${position}`}
+          value={String(holeForSlot(holes, count, position) ?? '')}
+        />
+      ))}
     </>
   );
 }

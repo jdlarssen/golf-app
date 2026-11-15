@@ -1043,6 +1043,193 @@ describe('GameWizard — #1011 sideturnering overlever lukket ark', () => {
   });
 });
 
+// #2283: hullet per LD-/CTP-plass velges i «Sideturnering og premier»-arket,
+// og speiles i FormData som side_ld_hole_N / side_ctp_hole_N akkurat som
+// antallene (#1011).
+describe('GameWizard — #2283 hull for sideturneringen', () => {
+  const SIDE_VALUES = {
+    game_mode: 'stableford' as const,
+    course_id: 'course-1',
+    tee_box_id: 'tee-1',
+    side_tournament_enabled: true,
+  };
+
+  /** Steg 1 → 5 med en spiller; arket er lukket. */
+  function renderAtStep5(initialValues: Parameters<typeof renderWizard>[0] extends infer P ? (P extends { initialValues?: infer I } ? I : never) : never) {
+    const view = renderWizard({ players: EIGHT_PLAYERS.slice(0, 2), initialValues });
+    pickKompisIntent();
+    pickStablefordFormat();
+    clickNext();
+    setTeeOff(FUTURE_TEE_OFF);
+    clickNext();
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    clickNext();
+    expectStep(5);
+    return view;
+  }
+
+  const formData = (container: HTMLElement) => new FormData(container.querySelector('form')!);
+  const chooseHole = (label: string, hole: string) =>
+    fireEvent.change(screen.getByLabelText(label), { target: { value: hole } });
+
+  it('FormData har hullet per plass uten at et ark er åpnet, og ingenting for en plass antallet har droppet', () => {
+    const { container } = renderAtStep5({
+      ...SIDE_VALUES,
+      side_ld_count: 2,
+      side_ld_holes: [9, 4],
+      side_ctp_count: 1,
+      // Plass 2 står i lagret state, men antallet er 1: den skal ikke sendes.
+      side_ctp_holes: [7, 12],
+    });
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    const fd = formData(container);
+    expect(fd.get('side_ld_hole_1')).toBe('9');
+    expect(fd.get('side_ld_hole_2')).toBe('4');
+    expect(fd.get('side_ctp_hole_1')).toBe('7');
+    expect(fd.has('side_ctp_hole_2')).toBe(false);
+  });
+
+  it('en plass uten hull sendes som tomt felt (Velg hull senere)', () => {
+    const { container } = renderAtStep5({ ...SIDE_VALUES, side_ld_count: 2, side_ld_holes: [null, 5], side_ctp_count: 0 });
+
+    const fd = formData(container);
+    expect(fd.getAll('side_ld_hole_1')).toEqual(['']);
+    expect(fd.getAll('side_ld_hole_2')).toEqual(['5']);
+    expect(fd.has('side_ctp_hole_1')).toBe(false);
+  });
+
+  it('sideturnering av: ingen hullfelt, selv med hull i state', () => {
+    const { container } = renderAtStep5({
+      ...SIDE_VALUES,
+      side_tournament_enabled: false,
+      side_ld_count: 1,
+      side_ld_holes: [9],
+    });
+
+    const fd = formData(container);
+    expect(fd.has('side_ld_hole_1')).toBe(false);
+    expect(fd.has('side_ld_count')).toBe(false);
+  });
+
+  it('arket viser én velger per plass, med tegningens etiketter og forklaringen etter den siste', () => {
+    renderAtStep5({ ...SIDE_VALUES, side_ld_count: 1, side_ld_holes: [9], side_ctp_count: 2, side_ctp_holes: [7, null] });
+    openSetting(/sideturnering og premier/i);
+
+    const ld = screen.getByLabelText('Hull for lengste drive') as HTMLSelectElement;
+    expect(ld.id).toBe('side-ld-hole-1');
+    expect(ld.value).toBe('9');
+    // «Velg hull senere» + hull 1–18.
+    expect(Array.from(ld.options).map((o) => o.text)).toEqual([
+      'Velg hull senere',
+      ...Array.from({ length: 18 }, (_, i) => `Hull ${i + 1}`),
+    ]);
+    expect((screen.getByLabelText('Hull for nærmest pinnen 1') as HTMLSelectElement).value).toBe('7');
+    expect((screen.getByLabelText('Hull for nærmest pinnen 2') as HTMLSelectElement).value).toBe('');
+    // Én forklaring, og den står etter den siste velgeren.
+    const note = screen.getByText(
+      'Velger du hull, melder flighten inn på hullet. Uten hull kårer du vinneren når runden er ferdig.',
+    );
+    const last = screen.getByLabelText('Hull for nærmest pinnen 2');
+    expect(last.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('ingen velgere og ingen forklaring når begge antallene er 0 (eller sideturneringen er av)', () => {
+    renderAtStep5({ ...SIDE_VALUES, side_ld_count: 0, side_ctp_count: 0 });
+    openSetting(/sideturnering og premier/i);
+
+    expect(screen.queryByLabelText(/^hull for /i)).toBeNull();
+    expect(screen.queryByText(/velger du hull/i)).toBeNull();
+
+    // Av: raden med antall er borte, og dermed velgerne også.
+    fireEvent.click(screen.getByRole('switch', { name: /sideturnering/i }));
+    expect(screen.queryByText(/lengste drive: antall hull/i)).toBeNull();
+    expect(screen.queryByLabelText(/^hull for /i)).toBeNull();
+  });
+
+  it('å velge hull i arket kommer med i FormData, uten duplikater (velgerne har ikke name)', () => {
+    const { container } = renderAtStep5({ ...SIDE_VALUES, side_ld_count: 1, side_ctp_count: 0 });
+    openSetting(/sideturnering og premier/i);
+
+    chooseHole('Hull for lengste drive', '12');
+
+    const fd = formData(container);
+    expect(fd.getAll('side_ld_hole_1')).toEqual(['12']);
+    // Arket lukkes og velgeren avmonteres: valget står likevel.
+    closeSheet();
+    expect(formData(container).getAll('side_ld_hole_1')).toEqual(['12']);
+  });
+
+  it('å senke antallet dropper plassens hull fra FormData; å heve det igjen gir hullet tilbake', () => {
+    const { container } = renderAtStep5({
+      ...SIDE_VALUES,
+      side_ld_count: 2,
+      side_ld_holes: [9, 4],
+      side_ctp_count: 0,
+    });
+    openSetting(/sideturnering og premier/i);
+    expect(screen.getByLabelText('Hull for lengste drive 2')).toBeInTheDocument();
+
+    const [ldGroup] = screen.getAllByRole('radiogroup');
+    fireEvent.click(within(ldGroup).getByRole('radio', { name: '1' }));
+
+    expect(screen.queryByLabelText('Hull for lengste drive 2')).toBeNull();
+    // Med én plass heter velgeren uten nummer.
+    expect(screen.getByLabelText('Hull for lengste drive')).toHaveValue('9');
+    let fd = formData(container);
+    expect(fd.getAll('side_ld_count')).toEqual(['1']);
+    expect(fd.getAll('side_ld_hole_1')).toEqual(['9']);
+    expect(fd.has('side_ld_hole_2')).toBe(false);
+
+    fireEvent.click(within(ldGroup).getByRole('radio', { name: '2' }));
+    fd = formData(container);
+    expect(fd.getAll('side_ld_hole_2')).toEqual(['4']);
+  });
+
+  it('samme hull på to plasser i én kategori: hullet flyttes, den andre plassen blir tom', () => {
+    const { container } = renderAtStep5({
+      ...SIDE_VALUES,
+      side_ctp_count: 2,
+      side_ctp_holes: [7, 12],
+      side_ld_count: 0,
+    });
+    openSetting(/sideturnering og premier/i);
+
+    chooseHole('Hull for nærmest pinnen 2', '7');
+
+    expect(screen.getByLabelText('Hull for nærmest pinnen 1')).toHaveValue('');
+    expect(screen.getByLabelText('Hull for nærmest pinnen 2')).toHaveValue('7');
+    const fd = formData(container);
+    expect(fd.getAll('side_ctp_hole_1')).toEqual(['']);
+    expect(fd.getAll('side_ctp_hole_2')).toEqual(['7']);
+  });
+
+  it('samme hull i de to kategoriene er greit (kategoriene har hver sin liste)', () => {
+    const { container } = renderAtStep5({
+      ...SIDE_VALUES,
+      side_ld_count: 1,
+      side_ld_holes: [9],
+      side_ctp_count: 1,
+    });
+    openSetting(/sideturnering og premier/i);
+
+    chooseHole('Hull for nærmest pinnen', '9');
+
+    const fd = formData(container);
+    expect(fd.getAll('side_ld_hole_1')).toEqual(['9']);
+    expect(fd.getAll('side_ctp_hole_1')).toEqual(['9']);
+  });
+
+  it('«Velg hull senere» tømmer plassen', () => {
+    const { container } = renderAtStep5({ ...SIDE_VALUES, side_ld_count: 1, side_ld_holes: [9], side_ctp_count: 0 });
+    openSetting(/sideturnering og premier/i);
+
+    chooseHole('Hull for lengste drive', '');
+
+    expect(formData(container).getAll('side_ld_hole_1')).toEqual(['']);
+  });
+});
+
 describe('GameWizard — #1065 allowance + kontingent overlever flytting til steg 5 og lukket ark', () => {
   it('hcp_allowance_pct + entry_fee_kr + payment_link speiles i FormData uansett om et ark er åpent, uten duplikater', () => {
     const { container } = renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
@@ -1298,6 +1485,82 @@ describe('GameWizard — #1380 utkast overlever reload', () => {
     await waitFor(() =>
       expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull(),
     );
+  });
+});
+
+// #2283: the holes ride in the saved draft like the counts, so a reload (or the
+// phone throwing the PWA out of memory) does not drop them.
+describe('GameWizard — #2283 hullene overlever utkastet', () => {
+  const key = () => wizardDraftStorageKey(USER_ID, '/');
+
+  function seed(values: Partial<WizardDraft['values']>) {
+    saveWizardDraft(
+      key(),
+      {
+        intent: 'kompis',
+        expectedPlayerCount: 4,
+        nameTouched: true,
+        values: {
+          name: 'Lørdagsrunden',
+          game_mode: 'stableford',
+          team_size: 1,
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
+          players: [{ user_id: 'u0', team_number: null, flight_number: null }],
+          side_tournament_enabled: true,
+          ...values,
+        },
+      },
+      wizardDraftContext({}),
+    );
+  }
+
+  function toStep5() {
+    for (let i = 0; i < 4; i++) clickNext();
+    expectStep(5);
+  }
+
+  it('et valgt hull skrives til utkastet, og en ny montering gir det tilbake', () => {
+    seed({ side_ld_count: 1, side_ctp_count: 2 });
+    const first = renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
+    toStep5();
+    openSetting(/sideturnering og premier/i);
+    fireEvent.change(screen.getByLabelText('Hull for lengste drive'), { target: { value: '12' } });
+    fireEvent.change(screen.getByLabelText('Hull for nærmest pinnen 2'), { target: { value: '5' } });
+    // `pagehide` er det siden fyrer på vei ut; den tvinger utkastet ut uten ventetid.
+    fireEvent(window, new Event('pagehide'));
+    first.unmount();
+
+    const stored = JSON.parse(window.localStorage.getItem(key())!).draft as WizardDraft;
+    expect(stored.values.side_ld_holes).toEqual([12]);
+    expect(stored.values.side_ctp_holes).toEqual([null, 5]);
+
+    const { container } = renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
+    toStep5();
+    const fd = new FormData(container.querySelector('form')!);
+    expect(fd.getAll('side_ld_hole_1')).toEqual(['12']);
+    expect(fd.getAll('side_ctp_hole_1')).toEqual(['']);
+    expect(fd.getAll('side_ctp_hole_2')).toEqual(['5']);
+  });
+
+  it('et utkast fra før hullene fantes gir plasser uten hull', () => {
+    seed({ side_ld_count: 1, side_ctp_count: 0 });
+    const { container } = renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
+    toStep5();
+
+    expect(new FormData(container.querySelector('form')!).getAll('side_ld_hole_1')).toEqual(['']);
+  });
+
+  it('et ugyldig hull i lagret utkast (samme hull to ganger, utenfor 1–18) tas ikke imot', () => {
+    seed({ side_ld_count: 2, side_ld_holes: [9, 9], side_ctp_count: 1, side_ctp_holes: [40] });
+    const { container } = renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
+    toStep5();
+
+    const fd = new FormData(container.querySelector('form')!);
+    expect(fd.getAll('side_ld_hole_1')).toEqual(['9']);
+    expect(fd.getAll('side_ld_hole_2')).toEqual(['']);
+    expect(fd.getAll('side_ctp_hole_1')).toEqual(['']);
   });
 });
 

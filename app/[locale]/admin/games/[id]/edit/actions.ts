@@ -212,6 +212,8 @@ async function updateGameInternal(
     enabled: sideEnabled,
     ldCount: sideLdCount,
     ctpCount: sideCtpCount,
+    ldHoles: sideLdHoles,
+    ctpHoles: sideCtpHoles,
     disabledCategories: sideDisabledCategories,
   } = sidePayload;
 
@@ -345,6 +347,11 @@ async function updateGameInternal(
       side_tournament_enabled: sideEnabled,
       side_ld_count: sideLdCount,
       side_ctp_count: sideCtpCount,
+      // #2283 — the hole per slot, same status gating. null when the toggle is
+      // off or no slot has one. The generated type says number[], the column
+      // also holds a null element for a slot without a hole.
+      side_ld_holes: sideLdHoles as number[] | null,
+      side_ctp_holes: sideCtpHoles as number[] | null,
       // v1.2.0 — side_disabled_categories følger samme lock-mønster: write
       // bare når status fortsatt er draft/scheduled (optimistic-lock under).
       // Parseren garanterer tomt array når sideEnabled er false.
