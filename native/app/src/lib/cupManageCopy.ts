@@ -6,9 +6,11 @@ import type {
   AppCupSideAward,
   AppCupWithdrawalMatch,
 } from '../../../../lib/cup/appCupManageView';
+import type { CupGirReport, CupReportMatch, CupSlotReports } from '../../../../lib/cup/cupSideReports';
 import { MAX_PERSONAL_CUP_PLAYERS } from '../../../../lib/cup/limits';
 import { formatMessage } from './kavalkadeCopy';
 import { CUP_TEXT, matchStatusLabel } from './cupCopy';
+import { reportedDistance } from './endGameCopy';
 
 export const WITHDRAW_TEXT = {
   kicker: 'Trekk fra cupen',
@@ -137,6 +139,21 @@ export const SIDE_AWARD_TEXT = {
   girCount: 'Hvor mange GIR klarte {team}?',
   girRegistered: 'GIR-tellingen er registrert.',
 } as const;
+
+/**
+ * `cup.sideAwards.reported*`: det kampene har meldt inn (#2283, tegning V3). De tre
+ * faste setningene; resten er byggeklosser under. Ordlyden er nettets, tegn for tegn,
+ * låst mot `lib/cup/cupSideReportsCopyCases.ts` i `cupSideReportsCopy.parity.test.ts`.
+ */
+export const SIDE_REPORTED_TEXT = {
+  heading: 'Meldt inn fra kampene',
+  readFailed: 'Fikk ikke hentet det kampene har meldt inn.',
+  none: 'Ingen kamper har meldt inn ennå.',
+} as const;
+
+const REPORTED_NO_ONE = { ctp: 'Ingen på green', ld: 'Ingen på fairway' } as const;
+const REPORTED_MISSING = '{match} har ikke meldt inn';
+const REPORTED_GIR_MAX = 'maks {max} GIR';
 
 const SIDE_AWARD_ERRORS: Record<string, string> = {
   not_found: 'Fant ikke cupen.',
@@ -280,4 +297,101 @@ export function sideAwardTitle(award: AppCupSideAward): string {
 /** Statusen på en kamp i «Styr cupen». */
 export function manageMatchStatus(match: AppCupManageMatch): string {
   return matchStatusLabel(match);
+}
+
+/** Avsenderen: kampens navn, eller «Match» når kampen ikke har et. */
+function reportedSender(match: CupReportMatch): string {
+  return match.matchLabel ?? CUP_TEXT.matchFallback;
+}
+
+/** «Four-ball 2 har ikke meldt inn». */
+export type ReportedMissingLine = { key: string; text: string };
+
+function reportedMissingLines(missing: readonly CupReportMatch[]): ReportedMissingLine[] {
+  return missing.map((match) => ({
+    key: match.gameId,
+    text: formatMessage(REPORTED_MISSING, { match: reportedSender(match) }),
+  }));
+}
+
+/** Én kamps svar under nærmest pinnen eller lengste drive. */
+export type ReportedSlotLine = {
+  key: string;
+  sender: string;
+  /** Vinnerens navn, eller «Ingen på green» / «Ingen på fairway». */
+  name: string;
+  /** Falsk: «Ingen på …», som står dempet og ikke fet. */
+  answered: boolean;
+  /** «1,8 m»; null når kampen ikke ga avstand. */
+  distance: string | null;
+};
+
+/** Det boksen under en kåring viser: linjer, eller én setning. */
+export type ReportedSlotBox = {
+  lines: ReportedSlotLine[];
+  missing: ReportedMissingLine[];
+  /** Én setning i stedet for linjer: ingen har meldt inn, eller lesingen feilet. */
+  empty: string | null;
+};
+
+/**
+ * Boksen under nærmest pinnen og lengste drive. Kampene som ikke har meldt inn,
+ * nevnes først når en kamp har det: ellers er det én setning, ikke en liste med
+ * alle kampene. Samme regel som nettets `SlotReportedBox`.
+ */
+export function reportedSlotBox(kind: 'ctp' | 'ld', reports: CupSlotReports | 'failed'): ReportedSlotBox {
+  if (reports === 'failed') return { lines: [], missing: [], empty: SIDE_REPORTED_TEXT.readFailed };
+  const lines = reports.lines.map(
+    (line): ReportedSlotLine => ({
+      key: line.gameId,
+      sender: reportedSender(line),
+      name: line.name ?? REPORTED_NO_ONE[kind],
+      answered: line.name !== null,
+      distance: line.distanceM === null ? null : reportedDistance(line.distanceM),
+    }),
+  );
+  if (lines.length === 0) return { lines, missing: [], empty: SIDE_REPORTED_TEXT.none };
+  return { lines, missing: reportedMissingLines(reports.missing), empty: null };
+}
+
+/** Ett lags linje under GIR-tellerne: «Rød:» står fet, resten står etter. */
+export type ReportedGirTeam = {
+  key: 'team1' | 'team2';
+  /** «Rød:». */
+  label: string;
+  /** « 3 (Jonas, Marte, Sigrid) · maks 2 GIR». Label pluss rest er hele linja. */
+  rest: string;
+  /** Over «maks per lag»: linja står i advarselsfargen. */
+  over: boolean;
+};
+
+export type ReportedGirBox = {
+  teams: ReportedGirTeam[];
+  missing: ReportedMissingLine[];
+  empty: string | null;
+};
+
+/**
+ * Boksen under begge GIR-tellerne: et lag per linje, summen over alle kampene og
+ * hvem som traff. Over «maks per lag» står tallet likevel, med taket ved siden av.
+ */
+export function reportedGirBox(
+  reports: CupGirReport | 'failed',
+  team1Name: string,
+  team2Name: string,
+): ReportedGirBox {
+  if (reports === 'failed') return { teams: [], missing: [], empty: SIDE_REPORTED_TEXT.readFailed };
+  if (reports.reportedMatches === 0) return { teams: [], missing: [], empty: SIDE_REPORTED_TEXT.none };
+  const team = (key: 'team1' | 'team2', name: string): ReportedGirTeam => {
+    const sum = reports[key];
+    const over = sum.count > reports.maxPerTeam;
+    const who = sum.names.length > 0 ? ` (${sum.names.join(', ')})` : '';
+    const max = over ? ` · ${formatMessage(REPORTED_GIR_MAX, { max: reports.maxPerTeam })}` : '';
+    return { key, label: `${name}:`, rest: ` ${sum.count}${who}${max}`, over };
+  };
+  return {
+    teams: [team('team1', team1Name), team('team2', team2Name)],
+    missing: reportedMissingLines(reports.missing),
+    empty: null,
+  };
 }

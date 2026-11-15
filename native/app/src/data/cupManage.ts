@@ -13,6 +13,7 @@ import type {
   AppCupSwapCandidates,
   AppCupWithdrawalView,
 } from '../../../../lib/cup/appCupManageView';
+import type { CupSideReports, CupSideReportsResult } from '../../../../lib/cup/cupSideReports';
 import { supabase } from '../supabase';
 import { callWebRoute } from './webApi';
 
@@ -69,8 +70,22 @@ export async function fetchCupIsRunning(cupId: string): Promise<boolean> {
   return !error && data?.status === 'active';
 }
 
-export function fetchCupManage(cupId: string) {
-  return read<AppCupManageView>(`${base(cupId)}/manage`, (view) =>
+/**
+ * Det kampene har meldt inn (#2283, V3). En tjener som ikke har det ennå, sender
+ * ikke feltet, og da er det `null`: skjermen tegner ingen bokser, og
+ * registreringen virker som før. Alt som ikke ser ut som rapporten, regnes på
+ * samme måte, så en endret form på tjeneren aldri velter skjermen.
+ */
+function readSideReports(value: unknown): CupSideReportsResult {
+  if (value === 'failed') return 'failed';
+  const reports = value as Partial<CupSideReports> | null | undefined;
+  return reports && Array.isArray(reports.slots) && Array.isArray(reports.gir)
+    ? (reports as CupSideReports)
+    : null;
+}
+
+export async function fetchCupManage(cupId: string) {
+  const result = await read<AppCupManageView>(`${base(cupId)}/manage`, (view) =>
     Boolean(
       view.id &&
         Array.isArray(view.players) &&
@@ -79,6 +94,11 @@ export function fetchCupManage(cupId: string) {
         view.finish,
     ),
   );
+  if (!result.ok) return result;
+  return {
+    ok: true as const,
+    view: { ...result.view, sideReports: readSideReports(result.view.sideReports) },
+  };
 }
 
 /** Uten `userId`: spillerens eget trekk. */

@@ -1,8 +1,12 @@
 // #2752: registreringen av sidepoeng som skjerm (Type C). Reglene er på serveren; her
 // låses valgene og hva som sendes, at 0 er et svar, og at en ferdig cup kan rettes.
+// #2283 (V3): og at «Meldt inn fra kampene» bare er tekst under kåringene. Ordlyden og
+// reglene i boksene er låst i `lib/cupSideReportsCopy.parity.test.ts`; her står at
+// skjermen tegner dem på rett sted og lar valgene og tellerne stå tomme.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { AppCupManageView, AppCupSideAward } from '../../../../lib/cup/appCupManageView';
+import type { CupSideReportsResult } from '../../../../lib/cup/cupSideReports';
 import { registerGirCounts, registerSideAwardWinner } from '../data/cupManage';
 import type { ScreenProps } from '../navigation';
 import { CupSideAwards } from './CupSideAwards';
@@ -14,6 +18,11 @@ jest.mock('../data/cupManage', () => ({
   registerSideAwardWinner: jest.fn(async () => ({ ok: true })),
 }));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
+let mockScheme: 'light' | 'dark' = 'light';
+jest.mock('react-native/Libraries/Utilities/useColorScheme', () => ({
+  __esModule: true,
+  default: () => mockScheme,
+}));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback: () => void) => {
     mockFocus = callback;
@@ -53,7 +62,11 @@ const gir = (over: Partial<Extract<AppCupSideAward, { kind: 'gir' }>> = {}): App
   ...over,
 });
 
-const room = (sideAwards: AppCupSideAward[], status: AppCupManageView['status'] = 'active'): AppCupManageView => ({
+const room = (
+  sideAwards: AppCupSideAward[],
+  status: AppCupManageView['status'] = 'active',
+  sideReports?: CupSideReportsResult,
+): AppCupManageView => ({
   id: 'cup-1',
   name: 'Klubbmesterskapet',
   status,
@@ -65,6 +78,7 @@ const room = (sideAwards: AppCupSideAward[], status: AppCupManageView['status'] 
   ],
   matches: [],
   sideAwards,
+  ...(sideReports === undefined ? {} : { sideReports }),
   finish: { progress: { played: 0, total: 1 }, missingAwards: [], activeMatches: [] },
 });
 
@@ -87,6 +101,7 @@ const refocus = async () => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockScheme = 'light';
 });
 
 describe('nærmest pinnen og lengste drive', () => {
@@ -230,5 +245,190 @@ describe('rommet', () => {
     answer({ ok: false, reason: 'offline' });
     await renderAwards();
     expect(screen.getByTestId('cup-side-awards-retry')).toBeTruthy();
+  });
+});
+
+describe('det kampene har meldt inn (#2283, V3)', () => {
+  const reports: CupSideReportsResult = {
+    slots: [
+      {
+        kind: 'ctp',
+        holeNumber: 7,
+        lines: [
+          { gameId: 'g2', matchLabel: 'Four-ball 2', name: 'Kristian', distanceM: 1.8 },
+          { gameId: 'g1', matchLabel: 'Four-ball 1', name: 'Marte', distanceM: 2.4 },
+        ],
+        missing: [{ gameId: 'g3', matchLabel: 'Four-ball 3' }],
+      },
+      {
+        kind: 'ld',
+        holeNumber: 9,
+        lines: [
+          { gameId: 'g1', matchLabel: 'Four-ball 1', name: 'Jonas', distanceM: null },
+          { gameId: 'g2', matchLabel: 'Four-ball 2', name: null, distanceM: null },
+        ],
+        missing: [],
+      },
+    ],
+    gir: [
+      {
+        holeNumber: 12,
+        maxPerTeam: 2,
+        team1: { count: 3, names: ['Jonas', 'Marte', 'Sigrid'] },
+        team2: { count: 1, names: ['Tore'] },
+        reportedMatches: 2,
+        missing: [],
+      },
+    ],
+  };
+  const awards = [ctp(), ctp({ id: 'ld', kind: 'ld', holeNumber: 9 }), gir()];
+
+  it('en boks per kåring: kampen som avsender, vinneren, avstanden, «Ingen på fairway» og kampen som mangler', async () => {
+    answer({ ok: true, view: room(awards, 'active', reports) });
+    await renderAwards();
+
+    const ctpBox = screen.getByTestId('side-reports-ctp');
+    expect(screen.getAllByText('Meldt inn fra kampene')).toHaveLength(3);
+    expect(screen.getByTestId('side-reports-line-ctp-g2')).toHaveTextContent('Four-ball 2Kristian1,8 m');
+    expect(screen.getByTestId('side-reports-line-ctp-g1')).toHaveTextContent('Four-ball 1Marte2,4 m');
+    expect(screen.getByTestId('side-reports-missing-ctp-g3')).toHaveTextContent('Four-ball 3 har ikke meldt inn');
+    // Boksen står inne i kåringens kort, over «Registrer».
+    expect(screen.getByTestId('side-award-ctp')).toContainElement(ctpBox);
+
+    expect(screen.getByTestId('side-reports-line-ld-g1')).toHaveTextContent('Four-ball 1Jonas');
+    expect(screen.getByTestId('side-reports-line-ld-g2')).toHaveTextContent('Four-ball 2Ingen på fairway');
+  });
+
+  it('GIR: én boks under begge tellerne, ett lag per linje, og over maks i advarselsfargen', async () => {
+    answer({ ok: true, view: room(awards, 'active', reports) });
+    await renderAwards();
+
+    expect(screen.getAllByTestId('side-reports-gir')).toHaveLength(1);
+    const red = screen.getByTestId('side-reports-team1-gir');
+    expect(red).toHaveTextContent('Team Nord: 3 (Jonas, Marte, Sigrid) · maks 2 GIR');
+    expect(red).toHaveStyle({ color: '#7A5410' });
+    const blue = screen.getByTestId('side-reports-team2-gir');
+    expect(blue).toHaveTextContent('Team Sør: 1 (Tore)');
+    expect(blue).not.toHaveTextContent('maks');
+    expect(blue).toHaveStyle({ color: '#4A3F30' });
+  });
+
+  it('natt: boksen står på nattens bakgrunn og advarselen i nattens farge', async () => {
+    mockScheme = 'dark';
+    answer({ ok: true, view: room(awards, 'active', reports) });
+    await renderAwards();
+
+    expect(screen.getByTestId('side-reports-ctp')).toHaveStyle({ backgroundColor: '#14201A' });
+    expect(screen.getByTestId('side-reports-team1-gir')).toHaveStyle({ color: '#E5B26F' });
+  });
+
+  it('valgene og tellerne står tomme, og registreringen virker som før', async () => {
+    answer({ ok: true, view: room(awards, 'active', reports) });
+    await renderAwards();
+
+    expect(screen.getByTestId('side-award-option-ctp-ola').props.accessibilityState.selected).toBe(false);
+    expect(screen.getByTestId('side-award-option-ctp-none').props.accessibilityState.selected).toBe(false);
+    expect(screen.getByTestId('gir-count-1-gir').props.value).toBe('');
+    expect(screen.getByTestId('gir-count-2-gir').props.value).toBe('');
+
+    await fireEvent.press(screen.getByTestId('side-award-option-ctp-ola'));
+    await fireEvent.press(screen.getByTestId('side-award-register-ctp'));
+    expect(registerSideAwardWinner).toHaveBeenCalledWith('cup-1', 'ctp', 'ola');
+
+    await fireEvent.changeText(screen.getByTestId('gir-count-1-gir'), '2');
+    await fireEvent.changeText(screen.getByTestId('gir-count-2-gir'), '1');
+    await fireEvent.press(screen.getByTestId('side-award-register-gir'));
+    expect(registerGirCounts).toHaveBeenCalledWith('cup-1', 'gir', 2, 1);
+  });
+
+  it('ingen har meldt inn: én setning i hver boks, og kampene nevnes ikke', async () => {
+    answer({
+      ok: true,
+      view: room(awards, 'active', {
+        slots: [
+          { kind: 'ctp', holeNumber: 7, lines: [], missing: [{ gameId: 'g1', matchLabel: 'Four-ball 1' }] },
+          { kind: 'ld', holeNumber: 9, lines: [], missing: [{ gameId: 'g1', matchLabel: 'Four-ball 1' }] },
+        ],
+        gir: [
+          {
+            holeNumber: 12,
+            maxPerTeam: 2,
+            team1: { count: 0, names: [] },
+            team2: { count: 0, names: [] },
+            reportedMatches: 0,
+            missing: [{ gameId: 'g1', matchLabel: 'Four-ball 1' }],
+          },
+        ],
+      }),
+    });
+    await renderAwards();
+
+    for (const id of ['ctp', 'ld', 'gir']) {
+      expect(screen.getByTestId(`side-reports-empty-${id}`)).toHaveTextContent('Ingen kamper har meldt inn ennå.');
+    }
+    expect(screen.queryByText(/har ikke meldt inn$/)).toBeNull();
+  });
+
+  it('en kamp uten navn heter «Match», og en kamp som mangler på GIR står under lagene', async () => {
+    answer({
+      ok: true,
+      view: room([ctp(), gir()], 'active', {
+        slots: [
+          {
+            kind: 'ctp',
+            holeNumber: 7,
+            lines: [{ gameId: 'g1', matchLabel: null, name: 'Marte', distanceM: 2 }],
+            missing: [{ gameId: 'g2', matchLabel: null }],
+          },
+        ],
+        gir: [
+          {
+            holeNumber: 12,
+            maxPerTeam: 4,
+            team1: { count: 1, names: ['Jonas'] },
+            team2: { count: 0, names: [] },
+            reportedMatches: 1,
+            missing: [{ gameId: 'g2', matchLabel: 'Four-ball 2' }],
+          },
+        ],
+      }),
+    });
+    await renderAwards();
+
+    expect(screen.getByTestId('side-reports-line-ctp-g1')).toHaveTextContent('MatchMarte2,0 m');
+    expect(screen.getByTestId('side-reports-missing-ctp-g2')).toHaveTextContent('Match har ikke meldt inn');
+    expect(screen.getByTestId('side-reports-team2-gir')).toHaveTextContent(/^Team Sør: 0$/);
+    expect(screen.getByTestId('side-reports-missing-gir-g2')).toHaveTextContent('Four-ball 2 har ikke meldt inn');
+  });
+
+  it('lesingen feilet: boksen sier det, og registreringen står som før', async () => {
+    answer({ ok: true, view: room(awards, 'active', 'failed') });
+    await renderAwards();
+
+    for (const id of ['ctp', 'ld', 'gir']) {
+      expect(screen.getByTestId(`side-reports-empty-${id}`)).toHaveTextContent(
+        'Fikk ikke hentet det kampene har meldt inn.',
+      );
+    }
+    await fireEvent.press(screen.getByTestId('side-award-option-ctp-none'));
+    await fireEvent.press(screen.getByTestId('side-award-register-ctp'));
+    expect(registerSideAwardWinner).toHaveBeenCalledWith('cup-1', 'ctp', null);
+  });
+
+  it('en tjener uten rapporten (eller en cup uten noe å melde): ingen bokser, ingenting velter', async () => {
+    answer({ ok: true, view: room(awards) });
+    await renderAwards();
+    expect(screen.getByTestId('side-award-ctp')).toBeTruthy();
+    expect(screen.queryByText('Meldt inn fra kampene')).toBeNull();
+
+    answer({ ok: true, view: room(awards, 'active', null) });
+    await refocus();
+    expect(screen.queryByText('Meldt inn fra kampene')).toBeNull();
+  });
+
+  it('et hull som ikke står i rapporten, får ingen boks', async () => {
+    answer({ ok: true, view: room([ctp({ holeNumber: 3 })], 'active', { slots: [], gir: [] }) });
+    await renderAwards();
+    expect(screen.queryByTestId('side-reports-ctp')).toBeNull();
   });
 });
