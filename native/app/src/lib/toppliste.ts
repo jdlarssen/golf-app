@@ -204,12 +204,13 @@ export type MomentsModel = {
 };
 
 /** `YYYY-MM-DD` som en lokal dato, så dag og måned ikke flytter seg med tidssonen. */
-function localDate(playedOn: string): Date {
+export function localDate(playedOn: string): Date {
   const [year, month, day] = playedOn.split('-').map(Number);
   return new Date(year, month - 1, day);
 }
 
-function momentRow(m: AeresbrettMoment): MomentRowModel {
+/** Én rad i «Sjeldne slag», og den samme raden på Æreslista (#2894). */
+export function momentRow(m: AeresbrettMoment): MomentRowModel {
   const shot = topplisteT(MOMENT_KIND_KEY[m.kind]);
   const date = localDate(m.playedOn);
   const course = m.courseName;

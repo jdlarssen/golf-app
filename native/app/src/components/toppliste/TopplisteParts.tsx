@@ -14,10 +14,10 @@ import { TOPPLISTE_TEXT } from '../../lib/topplisteCopy';
 import { FONTS, fraunces, interLine, TAP, useTheme, withAlpha } from '../../theme';
 import { RankMedal } from '../RankMedal';
 
-/** Metallene og krem-tonene på skogflaten er like i begge drakter (designet). */
-const GOLD = '#C9A961';
-const GOLD_NUMBER = '#D4B870';
-const CREAM = '#ECE5D2';
+/** Metallene og krem-tonene på skogflaten er like i begge drakter (designet). Æreslista (#2894) deler dem. */
+export const GOLD = '#C9A961';
+export const GOLD_NUMBER = '#D4B870';
+export const CREAM = '#ECE5D2';
 
 const TAB_LABEL: Readonly<Record<TopplisteTab, string>> = {
   wins: TOPPLISTE_TEXT.tabWins,
@@ -192,14 +192,22 @@ export function TopplisteList({ rows }: { rows: readonly TopplisteRowModel[] }) 
   );
 }
 
-/** Skogkortet når ingen runder er levert: «Ingen runder ennå». */
-export function TopplisteEmpty({ heading, body }: { heading: string; body: string }) {
+/** Skogkortet når ingen runder er levert: «Ingen runder ennå». Æreslista (#2894) bruker det for «Ingen ennå». */
+export function TopplisteEmpty({
+  heading,
+  body,
+  testID = 'toppliste-empty',
+}: {
+  heading: string;
+  body: string;
+  testID?: string;
+}) {
   const { colors } = useTheme();
   return (
     <View
       accessibilityRole="summary"
       style={[styles.empty, { backgroundColor: colors.surfaceStrong }]}
-      testID="toppliste-empty"
+      testID={testID}
     >
       <Text numberOfLines={1} accessibilityRole="header" style={[styles.emptyHeading, { color: colors.onStrongWarm }]}>
         {heading}
@@ -248,8 +256,8 @@ export function TopplisteMessage({
   );
 }
 
-/** En flate i skjelettet: ingen glans, som tegningen («Hentes»). */
-function Bone({
+/** En flate i skjelettet: ingen glans, som tegningen («Hentes»). Æreslista (#2894) bruker den samme. */
+export function Bone({
   width,
   height,
   radius = 999,

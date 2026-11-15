@@ -63,6 +63,7 @@ import { STATUS_LABELS, type GameStatus } from '../../../../lib/games/status';
 import type { AppCupSummary } from '../../../../lib/cup/appCupView';
 import type { AppLeagueSummary } from '../../../../lib/league/appLeagueView';
 import { KavalkadeHomeBanner } from '../components/kavalkade/KavalkadeDoors';
+import { RareShotBanner } from '../components/home/RareShotBanner';
 import { LeagueHomeRow } from '../components/league/LeagueHomeRow';
 import { MarkerQueueCard } from '../components/league/MarkerQueueCard';
 import { CupHomeRow } from '../components/cup/CupHomeRow';
@@ -515,6 +516,10 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
             />
           </View>
         ) : null}
+
+        {/* #2894 PR 2: det nyeste delte hole-in-one eller albatross, i 7 dager etter
+            runden. Under Kavalkaden når begge står; hvert banner lukkes for seg. */}
+        <RareShotBanner onOpen={() => openOrReturn(navigation, 'Aeresliste', { from: 'home' })} />
 
         {markerRows.length > 0 ? (
           <View testID="home-marker-queue">

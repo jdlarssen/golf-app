@@ -52,9 +52,13 @@ const VIEW: AeresbrettView = {
   ],
 };
 
+const navigate = jest.fn();
+
 async function renderScreen(selfInitials?: string) {
   const route = { params: selfInitials ? { selfInitials } : undefined };
-  await render(<Toppliste {...({ navigation: {}, route } as unknown as ScreenProps<'Toppliste'>)} />);
+  // `getState` for `openOrReturn`: tom stakk, så den åpner som `navigate`.
+  const navigation = { navigate, getState: () => undefined };
+  await render(<Toppliste {...({ navigation, route } as unknown as ScreenProps<'Toppliste'>)} />);
 }
 
 beforeEach(() => {
@@ -285,6 +289,25 @@ describe('Toppliste', () => {
       fetchMock.mockResolvedValue({ ok: true, view: { ...VIEW, seasonYear: 2025, seasonOver: true, moments: [] } });
       await renderScreen();
       expect(await screen.findByTestId('toppliste-moments-empty')).toHaveTextContent('Ingen i 2025.');
+    });
+
+    // #2894 PR 2: lenka til Æreslista står nederst i kortet, i alle tilstandene.
+    it.each([
+      ['with «Vis alle»', many],
+      ['without «Vis alle»', VIEW.moments],
+      ['when the card is empty', []],
+    ])('ends with the link to Æreslista %s, which opens it', async (_case, moments) => {
+      fetchMock.mockResolvedValue({ ok: true, view: { ...VIEW, moments } });
+      await renderScreen();
+      await screen.findByTestId('toppliste-list');
+
+      const link = screen.getByRole('link', { name: 'Æreslista. Hole-in-one og albatross, alle år' });
+      expect(link).toHaveTextContent('ÆreslistaHole-in-one og albatross, alle år');
+      const order = screen.getAllByTestId(/^toppliste-(moment-\d+|moments-toggle|moments-empty|aeresliste-link)$/);
+      expect(order.at(-1)?.props.testID).toBe('toppliste-aeresliste-link');
+
+      await fireEvent.press(link);
+      expect(navigate).toHaveBeenCalledWith('Aeresliste', { from: 'toppliste' });
     });
 
     it('lets only the card say so when the strokes could not be read, and tries again', async () => {

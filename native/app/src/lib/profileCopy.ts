@@ -330,6 +330,8 @@ export const PROFILE_TEXT = {
  * - `rareShots` (#2894): `/api/aeresbrett` leser alle ferdige runder med service-rollen og sender
  *   navn, hull, bane og dato for alle i Tørny (`lib/stats/getSeasonStrokes.ts`). Bryteren er
  *   `notification_preferences.share_rare_shots` (0238), filteret `lib/stats/rareShotOptOuts.ts`.
+ *   Æreslista (#2894 PR 2) og banneret på Hjem: `/api/aeresliste` leser hole-in-one og albatross
+ *   for alle år på samme måte (`lib/stats/getRareShotsAllTime.ts`), med samme filter.
  * - `social`: `friendships view own` (ingen admin-gren), `group_members select
  *   member or admin`; vennelenka krever innlogging
  *   (`app/[locale]/venner/legg-til/[code]/page.tsx:48`).

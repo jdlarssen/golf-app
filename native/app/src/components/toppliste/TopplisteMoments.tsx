@@ -3,13 +3,18 @@
 // alle tre fanene. Fem rader og «Vis alle N»; åpnet står alle, med «Vis færre». All tekst
 // står på én linje (`numberOfLines={1}`), og hver rad har én etikett til skjermleseren
 // (merket og datoen er skjult).
+//
+// #2894 PR 2: nederst står lenka til Æreslista (hole-in-one og albatross for alle år),
+// under «Vis alle N», og også når kortet er tomt eller ikke fikk hentet slagene.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MomentRowModel, MomentsModel } from '../../lib/toppliste';
 import { TOPPLISTE_TEXT } from '../../lib/topplisteCopy';
 import { FONTS, fraunces, interLine, TAP, useTheme } from '../../theme';
 import { AchievementBadge } from '../history/AchievementBadge';
+import { ChevronIcon } from '../icons/Icons';
 
-function MomentRow({ row, last, index }: { row: MomentRowModel; last: boolean; index: number }) {
+/** Én rad: merket, navnet («Du» på din egen), datoen og slaget. Æreslista bruker den samme. */
+export function MomentRow({ row, last, testID }: { row: MomentRowModel; last: boolean; testID: string }) {
   const { colors } = useTheme();
   const muted = row.isViewer ? colors.text : colors.muted;
   return (
@@ -21,7 +26,7 @@ function MomentRow({ row, last, index }: { row: MomentRowModel; last: boolean; i
         row.isViewer ? { backgroundColor: colors.youFill } : null,
         last ? null : { borderBottomWidth: 1, borderBottomColor: colors.divider },
       ]}
-      testID={`toppliste-moment-${index}`}
+      testID={testID}
     >
       <AchievementBadge mark={row.mark} earned />
       <View style={styles.rowMiddle} importantForAccessibility="no-hide-descendants">
@@ -50,11 +55,13 @@ export function TopplisteMoments({
   expanded,
   onToggle,
   onRetry,
+  onOpenAeresliste,
 }: {
   model: MomentsModel;
   expanded: boolean;
   onToggle: () => void;
   onRetry: () => void;
+  onOpenAeresliste: () => void;
 }) {
   const { colors } = useTheme();
   return (
@@ -96,7 +103,7 @@ export function TopplisteMoments({
             <MomentRow
               key={`${row.shot}-${row.name}-${row.date}-${index}`}
               row={row}
-              index={index}
+              testID={`toppliste-moment-${index}`}
               last={index === model.rows.length - 1 && model.toggleLabel === null}
             />
           ))}
@@ -117,6 +124,24 @@ export function TopplisteMoments({
           ) : null}
         </>
       )}
+
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel={`${TOPPLISTE_TEXT.aeresHeading}. ${TOPPLISTE_TEXT.aeresLinkSubtitle}`}
+        onPress={onOpenAeresliste}
+        style={({ pressed }) => [styles.link, { borderTopColor: colors.divider }, pressed ? styles.pressed : null]}
+        testID="toppliste-aeresliste-link"
+      >
+        <View style={styles.linkText}>
+          <Text numberOfLines={1} style={[styles.linkTitle, { color: colors.text }]}>
+            {TOPPLISTE_TEXT.aeresHeading}
+          </Text>
+          <Text numberOfLines={1} style={[styles.linkSubtitle, { color: colors.muted }]}>
+            {TOPPLISTE_TEXT.aeresLinkSubtitle}
+          </Text>
+        </View>
+        <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} />
+      </Pressable>
     </View>
   );
 }
@@ -164,4 +189,18 @@ const styles = StyleSheet.create({
 
   toggle: { minHeight: 48, paddingHorizontal: 16, borderTopWidth: 1, alignItems: 'center', justifyContent: 'center' },
   toggleText: { ...interLine(15, 18), fontFamily: FONTS.sansSemiBold, fontVariant: ['tabular-nums'] },
+
+  // Lenka til Æreslista (gruppe 13): minst 56 høy, skillelinje over, pila i `primary`.
+  link: {
+    minHeight: 56,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  linkText: { flexGrow: 1, flexShrink: 1, minWidth: 0 },
+  linkTitle: { ...interLine(15, 18), fontFamily: FONTS.sansSemiBold },
+  linkSubtitle: { ...interLine(12, 15), marginTop: 2 },
 });

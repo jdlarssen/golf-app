@@ -65,10 +65,39 @@ export const TOPPLISTE_TEXT = {
   momentsNone: 'Ingen ennå.',
   momentsNoneOver: 'Ingen i {year}.',
   momentsFailed: 'Fikk ikke hentet slagene.',
+  // Æreslista (#2894 PR 2): hole-in-one og albatross for alle år, lenka i kortet og banneret på Hjem.
+  aeresHeading: 'Æreslista',
+  aeresSubtitle: 'Hole-in-one og albatross i Tørny',
+  /** Toppen sier hvor siden ble åpnet fra (tegningen viser «Toppliste»). */
+  aeresKickerHome: 'Hjem',
+  aeresLinkSubtitle: 'Hole-in-one og albatross, alle år',
+  aeresNewestHoleInOne: 'Nyeste hole-in-one',
+  aeresNewestAlbatross: 'Nyeste albatross',
+  /** Hole-in-one er samme ord i flertall. */
+  aeresCountHoleInOne: '{count} hole-in-one',
+  aeresCountAlbatross: '{count, plural, one {# albatross} other {# albatrosser}}',
+  aeresEmptyHeading: 'Ingen ennå',
+  aeresEmptyBody: 'Den første hole-in-one står her.',
+  aeresFailedHeading: 'Fikk ikke hentet slagene',
+  aeresWhere: 'Hull {hole} på {course}',
+  aeresWhereNoCourse: 'Hull {hole}',
+  aeresHeroSpoken: '{label}, {name}, hull {hole} på {course}, {date}',
+  aeresHeroSpokenNoCourse: '{label}, {name}, hull {hole}, {date}',
+  bannerMore: '+{count} til',
+  bannerClose: 'Lukk',
+  bannerSpoken: '{kind}: {name}, hull {hole} på {course}. Åpner æreslista.',
+  bannerSpokenNoCourse: '{kind}: {name}, hull {hole}. Åpner æreslista.',
 } as const;
 
 export type TopplisteKey = keyof typeof TOPPLISTE_TEXT;
 
 export function topplisteT(key: TopplisteKey, values?: Record<string, string | number>): string {
   return formatMessage(TOPPLISTE_TEXT[key], values);
+}
+
+/** Ordet i toppen på Æreslista (#2894): hvor den ble åpnet fra, og bare pila fra et varsel. */
+export function aereslisteKicker(from: 'toppliste' | 'home' | 'notification' | undefined): string {
+  if (from === 'toppliste') return TOPPLISTE_TEXT.heading;
+  if (from === 'home') return TOPPLISTE_TEXT.aeresKickerHome;
+  return '';
 }

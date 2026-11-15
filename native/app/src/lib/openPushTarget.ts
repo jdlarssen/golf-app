@@ -48,6 +48,7 @@ export function openScreenTarget(navigation: BackNavigation, target: ScreenTarge
     openOrReturn(navigation, 'EndGame', target.params);
   } else if (target.name === 'Friends') openOrReturn(navigation, 'Friends', target.params);
   else if (target.name === 'RoundStats') openOrReturn(navigation, 'RoundStats');
+  else if (target.name === 'Aeresliste') openOrReturn(navigation, 'Aeresliste', target.params);
   else if (target.name === 'League') openOrReturn(navigation, 'League', target.params);
   else if (target.name === 'Cup') openOrReturn(navigation, 'Cup', target.params);
   else if (target.name === 'CupParticipants') {

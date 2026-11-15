@@ -32,6 +32,7 @@ const SCREENS = [
   'Inbox',
   'Friends',
   'RoundStats',
+  'Aeresliste',
   'League',
   'Cup',
   'CupParticipants',
@@ -240,6 +241,7 @@ describe('et trykk i innboksen (#2759)', () => {
     ['GameHome', { name: 'GameHome', params: G }],
     ['Friends', { name: 'Friends', params: { from: 'notification' } }],
     ['RoundStats', { name: 'RoundStats' }],
+    ['Aeresliste', { name: 'Aeresliste', params: { from: 'notification' } }],
     ['League', { name: 'League', params: { leagueId: 'l1' } }],
     ['Cup', { name: 'Cup', params: { cupId: 'c1' } }],
   ] as const)('%s ligger rett over innboksen, og tilbake lander der', async (name, target) => {
