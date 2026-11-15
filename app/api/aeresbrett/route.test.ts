@@ -18,9 +18,15 @@ const OSLO_YEAR = osloParts(new Date()).year;
 const USER = 'spiller';
 const TOKEN = 'token-spiller';
 
+// #2894: the one real read left in the route is who said no to «Del sjeldne slag med alle».
+let optOutRows: Array<{ user_id: string }> = [];
+let optOutError: { message: string } | null = null;
 const fake = createAdminClientMock({
   tokens: { [TOKEN]: USER },
   respond: (op) => {
+    if (op.kind === 'select' && op.table === 'notification_preferences') {
+      return optOutError ? { error: optOutError } : { data: optOutRows };
+    }
     throw new Error(`uventet spørring: ${op.kind} ${op.table}`);
   },
 });
@@ -68,6 +74,8 @@ const aggregate = (over: Partial<ClubStatsAggregate> = {}): ClubStatsAggregate =
 beforeEach(() => {
   vi.clearAllMocks();
   fake.reset();
+  optOutRows = [];
+  optOutError = null;
   seasonWinsMock.mockResolvedValue({ season: OSLO_YEAR, wins: aggregate() });
   strokesMock.mockResolvedValue({
     birdies: [
@@ -164,6 +172,49 @@ describe('GET — svaret', () => {
     const body = await (await GET(request(`Bearer ${TOKEN}`))).json();
 
     expect(body.seasonOver).toBe(true);
+  });
+});
+
+describe('«Del sjeldne slag med alle» (#2894)', () => {
+  it('leser bare dem som har sagt nei, med service-rollen', async () => {
+    await GET(request(`Bearer ${TOKEN}`));
+
+    const reads = fake.ops.filter((op) => op.table === 'notification_preferences');
+    expect(reads).toHaveLength(1);
+    expect(reads[0]).toMatchObject({ kind: 'select', columns: 'user_id' });
+    expect(reads[0].filters).toEqual([{ op: 'eq', column: 'share_rare_shots', value: false }]);
+  });
+
+  it('en spiller som har sagt nei, står ikke i «Sjeldne slag», men står på brettene', async () => {
+    optOutRows = [{ user_id: 'u-anne' }];
+
+    const body = await (await GET(request(`Bearer ${TOKEN}`))).json();
+
+    expect(body.moments.map((m: { name: string }) => m.name)).toEqual(['Kari N.']);
+    expect(body.boards.birdies.rows.map((r: { name: string }) => r.name)).toContain('Anne B.');
+    expect(body.boards.wins.rows.map((r: { name: string }) => r.name)).toContain('Anne B.');
+  });
+
+  it('har kalleren selv sagt nei, ser heller ikke kalleren sitt eget slag', async () => {
+    optOutRows = [{ user_id: USER }];
+
+    const body = await (await GET(request(`Bearer ${TOKEN}`))).json();
+
+    expect(body.moments.map((m: { name: string }) => m.name)).toEqual(['Anne B.']);
+  });
+
+  it('feiler lesingen av valget: moments null (kortet sier fra), birdies og brettene står', async () => {
+    optOutError = { message: 'permission denied' };
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const res = await GET(request(`Bearer ${TOKEN}`));
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.moments).toBeNull();
+    expect(body.boards.birdies.rows).toHaveLength(2);
+    expect(errorSpy).toHaveBeenCalledWith('[api/aeresbrett] rare shot opt-outs failed', expect.any(Error));
+    errorSpy.mockRestore();
   });
 });
 

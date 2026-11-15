@@ -38,6 +38,7 @@ import {
 } from 'expo-local-authentication';
 import { fetchOwnAiConsent, saveAiConsent } from '../data/aiConsent';
 import { downloadDataExport } from '../data/dataExport';
+import { fetchOwnRareShotSharing, saveRareShotSharing } from '../data/pushPreferences';
 import { logOut } from '../data/logout';
 import { AI_CONSENT_TEXT } from '../lib/aiConsentCopy';
 import { APP_LOCK_STORAGE_KEY, getAppLock, loadAppLock, setAppLock } from '../lib/appLock';
@@ -69,6 +70,11 @@ jest.mock('../data/logout', () => ({ logOut: jest.fn() }));
 // #2561: the AI consent row reads and writes its own row.
 jest.mock('../data/aiConsent', () => ({ fetchOwnAiConsent: jest.fn(), saveAiConsent: jest.fn() }));
 jest.mock('../data/aiConsentGate', () => ({ rememberAiConsentAnswered: jest.fn() }));
+// #2894: «Del sjeldne slag med alle» reads and writes its column itself (`data/pushPreferences.test.ts`).
+jest.mock('../data/pushPreferences', () => ({
+  fetchOwnRareShotSharing: jest.fn(),
+  saveRareShotSharing: jest.fn(),
+}));
 // #2332 PR C: nedlastingen har sin egen suite (`data/dataExport.test.ts`).
 jest.mock('../data/dataExport', () => ({ downloadDataExport: jest.fn() }));
 jest.mock('../lib/stagingGate', () => ({ isStagingBuild: jest.fn() }));
@@ -122,6 +128,8 @@ describe('AccountSettings', () => {
     isStagingBuildMock.mockReturnValue(false);
     (fetchOwnAiConsent as jest.Mock).mockResolvedValue(true);
     (saveAiConsent as jest.Mock).mockResolvedValue({ ok: true });
+    (fetchOwnRareShotSharing as jest.Mock).mockResolvedValue(true);
+    (saveRareShotSharing as jest.Mock).mockResolvedValue({ ok: true });
     // Spionen settes for HVER test, ikke bare den som venter dialogen: uten den
     // er `Alert.alert` den ekte funksjonen, og «ble ikke spurt» kunne ikke
     // uttrykkes som en assert i det hele tatt.
@@ -229,6 +237,63 @@ describe('AccountSettings', () => {
     expect(screen.getByTestId('account-ai-consent-switch')).not.toBeChecked();
     expect(screen.getByTestId('account-ai-consent-error')).toBeTruthy();
     expect(announce).toHaveBeenCalledWith(AI_CONSENT_TEXT.toggleFailed);
+  });
+
+  describe('#2894: «Del sjeldne slag med alle»', () => {
+    it('står rett under AI-bryteren i «Du bestemmer», med tegningens ord, og er på som standard', async () => {
+      await renderScreen();
+      const toggle = await screen.findByTestId('account-share-rare-shots-switch');
+      expect(toggle).toBeChecked();
+
+      const ids = testIdsInOrder();
+      expect(ids.indexOf('account-share-rare-shots')).toBeGreaterThan(ids.indexOf('account-ai-consent-switch'));
+      expect(ids.indexOf('account-share-rare-shots')).toBeLessThan(ids.indexOf('account-export'));
+      expect(ids.indexOf('account-share-rare-shots')).toBeGreaterThan(ids.indexOf('account-you-decide'));
+      const row = screen.getByTestId('account-share-rare-shots');
+      expect(row).toHaveTextContent(/Del sjeldne slag med alle/);
+      expect(row).toHaveTextContent(/Av: bare venner og ligaen får vite/);
+      expect(screen.getByLabelText('Del sjeldne slag med alle')).toBeTruthy();
+    });
+
+    it('viser et lagret nei, og lagrer når den slås på igjen', async () => {
+      (fetchOwnRareShotSharing as jest.Mock).mockResolvedValue(false);
+      await renderScreen();
+      const toggle = await screen.findByTestId('account-share-rare-shots-switch');
+      expect(toggle).not.toBeChecked();
+      // Underteksten er lik på og av.
+      expect(screen.getByTestId('account-share-rare-shots')).toHaveTextContent(/Av: bare venner og ligaen får vite/);
+
+      await act(async () => {
+        fireEvent.press(toggle);
+      });
+      expect(saveRareShotSharing).toHaveBeenLastCalledWith('user-me', true);
+      expect(screen.getByTestId('account-share-rare-shots-switch')).toBeChecked();
+      expect(screen.queryByTestId('account-share-rare-shots-error')).toBeNull();
+    });
+
+    it('ruller tilbake og sier fra når lagringen ikke gikk gjennom', async () => {
+      (saveRareShotSharing as jest.Mock).mockResolvedValue({ ok: false });
+      const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
+      await renderScreen();
+
+      await act(async () => {
+        fireEvent.press(await screen.findByTestId('account-share-rare-shots-switch'));
+      });
+      expect(saveRareShotSharing).toHaveBeenLastCalledWith('user-me', false);
+      expect(screen.getByTestId('account-share-rare-shots-switch')).toBeChecked();
+      expect(screen.getByTestId('account-share-rare-shots-error')).toHaveTextContent(PROFILE_TEXT.shareRareShotsFailed);
+      expect(announce).toHaveBeenCalledWith(PROFILE_TEXT.shareRareShotsFailed);
+    });
+
+    it('står uten bryter når valget ikke kunne leses, så den aldri viser et gjettet valg', async () => {
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      (fetchOwnRareShotSharing as jest.Mock).mockRejectedValue(new Error('offline'));
+      await renderScreen();
+      await screen.findByTestId('account-ai-consent-switch');
+
+      expect(screen.getByTestId('account-share-rare-shots')).toHaveTextContent(/Del sjeldne slag med alle/);
+      expect(screen.queryByTestId('account-share-rare-shots-switch')).toBeNull();
+    });
   });
 
   describe('#2841: lås med Face ID', () => {

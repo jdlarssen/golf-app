@@ -521,6 +521,10 @@
           "title": "Your rounds and strokes",
           "body": "The others in the game and the organiser see your strokes. With a live link, anyone can follow the game."
         },
+        "rareShots": {
+          "title": "Rare shots",
+          "body": "When you make a hole-in-one, albatross or eagle, it shows on the leaderboard and everyone in Tørny sees it. You can turn that off in the app, under You decide."
+        },
         "social": {
           "title": "Friends and clubs",
           "body": "Only you and your friend see that you are friends. Your club sees that you are a member."

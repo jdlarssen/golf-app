@@ -13,7 +13,7 @@
 // `profileCopy.ts`). Så kommer «Du bestemmer», «Konto» med e-posten og
 // utloggingen, utviklerflaten i staging og til slutt sletting. Designet har
 // ikke e-posten, Face ID, AI-bryteren eller utviklerflaten, og ingen av dem er
-// fjernet.
+// fjernet. #2894 la «Del sjeldne slag med alle» under AI-bryteren.
 //
 // **Profil v2: «Logg ut» og utviklerflaten bor her.** Profilen skal være
 // identisk med designlerretet, og der slutter siden med «Del bag-taggen».
@@ -42,6 +42,7 @@ import { SettingList, SettingRow } from '../components/SettingRow';
 import { fetchOwnAiConsent, saveAiConsent } from '../data/aiConsent';
 import { rememberAiConsentAnswered } from '../data/aiConsentGate';
 import { downloadDataExport } from '../data/dataExport';
+import { fetchOwnRareShotSharing, saveRareShotSharing } from '../data/pushPreferences';
 import { logOut } from '../data/logout';
 import { AI_CONSENT_TEXT } from '../lib/aiConsentCopy';
 import {
@@ -211,6 +212,7 @@ export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) 
       <SettingList testID="account-you-decide" style={styles.list}>
         <AppLockSetting />
         <AiConsentSetting />
+        <RareShotSharingSetting />
         <SettingRow
           label={exportPending ? PROFILE_TEXT.exportPending : DATA_TEXT.exportRow}
           sublabel={DATA_TEXT.exportSublabel}
@@ -472,6 +474,75 @@ function AiConsentSetting() {
           onColor={colors.primary}
           offColor={listSwitchOffColor(colors, scheme)}
           testID="account-ai-consent-switch"
+        />
+      ) : null}
+    </View>
+  );
+}
+
+/**
+ * #2894: «Del sjeldne slag med alle», rett under AI-bryteren og tegnet som den (gruppe 10,
+ * rad 99). Står den av, står spilleren ikke i kortet «Sjeldne slag» på Topplista; vennene og
+ * ligaen får fortsatt vite det. Valget bor i `notification_preferences.share_rare_shots`
+ * (0238), og serveren filtrerer (`lib/stats/rareShotOptOuts.ts`).
+ *
+ * Som AI-bryteren: bryteren vises først når valget er lest, feiler lesingen står raden uten
+ * bryter, og en lagring som ikke gikk gjennom ruller tilbake og sier fra.
+ */
+function RareShotSharingSetting() {
+  const { userId } = useSession();
+  const { colors, scheme } = useTheme();
+  const [value, setValue] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchOwnRareShotSharing(userId)
+      .then((share) => {
+        if (!cancelled) setValue(share);
+      })
+      .catch((err: unknown) => {
+        console.error('[AccountSettings] delingsvalget kunne ikke leses', err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  const onToggle = async (next: boolean) => {
+    setBusy(true);
+    setFailed(false);
+    setValue(next);
+    const result = await saveRareShotSharing(userId, next);
+    setBusy(false);
+    if (!result.ok) {
+      setValue(!next);
+      setFailed(true);
+      AccessibilityInfo.announceForAccessibility(PROFILE_TEXT.shareRareShotsFailed);
+    }
+  };
+
+  return (
+    <View style={styles.aiRow} testID="account-share-rare-shots">
+      <View style={styles.aiTexts}>
+        <Text style={[styles.aiTitle, { color: colors.text }]}>{PROFILE_TEXT.shareRareShotsTitle}</Text>
+        <Text style={[styles.aiSub, { color: colors.muted }]}>{PROFILE_TEXT.shareRareShotsSublabel}</Text>
+        {failed ? (
+          <Text style={[styles.aiSub, { color: colors.danger }]} testID="account-share-rare-shots-error">
+            {PROFILE_TEXT.shareRareShotsFailed}
+          </Text>
+        ) : null}
+      </View>
+      {value !== null ? (
+        <DesignSwitch
+          value={value}
+          disabled={busy}
+          onValueChange={(next) => void onToggle(next)}
+          label={PROFILE_TEXT.shareRareShotsTitle}
+          onColor={colors.primary}
+          offColor={listSwitchOffColor(colors, scheme)}
+          testID="account-share-rare-shots-switch"
         />
       ) : null}
     </View>
