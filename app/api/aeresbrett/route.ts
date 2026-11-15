@@ -3,7 +3,7 @@ import { authenticatedUserId } from '@/lib/api/appAuth';
 import { osloParts } from '@/lib/format/teeOff';
 import { buildAeresbrettView, type AeresbrettView } from '@/lib/stats/appAeresbrettView';
 import { getCurrentSeasonWins } from '@/lib/stats/getFinishedGameWins';
-import { getSeasonBirdies } from '@/lib/stats/getSeasonBirdies';
+import { getSeasonStrokes, type SeasonStrokes } from '@/lib/stats/getSeasonStrokes';
 
 // Æresbrettet i appen (#2259): sesongens topp 10 i flest seire, flest birdies og
 // flest runder, for hele Tørny, pluss spillerens egen plass.
@@ -21,8 +21,9 @@ import { getSeasonBirdies } from '@/lib/stats/getSeasonBirdies';
 //       401 { error: 'unauthorized' }
 //       500 { error: 'load_failed' }
 //
-// Feiler bare birdie-lesingen, logges den og `boards.birdies` blir `null`; de to
-// andre fanene virker. Feil-bodyene er faste koder, aldri `err.message`.
+// Feiler lesingen av slagene, logges den, og `boards.birdies` og `moments` blir `null`:
+// Birdies-fanen og kortet «Sjeldne slag» sier fra hver for seg, de to andre fanene virker.
+// `moments` har navn, hull, bane og hel dato (eierens valg 15.11), aldri id-er, spill eller slag. Feil-bodyene er faste koder, aldri `err.message`.
 
 const LOG_PREFIX = 'api/aeresbrett';
 
@@ -38,15 +39,16 @@ export async function GET(request: NextRequest) {
 
     const { season, wins } = await getCurrentSeasonWins();
 
-    let birdies: Array<[string, number]> | null = null;
+    // One read feeds the birdie tab and the «Sjeldne slag» card; if it fails, the tab and the
+    // card each say so (`birdies: null`, `moments: null`) and the other two tabs stand.
+    let strokes: SeasonStrokes | null = { birdies: [], moments: [] };
     if (season !== null) {
       try {
-        birdies = await getSeasonBirdies({ seasonYear: season });
+        strokes = await getSeasonStrokes({ seasonYear: season });
       } catch (err) {
-        console.error(`[${LOG_PREFIX}] birdies failed`, err);
+        console.error(`[${LOG_PREFIX}] strokes failed`, err);
+        strokes = null;
       }
-    } else {
-      birdies = [];
     }
 
     const body: AeresbrettView = buildAeresbrettView({
@@ -55,7 +57,8 @@ export async function GET(request: NextRequest) {
       viewerUserId: userId,
       wins: wins.winnerCounts,
       rounds: wins.participationCounts,
-      birdies,
+      birdies: strokes?.birdies ?? null,
+      moments: strokes?.moments ?? null,
       names: wins.userNames,
       nicknames: wins.userNicknames,
     });

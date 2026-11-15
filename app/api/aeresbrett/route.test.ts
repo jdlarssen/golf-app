@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createAdminClientMock } from '@/lib/supabase/testing/adminClientMock';
 import { osloParts } from '@/lib/format/teeOff';
 import type { ClubStatsAggregate } from '@/lib/stats/getFinishedGameWins';
+import type { SeasonStrokes } from '@/lib/stats/getSeasonStrokes';
 
 /**
  * Type A (#2259): Æresbrett-rutas port og transport.
@@ -32,9 +33,9 @@ const seasonWinsMock = vi.fn<() => Promise<{ season: number | null; wins: ClubSt
 vi.mock('@/lib/stats/getFinishedGameWins', () => ({
   getCurrentSeasonWins: () => seasonWinsMock(),
 }));
-const birdiesMock = vi.fn<(opts: { seasonYear: number }) => Promise<Array<[string, number]>>>();
-vi.mock('@/lib/stats/getSeasonBirdies', () => ({
-  getSeasonBirdies: (opts: { seasonYear: number }) => birdiesMock(opts),
+const strokesMock = vi.fn<(opts: { seasonYear: number }) => Promise<SeasonStrokes>>();
+vi.mock('@/lib/stats/getSeasonStrokes', () => ({
+  getSeasonStrokes: (opts: { seasonYear: number }) => strokesMock(opts),
 }));
 
 import { NextRequest } from 'next/server';
@@ -68,10 +69,16 @@ beforeEach(() => {
   vi.clearAllMocks();
   fake.reset();
   seasonWinsMock.mockResolvedValue({ season: OSLO_YEAR, wins: aggregate() });
-  birdiesMock.mockResolvedValue([
-    ['u-anne', 3],
-    [USER, 5],
-  ]);
+  strokesMock.mockResolvedValue({
+    birdies: [
+      ['u-anne', 3],
+      [USER, 5],
+    ],
+    moments: [
+      { kind: 'eagle', userId: 'u-anne', hole: 7, courseName: 'Bogstad', playedOn: '2026-06-12' },
+      { kind: 'hole_in_one', userId: USER, hole: 3, courseName: 'Holtsmark', playedOn: '2026-08-02' },
+    ],
+  });
 });
 
 describe('porten', () => {
@@ -81,7 +88,7 @@ describe('porten', () => {
     expect(res.status).toBe(401);
     await expect(res.json()).resolves.toEqual({ error: 'unauthorized' });
     expect(seasonWinsMock).not.toHaveBeenCalled();
-    expect(birdiesMock).not.toHaveBeenCalled();
+    expect(strokesMock).not.toHaveBeenCalled();
   });
 
   it('med et token GoTrue avviser: 401, ingenting leses', async () => {
@@ -108,7 +115,7 @@ describe('GET — svaret', () => {
     // Birdier: kalleren (5) leder foran Anne (3), så det finnes en egen leder-plass 1 i lista.
     expect(body.boards.birdies.rows[0]).toMatchObject({ name: 'Kari N.', place: 1, isViewer: true });
     expect(body.boards.rounds.rows[0]).toMatchObject({ name: 'Anne B.', count: 9 });
-    expect(birdiesMock).toHaveBeenCalledWith({ seasonYear: OSLO_YEAR });
+    expect(strokesMock).toHaveBeenCalledWith({ seasonYear: OSLO_YEAR });
   });
 
   it('sender bare de fem radnøklene: ingen id-er, spill, datoer eller slag', async () => {
@@ -124,6 +131,19 @@ describe('GET — svaret', () => {
     expect(raw).not.toContain(USER);
   });
 
+  it('sender «Sjeldne slag» med navn, hull, bane og dato, og aldri id-er, spill eller slag', async () => {
+    const body = await (await GET(request(`Bearer ${TOKEN}`))).json();
+
+    expect(body.moments).toEqual([
+      { kind: 'hole_in_one', name: 'Kari N.', initials: 'KN', isViewer: true, hole: 3, courseName: 'Holtsmark', playedOn: '2026-08-02' },
+      { kind: 'eagle', name: 'Anne B.', initials: 'AB', isViewer: false, hole: 7, courseName: 'Bogstad', playedOn: '2026-06-12' },
+    ]);
+    for (const m of body.moments) {
+      expect(Object.keys(m).sort()).toEqual(['courseName', 'hole', 'initials', 'isViewer', 'kind', 'name', 'playedOn']);
+    }
+    expect(JSON.stringify(body.moments)).not.toContain('u-anne');
+  });
+
   it('en tom sesong (ingen ferdige runder i år eller i fjor): 200 med tomme brett og uten birdie-lesing', async () => {
     seasonWinsMock.mockResolvedValue({ season: null, wins: aggregate({ hasGames: false, winnerCounts: [], participationCounts: [] }) });
 
@@ -134,7 +154,8 @@ describe('GET — svaret', () => {
     expect(body.seasonYear).toBeNull();
     expect(body.boards.wins).toEqual({ rows: [], me: null, leader: null });
     expect(body.boards.birdies).toEqual({ rows: [], me: null });
-    expect(birdiesMock).not.toHaveBeenCalled();
+    expect(body.moments).toEqual([]);
+    expect(strokesMock).not.toHaveBeenCalled();
   });
 
   it('en sesong fra i fjor er avsluttet', async () => {
@@ -147,8 +168,8 @@ describe('GET — svaret', () => {
 });
 
 describe('feil under panseret', () => {
-  it('feiler bare birdie-lesingen: 200 med birdies null, de andre fanene står', async () => {
-    birdiesMock.mockRejectedValue(new Error('season birdies scores: page 1 failed: boom'));
+  it('feiler lesingen av slagene: 200 med birdies og moments null, de to andre fanene står', async () => {
+    strokesMock.mockRejectedValue(new Error('season strokes scores: page 1 failed: boom'));
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const res = await GET(request(`Bearer ${TOKEN}`));
@@ -156,8 +177,10 @@ describe('feil under panseret', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.boards.birdies).toBeNull();
+    expect(body.moments).toBeNull();
     expect(body.boards.wins.rows).toHaveLength(2);
-    expect(errorSpy).toHaveBeenCalledWith('[api/aeresbrett] birdies failed', expect.any(Error));
+    expect(body.boards.rounds.rows).toHaveLength(2);
+    expect(errorSpy).toHaveBeenCalledWith('[api/aeresbrett] strokes failed', expect.any(Error));
     errorSpy.mockRestore();
   });
 

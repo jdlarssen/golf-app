@@ -1,5 +1,6 @@
 import type { NotificationKind, NotificationPayload } from './types';
 import { formatKr } from '@/lib/format/formatKr';
+import { RARE_MOMENT_ORDER } from '@/lib/stats/achievementMarks';
 import {
   STRUCTURAL_BLOCK_REASONS,
   type StructuralBlockReason,
@@ -503,8 +504,9 @@ const MOMENT_KEY: Record<'hole_in_one' | 'eagle' | 'turkey' | 'snowman', string>
 
 type FriendMomentKind = NotificationPayload<'friend_achievement'>['moments'][number]['kind'];
 
-// Best first: the title names the first of these the round has.
-const FRIEND_MOMENT_ORDER: readonly FriendMomentKind[] = ['hole_in_one', 'albatross', 'eagle'];
+// Best first: the title names the first of these the round has. One home with the
+// «Sjeldne slag» card on the Toppliste (`lib/stats/achievementMarks.ts`).
+const FRIEND_MOMENT_ORDER: readonly FriendMomentKind[] = RARE_MOMENT_ORDER;
 
 const FRIEND_TITLE_KEY: Record<FriendMomentKind, string> = {
   hole_in_one: 'titleHoleInOne',
