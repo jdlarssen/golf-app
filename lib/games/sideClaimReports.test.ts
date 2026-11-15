@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { claimFlightKeys } from './sideContest';
 import {
   reportsForSlot,
@@ -114,13 +114,16 @@ describe('toSideClaimReports', () => {
     flight_number: 1,
     winner_user_id: 'marte',
     distance_m: 2.4,
-    winner: { name: 'Marte Lie', nickname: null },
     ...over,
   });
+  const marte = () => ({ name: 'Marte Lie', nickname: null });
 
   it('maps a row, reads a string distance as a number and leaves out an unknown category', () => {
     expect(
-      toSideClaimReports([row({ distance_m: '1.8' }), row({ category: 'gir', flight_number: 2 }), row({ distance_m: 'x', flight_number: 3 })]),
+      toSideClaimReports(
+        [row({ distance_m: '1.8' }), row({ category: 'gir', flight_number: 2 }), row({ distance_m: 'x', flight_number: 3 })],
+        marte,
+      ),
     ).toEqual([
       {
         category: 'closest_to_pin',
@@ -142,8 +145,19 @@ describe('toSideClaimReports', () => {
   });
 
   it('no winner gives no name, and a missing distance stays null', () => {
-    expect(toSideClaimReports([row({ winner_user_id: null, distance_m: null })])).toMatchObject([
+    const winnerName = vi.fn(marte);
+    expect(toSideClaimReports([row({ winner_user_id: null, distance_m: null })], winnerName)).toMatchObject([
       { winnerUserId: null, winner: null, distanceM: null },
     ]);
+    expect(winnerName).not.toHaveBeenCalled();
+  });
+
+  it('asks the caller for the winner\'s name with the id and the row, so the web can look it up and the app read it off the row', () => {
+    const rows = [row({ winner_user_id: 'kristian', flight_number: 2 })];
+    const winnerName = vi.fn(() => ({ name: 'Kristian Holm', nickname: null }));
+    expect(toSideClaimReports(rows, winnerName)).toMatchObject([
+      { winnerUserId: 'kristian', winner: { name: 'Kristian Holm', nickname: null } },
+    ]);
+    expect(winnerName).toHaveBeenCalledWith('kristian', rows[0]);
   });
 });

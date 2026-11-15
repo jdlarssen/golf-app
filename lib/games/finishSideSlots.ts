@@ -85,17 +85,9 @@ async function readAllClaims(
       return null;
     }
     const byId = new Map(players.map((p) => [p.user_id, p.users]));
-    return toSideClaimReports(
-      (data ?? []).map((row) => ({
-        ...row,
-        // A winner is always a player of the game (the rpc checks); an unknown id
-        // gets an empty name rather than a guess.
-        winner:
-          row.winner_user_id === null
-            ? null
-            : (byId.get(row.winner_user_id) ?? { name: null, nickname: null }),
-      })),
-    );
+    // A winner is always a player of the game (the rpc checks); an unknown id
+    // gets an empty name rather than a guess.
+    return toSideClaimReports(data ?? [], (winnerUserId) => byId.get(winnerUserId) ?? { name: null, nickname: null });
   } catch (err) {
     console.error('[finishSideSlots] could not read the flights\' reports', err);
     return null;
