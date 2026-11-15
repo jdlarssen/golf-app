@@ -162,6 +162,10 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
   const [confirming, setConfirming] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [sheetSlot, setSheetSlot] = useState<FinishSlot | null>(null);
+  // #2283: plassen boksen gjelder. Den står igjen når arket lukkes, så boksen
+  // glir ned sammen med arket i stedet for å forsvinne midt i animasjonen
+  // (`WinnerSheet` holder plassen på samme måte).
+  const [reportSlot, setReportSlot] = useState<FinishSlot | null>(null);
   const isAdmin = useIsAdmin(userId);
   // #2283: det flightene har meldt inn, bare når en plass har hull.
   const finishClaims = useFinishClaims(
@@ -826,6 +830,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
                     onPress={() => {
                       setNotice(null);
                       setSheetSlot(slot);
+                      setReportSlot(slot);
                       // Hent på nytt: en flight kan ha meldt inn siden skjermen åpnet.
                       if (slot.hole !== null) finishClaims.reload();
                     }}
@@ -855,11 +860,16 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
         choices={liveChoices}
         withdrawalSupported={plan.withdrawalSupported}
         reports={
-          sheetSlot === null || finishClaims.claims === null
+          reportSlot === null || finishClaims.claims === null
             ? null
             : finishClaims.claims === 'failed'
               ? 'failed'
-              : reportsForSlot(sheetSlot, finishClaims.claims, claimFlights(bundle.game.gameMode, bundle.players))
+              : reportsForSlot(
+                  reportSlot,
+                  finishClaims.claims,
+                  claimFlights(bundle.game.gameMode, bundle.players),
+                  bundle.players,
+                )
         }
         onPick={(value) => {
           if (sheetSlot) setChoices((prev) => ({ ...prev, [sheetSlot.key]: value }));
@@ -882,6 +892,11 @@ function useFinishClaims(
 ): { claims: FinishClaim[] | 'failed' | null; reload: () => void } {
   const [claims, setClaims] = useState<FinishClaim[] | 'failed' | null>(null);
   const alive = useRef(true);
+  // Et svar skriver bare når det er nyere enn det som vises: et tregt svar fra
+  // da skjermen åpnet skal ikke legge seg over et nyere fra da arket åpnet.
+  // `sent` nummererer hentingene, `shown` er nummeret på dataene som vises.
+  const sent = useRef(0);
+  const shown = useRef(0);
   useEffect(() => {
     alive.current = true;
     return () => {
@@ -890,12 +905,16 @@ function useFinishClaims(
   }, []);
   const reload = useCallback(() => {
     if (!needed) return;
+    const request = ++sent.current;
     fetchSideClaimsForFinish(gameId)
       .then((rows) => {
-        if (alive.current) setClaims(rows);
+        if (!alive.current || request < shown.current) return;
+        shown.current = request;
+        setClaims(rows);
       })
       .catch(() => {
-        if (alive.current) setClaims((prev) => (prev === null ? 'failed' : prev));
+        // Feilen vises bare når ingenting er hentet ennå; ellers står det siste.
+        if (alive.current && shown.current === 0) setClaims((prev) => (prev === null ? 'failed' : prev));
       });
   }, [gameId, needed]);
   useEffect(() => {

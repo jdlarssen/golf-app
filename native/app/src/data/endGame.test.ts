@@ -874,7 +874,7 @@ describe('#2283: fetchSideClaimsForFinish', () => {
     jest.resetModules();
   });
 
-  it('leser rpc-en og gir fornavnet etter den delte navneregelen', async () => {
+  it('leser rpc-en og gir navnet rått videre, så kåringsarket kan skille like fornavn', async () => {
     const { supabase } = mocks();
     const returns = jest.fn().mockResolvedValue({
       data: [
@@ -906,7 +906,7 @@ describe('#2283: fetchSideClaimsForFinish', () => {
         holeNumber: 7,
         flightNumber: 2,
         winnerUserId: 'kristian',
-        winnerFirstName: 'Kristian',
+        winner: { name: 'Kristian Holm', nickname: null },
         distanceM: 1.8,
       },
       {
@@ -914,7 +914,7 @@ describe('#2283: fetchSideClaimsForFinish', () => {
         holeNumber: 9,
         flightNumber: 1,
         winnerUserId: null,
-        winnerFirstName: null,
+        winner: null,
         distanceM: null,
       },
     ]);
