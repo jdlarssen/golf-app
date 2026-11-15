@@ -14,6 +14,7 @@ const base: AeresbrettInput = {
   wins: [],
   rounds: [],
   birdies: [],
+  moments: [],
   names: [
     ['anne', 'Anne Berg'],
     ['bjorn', 'Bjørn Hansen'],
@@ -89,5 +90,61 @@ describe('buildAeresbrettView', () => {
     const empty = view({ seasonYear: null });
     expect(empty.seasonOver).toBe(false);
     expect(empty.seasonYear).toBeNull();
+  });
+});
+
+describe('buildAeresbrettView: sjeldne slag', () => {
+  const moment = (userId: string, kind: 'hole_in_one' | 'albatross' | 'eagle', playedOn: string, hole = 7) => ({
+    kind,
+    userId,
+    hole,
+    courseName: 'Bogstad',
+    playedOn,
+  });
+
+  it('shortens names, marks your own row and sends only the seven row keys', () => {
+    const { moments } = view({ moments: [moment('anne', 'eagle', '2026-06-12'), moment('meg', 'eagle', '2026-06-01')] });
+    expect(moments?.map((m) => [m.name, m.isViewer])).toEqual([
+      ['Anne B.', false],
+      ['Kari N.', true],
+    ]);
+    for (const m of moments ?? []) {
+      expect(Object.keys(m).sort()).toEqual(['courseName', 'hole', 'initials', 'isViewer', 'kind', 'name', 'playedOn']);
+    }
+    expect(JSON.stringify(moments)).not.toContain('"anne"');
+  });
+
+  it('puts hole-in-one first, then albatross, then eagle, and the newest first within each', () => {
+    const { moments } = view({
+      moments: [
+        moment('bjorn', 'eagle', '2026-09-30'),
+        moment('anne', 'hole_in_one', '2026-06-12'),
+        moment('bjorn', 'hole_in_one', '2026-08-02'),
+        moment('anne', 'albatross', '2026-07-01'),
+        moment('anne', 'eagle', '2026-05-20'),
+      ],
+    });
+    expect(moments?.map((m) => [m.kind, m.playedOn])).toEqual([
+      ['hole_in_one', '2026-08-02'],
+      ['hole_in_one', '2026-06-12'],
+      ['albatross', '2026-07-01'],
+      ['eagle', '2026-09-30'],
+      ['eagle', '2026-05-20'],
+    ]);
+  });
+
+  it('leaves out a player with neither name nor nickname', () => {
+    const { moments } = view({ moments: [moment('ukjent', 'eagle', '2026-06-12'), moment('solo', 'eagle', '2026-06-11')] });
+    expect(moments?.map((m) => m.name)).toEqual(['Ola']);
+  });
+
+  it('is null when the strokes read failed, and the tabs are unaffected', () => {
+    const v = view({ wins: [['anne', 1]], moments: null });
+    expect(v.moments).toBeNull();
+    expect(v.boards.wins.rows).toHaveLength(1);
+  });
+
+  it('is an empty list when there are none', () => {
+    expect(view({ moments: [] }).moments).toEqual([]);
   });
 });

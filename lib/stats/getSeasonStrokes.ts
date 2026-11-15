@@ -6,10 +6,10 @@ import { chunks } from '@/lib/stats/chunks';
 import { osloYearWindow } from '@/lib/format/osloCalendar';
 import { COURSE_HOLES_SELECT, type CourseHoleRow } from '@/lib/supabase/queryFragments';
 import type { GameMode, ScoringGender } from '@/lib/scoring/modes/types';
+import { playedOnKey, tallyRareMoments, type MomentGame, type RareMoment } from '@/lib/stats/rareMoments';
 import {
   countsForBirdies,
   tallySeasonBirdies,
-  type BirdieGame,
   type BirdiePlayer,
   type BirdieScore,
 } from '@/lib/stats/seasonBirdies';
@@ -19,6 +19,9 @@ type GameRow = {
   game_mode: GameMode;
   course_id: string | null;
   source_game_id: string | null;
+  scheduled_tee_off_at: string | null;
+  ended_at: string | null;
+  courses: { name: string } | null;
 };
 
 type PlayerRow = {
@@ -31,18 +34,27 @@ type PlayerRow = {
 
 type CourseHoleWithCourse = CourseHoleRow & { course_id: string };
 
+/** Det Topplista leser ut av sesongens slag: birdie-tellingen og de sjeldne slagene. */
+export type SeasonStrokes = {
+  /** `[userId, birdies]` for hver spiller med minst én birdie. */
+  birdies: Array<[string, number]>;
+  /** Hver hole-in-one, albatross og eagle (`userId` forlater aldri serveren). */
+  moments: RareMoment[];
+};
+
 /**
- * `[userId, birdies]` for every player with at least one birdie in the finished
- * games that ended in `seasonYear` (Oslo calendar year, the same window as
- * `getFinishedGameWins`, so the two tabs of the honour board agree on «sesongen»).
- * The counting rule is `tallySeasonBirdies`; this reads the rows.
+ * Sesongens slag (#2259): én lesing av de ferdige spillene som endte i `seasonYear`
+ * (Oslo-kalenderåret, samme vindu som `getFinishedGameWins`, så fanene og kortet er
+ * enige om «sesongen»), regnet to ganger: `tallySeasonBirdies` og `tallyRareMoments`.
+ * De deler lesingen fordi score-radene er det tyngste; feiler den, feiler begge, og
+ * ruta lar fanen og kortet si fra hver for seg.
  *
- * Service-role read, like `getFinishedGameWins`: a finished game is not world-readable
- * (#1542), so the caller (`/api/aeresbrett`) is the gate and sends only counts.
- * Cached five minutes under the same tag as the win counts.
+ * Service-rolle-lesing, som `getFinishedGameWins`: et ferdig spill er ikke world-readable
+ * (#1542), så kalleren (`/api/aeresbrett`) er porten og sender bare tall, korte navn,
+ * hull, bane og dato. Cachet fem minutter under samme tag som seirstellingen.
  */
-export const getSeasonBirdies = unstable_cache(
-  async (opts: { seasonYear: number }): Promise<Array<[string, number]>> => {
+export const getSeasonStrokes = unstable_cache(
+  async (opts: { seasonYear: number }): Promise<SeasonStrokes> => {
     const supabase = getAdminClient();
     const season = osloYearWindow(new Date(Date.UTC(opts.seasonYear, 6, 1)));
 
@@ -50,24 +62,27 @@ export const getSeasonBirdies = unstable_cache(
       (from, to) =>
         supabase
           .from('games')
-          .select('id, game_mode, course_id, source_game_id')
+          .select('id, game_mode, course_id, source_game_id, scheduled_tee_off_at, ended_at, courses(name)')
           .eq('status', 'finished')
           .gte('ended_at', season.startIso)
           .lt('ended_at', season.endIso)
           .order('id')
           .range(from, to)
           .returns<GameRow[]>(),
-      'season birdies games',
+      'season strokes games',
     );
-    const games: BirdieGame[] = gameRows.map((g) => ({
+    const games: MomentGame[] = gameRows.map((g) => ({
       id: g.id,
       gameMode: g.game_mode,
       courseId: g.course_id,
       derived: g.source_game_id != null,
+      courseName: g.courses?.name ?? null,
+      playedOn: playedOnKey(g),
     }));
     // Games that cannot count are not read further; saves score rows nobody uses.
-    const gameIds = games.filter(countsForBirdies).map((g) => g.id);
-    if (gameIds.length === 0) return [];
+    const counted = games.filter(countsForBirdies);
+    const gameIds = counted.map((g) => g.id);
+    if (gameIds.length === 0) return { birdies: [], moments: [] };
 
     const players: BirdiePlayer[] = [];
     const scores: BirdieScore[] = [];
@@ -82,7 +97,7 @@ export const getSeasonBirdies = unstable_cache(
             .order('user_id')
             .range(from, to)
             .returns<PlayerRow[]>(),
-        'season birdies game_players',
+        'season strokes game_players',
       );
       for (const p of playerRows) {
         players.push({
@@ -103,12 +118,14 @@ export const getSeasonBirdies = unstable_cache(
               .order('id')
               .range(from, to)
               .returns<BirdieScore[]>(),
-          'season birdies scores',
+          'season strokes scores',
         )),
       );
     }
 
-    const courseIds = Array.from(new Set(games.filter(countsForBirdies).map((g) => g.courseId).filter((c): c is string => c != null)));
+    const courseIds = Array.from(
+      new Set(counted.map((g) => g.courseId).filter((c): c is string => c != null)),
+    );
     const courseHolesByCourse = new Map<string, Map<number, CourseHoleRow>>();
     for (const ids of chunks(courseIds)) {
       const holeRows = await selectAllRows(
@@ -121,7 +138,7 @@ export const getSeasonBirdies = unstable_cache(
             .order('hole_number')
             .range(from, to)
             .returns<CourseHoleWithCourse[]>(),
-        'season birdies course_holes',
+        'season strokes course_holes',
       );
       for (const row of holeRows) {
         const byHole = courseHolesByCourse.get(row.course_id) ?? new Map<number, CourseHoleRow>();
@@ -130,8 +147,11 @@ export const getSeasonBirdies = unstable_cache(
       }
     }
 
-    return tallySeasonBirdies({ games, players, scores, courseHolesByCourse });
+    return {
+      birdies: tallySeasonBirdies({ games, players, scores, courseHolesByCourse }),
+      moments: tallyRareMoments({ games, players, scores, courseHolesByCourse }),
+    };
   },
-  ['club-statistikk-birdies'],
+  ['club-statistikk-strokes'],
   { tags: ['club-statistikk'], revalidate: 300 },
 );

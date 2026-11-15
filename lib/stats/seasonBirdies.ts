@@ -1,6 +1,6 @@
 /**
  * The birdie count behind the honour board's «Flest birdies» (#2259). Pure, so the
- * counting rule is tested without a database; `getSeasonBirdies.ts` reads the rows.
+ * counting rule is tested without a database; `getSeasonStrokes.ts` reads the rows.
  *
  * A birdie is one under par on a hole, gross and by the player's own tee gender
  * (`countRoundAchievements`, the same rule as «Mine tall» and the Kavalkade).
