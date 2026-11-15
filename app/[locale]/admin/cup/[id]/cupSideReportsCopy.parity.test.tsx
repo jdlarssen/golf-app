@@ -74,7 +74,7 @@ describe('the GIR box (under both counters) is the fixture’s', () => {
     expect(shown.firstElementChild?.textContent).toBe(CUP_REPORTED_FIXED.heading);
     expect(shown.getAttribute('aria-label')).toBe(CUP_REPORTED_FIXED.heading);
 
-    const teams = [...shown.querySelectorAll('[data-testid^="side-reports-gir-team"]')];
+    const teams = [...shown.querySelectorAll('[data-testid^="side-reports-team"]')];
     expect(teams.map((p) => ({ text: p.textContent, over: p.classList.contains('text-warning-text') }))).toEqual(
       box.teams,
     );

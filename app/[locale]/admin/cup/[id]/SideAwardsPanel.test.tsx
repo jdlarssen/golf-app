@@ -222,10 +222,10 @@ describe('SideAwardsPanel: det kampene har meldt inn', () => {
 
     const boxes = screen.getAllByTestId('side-reports-c3');
     expect(boxes).toHaveLength(1);
-    const red = within(boxes[0]).getByTestId('side-reports-gir-team1');
+    const red = within(boxes[0]).getByTestId('side-reports-team1-c3');
     expect(red).toHaveTextContent('Rød: 3 (Jonas, Marte, Sigrid) · maks 2 GIR');
     expect(red).toHaveClass('text-warning-text');
-    const blue = within(boxes[0]).getByTestId('side-reports-gir-team2');
+    const blue = within(boxes[0]).getByTestId('side-reports-team2-c3');
     expect(blue).toHaveTextContent('Blå: 1 (Tore)');
     expect(blue).not.toHaveClass('text-warning-text');
     expect(blue).not.toHaveTextContent('maks');
@@ -240,9 +240,9 @@ describe('SideAwardsPanel: det kampene har meldt inn', () => {
       ...REPORTS,
       gir: [{ ...REPORTS.gir[0], team1: { count: 2, names: ['Jonas', 'Marte'], overMax: false }, team2: { count: 0, names: [], overMax: false } }],
     });
-    const blue = screen.getByTestId('side-reports-gir-team2');
+    const blue = screen.getByTestId('side-reports-team2-c3');
     expect(blue).toHaveTextContent(/^Blå: 0$/);
-    expect(screen.getByTestId('side-reports-gir-team1')).not.toHaveClass('text-warning-text');
+    expect(screen.getByTestId('side-reports-team1-c3')).not.toHaveClass('text-warning-text');
   });
 
   it('en kamp som ikke har meldt inn står med navn i alle tre boksene; en uten navn heter «Match»', () => {
@@ -326,6 +326,23 @@ describe('SideAwardsPanel: det kampene har meldt inn', () => {
     expect(secondSelect).toHaveAttribute('aria-describedby', second.id);
     expect(first.id).not.toBe(second.id);
     expect(screen.getByTestId('side-reports-b3')).toBeInTheDocument();
+  });
+
+  it('to GIR-hull: hvert lag-linje har sin egen test-id (kåringens id), ikke samme to for alle hull', () => {
+    const girs: CupSideAwardSnapshot[] = [
+      { id: 'g-a', kind: 'gir', holeNumber: 5, points: 1.5, maxPerTeam: 2, team1Count: null, team2Count: null },
+      { id: 'g-b', kind: 'gir', holeNumber: 8, points: 1.5, maxPerTeam: 2, team1Count: null, team2Count: null },
+    ];
+    const sideReports: CupSideReports = {
+      slots: [],
+      gir: [REPORTS.gir[0], { ...REPORTS.gir[0], holeNumber: 8, team1: { count: 1, names: ['Ola'], overMax: false } }],
+    };
+    render(<SideAwardsPanel {...CUP_PROPS} initialAwards={girs} sideReports={sideReports} />);
+
+    expect(within(screen.getByTestId('side-reports-g-a')).getByTestId('side-reports-team1-g-a')).toHaveTextContent('Rød: 3');
+    expect(within(screen.getByTestId('side-reports-g-b')).getByTestId('side-reports-team1-g-b')).toHaveTextContent('Rød: 1');
+    expect(screen.getAllByTestId(/^side-reports-team[12]-/)).toHaveLength(4);
+    expect(new Set(screen.getAllByTestId(/^side-reports-team[12]-/).map((el) => el.dataset.testid)).size).toBe(4);
   });
 
   it('panelet bruker de delte oppslagene: hullet slås opp med kåringens type og hull, og svaret er det boksen viser', () => {
