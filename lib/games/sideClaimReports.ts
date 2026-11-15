@@ -119,3 +119,40 @@ export function reportsForSlot(
     missingFlights: flights.filter((f) => !reported.has(f)),
   };
 }
+
+/** What the box «Meldt inn fra flightene» under a side-contest select shows. */
+export type ReportedBoxView =
+  /** The read did not work: one sentence, and the organiser picks as before. */
+  | { kind: 'failed' }
+  /** No flight has answered: one sentence naming the hole, and the flights are not named. */
+  | { kind: 'none'; hole: number }
+  /** One line per answer, then the flights that have not answered. */
+  | { kind: 'lines'; lines: ReportedLine[]; missingFlights: number[] };
+
+/**
+ * The two rules of the box (AGENTS.md trap 4: a rule has one home): a flight
+ * that has not reported is only worth naming once some flight has (so
+ * `missingFlights` is only carried with lines), and when none has, the box is
+ * the one sentence instead of a list of every flight. «Ingen på green» is an
+ * answer: it opens the list of missing flights. The web's finish pages and the
+ * app's winner sheet only render what this returns.
+ */
+/**
+ * The one rule both report boxes follow, the finish's flights and the cup's
+ * matches (`slotBoxView` in lib/cup/cupSideReports.ts): with no answer the box
+ * is one sentence, and the senders that have not reported only show beside at
+ * least one answer.
+ */
+export function answersOrNone<L, M>(
+  lines: readonly L[],
+  missing: readonly M[],
+): { kind: 'none' } | { kind: 'lines'; lines: readonly L[]; missing: readonly M[] } {
+  return lines.length === 0 ? { kind: 'none' } : { kind: 'lines', lines, missing };
+}
+
+export function reportedBoxView(reports: SlotReports | 'failed'): ReportedBoxView {
+  if (reports === 'failed') return { kind: 'failed' };
+  const view = answersOrNone(reports.lines, reports.missingFlights);
+  if (view.kind === 'none') return { kind: 'none', hole: reports.hole };
+  return { kind: 'lines', lines: reports.lines, missingFlights: reports.missingFlights };
+}

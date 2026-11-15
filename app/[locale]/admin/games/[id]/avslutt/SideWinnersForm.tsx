@@ -8,6 +8,7 @@ import { SubmitButton } from '@/components/ui/SubmitButton';
 import type { AppLocale } from '@/i18n/routing';
 import { formatDistance } from '@/lib/i18n/format';
 import type { SideContestCategory } from '@/lib/games/sideContest';
+import { reportedBoxView } from '@/lib/games/sideClaimReports';
 import type { SideSlotView } from '@/lib/games/finishSideSlots';
 
 export type PlayerOption = {
@@ -177,7 +178,6 @@ function SlotField({
           id={boxId}
           testKey={`${category === 'longest_drive' ? 'ld' : 'ctp'}-${pos}`}
           category={category}
-          hole={hole}
           reports={view.reports!}
         />
       )}
@@ -189,18 +189,18 @@ function SlotField({
  * «Meldt inn fra flightene» (drawing V2, the same box as the app's winner
  * sheet): one line per flight's answer, the shortest distance first, then the
  * flights that have not reported. Read-only; nothing here picks the winner.
+ * What the box shows is `reportedBoxView`'s call (`lib/games/sideClaimReports.ts`,
+ * the same one the app's winner sheet reads); this only renders it.
  */
 function ReportedBox({
   id,
   testKey,
   category,
-  hole,
   reports,
 }: {
   id: string;
   testKey: string;
   category: SideContestCategory;
-  hole: number;
   reports: NonNullable<SideSlotView['reports']>;
 }) {
   const t = useTranslations('admin.game.sideWinners');
@@ -208,9 +208,10 @@ function ReportedBox({
   const flightName = (flightNumber: number) =>
     flightNumber === 0 ? t('reportedFlightSingle') : t('reportedFlight', { number: flightNumber });
 
+  const view = reportedBoxView(reports);
   const rows: { key: string; node: ReactNode; className: string }[] = [];
-  if (reports !== 'failed') {
-    for (const line of reports.lines) {
+  if (view.kind === 'lines') {
+    for (const line of view.lines) {
       rows.push({
         key: `line-${line.flightNumber}`,
         className: 'flex items-baseline gap-2.5 py-2',
@@ -230,21 +231,19 @@ function ReportedBox({
         ),
       });
     }
-    if (reports.lines.length > 0) {
-      for (const flight of reports.missingFlights) {
-        rows.push({
-          key: `missing-${flight}`,
-          className: 'py-2 text-sm leading-5 text-muted',
-          node: t('reportedMissing', { flight: flightName(flight) }),
-        });
-      }
+    for (const flight of view.missingFlights) {
+      rows.push({
+        key: `missing-${flight}`,
+        className: 'py-2 text-sm leading-5 text-muted',
+        node: t('reportedMissing', { flight: flightName(flight) }),
+      });
     }
   }
   const empty =
-    reports === 'failed'
+    view.kind === 'failed'
       ? t('reportedReadFailed')
-      : rows.length === 0
-        ? t('reportedNone', { hole })
+      : view.kind === 'none'
+        ? t('reportedNone', { hole: view.hole })
         : null;
 
   return (

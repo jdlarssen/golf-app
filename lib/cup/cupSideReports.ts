@@ -36,7 +36,7 @@ import {
   type GirSumGame,
   type SideContestCategory,
 } from '../games/sideContest';
-import { reportsForSlot, toSideClaimReports, type SideClaimReportRow } from '../games/sideClaimReports';
+import { answersOrNone, reportsForSlot, toSideClaimReports, type SideClaimReportRow } from '../games/sideClaimReports';
 import { playerShortName } from '../names/playerName';
 
 /** One of the cup's games, as `getCupSnapshot` reads them, with the label a report is sent under. */
@@ -255,7 +255,8 @@ export type CupSlotBoxView =
  */
 export function slotBoxView(reports: CupSlotReports | 'failed'): CupSlotBoxView {
   if (reports === 'failed') return { kind: 'failed' };
-  if (reports.lines.length === 0) return { kind: 'none' };
+  // The rule is the finish's too (`answersOrNone`).
+  if (answersOrNone(reports.lines, reports.missing).kind === 'none') return { kind: 'none' };
   return { kind: 'lines', lines: reports.lines, missing: reports.missing };
 }
 
