@@ -131,6 +131,26 @@ describe('buildRevansjeInitialValues', () => {
     expect(result.side_disabled_categories).toEqual(['clean_front_9']);
   });
 
+  it('hullene til sideturneringen følger med revansjen (#2283)', () => {
+    const result = buildRevansjeInitialValues(
+      baseGame({ side_ld_holes: [9], side_ctp_holes: [null, 7] }),
+      [player()],
+    );
+
+    expect(result.side_ld_holes).toEqual([9]);
+    expect(result.side_ctp_holes).toEqual([null, 7]);
+  });
+
+  it('uten hull på kilden gir revansjen ingen hull (#2283)', () => {
+    const result = buildRevansjeInitialValues(
+      baseGame({ side_ld_holes: null, side_ctp_holes: null }),
+      [player()],
+    );
+
+    expect(result.side_ld_holes).toBeNull();
+    expect(result.side_ctp_holes).toBeNull();
+  });
+
   it('beholder course_id, tee_box_id og game_mode', () => {
     const result = buildRevansjeInitialValues(baseGame(), [player()]);
 

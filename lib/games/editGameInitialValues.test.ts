@@ -44,6 +44,14 @@ describe('EDIT_FORM_COLUMNS', () => {
     }
   });
 
+  it('writes and selects the hole per side-contest slot (#2283)', () => {
+    // Both columns are in the update (so a save never drops them) and in the
+    // select (so the form starts from what is stored).
+    expect(written).toEqual(expect.arrayContaining(['side_ld_holes', 'side_ctp_holes']));
+    expect(selected.has('side_ld_holes')).toBe(true);
+    expect(selected.has('side_ctp_holes')).toBe(true);
+  });
+
   it('selects every column the edit save writes back from the form', () => {
     // status is set by the action itself, never from the form.
     // group_id too (#2433): from the DB row or the wizard's checked field, never GameForm state.
@@ -97,6 +105,35 @@ describe('buildEditInitialValues', () => {
   ] as const)('pre-fills %s from mode_config (%#)', (field, config, expected) => {
     const values = buildEditInitialValues(row(config as GameModeConfig), []);
     expect(values[field]).toBe(expected);
+  });
+});
+
+/**
+ * Type A (#2283). «Rediger spill» starts the setup form from the stored hole
+ * per side-contest slot; without it a save would write the empty choice back
+ * over the holes the organiser picked.
+ */
+describe('buildEditInitialValues — hull for sideturneringen', () => {
+  const stableford: GameModeConfig = { kind: 'stableford', team_size: 1, points_table: 'standard' };
+
+  it('carries the hole per slot, a null element included', () => {
+    const values = buildEditInitialValues(
+      row(stableford, {
+        side_tournament_enabled: true,
+        side_ld_count: 1,
+        side_ctp_count: 2,
+        side_ld_holes: [9],
+        side_ctp_holes: [null, 7],
+      }),
+      [],
+    );
+    expect(values.side_ld_holes).toEqual([9]);
+    expect(values.side_ctp_holes).toEqual([null, 7]);
+  });
+
+  it('a game without holes (null, or a row that does not select them) has none', () => {
+    expect(buildEditInitialValues(row(stableford, { side_ld_holes: null }), []).side_ld_holes).toBeNull();
+    expect(buildEditInitialValues(row(stableford), []).side_ctp_holes).toBeUndefined();
   });
 });
 

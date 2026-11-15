@@ -171,6 +171,8 @@ async function createGameInternal(
     enabled: sideEnabled,
     ldCount: sideLdCount,
     ctpCount: sideCtpCount,
+    ldHoles: sideLdHoles,
+    ctpHoles: sideCtpHoles,
     disabledCategories: sideDisabledCategories,
   } = sidePayload;
 
@@ -238,6 +240,11 @@ async function createGameInternal(
       side_tournament_enabled: sideEnabled,
       side_ld_count: sideLdCount,
       side_ctp_count: sideCtpCount,
+      // #2283: the hole per slot; null when the toggle is off or no slot has
+      // one. The generated type says number[], the column also holds a null
+      // element for a slot without a hole (`games_side_holes_valid`).
+      side_ld_holes: sideLdHoles as number[] | null,
+      side_ctp_holes: sideCtpHoles as number[] | null,
       // v1.2.0: parser garanterer tomt array hvis `enabled === false`, så denne
       // raden trygt persisteres uavhengig av master-toggle-staten.
       side_disabled_categories: sideDisabledCategories,

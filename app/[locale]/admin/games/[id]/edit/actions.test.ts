@@ -538,6 +538,77 @@ describe('updateScheduledAction — start_type (#2258)', () => {
   });
 });
 
+describe('updateScheduledAction — hull for sideturneringen (#2283)', () => {
+  // The edit form posts side_ld_hole_N/side_ctp_hole_N; the update writes them
+  // as the columns hold them (one element per slot, null = no hole) and the
+  // shared parser refuses two slots of one category on the same hole.
+  function queueUpdate() {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      { data: { status: 'scheduled', game_mode: 'best_ball' }, error: null }, // games.select
+      { data: [], error: null }, // game_players.select (prior roster)
+      { data: { id: 'game-1' }, error: null }, // games.update
+      { data: Array.from({ length: 8 }, (_, i) => ({ user_id: `u${i}` })), error: null }, // game_players.insert
+    ]);
+    signIn('admin-1');
+  }
+  const gameUpdate = () =>
+    supabaseMock.__fromCalls.find((c) => c.table === 'games' && c.method === 'update');
+
+  it('writes the hole per slot', async () => {
+    queueUpdate();
+    const form = fullBestBallFormData({
+      side_tournament_enabled: 'true',
+      side_ld_count: '1',
+      side_ld_hole_1: '9',
+      side_ctp_count: '2',
+      side_ctp_hole_1: '',
+      side_ctp_hole_2: '7',
+    });
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(updateScheduledAction('game-1', form)).rejects.toBeInstanceOf(RedirectError);
+
+    const row = gameUpdate()!.args[0] as Record<string, unknown>;
+    expect(row.side_ld_holes).toEqual([9]);
+    expect(row.side_ctp_holes).toEqual([null, 7]);
+  });
+
+  it('turning the side tournament off clears both columns', async () => {
+    queueUpdate();
+    const form = fullBestBallFormData({
+      side_tournament_enabled: 'false',
+      side_ld_count: '1',
+      side_ld_hole_1: '9',
+    });
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(updateScheduledAction('game-1', form)).rejects.toBeInstanceOf(RedirectError);
+
+    const row = gameUpdate()!.args[0] as Record<string, unknown>;
+    expect(row.side_ld_holes).toBeNull();
+    expect(row.side_ctp_holes).toBeNull();
+  });
+
+  it.each([
+    ['bad_side_ld_holes', { side_ld_count: '2', side_ld_hole_1: '5', side_ld_hole_2: '5' }],
+    ['bad_side_ctp_holes', { side_ctp_count: '2', side_ctp_hole_1: '12', side_ctp_hole_2: '12' }],
+  ] as const)('%s: a duplicate hole bounces to the edit form before any write', async (code, fields) => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      { data: { status: 'scheduled', game_mode: 'best_ball' }, error: null }, // games.select
+    ]);
+    signIn('admin-1');
+    const form = fullBestBallFormData({ side_tournament_enabled: 'true', ...fields });
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(updateScheduledAction('game-1', form)).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe(`/admin/games/game-1/edit?error=${code}`);
+    expect(gameUpdate()).toBeUndefined();
+  });
+});
+
 describe('updateScheduledAction — mode_config-nøkler skjemaet ikke eier (#1677)', () => {
   it('beholder team_strokes_override på en planlagt cup-greensome', async () => {
     // Cup-generatoren har skrevet arrangørens manuelle lag-slag inn i

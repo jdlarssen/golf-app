@@ -1048,7 +1048,14 @@
         "sideTournamentDesc": "Poeng for lengste drive og nærmest pinnen.",
         "sideLdLegend": "Lengste drive: antall hull",
         "sideCtpLegend": "Nærmest pinnen: antall hull",
-        "sideLockedNote": "Kan ikke endres etter spill-start."
+        "sideLockedNote": "Kan ikke endres etter spill-start.",
+        "sideLdHoleLabel": "Hull for lengste drive",
+        "sideLdHoleLabelNumbered": "Hull for lengste drive {position}",
+        "sideCtpHoleLabel": "Hull for nærmest pinnen",
+        "sideCtpHoleLabelNumbered": "Hull for nærmest pinnen {position}",
+        "sideHoleLater": "Velg hull senere",
+        "sideHoleOption": "Hull {hole}",
+        "sideHoleNote": "Velger du hull, melder flighten inn på hullet. Uten hull kårer du vinneren når runden er ferdig."
       },
       "registration": {
         "heading": "Påmelding",

@@ -160,6 +160,8 @@ async function loadRevansjeContext(
     side_tournament_enabled: game.side_tournament_enabled,
     side_ld_count: game.side_ld_count,
     side_ctp_count: game.side_ctp_count,
+    side_ld_holes: game.side_ld_holes ?? null,
+    side_ctp_holes: game.side_ctp_holes ?? null,
     side_disabled_categories: game.side_disabled_categories ?? [],
     game_mode: game.game_mode,
     mode_config: game.mode_config,

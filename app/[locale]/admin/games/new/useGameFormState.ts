@@ -14,6 +14,7 @@ import { settlementUnitKeyFor } from '@/lib/scoring/settlement';
 import { hcpAllowanceInPlay } from '@/lib/games/hcpAllowance';
 import { guestOnlyRoster } from '@/lib/games/guestOnlyRoster';
 import { isValidTeamHandicapSumPct } from '@/lib/games/teamHandicapUnit';
+import { normalizeSlotHoles, withSlotHole } from '@/lib/games/sideSlotHoles';
 import { clampMinTeeShots, type MinTeeShots } from '@/lib/games/teeShots';
 import { ambroseDefaultPct, defaultFloridaHandicapPct } from '@/lib/scoring';
 import type { TeamSize } from './TeamSizeSelector';
@@ -786,6 +787,26 @@ export function useGameFormState({
   );
   const [sideCtpCount, setSideCtpCount] = useState<0 | 1 | 2>(
     initialCtpCount as 0 | 1 | 2,
+  );
+  // #2283: hullet per plass, samme controlled-mønster som antallene. Plasser
+  // utover antallet beholder hullet i state (heves antallet igjen, er det der),
+  // men serialiseringen sender bare plasser ≤ antallet. Samme hull på to plasser
+  // i én kategori nekter den delte parseren, så settene flytter hullet.
+  const [sideLdHoles, setSideLdHoles] = useState<(number | null)[]>(() =>
+    normalizeSlotHoles(initialValues?.side_ld_holes),
+  );
+  const [sideCtpHoles, setSideCtpHoles] = useState<(number | null)[]>(() =>
+    normalizeSlotHoles(initialValues?.side_ctp_holes),
+  );
+  const setSideLdHole = useCallback(
+    (position: number, hole: number | null) =>
+      setSideLdHoles((prev) => withSlotHole(prev, position, hole)),
+    [],
+  );
+  const setSideCtpHole = useCallback(
+    (position: number, hole: number | null) =>
+      setSideCtpHoles((prev) => withSlotHole(prev, position, hole)),
+    [],
   );
 
   // Modus + lagstørrelse — wired av epic #41 fase 4. Default-modus er
@@ -2250,6 +2271,10 @@ export function useGameFormState({
     setSideLdCount,
     sideCtpCount,
     setSideCtpCount,
+    sideLdHoles,
+    setSideLdHole,
+    sideCtpHoles,
+    setSideCtpHole,
     sideTournamentSupported,
     gameMode,
     teamSize,

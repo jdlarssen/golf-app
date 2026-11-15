@@ -1665,6 +1665,78 @@ describe('GameForm — #1011 sideturnering serialiseres inline', () => {
   });
 });
 
+describe('GameForm — #2283 hull for sideturneringen serialiseres inline', () => {
+  // GameForm has no FormDataInputs mirror, so the selects carry the `name`s.
+  function renderForm(initialValues: Parameters<typeof GameForm>[0]['initialValues']) {
+    return render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS.slice(0, 2)}
+        mode={{ kind: 'create', createDraftAction: NO_OP, createAndPublishAction: NO_OP }}
+        initialValues={{
+          game_mode: 'stableford',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          side_tournament_enabled: true,
+          ...initialValues,
+        }}
+      />,
+    );
+  }
+
+  it('FormData har side_*_hole_N for hver plass, tomt for en plass uten hull', () => {
+    const { container } = renderForm({
+      side_ld_count: 2,
+      side_ld_holes: [9, 4],
+      side_ctp_count: 2,
+      side_ctp_holes: [null, 7],
+    });
+
+    const fd = new FormData(container.querySelector('form')!);
+    expect(fd.getAll('side_ld_hole_1')).toEqual(['9']);
+    expect(fd.getAll('side_ld_hole_2')).toEqual(['4']);
+    expect(fd.getAll('side_ctp_hole_1')).toEqual(['']);
+    expect(fd.getAll('side_ctp_hole_2')).toEqual(['7']);
+  });
+
+  it('en plass antallet ikke har, sender ingenting', () => {
+    const { container } = renderForm({
+      side_ld_count: 1,
+      side_ld_holes: [9, 4],
+      side_ctp_count: 0,
+      side_ctp_holes: [7],
+    });
+
+    const fd = new FormData(container.querySelector('form')!);
+    expect(fd.getAll('side_ld_hole_1')).toEqual(['9']);
+    expect(fd.has('side_ld_hole_2')).toBe(false);
+    expect(fd.has('side_ctp_hole_1')).toBe(false);
+  });
+
+  it('et valgt hull kommer med, og samme hull på den andre plassen flytter det', () => {
+    const { container } = renderForm({ side_ld_count: 2, side_ld_holes: [9, null], side_ctp_count: 0 });
+
+    fireEvent.change(screen.getByLabelText('Hull for lengste drive 2'), { target: { value: '9' } });
+
+    const fd = new FormData(container.querySelector('form')!);
+    expect(fd.getAll('side_ld_hole_1')).toEqual(['']);
+    expect(fd.getAll('side_ld_hole_2')).toEqual(['9']);
+  });
+
+  it('en velger er låst når sideturneringen er låst', () => {
+    const { container } = renderForm({
+      side_ld_count: 1,
+      side_ld_holes: [9],
+      side_ctp_count: 0,
+      lock_side_tournament: true,
+    });
+
+    expect(screen.getByLabelText('Hull for lengste drive')).toBeDisabled();
+    // Like låst som antall-pillene: et deaktivert felt sendes ikke.
+    expect(new FormData(container.querySelector('form')!).has('side_ld_hole_1')).toBe(false);
+  });
+});
+
 describe('GameForm — startkontingenten sendes med (#2282)', () => {
   // Beløpet og Vipps-feltet har ikke `name` (veiviseren speiler dem i
   // FormDataInputs). GameForm hadde ingen speiling, så «Lagre endringer» på et

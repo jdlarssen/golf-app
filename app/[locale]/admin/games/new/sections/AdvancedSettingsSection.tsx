@@ -29,6 +29,12 @@ import { FormSection, LIST_CARD_CLASS } from '@/components/ui/FormSection';
 import { ChoiceCardGrid, RadioChoiceCard } from '@/components/ui/ChoiceCard';
 import { PillRadio } from '@/components/ui/PillRadio';
 import { SwitchRow } from '@/components/ui/Switch';
+import {
+  SIDE_CONTEST_HOLE_MAX,
+  SIDE_CONTEST_HOLE_MIN,
+  holeForSlot,
+  parseSideContestHole,
+} from '@/lib/games/sideContest';
 
 type Props = {
   state: GameFormState;
@@ -62,6 +68,10 @@ type Props = {
 };
 
 const WINNER_COUNTS = [0, 1, 2] as const;
+const HOLE_NUMBERS = Array.from(
+  { length: SIDE_CONTEST_HOLE_MAX - SIDE_CONTEST_HOLE_MIN + 1 },
+  (_, i) => SIDE_CONTEST_HOLE_MIN + i,
+);
 
 export function AdvancedSettingsSection({
   state,
@@ -87,6 +97,10 @@ export function AdvancedSettingsSection({
     setSideLdCount,
     sideCtpCount,
     setSideCtpCount,
+    sideLdHoles,
+    setSideLdHole,
+    sideCtpHoles,
+    setSideCtpHole,
     sideTournamentSupported,
     lockSideTournament,
   } = state;
@@ -185,6 +199,14 @@ export function AdvancedSettingsSection({
                     onChange={setSideLdCount}
                     disabled={lockSideTournament}
                   />
+                  <SlotHoleSelects
+                    category="ld"
+                    name={ownName}
+                    count={sideLdCount}
+                    holes={sideLdHoles}
+                    onChange={setSideLdHole}
+                    disabled={lockSideTournament}
+                  />
                   <WinnerCountRow
                     labelId={ctpLabelId}
                     label={tBasics('sideCtpLegend')}
@@ -193,6 +215,19 @@ export function AdvancedSettingsSection({
                     onChange={setSideCtpCount}
                     disabled={lockSideTournament}
                   />
+                  <SlotHoleSelects
+                    category="ctp"
+                    name={ownName}
+                    count={sideCtpCount}
+                    holes={sideCtpHoles}
+                    onChange={setSideCtpHole}
+                    disabled={lockSideTournament}
+                  />
+                  {sideLdCount + sideCtpCount > 0 && (
+                    <p className="font-sans text-xs leading-4 text-muted">
+                      {tBasics('sideHoleNote')}
+                    </p>
+                  )}
                   {lockSideTournament && (
                     <p className="font-sans text-xs leading-[1.4] text-muted">
                       <strong>{tBasics('sideLockedNote')}</strong>
@@ -249,5 +284,80 @@ function WinnerCountRow({
         ))}
       </div>
     </div>
+  );
+}
+
+/**
+ * #2283 (drawing O2): one «Hull for …» select per slot up to the count, under
+ * that category's count row. Nothing when the count is 0. The first option,
+ * «Velg hull senere», is the empty value: a slot without a hole, which the
+ * organiser settles at the finish. The parser refuses two slots of one
+ * category on the same hole, so the state moves a hole instead of keeping both
+ * (`withSlotHole`); the select of the slot that lost it goes back to the empty
+ * option.
+ *
+ * Own select classes, not `CardSelect`: the drawing's field is 44 px with
+ * radius 12 and 16 px text on the card surface, and none of CardSelect's sizes
+ * (50, 44 with radius 10 and 14 px text, 46) is that.
+ */
+function SlotHoleSelects({
+  category,
+  name,
+  count,
+  holes,
+  onChange,
+  disabled,
+}: {
+  category: 'ld' | 'ctp';
+  /** `ownName`: undefined when the parent mirrors the field (the wizard). */
+  name: (field: string) => string | undefined;
+  count: number;
+  holes: readonly (number | null)[];
+  onChange: (position: number, hole: number | null) => void;
+  disabled: boolean;
+}) {
+  const t = useTranslations('wizard.sections.basics');
+  if (count < 1) return null;
+  const field = `side_${category}_hole_`;
+  return (
+    <>
+      {Array.from({ length: count }, (_, i) => i + 1).map((position) => {
+        const label =
+          category === 'ld'
+            ? count === 1
+              ? t('sideLdHoleLabel')
+              : t('sideLdHoleLabelNumbered', { position })
+            : count === 1
+              ? t('sideCtpHoleLabel')
+              : t('sideCtpHoleLabelNumbered', { position });
+        const id = `side-${category}-hole-${position}`;
+        return (
+          <div key={position}>
+            {/* The drawing's label is a block at the body's 16 px / 1.5 line
+                with the 13 px span inside it, so the label row is 24 px tall. */}
+            <label htmlFor={id} className="block text-base leading-6">
+              <span className="font-sans text-[13px] leading-[normal] font-semibold text-text">
+                {label}
+              </span>
+            </label>
+            <select
+              id={id}
+              name={name(`${field}${position}`)}
+              value={String(holeForSlot(holes, count, position) ?? '')}
+              onChange={(e) => onChange(position, parseSideContestHole(e.target.value))}
+              disabled={disabled}
+              className="mt-1 block min-h-[44px] w-full rounded-xl border border-border bg-surface px-3 py-2 font-sans text-base leading-6 text-text disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">{t('sideHoleLater')}</option>
+              {HOLE_NUMBERS.map((hole) => (
+                <option key={hole} value={hole}>
+                  {t('sideHoleOption', { hole })}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+      })}
+    </>
   );
 }

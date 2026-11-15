@@ -118,6 +118,12 @@ export type InitialValues = {
   /** Antall CTP-vinnere (0/1/2). Krever side_tournament_enabled=true. */
   side_ctp_count?: number;
   /**
+   * #2283: hullet for hver LD-/CTP-plass (`games.side_ld_holes`/`side_ctp_holes`):
+   * ett element per plass, null = «Velg hull senere». Null/utelatt = ingen hull valgt.
+   */
+  side_ld_holes?: readonly (number | null)[] | null;
+  side_ctp_holes?: readonly (number | null)[] | null;
+  /**
    * Kategorier som er slått av for dette spillet. Tomt array = Full pakke
    * (alle på). Kategori-config-UI-en er fjernet (#1139): nye spill får alltid
    * Full pakke. Feltet lastes fortsatt for eldre spill (lese-siden leser

@@ -336,6 +336,93 @@ describe('createGameDraft — start_type (#2258)', () => {
   });
 });
 
+describe('createGameDraft — hull for sideturneringen (#2283)', () => {
+  const SIDE_ON = { name: 'Sidekonk', side_tournament_enabled: 'true' };
+
+  function gamesInsert() {
+    return supabaseMock.__fromCalls.find((c) => c.table === 'games' && c.method === 'insert');
+  }
+
+  function queueDraft() {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false }, error: null }, // gate: not admin
+      { data: { id: 'hole-game-1' }, error: null }, // games.insert
+      { data: null, error: null }, // game_players.insert
+    ]);
+    signIn('reg-1', 'random@example.com');
+  }
+
+  it('writes the hole per slot; a slot without a hole is a null element', async () => {
+    queueDraft();
+    const { createGameDraft } = await import('./actions');
+    await expect(
+      createGameDraft(
+        fd({
+          ...SIDE_ON,
+          side_ld_count: '1',
+          side_ld_hole_1: '9',
+          side_ctp_count: '2',
+          side_ctp_hole_1: '',
+          side_ctp_hole_2: '7',
+        }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    const row = gamesInsert()!.args[0] as Record<string, unknown>;
+    expect(row.side_ld_count).toBe(1);
+    expect(row.side_ld_holes).toEqual([9]);
+    expect(row.side_ctp_count).toBe(2);
+    expect(row.side_ctp_holes).toEqual([null, 7]);
+  });
+
+  it('writes null columns when the toggle is on but no slot has a hole', async () => {
+    queueDraft();
+    const { createGameDraft } = await import('./actions');
+    await expect(
+      createGameDraft(fd({ ...SIDE_ON, side_ld_count: '1', side_ld_hole_1: '', side_ctp_count: '0' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    const row = gamesInsert()!.args[0] as Record<string, unknown>;
+    expect(row.side_ld_holes).toBeNull();
+    expect(row.side_ctp_holes).toBeNull();
+  });
+
+  it('ignores a hole field while the toggle is off', async () => {
+    queueDraft();
+    const { createGameDraft } = await import('./actions');
+    await expect(
+      createGameDraft(
+        fd({
+          name: 'Uten sidekonk',
+          side_tournament_enabled: 'false',
+          side_ld_count: '1',
+          side_ld_hole_1: '9',
+        }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    const row = gamesInsert()!.args[0] as Record<string, unknown>;
+    expect(row.side_ld_holes).toBeNull();
+    expect(row.side_ctp_holes).toBeNull();
+  });
+
+  it.each([
+    ['bad_side_ld_holes', { side_ld_count: '2', side_ld_hole_1: '9', side_ld_hole_2: '9' }],
+    ['bad_side_ctp_holes', { side_ctp_count: '2', side_ctp_hole_1: '4', side_ctp_hole_2: '4' }],
+    ['bad_side_ld_holes', { side_ld_count: '1', side_ld_hole_1: '19' }],
+  ] as const)('%s: two slots on one hole (or a hole outside 1–18) is refused before any write', async (code, fields) => {
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: false }, error: null }]);
+    signIn('reg-1', 'random@example.com');
+
+    const { createGameDraft } = await import('./actions');
+    const res = await createGameDraft(fd({ ...SIDE_ON, ...fields }));
+
+    expect(res).toEqual({ error: code });
+    expect(gamesInsert()).toBeUndefined();
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+});
+
 describe('tee-off «Nå» (#2463)', () => {
   function gamesInsertTeeOff() {
     const insert = supabaseMock.__fromCalls.find(
