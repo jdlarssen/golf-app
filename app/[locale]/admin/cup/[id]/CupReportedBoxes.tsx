@@ -149,7 +149,7 @@ export function GirReportedBox({
           const who = sum.names.length > 0 ? ` (${sum.names.join(', ')})` : '';
           const max = over ? ` · ${t('reportedGirMax', { max: view.maxPerTeam })}` : '';
           return (
-            <p key={key} data-testid={`side-reports-gir-${key}`} className={`${lineClass} ${over ? 'text-warning-text' : 'text-muted'}`}>
+            <p key={key} data-testid={`side-reports-${key}-${testKey}`} className={`${lineClass} ${over ? 'text-warning-text' : 'text-muted'}`}>
               <span className="font-semibold text-text">{name}:</span> {sum.count}
               {who}
               {max}

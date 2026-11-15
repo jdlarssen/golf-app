@@ -71,7 +71,7 @@ describe('GirReportedBox renders the shared view', () => {
   it('shows the one sentence when the view is «none», however many matches the report says reported', () => {
     vi.mocked(girBoxView).mockReturnValueOnce({ kind: 'none' });
     const { container } = render(<GirReportedBox {...props} reports={GIR_REPORTED.reports} />);
-    expect(container.querySelector('[data-testid^="side-reports-gir-team"]')).toBeNull();
+    expect(container.querySelector('[data-testid^="side-reports-team"]')).toBeNull();
     expect(container.querySelector('p')?.textContent).toBe(CUP_REPORTED_FIXED.none);
   });
 
