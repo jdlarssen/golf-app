@@ -262,9 +262,9 @@ describe('EndGame', () => {
   it('#2283: plassen viser hullet, og arket det flightene har meldt inn, uten forhåndsvalg', async () => {
     const { fetchSideClaimsForFinish } = require('../data/endGame') as { fetchSideClaimsForFinish: jest.Mock };
     fetchSideClaimsForFinish.mockResolvedValue([
-      { category: 'closest_to_pin', holeNumber: 7, flightNumber: 1, winnerUserId: MATE, winnerFirstName: 'Marte', distanceM: 2.4 },
-      { category: 'closest_to_pin', holeNumber: 7, flightNumber: 2, winnerUserId: 'k', winnerFirstName: 'Kristian', distanceM: 1.8 },
-      { category: 'longest_drive', holeNumber: 9, flightNumber: 1, winnerUserId: mockMe, winnerFirstName: 'Meg', distanceM: null },
+      { category: 'closest_to_pin', holeNumber: 7, flightNumber: 1, winnerUserId: MATE, winner: { name: 'Marte Lie', nickname: null }, distanceM: 2.4 },
+      { category: 'closest_to_pin', holeNumber: 7, flightNumber: 2, winnerUserId: 'k', winner: { name: 'Kristian Holm', nickname: null }, distanceM: 1.8 },
+      { category: 'longest_drive', holeNumber: 9, flightNumber: 1, winnerUserId: mockMe, winner: { name: 'Meg Selv', nickname: null }, distanceM: null },
     ]);
     const eight = [mockMe, MATE, 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'].map((userId, i) =>
       player({ userId, flightNumber: i < 4 ? 1 : 2, submittedAt: '2026-09-01T09:00:00.000Z' }),
@@ -300,6 +300,42 @@ describe('EndGame', () => {
     await fireEvent.press(screen.getByTestId('end-game-slot-ctp-2'));
     expect(screen.queryByTestId('end-game-reports-ctp-2')).toBeNull();
     expect(screen.getByText('Kår vinneren')).toBeTruthy();
+    fetchSideClaimsForFinish.mockResolvedValue([]);
+  });
+
+  it('#2283: et tregt svar fra da skjermen åpnet legger seg ikke over et nyere, og en rask feil sletter det ikke', async () => {
+    const { fetchSideClaimsForFinish } = require('../data/endGame') as { fetchSideClaimsForFinish: jest.Mock };
+    const marte = { category: 'closest_to_pin', holeNumber: 7, flightNumber: 1, winnerUserId: MATE, winner: { name: 'Marte Lie', nickname: null }, distanceM: 2.4 };
+    const kristian = { category: 'closest_to_pin', holeNumber: 7, flightNumber: 2, winnerUserId: 'k', winner: { name: 'Kristian Holm', nickname: null }, distanceM: 1.8 };
+    let answerOpen: (rows: unknown[]) => void = () => {};
+    let answerReopen: (rows: unknown[]) => void = () => {};
+    fetchSideClaimsForFinish
+      .mockReturnValueOnce(new Promise((resolve) => (answerOpen = resolve)))
+      .mockResolvedValueOnce([marte, kristian])
+      .mockReturnValueOnce(new Promise((resolve) => (answerReopen = resolve)))
+      .mockRejectedValueOnce(new Error('nett'));
+    const eight = [mockMe, MATE, 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'].map((userId, i) =>
+      player({ userId, flightNumber: i < 4 ? 1 : 2, submittedAt: '2026-09-01T09:00:00.000Z' }),
+    );
+    setBundle(eight, { sideTournamentEnabled: true, sideLdCount: 0, sideCtpCount: 1, sideCtpHoles: [7] });
+
+    // Skjermen åpner (henting 1 henger), arket åpner (henting 2 svarer straks).
+    await renderScreen();
+    await fireEvent.press(screen.getByTestId('end-game-slot-ctp-1'));
+    expect(screen.getByTestId('end-game-report-ctp-1-2')).toHaveTextContent('Kristian', { exact: false });
+    // Det gamle svaret kommer sist, med bare flight 1. Det nyere står.
+    await act(async () => answerOpen([marte]));
+    expect(screen.getByTestId('end-game-report-ctp-1-2')).toHaveTextContent('Kristian', { exact: false });
+    await fireEvent.press(screen.getByTestId('end-game-sheet-close'));
+    await screen.unmount();
+
+    // Ny skjerm: henting 1 henger, henting 2 feiler fort. Når henting 1 svarer,
+    // vises den, ikke feilen.
+    await renderScreen();
+    await fireEvent.press(screen.getByTestId('end-game-slot-ctp-1'));
+    expect(screen.getByTestId('end-game-reports-ctp-1')).toHaveTextContent('Fikk ikke hentet', { exact: false });
+    await act(async () => answerReopen([marte]));
+    expect(screen.getByTestId('end-game-report-ctp-1-1')).toHaveTextContent('Marte', { exact: false });
     fetchSideClaimsForFinish.mockResolvedValue([]);
   });
 

@@ -51,7 +51,7 @@ import {
   NoRowsAffectedError,
 } from '../../../../lib/supabase/affectedRows';
 import { isSideWinnerNotActive } from '../../../../lib/games/sideWinnerGuard';
-import { playerFirstName } from '../../../../lib/names/playerName';
+import type { PlayerNameParts } from '../../../../lib/names/playerName';
 import { finishGate, stampsFromRow } from '../../../../lib/games/finishGate';
 import { currentDeviceUserId, supabase } from '../supabase';
 import { withdrawPlayer } from './rosterActions';
@@ -607,8 +607,11 @@ export interface FinishClaim {
   flightNumber: number;
   /** `null` = «Ingen på green/fairway». */
   winnerUserId: string | null;
-  /** Fornavnet, etter den delte navneregelen. `null` når ingen vant. */
-  winnerFirstName: string | null;
+  /**
+   * Navnet rått, `null` når ingen vant. Kåringsarket velger fornavn eller
+   * fullt navn ut fra hvem andre som spiller (`playerShortName`).
+   */
+  winner: PlayerNameParts | null;
   distanceM: number | null;
 }
 
@@ -624,8 +627,8 @@ interface FinishClaimRow {
 
 /**
  * Alle flightenes svar i spillet (`side_claims_for_finish`). Rpc-en krever at
- * du er arrangør eller admin; appen har ingen service role. Navnene kommer rå,
- * og hvilket som vises, avgjør den delte `playerFirstName`.
+ * du er arrangør eller admin; appen har ingen service role. Navnene går rå
+ * videre, og hvilket som vises, avgjør `reportsForSlot`.
  *
  * @throws {Error} når rpc-en feiler. Tom liste betyr at ingen har meldt inn.
  */
@@ -643,8 +646,7 @@ export async function fetchSideClaimsForFinish(gameId: string): Promise<FinishCl
         holeNumber: row.hole_number,
         flightNumber: row.flight_number,
         winnerUserId: row.winner_user_id,
-        winnerFirstName:
-          row.winner_user_id == null ? null : playerFirstName({ name: row.winner_name, nickname: row.winner_nickname }),
+        winner: row.winner_user_id == null ? null : { name: row.winner_name, nickname: row.winner_nickname },
         distanceM: distance != null && Number.isFinite(distance) ? distance : null,
       },
     ];

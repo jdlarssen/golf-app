@@ -534,10 +534,14 @@ describe('#2283: det flightene har meldt inn', () => {
     holeNumber: 7,
     flightNumber: 1,
     winnerUserId: 'marte',
-    winnerFirstName: 'Marte',
+    winner: { name: 'Marte Lie', nickname: null },
     distanceM: null,
     ...over,
   });
+  const roster = [
+    { userId: 'marte', name: 'Marte Lie' },
+    { userId: 'kristian', name: 'Kristian Holm' },
+  ];
   const ctp = { key: 'ctp-1', category: 'closest_to_pin', position: 1, hole: 7 } as const;
 
   it('flightene er nøklene rpc-ene bruker: [0] med én flight, ellers de aktives flightnumre', () => {
@@ -553,13 +557,13 @@ describe('#2283: det flightene har meldt inn', () => {
 
   it('kortest avstand først, svar uten avstand sist, og flighter som mangler', () => {
     const claims = [
-      claim({ flightNumber: 1, winnerFirstName: 'Marte', distanceM: 2.4 }),
-      claim({ flightNumber: 2, winnerUserId: 'kristian', winnerFirstName: 'Kristian', distanceM: 1.8 }),
-      claim({ flightNumber: 3, winnerUserId: null, winnerFirstName: null }),
+      claim({ flightNumber: 1, distanceM: 2.4 }),
+      claim({ flightNumber: 2, winnerUserId: 'kristian', winner: { name: 'Kristian Holm', nickname: null }, distanceM: 1.8 }),
+      claim({ flightNumber: 3, winnerUserId: null, winner: null }),
       claim({ category: 'longest_drive', flightNumber: 4 }),
       claim({ holeNumber: 8, flightNumber: 4 }),
     ];
-    expect(reportsForSlot(ctp, claims, [1, 2, 3, 4])).toEqual({
+    expect(reportsForSlot(ctp, claims, [1, 2, 3, 4], roster)).toEqual({
       hole: 7,
       lines: [
         { flightNumber: 2, name: 'Kristian', distanceM: 1.8 },
@@ -571,7 +575,19 @@ describe('#2283: det flightene har meldt inn', () => {
   });
 
   it('en plass uten hull har ingen innmeldinger, og ingen innmelding gir tom liste', () => {
-    expect(reportsForSlot({ ...ctp, hole: null }, [claim({})], [1])).toBeNull();
-    expect(reportsForSlot(ctp, [], [1, 2])).toEqual({ hole: 7, lines: [], missingFlights: [1, 2] });
+    expect(reportsForSlot({ ...ctp, hole: null }, [claim({})], [1], roster)).toBeNull();
+    expect(reportsForSlot(ctp, [], [1, 2], roster)).toEqual({ hole: 7, lines: [], missingFlights: [1, 2] });
+  });
+
+  it('to med samme fornavn i spillet får fullt navn, så arrangøren ser hvem som vant (#2286)', () => {
+    const twoMartes = [...roster, { userId: 'marte-b', name: 'Marte Berg' }];
+    const claims = [
+      claim({ flightNumber: 1, distanceM: 2.4 }),
+      claim({ flightNumber: 2, winnerUserId: 'marte-b', winner: { name: 'Marte Berg', nickname: null }, distanceM: 1.8 }),
+    ];
+    expect(reportsForSlot(ctp, claims, [1, 2], twoMartes)?.lines.map((l) => l.name)).toEqual(['Marte Berg', 'Marte Lie']);
+    // Uten navn gjelder kallenavnet, som ellers i appen.
+    const nick = [claim({ winnerUserId: 'n', winner: { name: null, nickname: 'Kalle' } })];
+    expect(reportsForSlot(ctp, nick, [1], roster)?.lines[0].name).toBe('Kalle');
   });
 });

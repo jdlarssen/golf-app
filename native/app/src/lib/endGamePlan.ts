@@ -21,6 +21,7 @@ import {
 import { splitFinishRoster } from '../../../../lib/games/finishGate';
 import { isSingleFlightGame } from '../../../../lib/games/flightScope';
 import { holeForSlot, sortClaimsForHole } from '../../../../lib/games/sideContest';
+import { playerShortName } from '../../../../lib/names/playerName';
 import type { EndRoundFailure, FinishClaim } from '../data/endGame';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import type { SideWinnerRow } from '../data/sideWinners';
@@ -145,12 +146,15 @@ export interface SlotReports {
 /**
  * Det flightene har meldt inn for en plass, eller `null` når plassen ikke har
  * hull (da er kåringen som før). Innmeldingene er nøklet på kategori og hull,
- * ikke på plass.
+ * ikke på plass. Vinneren vises med fornavn, eller fullt navn når en annen i
+ * spillet har samme fornavn (`playerShortName`, #2286), siden lista under
+ * boksen viser fulle navn.
  */
 export function reportsForSlot(
   slot: FinishSlot,
   claims: readonly FinishClaim[],
   flights: readonly number[],
+  roster: readonly { userId: string; name: string | null }[],
 ): SlotReports | null {
   if (slot.hole === null) return null;
   const forHole = claims.filter((c) => c.category === slot.category && c.holeNumber === slot.hole);
@@ -159,7 +163,13 @@ export function reportsForSlot(
     hole: slot.hole,
     lines: sortClaimsForHole(forHole).map((c) => ({
       flightNumber: c.flightNumber,
-      name: c.winnerUserId === null ? null : (c.winnerFirstName ?? ''),
+      name:
+        c.winnerUserId === null
+          ? null
+          : (playerShortName(
+              c.winner,
+              roster.filter((p) => p.userId !== c.winnerUserId).map((p) => p.name),
+            ) ?? ''),
       distanceM: c.distanceM,
     })),
     missingFlights: flights.filter((f) => !reported.has(f)),
