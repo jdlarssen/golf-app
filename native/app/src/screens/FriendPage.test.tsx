@@ -193,6 +193,18 @@ describe('en venn', () => {
     expect(screen.queryByTestId('friend-page-failure')).toBeNull();
   });
 
+  it('uten nett fra ligaen: navnet, ligaens handicap og kortet, selv om forholdet er ukjent', async () => {
+    friendsMock.mockResolvedValue({ ok: false, reason: 'offline' });
+    roundsMock.mockResolvedValue({ ok: false, reason: 'offline' });
+    await renderPage({ name: 'Mari Dahl', from: 'league', hcp: 22.1 });
+    expect(await screen.findByTestId('friend-page-failure')).toHaveTextContent('Du er uten nett. Koble til og prøv igjen.', {
+      exact: false,
+    });
+    expect(screen.getByRole('header', { name: 'Mari Dahl' })).toBeTruthy();
+    expect(label('friend-page-hcp')).toBe('Handicap: 22,1');
+    expect(screen.queryByTestId('friend-page-add')).toBeNull();
+  });
+
   it('12: siden laster ikke — serverlinja i samme kort', async () => {
     asFriend();
     roundsMock.mockResolvedValue({ ok: false, reason: 'load_failed' });
