@@ -41,6 +41,8 @@ function sideContest(overrides: Partial<HoleSideContestProps> = {}): HoleSideCon
     // The server's snapshot: nobody has reported, so no read goes out on mount.
     claims: { failed: false, side: [], gir: [] },
     players: FLIGHT,
+    // Everyone in the game: the flight, and Siri, who played in another flight.
+    names: { ...Object.fromEntries(FLIGHT.map((p) => [p.userId, p.shortName])), siri: 'Siri' },
     ...overrides,
   };
 }
@@ -134,6 +136,43 @@ describe('HoleSideContests', () => {
       'Lagret av Kari. Alle i kampen kan endre.',
     );
     expect(screen.queryByTestId('side-contest-closest_to_pin-line-kari')).toBeNull();
+  });
+
+  it('names whoever saved from the whole game, also someone who is no longer in my flight (#2891)', () => {
+    // Siri saved this before she moved to another flight: no line for her here, but the status names her.
+    const reported: SideClaim = {
+      category: 'closest_to_pin',
+      holeNumber: 5,
+      winnerUserId: 'siri',
+      distanceM: 1.5,
+      enteredBy: 'siri',
+      updatedAt: '2026-11-15T10:00:01Z',
+    };
+    renderRows({
+      sideContest: sideContest({ contests: [CTP], claims: { failed: false, side: [reported], gir: undefined } }),
+    });
+    expect(screen.getByTestId('side-contest-closest_to_pin-subtitle')).toHaveTextContent('Siri · 1,5 m');
+    fireEvent.click(screen.getByTestId('side-contest-closest_to_pin'));
+    expect(screen.getByTestId('side-contest-closest_to_pin-sheet-status')).toHaveTextContent(
+      'Lagret av Siri. Alle i kampen kan endre.',
+    );
+    expect(screen.queryByTestId('side-contest-closest_to_pin-line-siri')).toBeNull();
+  });
+
+  it('says only «Lagret.» when the saver is not in the game at all', () => {
+    const reported: SideClaim = {
+      category: 'closest_to_pin',
+      holeNumber: 5,
+      winnerUserId: null,
+      distanceM: null,
+      enteredBy: 'stranger',
+      updatedAt: '2026-11-15T10:00:01Z',
+    };
+    renderRows({
+      sideContest: sideContest({ contests: [CTP], claims: { failed: false, side: [reported], gir: undefined } }),
+    });
+    fireEvent.click(screen.getByTestId('side-contest-closest_to_pin'));
+    expect(screen.getByTestId('side-contest-closest_to_pin-sheet-status')).toHaveTextContent(/^Lagret\. Alle i kampen kan endre\.$/);
   });
 
   it('GIR: one line per player who is still in, and «Deg» for yourself', () => {
