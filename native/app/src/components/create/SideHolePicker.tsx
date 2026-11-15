@@ -124,23 +124,27 @@ export function SideHoleSheet({
               <View key={row[0]} style={styles.gridRow}>
                 {row.map((hole) => {
                   const selected = hole === value;
+                  // The cell shares the row, not the button: Yoga counts the border
+                  // in the flex basis, so a 2 pt border on the button made the chosen
+                  // hole 1.7 pt wider than the rest (53 each on the drawing).
                   return (
-                    <Pressable
-                      key={hole}
-                      onPress={() => pick(hole)}
-                      style={[
-                        styles.hole,
-                        selected
-                          ? { borderWidth: 2, borderColor: colors.primary, backgroundColor: colors.primarySoft }
-                          : { borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityLabel={sideHoleValue(hole)}
-                      accessibilityState={{ selected }}
-                      testID={`create-side-${kind}-hole-${slot.position}-pick-${hole}`}
-                    >
-                      <Text style={[styles.holeText, { color: colors.text }]}>{hole}</Text>
-                    </Pressable>
+                    <View key={hole} style={styles.holeCell}>
+                      <Pressable
+                        onPress={() => pick(hole)}
+                        style={[
+                          styles.hole,
+                          selected
+                            ? { borderWidth: 2, borderColor: colors.primary, backgroundColor: colors.primarySoft }
+                            : { borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={sideHoleValue(hole)}
+                        accessibilityState={{ selected }}
+                        testID={`create-side-${kind}-hole-${slot.position}-pick-${hole}`}
+                      >
+                        <Text style={[styles.holeText, { color: colors.text }]}>{hole}</Text>
+                      </Pressable>
+                    </View>
                   );
                 })}
               </View>
@@ -211,7 +215,8 @@ const styles = StyleSheet.create({
   },
   grid: { gap: 8 },
   gridRow: { flexDirection: 'row', gap: 8 },
-  hole: { flex: 1, minHeight: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  holeCell: { flex: 1 },
+  hole: { minHeight: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   holeText: { ...fraunces(600, 18, 22), fontVariant: ['tabular-nums'] },
   later: {
     marginTop: 12,
