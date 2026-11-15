@@ -49,6 +49,7 @@ const VARIANT_BY_ROUTE = {
   Toppliste: 'default',
   Aeresliste: 'default',
   Friends: 'default',
+  FriendPage: 'default',
   Inbox: 'default',
   FriendLink: 'default',
   RoundDiary: 'default',

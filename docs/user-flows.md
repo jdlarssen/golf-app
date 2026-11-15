@@ -127,6 +127,10 @@ kortet), så forespørsler, «Folk du har spilt med» (flest runder sammen førs
 med «HCP · N runder sammen · sist …») og sendte forespørsler. En runde sammen er et ferdig spill dere
 begge sto i uten å trekke dere; handicapet vises bare for venner du har fullført minst én slik runde med.
 Et trykk på en venn åpner bekreftelsessiden `/profile/venner/fjern/[userId]` («Fjerne … som venn?»).
+I appen (#2381) åpner et trykk på en venn, en forespørsel, et forslag, en sendt forespørsel eller et navn i
+ligatabellen vennesiden. For en venn står «Mot hverandre» (hvem som kom foran i rundene mot hverandre; lag og
+ligaflight teller ikke), rundene dere har spilt sammen og «Fjern venn». For andre står aldri mer enn ligaarket
+viste, med «Legg til venn» eller «Godta». Rundene leses bare for godtatte venner (`GET /api/friends/[id]/rounds`).
 
 ### Tilbake
 
