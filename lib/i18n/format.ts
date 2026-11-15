@@ -76,6 +76,15 @@ export function formatNumber(
   return value.toLocaleString(intlLocaleTag(locale), options);
 }
 
+/**
+ * A side-contest distance in metres, one decimal with the locale's separator:
+ * «2,5» in Norwegian, «2.5» in English (#2283). The hole page and the finish
+ * page both show it, the app has its own `formatDistance` for the Norwegian case.
+ */
+export function formatDistance(distanceM: number, locale: AppLocale): string {
+  return formatNumber(distanceM, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
 // ---------------------------------------------------------------------------
 // Locale-aware tee-off / countdown helpers (#554 Fase 2a prerequisites).
 //

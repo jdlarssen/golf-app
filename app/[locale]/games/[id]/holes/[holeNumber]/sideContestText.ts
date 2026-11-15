@@ -7,7 +7,7 @@
 // four players).
 import { useLocale, useTranslations } from 'next-intl';
 import type { AppLocale } from '@/i18n/routing';
-import { formatNumber, intlLocaleTag } from '@/lib/i18n/format';
+import { formatDistance, formatNumber, intlLocaleTag } from '@/lib/i18n/format';
 import type { SideClaimFailure } from '@/lib/games/sideClaims';
 import {
   girQuestionForPar,
@@ -19,11 +19,6 @@ import {
 
 // The distance step lives in lib/games/sideContest.ts, the one the app's field uses too.
 export { DISTANCE_STEP_M, stepDistance } from '@/lib/games/sideContest';
-
-/** One decimal with the locale's separator: «2,5» in Norwegian, «2.5» in English. */
-export function formatDistance(distanceM: number, locale: AppLocale): string {
-  return distanceM.toLocaleString(intlLocaleTag(locale), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-}
 
 /** Who saved last: «deg» or the first name. `name: null` when unknown. */
 export type SavedBy = { me: true } | { me: false; name: string | null };

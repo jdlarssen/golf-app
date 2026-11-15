@@ -6,9 +6,9 @@ import { useLocale, useTranslations } from 'next-intl';
 import { Banner } from '@/components/ui/Banner';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import type { AppLocale } from '@/i18n/routing';
+import { formatDistance } from '@/lib/i18n/format';
 import type { SideContestCategory } from '@/lib/games/sideContest';
 import type { SideSlotView } from '@/lib/games/finishSideSlots';
-import { formatDistance } from '@/app/[locale]/games/[id]/holes/[holeNumber]/sideContestText';
 
 export type PlayerOption = {
   user_id: string;

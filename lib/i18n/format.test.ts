@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatDate,
   formatDateTime,
+  formatDistance,
   formatNumber,
   formatTime,
   intlLocaleTag,
@@ -221,6 +222,15 @@ describe('formatNumber', () => {
   it('group separators per locale', () => {
     expect(formatNumber(1234, 'en')).toBe('1,234');
     expect(formatNumber(1234, 'no')).toBe((1234).toLocaleString('nb-NO'));
+  });
+});
+
+describe('formatDistance', () => {
+  it('has one decimal and the locale’s separator', () => {
+    expect(formatDistance(2.5, 'no')).toBe('2,5');
+    expect(formatDistance(2, 'no')).toBe('2,0');
+    expect(formatDistance(11.5, 'no')).toBe('11,5');
+    expect(formatDistance(2.5, 'en')).toBe('2.5');
   });
 });
 

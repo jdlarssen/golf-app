@@ -4,10 +4,10 @@ import enMessages from '@/messages/en.json';
 import noMessages from '@/messages/no.json';
 import { mergeMessages } from '@/lib/i18n/messages';
 import { CLAIM_DISTANCE_MIN_M } from '@/lib/games/sideContest';
-import { formatDistance, stepDistance } from './sideContestText';
+import { stepDistance } from './sideContestText';
 import * as sharedSideContest from '@/lib/games/sideContest';
 
-// #2283 (part D3) — Type A: the distance steps and the number format, and a
+// #2283 (part D3) — Type A: the distance steps, and a
 // guard that every message of the row and sheet formats in both catalogs (an
 // ICU slip, such as an apostrophe before a brace, would otherwise show up as a
 // raw key on the hole).
@@ -35,15 +35,6 @@ describe('stepDistance', () => {
     expect(stepDistance(0.1 + 0.2, 1)).toBe(0.8);
     expect(stepDistance(1, -1)).toBe(0.5);
     expect(stepDistance(0.5, -1) ?? CLAIM_DISTANCE_MIN_M).toBeGreaterThanOrEqual(CLAIM_DISTANCE_MIN_M);
-  });
-});
-
-describe('formatDistance', () => {
-  it('has one decimal and the locale’s separator', () => {
-    expect(formatDistance(2.5, 'no')).toBe('2,5');
-    expect(formatDistance(2, 'no')).toBe('2,0');
-    expect(formatDistance(11.5, 'no')).toBe('11,5');
-    expect(formatDistance(2.5, 'en')).toBe('2.5');
   });
 });
 
