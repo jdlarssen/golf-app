@@ -24,7 +24,7 @@ type PlayerRow = {
   user_id: string;
   tee_gender: ScoringGender | null;
   withdrawn_at: string | null;
-  users: { is_guest: boolean; name: string | null; nickname: string | null } | null;
+  users: { is_guest: boolean; deleted_at: string | null; name: string | null; nickname: string | null } | null;
 };
 
 type CourseHoleWithCourse = CourseHoleRow & { course_id: string };
@@ -109,7 +109,7 @@ export const getRareShotsAllTime = unstable_cache(
         (from, to) =>
           supabase
             .from('game_players')
-            .select('game_id, user_id, tee_gender, withdrawn_at, users!game_players_user_id_fkey(is_guest, name, nickname)')
+            .select('game_id, user_id, tee_gender, withdrawn_at, users!game_players_user_id_fkey(is_guest, deleted_at, name, nickname)')
             .in('game_id', withLow)
             .order('game_id')
             .order('user_id')
@@ -123,7 +123,10 @@ export const getRareShotsAllTime = unstable_cache(
           userId: p.user_id,
           teeGender: p.tee_gender,
           withdrawn: p.withdrawn_at != null,
-          isGuest: p.users?.is_guest ?? false,
+          // A deleted account is left out like a guest: `anonymize_user` renames it «Slettet
+          // bruker» and drops its `notification_preferences` row, so an earlier «no» to
+          // sharing is gone and the list would show «Slettet B.» for good.
+          isGuest: (p.users?.is_guest ?? false) || p.users?.deleted_at != null,
         });
         if (p.users?.name && !names.has(p.user_id)) names.set(p.user_id, p.users.name);
         if (p.users?.nickname && !nicknames.has(p.user_id)) nicknames.set(p.user_id, p.users.nickname);
