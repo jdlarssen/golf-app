@@ -187,6 +187,76 @@ export async function fetchFriendLink(code: string): Promise<FriendLinkLoadResul
   };
 }
 
+/** Hvordan en runde endte mellom deg og vennen (`lib/friends/headToHead.ts`). */
+export type FriendRoundBadge = 'you_ahead' | 'them_ahead' | 'same_team' | 'tied';
+
+const ROUND_BADGES: readonly FriendRoundBadge[] = ['you_ahead', 'them_ahead', 'same_team', 'tied'];
+
+/** Én runde dere har spilt sammen, nyeste først fra serveren. */
+export interface FriendRound {
+  gameId: string;
+  name: string;
+  playedAt: string | null;
+  modeLabel: string;
+  /** `null`: runden sier ikke noe om dere to (ligaflight, mangler resultat). */
+  badge: FriendRoundBadge | null;
+}
+
+/** «Mot hverandre»: `played` er foran + bak + likt; lag og ligaflight teller ikke. */
+export interface FriendRecord {
+  played: number;
+  youAhead: number;
+  themAhead: number;
+  tied: number;
+}
+
+export type FriendRoundsResult =
+  | { ok: true; rounds: FriendRound[]; record: FriendRecord }
+  | { ok: false; reason: WebApiFailure | 'not_friends' | 'load_failed' };
+
+function readRounds(value: unknown): FriendRound[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) =>
+    isRecord(item) && typeof item.gameId === 'string'
+      ? [
+          {
+            gameId: item.gameId,
+            name: typeof item.name === 'string' ? item.name : '',
+            playedAt: typeof item.playedAt === 'string' ? item.playedAt : null,
+            modeLabel: typeof item.modeLabel === 'string' ? item.modeLabel : '',
+            badge: (ROUND_BADGES as readonly unknown[]).includes(item.badge)
+              ? (item.badge as FriendRoundBadge)
+              : null,
+          },
+        ]
+      : [],
+  );
+}
+
+function readRecord(value: unknown): FriendRecord | null {
+  if (!isRecord(value)) return null;
+  const { played, youAhead, themAhead, tied } = value;
+  if (![played, youAhead, themAhead, tied].every((n) => typeof n === 'number')) return null;
+  return { played, youAhead, themAhead, tied } as FriendRecord;
+}
+
+/**
+ * Rundene du og en venn har spilt sammen, og stillingen mellom dere
+ * (#2381, `GET /api/friends/[id]/rounds`). Serveren svarer bare for godtatte
+ * venner: `not_friends` er ingen feil, bare «ikke venner», og skjermen viser
+ * da det en som ikke er venn får se. Id-en står kodet i stien.
+ */
+export async function fetchFriendRounds(userId: string): Promise<FriendRoundsResult> {
+  const call = await callWebRoute(`/api/friends/${encodeURIComponent(userId)}/rounds`, 'GET');
+  if (!call.ok) return call;
+  if (call.status === 401) return { ok: false, reason: 'unauthorized' };
+  if (call.status === 403) return { ok: false, reason: 'not_friends' };
+  if (call.status !== 200) return { ok: false, reason: 'load_failed' };
+  const record = readRecord(call.body.record);
+  if (!record) return { ok: false, reason: 'load_failed' };
+  return { ok: true, rounds: readRounds(call.body.rounds), record };
+}
+
 /** Bli venner via venne-lenka (#2627): `accepted` når dere ble venner nå. */
 export function connectFriendLink(code: string): Promise<FriendActionResult<FriendStatus>> {
   return act(friendLinkRoute(code), {}, asFriendStatus);

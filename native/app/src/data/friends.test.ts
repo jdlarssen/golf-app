@@ -171,6 +171,50 @@ describe('venne-lenka', () => {
   });
 });
 
+describe('fetchFriendRounds', () => {
+  useWebRoute();
+
+  const ROUNDS = [
+    { gameId: 'g1', name: 'Onsdagsgolfen', playedAt: '2026-11-08T10:00:00Z', modeLabel: 'Slagspill', badge: 'you_ahead' },
+    { gameId: 'g2', name: 'Lagmøtet', playedAt: null, modeLabel: 'Texas scramble', badge: 'same_team' },
+  ];
+  const RECORD = { played: 1, youAhead: 1, themAhead: 0, tied: 0 };
+
+  it('henter rundene med GET, med id-en kodet i stien', async () => {
+    respondWith(200, { rounds: ROUNDS, record: RECORD });
+
+    expect(await friends().fetchFriendRounds('kari')).toEqual({ ok: true, rounds: ROUNDS, record: RECORD });
+    expect(mockFetch.mock.calls[0][0]).toBe(`${BASE_URL}/api/friends/kari/rounds`);
+    expect(requestInit().method).toBe('GET');
+
+    respondWith(200, { rounds: [], record: RECORD });
+    await friends().fetchFriendRounds('a/b?c');
+    expect(mockFetch.mock.calls[1][0]).toBe(`${BASE_URL}/api/friends/a%2Fb%3Fc/rounds`);
+  });
+
+  it('gir et ukjent merke videre som null og hopper over rader uten spill', async () => {
+    respondWith(200, { rounds: [{ ...ROUNDS[0], badge: 'noe_nytt' }, { name: 'uten id' }], record: RECORD });
+    const result = await friends().fetchFriendRounds('kari');
+    expect(result).toEqual({ ok: true, rounds: [{ ...ROUNDS[0], badge: null }], record: RECORD });
+  });
+
+  it.each([
+    [403, { error: 'not_friends' }, 'not_friends'],
+    [401, { error: 'unauthorized' }, 'unauthorized'],
+    [500, { error: 'load_failed' }, 'load_failed'],
+    [200, { rounds: ROUNDS }, 'load_failed'],
+  ] as const)('oversetter %s til «%s»', async (status, body, reason) => {
+    respondWith(status, body);
+    expect(await friends().fetchFriendRounds('kari')).toEqual({ ok: false, reason });
+  });
+
+  it('stopper uten nett, før noe sendes', async () => {
+    mockNetwork.online = false;
+    expect(await friends().fetchFriendRounds('kari')).toEqual({ ok: false, reason: 'offline' });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
+
 describe('vennehandlingene', () => {
   useWebRoute();
 
