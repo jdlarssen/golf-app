@@ -37,7 +37,7 @@ export function isWinningSummary(
   }
 }
 
-/** Én spillers rad i et ferdig spill, slik statistikk-siden leser den. */
+/** Én spillers rad i et ferdig spill, slik loaderen leser den (`getFinishedGameWins`). */
 export type StatPlayerRow = {
   userId: string;
   name: string | null;
