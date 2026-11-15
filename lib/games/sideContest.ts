@@ -14,6 +14,7 @@
 
 import { buildCupRoster, type CupRosterGame, type CupRosterPlayer } from '../cup/cupRoster';
 import { holesForSegment, type HoleSegment } from '../scoring/holeSegment';
+import { isSingleFlightGame, type FlightPlayer } from './flightScope';
 import { isAlternateShotMatchplay, type GameMode } from '../scoring/modes/types';
 
 /** The holes a contest can be on. `games_side_holes_valid` and the claim tables hold the same. */
@@ -235,6 +236,25 @@ export function girQuestionForPar(par: number): GirQuestionKey {
   if (par === 4) return 'onTwo';
   if (par === 5) return 'onThree';
   return 'onFour';
+}
+
+/**
+ * The caller's key in the claim tables, as `side_claim_flight_key` (0237)
+ * computes it: 0 in a single-flight game (`isSingleFlightGame`: Wolf, or at
+ * most four active players), else the caller's flight number. Null for a
+ * withdrawn player, a non-player, and a player without a flight in a bigger
+ * game: the rpcs answer `not_player` then and the SELECT policy shows
+ * nothing, so the hole has no card to offer. Never a key of its own (#2891);
+ * `sideContestDbCheck.test.ts` pins the SQL to the same rule.
+ */
+export function sideClaimFlightKey(
+  gameMode: GameMode,
+  players: readonly FlightPlayer[],
+  userId: string,
+): number | null {
+  const me = players.find((p) => p.user_id === userId && p.withdrawn_at == null);
+  if (!me) return null;
+  return isSingleFlightGame(gameMode, [...players]) ? 0 : me.flight_number;
 }
 
 /** A player as the GIR card needs it. */

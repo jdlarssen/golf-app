@@ -8,6 +8,7 @@ import {
   holeForSlot,
   parseClaimDistance,
   parseSideContestHole,
+  sideClaimFlightKey,
   sortClaimsForHole,
   sumGirClaimsByTeam,
   toCupSideAwards,
@@ -206,6 +207,43 @@ describe('girQuestionForPar', () => {
   it('clamps a par outside 3–6', () => {
     expect(girQuestionForPar(2)).toBe('afterTeeShot');
     expect(girQuestionForPar(7)).toBe('onFour');
+  });
+});
+
+describe('sideClaimFlightKey', () => {
+  const player = (user_id: string, flight_number: number | null, withdrawn_at: string | null = null) => ({
+    user_id,
+    flight_number,
+    withdrawn_at,
+  });
+  const twoFlights = [
+    player('me', 2),
+    player('a', 1),
+    player('b', 1),
+    player('c', 1),
+    player('d', 1),
+    player('e', 2),
+  ];
+
+  it('is 0 in a single-flight game, whatever the flight number says', () => {
+    expect(sideClaimFlightKey('stableford', [player('me', 3), player('a', 1)], 'me')).toBe(0);
+    expect(sideClaimFlightKey('wolf', [...twoFlights, player('f', 2)], 'me')).toBe(0);
+  });
+
+  it('is the caller’s flight number with more than four active players', () => {
+    expect(sideClaimFlightKey('stableford', twoFlights, 'me')).toBe(2);
+  });
+
+  it('counts only active players towards the four', () => {
+    const withdrawn = [player('me', 2), player('a', 1), player('b', 1), player('c', 1), player('d', 1, '2026-11-15')];
+    expect(sideClaimFlightKey('stableford', withdrawn, 'me')).toBe(0);
+  });
+
+  it('is null without a flight in a bigger game, for a withdrawn caller and for a non-player', () => {
+    const noFlight = twoFlights.map((p) => (p.user_id === 'me' ? player('me', null) : p));
+    expect(sideClaimFlightKey('stableford', noFlight, 'me')).toBeNull();
+    expect(sideClaimFlightKey('stableford', [player('me', 1, '2026-11-15'), player('a', 1)], 'me')).toBeNull();
+    expect(sideClaimFlightKey('stableford', twoFlights, 'stranger')).toBeNull();
   });
 });
 

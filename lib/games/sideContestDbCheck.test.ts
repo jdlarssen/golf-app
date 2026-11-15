@@ -23,6 +23,7 @@ import {
   parseClaimDistance,
   parseSideContestHole,
 } from './sideContest';
+import { MAX_FLIGHT_SIZE } from './flightScope';
 import { parseSideTournamentFromFormData } from './sideTournamentPayload';
 
 const MIGRATION = fs.readFileSync(
@@ -112,6 +113,18 @@ describe('side contest bounds: 0237 ↔ sideContest.ts ↔ the form parser (trap
       ok: false,
       errorCode: 'bad_side_ctp_holes',
     });
+  });
+
+  it('side_claim_flight_key uses the single-flight rule sideClaimFlightKey reads (wolf, or at most MAX_FLIGHT_SIZE active)', () => {
+    const key = MIGRATION.slice(
+      MIGRATION.indexOf('function public.side_claim_flight_key'),
+      MIGRATION.indexOf('-- ── 5.'),
+    );
+    expect(key).toMatch(/g\.game_mode\s*=\s*'wolf'/);
+    expect(key).toMatch(/gp\.withdrawn_at is null/);
+    expect(key).toMatch(/me\.withdrawn_at is null/);
+    const limits = [...key.matchAll(/\)\s*<=\s*(\d+)/g)].map((m) => Number(m[1]));
+    expect(only(limits, 'single-flight limit')).toBe(MAX_FLIGHT_SIZE);
   });
 
   it('the form parser never writes more slots than the CHECK allows', () => {
