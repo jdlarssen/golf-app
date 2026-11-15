@@ -13,6 +13,7 @@
 //  - Bare birdie-lesingen feilet: fanene står, og «Birdies» viser sitt eget kort.
 //  - Under lista står «Sjeldne slag i {år}», likt under alle tre fanene (PR 4): hole-in-one,
 //    albatross og eagle i sesongen, fem rader og «Vis alle N». Feiler slagene, sier bare kortet fra.
+//    Nederst i kortet står lenka til Æreslista (#2894 PR 2).
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,6 +29,7 @@ import {
 } from '../components/toppliste/TopplisteParts';
 import { TopplisteMoments } from '../components/toppliste/TopplisteMoments';
 import { fetchAeresbrett } from '../data/aeresbrett';
+import { openOrReturn } from '../lib/backTo';
 import { buildMomentsModel, buildTopplisteModel, type TopplisteTab } from '../lib/toppliste';
 import { TOPPLISTE_TEXT } from '../lib/topplisteCopy';
 import type { ScreenProps } from '../navigation';
@@ -62,7 +64,7 @@ function useToppliste(): { load: Load; retry: () => void } {
   return { load, retry };
 }
 
-export function Toppliste({ route }: ScreenProps<'Toppliste'>) {
+export function Toppliste({ navigation, route }: ScreenProps<'Toppliste'>) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { load, retry } = useToppliste();
@@ -86,6 +88,7 @@ export function Toppliste({ route }: ScreenProps<'Toppliste'>) {
       expanded={momentsOpen}
       onToggle={() => setMomentsOpen((open) => !open)}
       onRetry={retry}
+      onOpenAeresliste={() => openOrReturn(navigation, 'Aeresliste', { from: 'toppliste' })}
     />
   ) : null;
 

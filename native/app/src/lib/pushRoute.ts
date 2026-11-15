@@ -28,6 +28,9 @@
 // invitasjonen, sender lagsiden deg videre til svaret på påmeldingsskjermen.
 // `/signup/{kode}` er påmeldingssiden og åpner påmeldingsskjermen (`RoundInvite`).
 //
+// #2894: `/aeresliste` åpner Æreslista (`Aeresliste`). Stien finnes bare i appen (nettet har
+// ingen æresliste); varselet om et sjeldent slag til alle (PR 3) peker dit.
+//
 // **Hvor `url` ligger.** For et fjernvarsel på iOS legger expo-notifications
 // bare `userInfo["body"]` i `content.data` (Expos egen push-konvensjon).
 // Vår payload er `{ aps, url, kind }`, så `url` står i
@@ -61,6 +64,7 @@ export type PushTarget =
   | { name: 'MarkerApprove'; params: { leagueId: string; gameId: string; userId: string } }
   | { name: 'RoundInvite'; params: { shortId: string; src: null } }
   | { name: 'TeamPage'; params: { shortId: string } }
+  | { name: 'Aeresliste'; params: { from: 'notification' } }
   | { name: 'Home' };
 
 /** Den delen av et varsel funksjonen leser, løst typet: payloaden kan være hva som helst. */
@@ -77,6 +81,7 @@ const SUBMIT_SUFFIX = /^\/submit(?:[/?#]|$)/;
 const FINISH_SUFFIX = /^\/avslutt(?:[/?#]|$)/;
 const FRIENDS_PATH = /^\/(?:[a-z]{2}\/)?profile\/venner(?:[/?#]|$)/;
 const HISTORY_PATH = /^\/(?:[a-z]{2}\/)?profile\/historikk(?:[/?#]|$)/;
+const AERESLISTE_PATH = /^\/(?:[a-z]{2}\/)?aeresliste(?:[/?#]|$)/;
 const LEAGUE_PATH = /^\/(?:[a-z]{2}\/)?liga\/([^/?#]+)/;
 const ROUND_START_SUFFIX = /^\/runde\/([^/?#]+)\/spill(?:[/?#]|$)/;
 const MARKER_SUFFIX = /^\/godkjenn\/([^/?#]+)\/([^/?#]+)(?:[/?#]|$)/;
@@ -149,6 +154,7 @@ export function pushTarget(url: string | null): PushTarget {
   }
   if (url && FRIENDS_PATH.test(url)) return { name: 'Friends', params: { from: 'notification' } };
   if (url && HISTORY_PATH.test(url)) return { name: 'RoundStats' };
+  if (url && AERESLISTE_PATH.test(url)) return { name: 'Aeresliste', params: { from: 'notification' } };
   return { name: 'Home' };
 }
 

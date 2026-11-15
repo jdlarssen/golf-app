@@ -10,7 +10,9 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native';
 import type { CardBundle } from '../data/homeHero';
+import { fetchAeresliste } from '../data/aeresliste';
 import { fetchKavalkadeStatus } from '../data/kavalkade';
+import { localDayKey } from '../lib/homeDates';
 import type { HomeList } from '../data/homeList';
 import type { OwnProfile } from '../data/profile';
 import type { ScreenProps } from '../navigation';
@@ -52,6 +54,12 @@ jest.mock('../components/PushPromptCard', () => {
 });
 // #2265 PR 2: Kavalkade-banneret spør serveren; uten svar står det ikke.
 jest.mock('../data/kavalkade', () => ({ fetchKavalkadeStatus: jest.fn(async () => null) }));
+// #2894 PR 2: banneret om sjeldne slag leser Æreslista; uten svar står det ikke.
+jest.mock('../data/aeresliste', () => ({
+  fetchAeresliste: jest.fn(async () => ({ ok: false, reason: 'offline' })),
+  readClosedRareShot: jest.fn(async () => null),
+  closeRareShot: jest.fn(async () => undefined),
+}));
 jest.mock('../data/inbox', () => ({ fetchInboxUnreadCount: jest.fn(async () => mockState.unread) }));
 // #2638: «Ligaene dine» spør `GET /api/liga`; uten ligaer står ingen seksjon.
 jest.mock('../data/league', () => ({
@@ -189,6 +197,7 @@ function renderHome(params?: { deletedCup?: string }) {
 beforeEach(() => {
   mockInsets = { top: 0, right: 0, bottom: 0, left: 0 };
   (fetchKavalkadeStatus as jest.Mock).mockResolvedValue(null);
+  (fetchAeresliste as jest.Mock).mockResolvedValue({ ok: false, reason: 'offline' });
   mockState.online = true;
   mockState.list = LIST;
   mockState.cached = undefined;
@@ -501,6 +510,45 @@ describe('Kavalkaden på Hjem (#2265 PR 2)', () => {
       expect(screen.queryByTestId('kavalkade-home-banner')).toBeNull();
       await rendered.unmount();
     }
+  });
+});
+
+describe('banneret om sjeldne slag (#2894 PR 2)', () => {
+  const shot = {
+    kind: 'hole_in_one',
+    name: 'Marte L.',
+    initials: 'ML',
+    isViewer: false,
+    hole: 7,
+    courseName: 'Bogstad',
+    playedOn: localDayKey(new Date()),
+    key: 'a1b2c3d4e5f60718',
+  };
+
+  it('står under spørsmålet om varsler og under Kavalkaden, og åpner Æreslista', async () => {
+    (fetchKavalkadeStatus as jest.Mock).mockResolvedValue({ year: 2026, slot: 'teaser', canOpen: false, hasRound: true });
+    (fetchAeresliste as jest.Mock).mockResolvedValue({ ok: true, view: { rows: [shot] } });
+    const { navigate, view } = renderHome();
+    await view;
+
+    await screen.findByTestId('rare-shot-banner');
+    await screen.findByTestId('kavalkade-home-banner');
+    const order = testIdsInOrder();
+    expect(order.indexOf('push-prompt-stub')).toBeLessThan(order.indexOf('kavalkade-home-banner'));
+    expect(order.indexOf('kavalkade-home-banner')).toBeLessThan(order.indexOf('rare-shot-banner'));
+    expect(order.indexOf('rare-shot-banner')).toBeLessThan(order.indexOf('home-hero'));
+
+    await fireEvent.press(screen.getByTestId('rare-shot-banner-open'));
+    expect(navigate).toHaveBeenCalledWith('Aeresliste', { from: 'home' });
+  });
+
+  it('står ikke, og Hjem sier ikke fra, når lista ikke kan hentes', async () => {
+    (fetchAeresliste as jest.Mock).mockResolvedValue({ ok: false, reason: 'failed' });
+    const { view } = renderHome();
+    await view;
+
+    expect(await screen.findByTestId('home-hero-card-new')).toBeTruthy();
+    expect(screen.queryByTestId('rare-shot-banner')).toBeNull();
   });
 });
 

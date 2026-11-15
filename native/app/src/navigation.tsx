@@ -110,7 +110,8 @@ import { Terminliste } from './screens/Terminliste';
 import { RoundStats } from './screens/RoundStats';
 import { Kavalkade } from './screens/Kavalkade';
 import { Toppliste } from './screens/Toppliste';
-import { TOPPLISTE_TEXT } from './lib/topplisteCopy';
+import { Aeresliste } from './screens/Aeresliste';
+import { TOPPLISTE_TEXT, aereslisteKicker } from './lib/topplisteCopy';
 import { Scorecard } from './screens/Scorecard';
 import { useSession } from './session';
 import { SyncLab } from './SyncLab';
@@ -185,6 +186,12 @@ export type RootStackParamList = {
    * utenfor topp 10, fra profilen som åpner skjermen.
    */
   Toppliste: { selfInitials?: string } | undefined;
+  /**
+   * «Æreslista» (#2894 PR 2): hole-in-one og albatross i Tørny, alle år. `from` sier hvor
+   * den ble åpnet fra, og toppen nevner det: «Toppliste» (lenka i «Sjeldne slag»), «Hjem»
+   * (banneret), eller bare pila fra et varsel (`/aeresliste`, PR 3).
+   */
+  Aeresliste: { from?: 'toppliste' | 'home' | 'notification' } | undefined;
   /**
    * «Venner» (#2256): vennene dine, via `/api/friends`. `selfInitials` er
    * dine initialer til heltekortet, fra profilen som åpner skjermen.
@@ -558,6 +565,12 @@ export function RootNavigator() {
           options={kickerHeader(TOPPLISTE_TEXT.kicker, TOPPLISTE_TEXT.heading, {
             backLabel: TOPPLISTE_TEXT.backLabel,
           })}
+        />
+        {/* #2894 PR 2: toppen sier hvor lista ble åpnet fra, og «Æreslista» står stort i innholdet. */}
+        <Stack.Screen
+          name="Aeresliste"
+          component={Aeresliste}
+          options={({ route }) => kickerHeader(aereslisteKicker(route.params?.from), TOPPLISTE_TEXT.aeresHeading)}
         />
         {/* Eierens svar (#2256): tilbakepil til bunnmenyen kommer. Tittelen står i innholdet. */}
         <Stack.Screen

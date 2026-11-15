@@ -139,6 +139,18 @@ describe('pushTarget', () => {
     expect(pushTarget(url)).toEqual({ name: 'RoundStats' });
   });
 
+  // #2894: varselet om et sjeldent slag til alle (PR 3) åpner Æreslista, som bare finnes i appen.
+  it.each([['/aeresliste'], ['/no/aeresliste'], [`/aeresliste?varsel=${NOTE}`], ['/aeresliste/']])(
+    '%s åpner æreslista',
+    (url) => {
+      expect(pushTarget(url)).toEqual({ name: 'Aeresliste', params: { from: 'notification' } });
+    },
+  );
+
+  it('/aeresliste-noe-annet er ikke æreslista', () => {
+    expect(pushTarget('/aeresliste-noe-annet')).toEqual({ name: 'Home' });
+  });
+
   // #2632: «Resultatet er klart» peker på tavla, med eller uten språk, markør, skråstrek eller anker.
   it.each([
     [`/games/${GAME}/leaderboard`],
