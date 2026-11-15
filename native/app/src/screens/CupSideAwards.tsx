@@ -2,12 +2,18 @@
 // Vinner per plass, eller «Ingen kvalifiserte», og et tall per lag for GIR. Virker
 // også etter at cupen er avsluttet, og da regner serveren vinneren på nytt. Alt
 // krever nett, og reglene bor i kjernen (`lib/cup/sideAwardCore.ts`).
+//
+// #2283 (tegning V3): under hver kåring står det kampene har meldt inn, som tekst:
+// valgene og tellerne står tomme til arrangøren selv fyller dem. Rapporten kommer
+// med `fetchCupManage` (`sideReports`); en tjener som ikke har den, gir ingen bokser.
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { AppCupManageView, AppCupSideAward } from '../../../../lib/cup/appCupManageView';
+import type { CupGirReport, CupSideReportsResult, CupSlotReports } from '../../../../lib/cup/cupSideReports';
 import { PICKER_VISIBLE_ROWS, pickerRows } from '../../../../lib/league/pickerRows';
 import { CupOption } from '../components/cup/CupOption';
+import { GirReportsBox, SlotReportsBox } from '../components/cup/CupReportedBoxes';
 import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
 import { PickerMore, PickerNoMatch, PickerSearchField } from '../components/PickerSearch';
 import { fetchCupManage, registerGirCounts, registerSideAwardWinner } from '../data/cupManage';
@@ -30,6 +36,29 @@ type GirAward = Extract<AppCupSideAward, { kind: 'gir' }>;
 
 /** «Ingen kvalifiserte». Kan aldri kollidere med en uuid, som på nettet. */
 const NONE = 'none';
+
+/**
+ * Rapporten for ett hull. `null` = ingen boks: ingenting ble lest (`sideReports`
+ * er null, eller tjeneren sender den ikke) eller hullet står ikke i rapporten.
+ */
+function slotReportsFor(
+  sideReports: CupSideReportsResult | undefined,
+  kind: 'ctp' | 'ld',
+  holeNumber: number,
+): CupSlotReports | 'failed' | null {
+  if (!sideReports) return null;
+  if (sideReports === 'failed') return 'failed';
+  return sideReports.slots.find((slot) => slot.kind === kind && slot.holeNumber === holeNumber) ?? null;
+}
+
+function girReportsFor(
+  sideReports: CupSideReportsResult | undefined,
+  holeNumber: number,
+): CupGirReport | 'failed' | null {
+  if (!sideReports) return null;
+  if (sideReports === 'failed') return 'failed';
+  return sideReports.gir.find((hole) => hole.holeNumber === holeNumber) ?? null;
+}
 
 export function CupSideAwards({ route }: ScreenProps<'CupSideAwards'>) {
   const { colors, ui } = useTheme();
@@ -117,6 +146,7 @@ export function CupSideAwards({ route }: ScreenProps<'CupSideAwards'>) {
             award={award}
             team1Name={view.team1Name}
             team2Name={view.team2Name}
+            reports={girReportsFor(view.sideReports, award.holeNumber)}
             stale={stale}
             onSaved={load}
           />
@@ -126,6 +156,7 @@ export function CupSideAwards({ route }: ScreenProps<'CupSideAwards'>) {
             cupId={cupId}
             award={award}
             candidates={candidates}
+            reports={slotReportsFor(view.sideReports, award.kind, award.holeNumber)}
             stale={stale}
             onSaved={load}
           />
@@ -139,12 +170,14 @@ function WinnerCard({
   cupId,
   award,
   candidates,
+  reports,
   stale,
   onSaved,
 }: {
   cupId: string;
   award: WinnerAward;
   candidates: readonly Candidate[];
+  reports: CupSlotReports | 'failed' | null;
   stale: boolean;
   onSaved: () => Promise<void>;
 }) {
@@ -228,6 +261,7 @@ function WinnerCard({
         onPress={() => pick(NONE)}
         testID={`side-award-option-${award.id}-none`}
       />
+      {reports !== null ? <SlotReportsBox testKey={award.id} kind={award.kind} reports={reports} /> : null}
       <Pressable
         accessibilityRole="button"
         disabled={!choice || busy || stale}
@@ -258,6 +292,7 @@ function GirCard({
   award,
   team1Name,
   team2Name,
+  reports,
   stale,
   onSaved,
 }: {
@@ -265,6 +300,7 @@ function GirCard({
   award: GirAward;
   team1Name: string;
   team2Name: string;
+  reports: CupGirReport | 'failed' | null;
   stale: boolean;
   onSaved: () => Promise<void>;
 }) {
@@ -327,6 +363,9 @@ function GirCard({
       </Text>
       {field(1, team1Name, team1, setTeam1)}
       {field(2, team2Name, team2, setTeam2)}
+      {reports !== null ? (
+        <GirReportsBox testKey={award.id} reports={reports} team1Name={team1Name} team2Name={team2Name} />
+      ) : null}
       <Pressable
         accessibilityRole="button"
         disabled={!filled || busy || stale}

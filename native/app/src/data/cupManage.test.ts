@@ -20,11 +20,29 @@ describe('data/cupManage', () => {
   it('leser rommet, og en 200 uten spillere er ikke noe å tegne', async () => {
     const view = { id: 'c', players: [], matches: [], sideAwards: [], finish: {} };
     respondWith(200, view);
-    await expect(api().fetchCupManage('c')).resolves.toEqual({ ok: true, view });
+    // En tjener uten `sideReports` (#2283) leses som `null`: ingen bokser, ingenting velter.
+    await expect(api().fetchCupManage('c')).resolves.toEqual({ ok: true, view: { ...view, sideReports: null } });
     expect(sent().url).toBe(`${BASE_URL}/api/cup/c/manage`);
 
     respondWith(200, { id: 'c' });
     await expect(api().fetchCupManage('c')).resolves.toEqual({ ok: false, reason: 'load_failed' });
+  });
+
+  it('det kampene har meldt inn (#2283): rapporten og «failed» går videre, alt annet er null', async () => {
+    const view = { id: 'c', players: [], matches: [], sideAwards: [], finish: {} };
+    const reports = { slots: [{ kind: 'ctp', holeNumber: 3, lines: [], missing: [] }], gir: [] };
+
+    respondWith(200, { ...view, sideReports: reports });
+    await expect(api().fetchCupManage('c')).resolves.toEqual({ ok: true, view: { ...view, sideReports: reports } });
+
+    respondWith(200, { ...view, sideReports: 'failed' });
+    await expect(api().fetchCupManage('c')).resolves.toEqual({ ok: true, view: { ...view, sideReports: 'failed' } });
+
+    // Ingen rapport, og en form appen ikke kjenner: begge er «ingenting å vise».
+    for (const odd of [null, 'ok', { slots: 'x', gir: [] }, { slots: [] }]) {
+      respondWith(200, { ...view, sideReports: odd });
+      await expect(api().fetchCupManage('c')).resolves.toEqual({ ok: true, view: { ...view, sideReports: null } });
+    }
   });
 
   it.each([
