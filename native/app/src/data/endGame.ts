@@ -53,6 +53,7 @@ import {
 import { isSideWinnerNotActive } from '../../../../lib/games/sideWinnerGuard';
 import type { PlayerNameParts } from '../../../../lib/names/playerName';
 import { finishGate, stampsFromRow } from '../../../../lib/games/finishGate';
+import { toSideClaimReports } from '../../../../lib/games/sideClaimReports';
 import { currentDeviceUserId, supabase } from '../supabase';
 import { withdrawPlayer } from './rosterActions';
 import { refreshWebCache } from './refreshWebCache';
@@ -637,18 +638,10 @@ export async function fetchSideClaimsForFinish(gameId: string): Promise<FinishCl
     .rpc('side_claims_for_finish', { p_game_id: gameId })
     .returns<FinishClaimRow[]>();
   if (error) throw new Error(`fetchSideClaimsForFinish: ${error.message}`);
-  return (data ?? []).flatMap((row) => {
-    if (row.category !== 'closest_to_pin' && row.category !== 'longest_drive') return [];
-    const distance = row.distance_m == null ? null : Number(row.distance_m);
-    return [
-      {
-        category: row.category,
-        holeNumber: row.hole_number,
-        flightNumber: row.flight_number,
-        winnerUserId: row.winner_user_id,
-        winner: row.winner_user_id == null ? null : { name: row.winner_name, nickname: row.winner_nickname },
-        distanceM: distance != null && Number.isFinite(distance) ? distance : null,
-      },
-    ];
-  });
+  // Raden og avstanden leses av den delte regelen, den samme nettets avslutt-side bruker
+  // (`lib/games/sideClaimReports.ts`); bare navnet kommer her fra rpc-en.
+  return toSideClaimReports(data ?? [], (_winnerUserId, row) => ({
+    name: row.winner_name,
+    nickname: row.winner_nickname,
+  }));
 }

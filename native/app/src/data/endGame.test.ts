@@ -36,6 +36,14 @@ jest.mock('./syncTriggers', () => ({
   isDeviceOnline: () => mockNetwork.online,
 }));
 
+// Pakker den delte kartleggeren så «ett hjem»-testen kan se at appen kaller den; resten er som før.
+// Fabrikken kjører på nytt etter hver jest.resetModules(), så testen henter spionen etter at
+// endGame er lastet (`sharedReports()`).
+jest.mock('../../../../lib/games/sideClaimReports', () => {
+  const actual = jest.requireActual('../../../../lib/games/sideClaimReports');
+  return { ...actual, toSideClaimReports: jest.fn(actual.toSideClaimReports) };
+});
+
 const GAME = GAME_ID;
 const REFRESH_URL = `${BASE_URL}/api/games/${GAME}/refresh`;
 const ME = 'user-me';
@@ -52,6 +60,10 @@ function mocks(): Mocks {
 
 function endGame(): EndGame {
   return require('./endGame') as EndGame;
+}
+
+function sharedReports(): typeof import('../../../../lib/games/sideClaimReports') {
+  return require('../../../../lib/games/sideClaimReports');
 }
 
 /** Spillets gate-rad, slik `loadFinishGate` leser den. */
@@ -919,6 +931,41 @@ describe('#2283: fetchSideClaimsForFinish', () => {
       },
     ]);
     expect(supabase.rpc).toHaveBeenCalledWith('side_claims_for_finish', { p_game_id: GAME });
+  });
+
+  it('kartlegger radene med den delte regelen fra lib/games, den nettets avslutt-side leser', async () => {
+    const { supabase } = mocks();
+    const rows = [
+      {
+        category: 'closest_to_pin',
+        hole_number: 7,
+        flight_number: 2,
+        winner_user_id: 'kristian',
+        winner_name: 'Kristian Holm',
+        winner_nickname: 'Kris',
+        distance_m: '1.8',
+      },
+      // Kategorien filtreres bort av den delte regelen, ikke av appen.
+      {
+        category: 'gir',
+        hole_number: 7,
+        flight_number: 2,
+        winner_user_id: null,
+        winner_name: null,
+        winner_nickname: null,
+        distance_m: null,
+      },
+    ];
+    supabase.rpc.mockReturnValue({ returns: jest.fn().mockResolvedValue({ data: rows, error: null }) });
+    const fromApp = await endGame().fetchSideClaimsForFinish(GAME);
+    const shared = jest.mocked(sharedReports().toSideClaimReports);
+    expect(shared).toHaveBeenCalledTimes(1);
+    expect(shared).toHaveBeenCalledWith(rows, expect.any(Function));
+    // Samme liste, ikke en kopi: appen legger ikke noe til etterpå.
+    expect(fromApp).toBe(shared.mock.results[0].value);
+    // Det eneste appen eier er hvor navnet kommer fra: rpc-ens egne kolonner.
+    const winnerName = shared.mock.calls[0][1];
+    expect(winnerName('kristian', rows[0] as never)).toEqual({ name: 'Kristian Holm', nickname: 'Kris' });
   });
 
   it('kaster ved feil, så boksen sier fra i stedet for å vise ingenting', async () => {

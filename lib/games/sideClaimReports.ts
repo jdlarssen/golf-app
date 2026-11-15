@@ -24,7 +24,7 @@ export interface SideClaimReport {
   distanceM: number | null;
 }
 
-/** A raw `game_side_claims` row with the winner's name already looked up. */
+/** A raw claim row: `game_side_claims` itself, or what `side_claims_for_finish` returns. */
 export interface SideClaimReportRow {
   category: string;
   hole_number: number;
@@ -32,14 +32,19 @@ export interface SideClaimReportRow {
   winner_user_id: string | null;
   /** `numeric(3,1)`: PostgREST sends a number, but a string would not surprise anyone. */
   distance_m: number | string | null;
-  winner: PlayerNameParts | null;
 }
 
 /**
  * Maps the rows; a category this file does not know is left out instead of
- * guessed at (the CHECK holds it to the two).
+ * guessed at (the CHECK holds it to the two). The one part the two readers
+ * cannot share is where the winner's name comes from: the web looks it up in
+ * the roster, the app's rpc sends it with the row. `winnerName` is asked only
+ * for a row that has a winner.
  */
-export function toSideClaimReports(rows: readonly SideClaimReportRow[]): SideClaimReport[] {
+export function toSideClaimReports<R extends SideClaimReportRow>(
+  rows: readonly R[],
+  winnerName: (winnerUserId: string, row: R) => PlayerNameParts,
+): SideClaimReport[] {
   return rows.flatMap((row) => {
     if (row.category !== 'closest_to_pin' && row.category !== 'longest_drive') return [];
     const distance = row.distance_m == null ? null : Number(row.distance_m);
@@ -49,7 +54,7 @@ export function toSideClaimReports(rows: readonly SideClaimReportRow[]): SideCla
         holeNumber: row.hole_number,
         flightNumber: row.flight_number,
         winnerUserId: row.winner_user_id,
-        winner: row.winner_user_id == null ? null : row.winner,
+        winner: row.winner_user_id == null ? null : winnerName(row.winner_user_id, row),
         distanceM: distance != null && Number.isFinite(distance) ? distance : null,
       },
     ];
