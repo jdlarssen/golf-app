@@ -34,7 +34,8 @@
 --    16. alle tre gruppene som kan slås av                    → lagret
 --
 --   Standardverdier og triggeren:
---    17. en rad med bare user_id får tom liste og stille tid av
+--    17. en rad med bare user_id får tom liste, stille tid av og deling på
+--        (share_rare_shots, #2894, 0238)
 --    18. en klient-sendt updated_at overstyres med now() ved INSERT
 --    19. … og ved UPDATE
 --
@@ -45,8 +46,14 @@
 --   Sletting:
 --    22. sletting av brukeren (auth.users) sletter raden      → CASCADE
 --
+--   «Del sjeldne slag med alle» (#2894, 0238):
+--    23. en annen slår av delingen på eierens rad (hostile PATCH) → 0 rader
+--    24. eieren slår av delingen med PostgREST-upserten (bare den kolonnen
+--        i SET-lista, slik appens saveRareShotSharing sender den) → PASS
+--
 --   Kontroll:
---    23. service-rollen ser eierens rad med verdiene fra punkt 4 og 16
+--    25. service-rollen ser eierens rad med verdiene fra punkt 4, 16 og 24:
+--        upserten i 24 lot varselvalgene stå
 --
 -- Anonymiseringen (spilleren som har spilt) dekkes i users_anonymize_test.sql
 -- og users_anonymize_fk_coverage_test.sql.
@@ -58,7 +65,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(23);
+select plan(25);
 
 \ir fixtures/rls_helpers.psql
 
@@ -313,9 +320,9 @@ insert into public.notification_preferences (user_id, updated_at)
 
 select torny_rls.as_service();
 select ok(
-  (select muted_groups = '{}'::text[] and quiet_hours = false
+  (select muted_groups = '{}'::text[] and quiet_hours = false and share_rare_shots = true
      from public.notification_preferences where user_id = torny_rls.outsider_id()),
-  'en rad med bare user_id får tom liste og stille tid av (standardverdiene)'
+  'en rad med bare user_id får tom liste, stille tid av og deling på (standardverdiene)'
 );
 
 select is(
@@ -361,12 +368,49 @@ select is(
   'sletting av brukeren sletter raden med varselvalgene (cascade)'
 );
 
+-- ═════════════════════════════════════════════════════════════════════════════
+-- «Del sjeldne slag med alle» (#2894, 0238) — samme eier-policyer som resten
+-- ═════════════════════════════════════════════════════════════════════════════
+-- try_set_share_rare_shots(owner, share): TRUE hvis en rad faktisk ble endret.
+create or replace function torny_rls.try_set_share_rare_shots(p_owner uuid, p_share boolean)
+  returns boolean
+  language plpgsql
+  as $$
+  declare v_rows int;
+  begin
+    update public.notification_preferences set share_rare_shots = p_share where user_id = p_owner;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
+  exception
+    when insufficient_privilege then return false;
+  end;
+  $$;
+
+select torny_rls.as_user(torny_rls.flightmate_id());
+select ok(
+  not torny_rls.try_set_share_rare_shots(torny_rls.active_id(), false),
+  'en annen kan IKKE slå av delingen på eierens rad (0 rader)'
+);
+
+-- PostgREST sin upsert med bare user_id og share_rare_shots i nyttelasten:
+-- SET-lista har bare kolonnene som ble sendt.
+select torny_rls.as_user(torny_rls.active_id());
+select lives_ok(
+  $$insert into public.notification_preferences (user_id, share_rare_shots)
+      values (torny_rls.active_id(), false)
+      on conflict (user_id) do update
+        set user_id = excluded.user_id, share_rare_shots = excluded.share_rare_shots$$,
+  'eieren slår av delingen med upsert av bare den kolonnen'
+);
+
 -- Kontroll: eierens rad finnes, med verdiene fra endringene over.
+select torny_rls.as_service();
 select ok(
   (select quiet_hours = true
           and muted_groups = array['scorecards', 'friends', 'signups']::text[]
+          and share_rare_shots = false
      from public.notification_preferences where user_id = torny_rls.active_id()),
-  'service-rollen ser eierens rad med stille tid på og de tre gruppene dempet'
+  'service-rollen ser eierens rad med stille tid på, de tre gruppene dempet og delingen av'
 );
 
 select * from finish();

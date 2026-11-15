@@ -112,6 +112,13 @@ describe('buildUserExport', () => {
     }
   });
 
+  it('varselvalgene leses med alle kolonnene, så «Del sjeldne slag med alle» (#2894) er med', async () => {
+    await run();
+
+    const op = caller.ops.find((o) => o.table === 'notification_preferences');
+    expect(op?.columns).toBe('*');
+  });
+
   it.each(NEW_READS)('en lesefeil i %s gir { ok: false } og ingen fil', async (read) => {
     failing = read;
 

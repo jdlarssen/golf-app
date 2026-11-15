@@ -4,6 +4,7 @@ import { osloParts } from '@/lib/format/teeOff';
 import { buildAeresbrettView, type AeresbrettView } from '@/lib/stats/appAeresbrettView';
 import { getCurrentSeasonWins } from '@/lib/stats/getFinishedGameWins';
 import { getSeasonStrokes, type SeasonStrokes } from '@/lib/stats/getSeasonStrokes';
+import { getRareShotOptOuts, sharedMomentsOnly } from '@/lib/stats/rareShotOptOuts';
 
 // Æresbrettet i appen (#2259): sesongens topp 10 i flest seire, flest birdies og
 // flest runder, for hele Tørny, pluss spillerens egen plass.
@@ -24,6 +25,10 @@ import { getSeasonStrokes, type SeasonStrokes } from '@/lib/stats/getSeasonStrok
 // Feiler lesingen av slagene, logges den, og `boards.birdies` og `moments` blir `null`:
 // Birdies-fanen og kortet «Sjeldne slag» sier fra hver for seg, de to andre fanene virker.
 // `moments` har navn, hull, bane og hel dato (eierens valg 15.11), aldri id-er, spill eller slag. Feil-bodyene er faste koder, aldri `err.message`.
+//
+// #2894: en spiller som har slått av «Del sjeldne slag med alle», står ikke i `moments`, heller
+// ikke for seg selv. Feiler lesingen av det valget, blir `moments` `null` (kortet sier fra) i
+// stedet for å vise noen som har sagt nei. Birdies-fanen er uendret.
 
 const LOG_PREFIX = 'api/aeresbrett';
 
@@ -42,13 +47,25 @@ export async function GET(request: NextRequest) {
     // One read feeds the birdie tab and the «Sjeldne slag» card; if it fails, the tab and the
     // card each say so (`birdies: null`, `moments: null`) and the other two tabs stand.
     let strokes: SeasonStrokes | null = { birdies: [], moments: [] };
+    let moments: SeasonStrokes['moments'] | null = [];
     if (season !== null) {
-      try {
-        strokes = await getSeasonStrokes({ seasonYear: season });
-      } catch (err) {
-        console.error(`[${LOG_PREFIX}] strokes failed`, err);
+      const [strokesRead, optOutsRead] = await Promise.allSettled([
+        getSeasonStrokes({ seasonYear: season }),
+        getRareShotOptOuts(),
+      ]);
+      if (strokesRead.status === 'fulfilled') {
+        strokes = strokesRead.value;
+      } else {
+        console.error(`[${LOG_PREFIX}] strokes failed`, strokesRead.reason);
         strokes = null;
       }
+      if (optOutsRead.status === 'rejected') {
+        console.error(`[${LOG_PREFIX}] rare shot opt-outs failed`, optOutsRead.reason);
+      }
+      moments =
+        strokes && optOutsRead.status === 'fulfilled'
+          ? sharedMomentsOnly(strokes.moments, optOutsRead.value)
+          : null;
     }
 
     const body: AeresbrettView = buildAeresbrettView({
@@ -58,7 +75,7 @@ export async function GET(request: NextRequest) {
       wins: wins.winnerCounts,
       rounds: wins.participationCounts,
       birdies: strokes?.birdies ?? null,
-      moments: strokes?.moments ?? null,
+      moments,
       names: wins.userNames,
       nicknames: wins.userNicknames,
     });

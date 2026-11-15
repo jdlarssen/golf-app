@@ -7,7 +7,12 @@
 // lagret, må aldri se lagret ut. «Rundene dine» er alltid på og sendes aldri.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { queryStub, routeFrom, stepArgs } from '../test/supabaseMock';
-import { fetchOwnPushPreferences, savePushPreferences } from './pushPreferences';
+import {
+  fetchOwnPushPreferences,
+  fetchOwnRareShotSharing,
+  savePushPreferences,
+  saveRareShotSharing,
+} from './pushPreferences';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 
@@ -96,5 +101,54 @@ describe('savePushPreferences', () => {
     routeFrom({ notification_preferences: [queryStub(result)] });
 
     await expect(savePushPreferences(USER, { mutedGroups: [], quietHours: false })).resolves.toEqual({ ok: false });
+  });
+});
+
+// #2894: «Del sjeldne slag med alle» (`share_rare_shots`, 0238) i samme rad.
+describe('fetchOwnRareShotSharing', () => {
+  it('leser valget fra sin egen rad', async () => {
+    const read = queryStub({ data: { share_rare_shots: false }, error: null });
+    routeFrom({ notification_preferences: [read] });
+
+    await expect(fetchOwnRareShotSharing(USER)).resolves.toBe(false);
+    expect(stepArgs(read, 'select')).toEqual([['share_rare_shots']]);
+    expect(stepArgs(read, 'eq')).toEqual([['user_id', USER]]);
+  });
+
+  it('ingen rad betyr ja', async () => {
+    routeFrom({ notification_preferences: [queryStub({ data: null, error: null })] });
+
+    await expect(fetchOwnRareShotSharing(USER)).resolves.toBe(true);
+  });
+
+  it('kaster ved lesefeil, så bryteren aldri viser et gjettet valg', async () => {
+    routeFrom({ notification_preferences: [queryStub({ data: null, error: { message: 'boom' } })] });
+
+    await expect(fetchOwnRareShotSharing(USER)).rejects.toThrow();
+  });
+});
+
+describe('saveRareShotSharing', () => {
+  it('sender bare delingsvalget, så varselvalgene står, og leser raden tilbake', async () => {
+    const upsert = queryStub({ data: [{ user_id: USER }], error: null });
+    routeFrom({ notification_preferences: [upsert] });
+
+    await expect(saveRareShotSharing(USER, false)).resolves.toEqual({ ok: true });
+    expect(stepArgs(upsert, 'upsert')).toEqual([
+      [{ user_id: USER, share_rare_shots: false }, { onConflict: 'user_id' }],
+    ]);
+    expect(stepArgs(upsert, 'select')).toEqual([['user_id']]);
+  });
+
+  it('null rader tilbake er ikke lagret', async () => {
+    routeFrom({ notification_preferences: [queryStub({ data: [], error: null })] });
+
+    await expect(saveRareShotSharing(USER, true)).resolves.toEqual({ ok: false });
+  });
+
+  it('en feil fra basen er ikke lagret, og kaster ikke', async () => {
+    routeFrom({ notification_preferences: [queryStub({ data: null, error: { message: 'rls' } })] });
+
+    await expect(saveRareShotSharing(USER, true)).resolves.toEqual({ ok: false });
   });
 });

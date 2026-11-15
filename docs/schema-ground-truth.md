@@ -140,7 +140,8 @@ bypasses every TS guard — only RLS + the guard trigger stop it.
 `roster_candidates`, `handicap_history`, `invitations`, `games` (incl. `round_report`, `payment_link`),
 `game_players` (incl. `paid_at`), `scores`, `reactions`, `friendships`, `group_members`, `ai_consents`,
 `kavalkades`, `kavalkade_shares`, `notifications`, `notification_preferences`, the push-token tables or `idea_submissions` — or
-widen a service-role surface over them (spectate, embeds, the finished-game board) — update
+widen a service-role surface over them (spectate, embeds, the finished-game board, the app's honour
+board `/api/aeresbrett`, whose rare shots obey `notification_preferences.share_rare_shots`, 0238) — update
 `messages/*.json → profile.data`, `DATA_TEXT` and the source comment above `DATA_ROWS` in
 `native/app/src/lib/profileCopy.ts` in the same PR.
 

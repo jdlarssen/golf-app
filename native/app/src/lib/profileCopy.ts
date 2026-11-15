@@ -237,6 +237,14 @@ export const PROFILE_TEXT = {
   privacyRow: 'Personvernerklæringen',
   privacySublabel: 'Hele teksten, på vanlig norsk',
 
+  // --- App-egent: «Del sjeldne slag med alle» (#2894) ----------------------
+  // Raden under «AI-tekster om meg», med tegningens ord (gruppe 10, rad 99).
+  // Underteksten er lik når bryteren står på og av. Nettet har ingen bryter:
+  // Topplista finnes bare i appen. Feillinja er AI-bryterens.
+  shareRareShotsTitle: 'Del sjeldne slag med alle',
+  shareRareShotsSublabel: 'Av: bare venner og ligaen får vite',
+  shareRareShotsFailed: 'Fikk ikke lagret. Prøv igjen.',
+
   // --- App-egent: nedlastingen av dataene (#2332 PR C) ---------------------
   // Raden og underteksten er webbens (`DATA_TEXT.exportRow`/`exportSublabel`).
   // Nettsiden laster ned med et klikk og har ingen ventetekst; appen henter
@@ -319,6 +327,9 @@ export const PROFILE_TEXT = {
  *   game` (`is_in_game`) og `game_players creator select`. Vipps-nummeret er
  *   `games.payment_link`, vist på spillsiden og på den åpne påmeldingssiden
  *   (`app/[locale]/signup/[shortId]/PublicLandingView.tsx`).
+ * - `rareShots` (#2894): `/api/aeresbrett` leser alle ferdige runder med service-rollen og sender
+ *   navn, hull, bane og dato for alle i Tørny (`lib/stats/getSeasonStrokes.ts`). Bryteren er
+ *   `notification_preferences.share_rare_shots` (0238), filteret `lib/stats/rareShotOptOuts.ts`.
  * - `social`: `friendships view own` (ingen admin-gren), `group_members select
  *   member or admin`; vennelenka krever innlogging
  *   (`app/[locale]/venner/legg-til/[code]/page.tsx:48`).
@@ -336,7 +347,7 @@ export const PROFILE_TEXT = {
  *   Ikke vennskap, varsler, enheter, AI-svaret, Kavalkaden eller
  *   handicaphistorikken.
  */
-export const DATA_ROWS = ['profile', 'email', 'rounds', 'social', 'ai', 'notifications'] as const;
+export const DATA_ROWS = ['profile', 'email', 'rounds', 'rareShots', 'social', 'ai', 'notifications'] as const;
 
 export type DataRowId = (typeof DATA_ROWS)[number];
 
@@ -361,6 +372,10 @@ export const DATA_TEXT = {
     rounds: {
       title: 'Rundene og slagene dine',
       body: 'De andre i spillet og arrangøren ser slagene dine. Med en live-lenke kan hvem som helst følge spillet.',
+    },
+    rareShots: {
+      title: 'Sjeldne slag',
+      body: 'Slår du hole-in-one, albatross eller eagle, står det på Topplista, og alle i Tørny ser det. Det kan du skru av i appen, under Du bestemmer.',
     },
     social: {
       title: 'Venner og klubber',

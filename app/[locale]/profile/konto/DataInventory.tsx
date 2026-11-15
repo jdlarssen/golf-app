@@ -3,7 +3,7 @@ import { SettingList } from '@/components/ui/SettingRow';
 /**
  * #2332: the rows under «Dette lagrer vi» on «Dine data», in screen order.
  *
- * The same six rows, in the same order and with the same words, as the app's
+ * The same seven rows, in the same order and with the same words, as the app's
  * «Personvern og konto» (`DATA_ROWS`/`DATA_TEXT` in
  * `native/app/src/lib/profileCopy.ts`, whose parity test compares the whole of
  * `messages/no.json → profile.data`). The source for every sentence — the
@@ -11,7 +11,7 @@ import { SettingList } from '@/components/ui/SettingRow';
  * there, once; change who can read one of those tables and the text, that
  * comment and this list change together (`docs/schema-ground-truth.md`, RLS).
  */
-export const DATA_ROWS = ['profile', 'email', 'rounds', 'social', 'ai', 'notifications'] as const;
+export const DATA_ROWS = ['profile', 'email', 'rounds', 'rareShots', 'social', 'ai', 'notifications'] as const;
 
 export type DataRowId = (typeof DATA_ROWS)[number];
 

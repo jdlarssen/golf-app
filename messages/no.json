@@ -540,6 +540,10 @@
           "title": "Rundene og slagene dine",
           "body": "De andre i spillet og arrangøren ser slagene dine. Med en live-lenke kan hvem som helst følge spillet."
         },
+        "rareShots": {
+          "title": "Sjeldne slag",
+          "body": "Slår du hole-in-one, albatross eller eagle, står det på Topplista, og alle i Tørny ser det. Det kan du skru av i appen, under Du bestemmer."
+        },
         "social": {
           "title": "Venner og klubber",
           "body": "Hvem du er venn med, ser bare du og vennen. Klubben ser at du er med."
