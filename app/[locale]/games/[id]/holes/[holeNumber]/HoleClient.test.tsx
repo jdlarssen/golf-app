@@ -65,6 +65,30 @@ vi.mock('@/lib/wolf/readWolfChoices', () => ({
   readWolfChoices: vi.fn().mockResolvedValue([]),
 }));
 
+// #2283: the side-contest rows read the flight's reports through the browser
+// client and save through a server action. The wiring has its own tests
+// (HoleSideContests.test.tsx); here only where the rows stand on the page, so
+// the hook answers from the server's snapshot and the actions are stubs.
+vi.mock('./sideClaimActions', () => ({
+  recordSideClaim: vi.fn().mockResolvedValue({ ok: true }),
+  recordGirClaims: vi.fn().mockResolvedValue({ ok: true }),
+}));
+vi.mock('./useSideClaims', () => ({
+  useSideClaims: (
+    _gameId: string,
+    _hole: number,
+    _need: unknown,
+    initial: { failed: boolean; side?: unknown[]; gir?: unknown[] } | null,
+  ) => ({
+    side: initial?.failed ? undefined : initial?.side,
+    gir: initial?.failed ? undefined : initial?.gir,
+    failed: initial?.failed ?? false,
+    refresh: async () => {},
+    snapshotSeq: 0,
+    startedSeq: () => 0,
+  }),
+}));
+
 import { writeScore } from '@/lib/sync/writeScore';
 import { drainQueue } from '@/lib/sync/syncWorker';
 import { HoleClient, type HoleClientProps, ONBOARDING_KEY } from './HoleClient';
@@ -1101,5 +1125,69 @@ describe('HoleClient — wolf on the hole (#2314)', () => {
     // 9 · 6 · 4 · 6 before hole 17: u3 is 5 behind (≥ 4) and is the wolf.
     render(<HoleClient {...wolfProps({ myUserId: 'u3', wolfTurn: undefined })} />);
     expect(screen.getByTestId('wolf-choice-modal')).toBeInTheDocument();
+  });
+});
+
+describe('HoleClient — side contest rows (#2283)', () => {
+  const ctp = { category: 'closest_to_pin', source: 'game' } as const;
+  const sideContest = (overrides: Partial<NonNullable<HoleClientProps['sideContest']>> = {}) => ({
+    contests: [ctp],
+    canReport: true,
+    claims: { failed: false, side: [], gir: undefined },
+    players: makePlayers().map((p) => ({
+      userId: p.userId,
+      name: p.name,
+      shortName: p.name,
+      initial: 'P',
+      teamNumber: null,
+      withdrawn: false,
+    })),
+    ...overrides,
+  });
+
+  it('the row is the first thing in the content, above the flight list (H2)', () => {
+    render(<HoleClient {...baseProps({ currentHole: 7, sideContest: sideContest() })} />);
+    const row = screen.getByTestId('side-contest-closest_to_pin');
+    const content = screen.getByTestId('side-contests').parentElement as HTMLElement;
+    // The wrapper is the first child of the content div, and the flight list comes after it.
+    expect(content.firstElementChild).toBe(screen.getByTestId('side-contests'));
+    expect(content).toContainElement(screen.getByTestId('flight-list'));
+    expect(
+      screen.getByTestId('side-contests').compareDocumentPosition(screen.getByTestId('flight-list')) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(row).toHaveTextContent('Nærmest pinnen');
+    expect(row).toHaveTextContent('Meld inn');
+  });
+
+  it('shows no row when the player cannot report (withdrawn, no flight, or the round is over)', () => {
+    render(<HoleClient {...baseProps({ sideContest: sideContest({ canReport: false, claims: null, players: [] }) })} />);
+    expect(screen.queryByTestId('side-contests')).toBeNull();
+  });
+
+  it('shows no row on a hole without a side contest, and none when the prop is left out', () => {
+    const { unmount } = render(<HoleClient {...baseProps({ sideContest: null })} />);
+    expect(screen.queryByTestId('side-contests')).toBeNull();
+    unmount();
+    render(<HoleClient {...baseProps()} />);
+    expect(screen.queryByTestId('side-contests')).toBeNull();
+  });
+
+  it('with several contests the rows stand together above the flight', () => {
+    render(
+      <HoleClient
+        {...baseProps({
+          sideContest: sideContest({
+            contests: [ctp, { category: 'longest_drive', source: 'game' }],
+            claims: { failed: false, side: [], gir: undefined },
+          }),
+        })}
+      />,
+    );
+    const wrapper = screen.getByTestId('side-contests');
+    expect(Array.from(wrapper.children).map((c) => c.getAttribute('data-testid'))).toEqual([
+      'side-contest-closest_to_pin',
+      'side-contest-longest_drive',
+    ]);
   });
 });

@@ -16,12 +16,17 @@ import { useModalFocus } from '@/hooks/useModalFocus';
  * wizard's FormDataInputs does, #1011). Focus goes into the sheet on open, is
  * held there, and returns to the button that opened it (`useModalFocus`).
  *
+ * `kicker` is an optional small line above the title («Sidekonkurranse · hull
+ * 7», #2283). It sits outside the heading, so the dialog is still named by the
+ * title alone.
+ *
  * `position: fixed` lands wrong when an ancestor has a `transform` (#2251);
  * keep the sheet out from under one.
  */
 export function BottomSheet({
   open,
   title,
+  kicker,
   onClose,
   doneLabel,
   closeLabel,
@@ -29,6 +34,8 @@ export function BottomSheet({
 }: {
   open: boolean;
   title: string;
+  /** A line above the title. Left out, the header is the title alone. */
+  kicker?: string;
   onClose: () => void;
   /** The button at the bottom: «Ferdig». Left out, the sheet has none. */
   doneLabel?: string;
@@ -54,6 +61,12 @@ export function BottomSheet({
 
   if (!open) return null;
 
+  const heading = (
+    <h2 id={titleId} className="min-w-0 font-serif text-[22px] leading-[normal] font-semibold text-text">
+      {title}
+    </h2>
+  );
+
   return (
     <div
       className="bottom-sheet-backdrop fixed inset-0 z-50 flex items-end justify-center bg-black/[0.32]"
@@ -71,9 +84,14 @@ export function BottomSheet({
       >
         <span aria-hidden className="h-[5px] w-10 shrink-0 self-center rounded-full bg-border" />
         <div className="flex items-center justify-between gap-4">
-          <h2 id={titleId} className="min-w-0 font-serif text-[22px] leading-[normal] font-semibold text-text">
-            {title}
-          </h2>
+          {kicker ? (
+            <div className="min-w-0">
+              <p className="text-[12px] leading-[15px] font-semibold text-accent-text">{kicker}</p>
+              {heading}
+            </div>
+          ) : (
+            heading
+          )}
           <button
             type="button"
             onClick={onClose}

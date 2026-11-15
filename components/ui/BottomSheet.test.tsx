@@ -79,4 +79,24 @@ describe('BottomSheet', () => {
     expect(screen.getAllByRole('button')).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Lukk' })).toBeInTheDocument();
   });
+
+  it('shows a kicker above the title, outside the heading (#2283)', () => {
+    render(
+      <BottomSheet open title="Nærmest pinnen" kicker="Sidekonkurranse · hull 7" onClose={vi.fn()} closeLabel="Lukk">
+        <p>Innhold</p>
+      </BottomSheet>,
+    );
+    const kicker = screen.getByText('Sidekonkurranse · hull 7');
+    const heading = screen.getByRole('heading', { name: 'Nærmest pinnen' });
+    // Above the heading, and not part of it: the dialog is still named by the title alone.
+    expect(kicker.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(heading).not.toContainElement(kicker);
+    expect(screen.getByRole('dialog', { name: 'Nærmest pinnen' })).toBeInTheDocument();
+  });
+
+  it('without a kicker the header is the title alone, as before', () => {
+    renderSheet();
+    const heading = screen.getByRole('heading', { name: 'Handicap' });
+    expect(heading.parentElement?.querySelector('p')).toBeNull();
+  });
 });

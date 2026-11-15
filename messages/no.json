@@ -3104,6 +3104,66 @@
         "unknown": "Noe gikk galt. Prøv igjen."
       },
       "teeHint": "{name} slår ut"
+    },
+    "sideContest": {
+      "report": "Meld inn",
+      "rowGame": "Sidekonkurranse",
+      "kickerGame": "Sidekonkurranse · hull {hole}",
+      "kickerCup": "Sidepoeng · hull {hole} · {points}",
+      "pointsToTeam": "+{points} p til laget",
+      "pointsPerGir": "+{points} p per GIR",
+      "rowOffline": "Uten nett. Meld inn senere.",
+      "rowFetchFailed": "Fikk ikke hentet. Prøver igjen.",
+      "sheetOffline": "Du er uten nett. Kom tilbake til dette hullet og meld inn når du har dekning.",
+      "distanceLabel": "Hvor nær?",
+      "metre": "m",
+      "metreField": "Meter",
+      "shorter": "0,5 meter kortere",
+      "longer": "0,5 meter lengre",
+      "done": "Ferdig",
+      "close": "Lukk",
+      "you": "Deg",
+      "groupGame": "flighten",
+      "groupCup": "kampen",
+      "title": {
+        "closest_to_pin": "Nærmest pinnen",
+        "longest_drive": "Lengste drive",
+        "gir": "GIR"
+      },
+      "none": {
+        "closest_to_pin": "Ingen på green",
+        "longest_drive": "Ingen på fairway",
+        "gir": "Ingen traff greenen"
+      },
+      "questionClosestToPin": "Hvem i {group} lå nærmest på green etter utslaget?",
+      "questionLongestDrive": "Hvem i {group} slo lengst ut på fairway?",
+      "statusSharedGame": "Svaret deles med hele flighten. Arrangøren kårer vinneren til slutt.",
+      "statusSharedCup": "Svaret deles med kampen. Arrangøren kårer vinneren til slutt.",
+      "savedByMe": "Lagret av deg.",
+      "savedByName": "Lagret av {name}.",
+      "savedUnknown": "Lagret.",
+      "anyoneCanChange": "Alle i {group} kan endre.",
+      "answerWithDistance": "{name} · {distance} {unit}",
+      "failure": {
+        "notAuthenticated": "Du er ikke logget inn lenger. Logg inn på nytt.",
+        "notActive": "Runden er avsluttet. Nå kan ingenting registreres mer.",
+        "notPlayer": "Du er ikke med i {group} lenger, så svaret ble ikke lagret.",
+        "wrongFlight": "Spilleren er ikke med i {group} din lenger, så svaret ble ikke lagret.",
+        "noSlot": "Hullet har ikke sidekonkurranse lenger, så svaret ble ikke lagret.",
+        "badDistance": "Avstanden må være mellom 0,1 og 99,9 meter.",
+        "dbError": "Fikk ikke lagret. Sjekk nettet og prøv igjen."
+      }
+    },
+    "girContest": {
+      "questionAfterTeeShot": "Hvem var på greenen etter utslaget?",
+      "questionOnTwo": "Hvem var på greenen på to slag?",
+      "questionOnThree": "Hvem var på greenen på tre slag?",
+      "questionOnFour": "Hvem var på greenen på fire slag?",
+      "tapAllWhoHit": "Trykk på alle som traff.",
+      "answer": "{hits} av {balls} traff",
+      "sharedWithMatch": "Svaret deles med kampen.",
+      "maxPerTeam": "Hvert lag får poeng for høyst {max}.",
+      "oneBall": "Laget spiller én ball, så det teller én gang."
     }
   },
   "leaderboard": {
