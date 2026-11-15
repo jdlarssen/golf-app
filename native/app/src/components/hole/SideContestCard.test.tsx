@@ -207,6 +207,38 @@ describe('SideContestCard', () => {
     expect(recordMock.mock.calls.map(([write]) => write.distanceM)).toEqual([null, 0.5, 1, 1.5]);
   });
 
+  it('feiler siste henting, står siste trykk, ikke et mellomsvar', async () => {
+    const answers: ((result: { ok: true }) => void)[] = [];
+    recordMock.mockImplementation(() => new Promise((resolve) => answers.push(resolve)));
+    const claim = (distanceM: number | null, updatedAt: string) => ({
+      category: 'closest_to_pin' as const,
+      holeNumber: 7,
+      winnerUserId: 'marte',
+      distanceM,
+      enteredBy: 'me',
+      updatedAt,
+    });
+    const refresh = jest
+      .fn()
+      .mockResolvedValueOnce({ side: [claim(null, 't1')] })
+      .mockResolvedValueOnce({ side: [claim(0.5, 't2')] })
+      // Siste henting feiler (useSideClaims gir null).
+      .mockResolvedValueOnce(null);
+    const p = props({ refresh });
+    const view = await render(<SideContestCard {...p} />);
+    await fireEvent.press(screen.getByTestId('side-contest-closest_to_pin'));
+    await fireEvent.press(screen.getByTestId('side-contest-closest_to_pin-line-marte'));
+    await fireEvent.press(screen.getByTestId('side-contest-closest_to_pin-distance-plus'));
+    await act(async () => answers[0]({ ok: true }));
+    await view.rerender(<SideContestCard {...p} claim={claim(null, 't1')} />);
+    await fireEvent.press(screen.getByTestId('side-contest-closest_to_pin-distance-plus'));
+    await act(async () => answers[1]({ ok: true }));
+    await view.rerender(<SideContestCard {...p} claim={claim(0.5, 't2')} />);
+    await act(async () => answers[2]({ ok: true }));
+    // Lagret 1,0 m, men hentingen etterpå feilet: feltet viser det som ble lagret.
+    expect(screen.getByTestId('side-contest-closest_to_pin-distance-input').props.value).toBe('1,0');
+  });
+
   it('en feil fra en tidligere lagring forsvinner når en senere lagring går gjennom', async () => {
     const answers: ((result: Awaited<ReturnType<typeof recordSideClaim>>) => void)[] = [];
     recordMock.mockImplementation(() => new Promise((resolve) => answers.push(resolve)));

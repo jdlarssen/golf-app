@@ -13,6 +13,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { HoleContest } from '../../../../../lib/games/sideContest';
 import { recordGirClaims, type GirClaim } from '../../data/sideClaims';
+import type { SideClaimsSnapshot } from '../../lib/useSideClaims';
 import {
   contestPointsLine,
   contestTitle,
@@ -45,8 +46,13 @@ export interface GirBallLine {
   faces: LineFace[];
 }
 
-/** Et trykk per spiller, til serveren har et nyere svar for spilleren. */
-type Pending = { hit: boolean; base: string | null };
+/**
+ * Et trykk per spiller: lagringsnummeret, og `updatedAt` det gjelder over. Til
+ * lagringen er ferdig er det spillerens rad da trykket kom; etterpå raden
+ * lagringen ga. Hver ball har sitt eget trykk, så en lagring på én ball får aldri
+ * et gammelt trykk på en annen ball til å gjelde igjen.
+ */
+type Pending = { hit: boolean; save: number; base: string | null };
 
 export function GirContestCard({
   gameId,
@@ -75,13 +81,14 @@ export function GirContestCard({
   failed: boolean;
   online: boolean;
   savedByName: (userId: string) => string | null;
-  refresh: () => Promise<void>;
+  /** Henter på nytt; gir det som ble hentet, eller `null` når hentingen feilet. */
+  refresh: () => Promise<SideClaimsSnapshot | null | void>;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<ReadonlyMap<string, Pending>>(new Map());
   const [error, setError] = useState<string | null>(null);
-  // Lagringer som er sendt eller venter i køen.
-  const [inFlight, setInFlight] = useState(0);
+  // Høyeste lagringsnummer som er ferdig (lagringene går i rekkefølge).
+  const [settled, setSettled] = useState(0);
 
   const alive = useRef(true);
   useEffect(() => {
@@ -95,13 +102,18 @@ export function GirContestCard({
 
   const loaded = claims !== undefined;
   const server = new Map((claims ?? []).map((row) => [row.userId, row]));
+  // Det serveren viser nå, lest når en lagring er ferdig og hentingen feilet.
+  const shown = useRef(server);
+  useEffect(() => {
+    shown.current = new Map((claims ?? []).map((row) => [row.userId, row]));
+  }, [claims]);
 
   /**
-   * Treffet for én spiller: trykket mens lagringer står i kø, og ellers så
-   * lenge serveren ikke har noe nyere.
+   * Treffet for én spiller: trykket til dets egen lagring er ferdig, og
+   * deretter så lenge serveren ikke har noe nyere enn raden lagringen ga.
    */
   const pressLive = (userId: string, press: Pending) =>
-    inFlight > 0 || press.base === (server.get(userId)?.updatedAt ?? null);
+    press.save > settled || press.base === (server.get(userId)?.updatedAt ?? null);
   const hitOf = (userId: string): boolean | null => {
     const row = server.get(userId);
     const press = pending.get(userId);
@@ -148,30 +160,46 @@ export function GirContestCard({
     const mySave = ++latest.current;
     setPending((prev) => {
       const next = new Map(prev);
-      for (const userId of userIds) next.set(userId, { hit, base: server.get(userId)?.updatedAt ?? null });
+      for (const userId of userIds) {
+        next.set(userId, { hit, save: mySave, base: server.get(userId)?.updatedAt ?? null });
+      }
       return next;
     });
     setError(null);
-    setInFlight((n) => n + 1);
     chain.current = chain.current.then(async () => {
       try {
         const result = await recordGirClaims({ gameId, holeNumber, userIds, hit });
         if (!alive.current) return;
         if (result.ok) {
-          await refresh();
+          const fresh = await refresh();
+          if (!alive.current) return;
+          // Trykkene gjelder nå over radene lagringen ga. Feilet hentingen, over
+          // det serveren viser: da står de til pollen henter noe nyere.
+          setPending((prev) => {
+            const next = new Map(prev);
+            for (const userId of userIds) {
+              const press = next.get(userId);
+              if (!press || press.save !== mySave) continue;
+              const base = fresh
+                ? (fresh.gir?.find((row) => row.userId === userId)?.updatedAt ?? null)
+                : (shown.current.get(userId)?.updatedAt ?? null);
+              next.set(userId, { ...press, base });
+            }
+            return next;
+          });
           // Siste trykk er lagret: en feil fra et tidligere trykk gjelder ikke lenger.
-          if (alive.current && mySave === latest.current) setError(null);
+          if (mySave === latest.current) setError(null);
           return;
         }
         setError(describeSideClaimFailure(result.error, contest));
         // Ballen hopper tilbake til det serveren har, om ingen har trykket på den siden.
         setPending((prev) => {
           const next = new Map(prev);
-          for (const userId of userIds) if (next.get(userId)?.hit === hit) next.delete(userId);
+          for (const userId of userIds) if (next.get(userId)?.save === mySave) next.delete(userId);
           return next;
         });
       } finally {
-        if (alive.current) setInFlight((n) => n - 1);
+        if (alive.current) setSettled((n) => Math.max(n, mySave));
       }
     });
   };

@@ -19,13 +19,20 @@ import { useFocusEffect } from '@react-navigation/native';
 import { fetchGirClaims, fetchSideClaims, type GirClaim, type SideClaim } from '../data/sideClaims';
 import { CHOICES_POLL_MS } from './useChoices';
 
+/** Det én henting fant. Kortene bruker den til å vite hva serveren har etter egen lagring. */
+export interface SideClaimsSnapshot {
+  side?: SideClaim[];
+  gir?: GirClaim[];
+}
+
 export interface SideClaimsState {
   /** `undefined` = ikke hentet for dette hullet ennå. Tom liste er et svar. */
   side: SideClaim[] | undefined;
   gir: GirClaim[] | undefined;
   /** Siste henting feilet, og ingen har lyktes for hullet. Raden sier fra. */
   failed: boolean;
-  refresh: () => Promise<void>;
+  /** Henter på nytt og gir tilbake det som ble hentet, eller `null` når hentingen feilet. */
+  refresh: () => Promise<SideClaimsSnapshot | null>;
 }
 
 interface Fetched {
@@ -59,8 +66,8 @@ export function useSideClaims(
   const appliedSeq = useRef(0);
   const succeededHole = useRef<number | null>(null);
 
-  const refresh = useCallback(async () => {
-    if (!enabled) return;
+  const refresh = useCallback(async (): Promise<SideClaimsSnapshot | null> => {
+    if (!enabled) return null;
     const mySeq = ++seq.current;
     const hole = holeNumber;
     try {
@@ -68,15 +75,18 @@ export function useSideClaims(
         need.side ? fetchSideClaims(gameId, hole) : Promise.resolve(undefined),
         need.gir ? fetchGirClaims(gameId, hole) : Promise.resolve(undefined),
       ]);
-      if (!alive.current || mySeq <= appliedSeq.current) return;
-      appliedSeq.current = mySeq;
-      succeededHole.current = hole;
-      setFetched({ hole, side, gir });
-      setFailedHole(null);
+      if (alive.current && mySeq > appliedSeq.current) {
+        appliedSeq.current = mySeq;
+        succeededHole.current = hole;
+        setFetched({ hole, side, gir });
+        setFailedHole(null);
+      }
+      return { side, gir };
     } catch {
       // Forrige svar for hullet står. Har ingen henting lyktes for hullet,
       // sier raden «Fikk ikke hentet».
       if (alive.current && succeededHole.current !== hole) setFailedHole(hole);
+      return null;
     }
   }, [enabled, gameId, holeNumber, need.gir, need.side]);
 

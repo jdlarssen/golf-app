@@ -163,6 +163,41 @@ describe('GirContestCard', () => {
     expect(recordMock.mock.calls.map(([write]) => write.hit)).toEqual([true, false]);
   });
 
+  it('en kamerats retting står når du lagrer en annen ball', async () => {
+    const answers: ((result: { ok: true }) => void)[] = [];
+    recordMock.mockImplementation(() => new Promise((resolve) => answers.push(resolve)));
+    const marteHit = [row('marte', true, 't1', 'me')];
+    const refresh = jest.fn().mockResolvedValueOnce({ gir: marteHit });
+    const p = props({ refresh });
+    const view = await render(<GirContestCard {...p} />);
+    await fireEvent.press(screen.getByTestId('side-contest-gir'));
+    await fireEvent.press(screen.getByTestId('side-contest-gir-line-marte'));
+    await act(async () => answers[0]({ ok: true }));
+    await view.rerender(<GirContestCard {...p} claims={marteHit} />);
+
+    // Tore retter Marte til bommet, og pollen henter det.
+    await view.rerender(<GirContestCard {...p} claims={[row('marte', false, 't2', 'tore')]} />);
+    // Du huker av Tore. Mens den lagringen pågår, står Marte som bommet.
+    await fireEvent.press(screen.getByTestId('side-contest-gir-line-tore'));
+    expect(screen.getByTestId('side-contest-gir-line-marte').props.accessibilityState.checked).toBe(false);
+    expect(screen.getByTestId('side-contest-gir-subtitle')).toHaveTextContent('1 av 4 traff');
+    await act(async () => answers[1]({ ok: true }));
+  });
+
+  it('en feil midt i køen tar ikke et senere trykk på samme ball', async () => {
+    const answers: ((result: Awaited<ReturnType<typeof recordGirClaims>>) => void)[] = [];
+    recordMock.mockImplementation(() => new Promise((resolve) => answers.push(resolve)));
+    await render(<GirContestCard {...props()} />);
+    await fireEvent.press(screen.getByTestId('side-contest-gir'));
+    // På, av, på igjen. Den første lagringen feiler.
+    for (let i = 0; i < 3; i++) await fireEvent.press(screen.getByTestId('side-contest-gir-line-marte'));
+    await act(async () => answers[0]({ ok: false, error: 'db_error' }));
+    expect(screen.getByTestId('side-contest-gir-line-marte').props.accessibilityState.checked).toBe(true);
+    await act(async () => answers[1]({ ok: true }));
+    await act(async () => answers[2]({ ok: true }));
+    expect(recordMock.mock.calls.map(([write]) => write.hit)).toEqual([true, false, true]);
+  });
+
   it('uten nett er linjene sperret', async () => {
     const p = props();
     const view = await render(<GirContestCard {...p} />);
