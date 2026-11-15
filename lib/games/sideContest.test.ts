@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CupNamedPlayerRow } from '../cup/cupRoster';
 import {
   categoryForCupKind,
+  claimFlightKeys,
   contestsForHole,
   girBallsForGame,
   girQuestionForPar,
@@ -10,6 +11,7 @@ import {
   parseSideContestHole,
   sideClaimFlightKey,
   sortClaimsForHole,
+  stepDistance,
   sumGirClaimsByTeam,
   toCupSideAwards,
   type CupSideAward,
@@ -244,6 +246,51 @@ describe('sideClaimFlightKey', () => {
     expect(sideClaimFlightKey('stableford', noFlight, 'me')).toBeNull();
     expect(sideClaimFlightKey('stableford', [player('me', 1, '2026-11-15'), player('a', 1)], 'me')).toBeNull();
     expect(sideClaimFlightKey('stableford', twoFlights, 'stranger')).toBeNull();
+  });
+});
+
+describe('claimFlightKeys', () => {
+  const player = (user_id: string, flight_number: number | null, withdrawn_at: string | null = null) => ({
+    user_id,
+    flight_number,
+    withdrawn_at,
+  });
+  const eight = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => player(`p${n}`, n <= 4 ? 1 : 2));
+
+  it('is [0] in a single-flight game and the active flights otherwise', () => {
+    expect(claimFlightKeys('stableford', eight.slice(0, 4))).toEqual([0]);
+    expect(claimFlightKeys('wolf', eight)).toEqual([0]);
+    expect(claimFlightKeys('stableford', eight)).toEqual([1, 2]);
+  });
+
+  it('leaves out withdrawn players and players without a flight', () => {
+    const odd = [...eight, player('x', 3, '2026-11-15'), player('y', null)];
+    expect(claimFlightKeys('stableford', odd)).toEqual([1, 2]);
+  });
+
+  it('is exactly the keys sideClaimFlightKey gives each player', () => {
+    const rosters = [eight, eight.slice(0, 4), [...eight, player('x', 3, '2026-11-15'), player('y', null)], []];
+    for (const roster of rosters) {
+      const each = roster.map((p) => sideClaimFlightKey('stableford', roster, p.user_id)).filter((k) => k !== null);
+      expect(claimFlightKeys('stableford', roster)).toEqual([...new Set(each)].sort((a, b) => a - b));
+    }
+  });
+});
+
+describe('stepDistance', () => {
+  it('steps 0,5 m from the value, and + from an empty field gives the first step', () => {
+    expect(stepDistance(null, 1)).toBe(0.5);
+    expect(stepDistance(null, -1)).toBeNull();
+    expect(stepDistance(2.5, 1)).toBe(3);
+    expect(stepDistance(2.4, 1)).toBe(2.9);
+    expect(stepDistance(0.6, -1)).toBe(0.1);
+  });
+
+  it('stops at the distance bounds and never drifts', () => {
+    expect(stepDistance(0.5, -1)).toBeNull();
+    expect(stepDistance(99.5, 1)).toBeNull();
+    expect(stepDistance(99.4, 1)).toBe(99.9);
+    expect(stepDistance(0.1 + 0.2, 1)).toBe(0.8);
   });
 });
 

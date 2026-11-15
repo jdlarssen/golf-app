@@ -22,6 +22,7 @@ import {
   withdrawUserIds,
   NO_WINNER,
 } from './endGamePlan';
+import * as sharedSideContest from '../../../../lib/games/sideContest';
 
 const ME = 'user-me';
 const MATE = 'user-mate';
@@ -589,5 +590,26 @@ describe('#2283: det flightene har meldt inn', () => {
     // Uten navn gjelder kallenavnet, som ellers i appen.
     const nick = [claim({ winnerUserId: 'n', winner: { name: null, nickname: 'Kalle' } })];
     expect(reportsForSlot(ctp, nick, [1], roster)?.lines[0].name).toBe('Kalle');
+  });
+});
+
+describe('#2283: flight-regelen har ett hjem', () => {
+  it('claimFlights gir nøklene sideClaimFlightKey gir hver spiller, i lib/games', () => {
+    const eight = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => player({ userId: `p${n}`, flightNumber: n <= 4 ? 1 : 2 }));
+    const rosters = [
+      eight,
+      eight.slice(0, 4),
+      [...eight, player({ userId: 'x', flightNumber: 3, withdrawnAt: '2026-11-15' }), player({ userId: 'y' })],
+    ];
+    for (const mode of ['stableford', 'wolf'] as const) {
+      for (const roster of rosters) {
+        const flightPlayers = roster.map((p) => ({ user_id: p.userId, flight_number: p.flightNumber, withdrawn_at: p.withdrawnAt }));
+        const each = flightPlayers
+          .map((p) => sharedSideContest.sideClaimFlightKey(mode, flightPlayers, p.user_id))
+          .filter((k): k is number => k !== null);
+        expect(claimFlights(mode, roster)).toEqual([...new Set(each)].sort((a, b) => a - b));
+        expect(claimFlights(mode, roster)).toEqual(sharedSideContest.claimFlightKeys(mode, flightPlayers));
+      }
+    }
   });
 });

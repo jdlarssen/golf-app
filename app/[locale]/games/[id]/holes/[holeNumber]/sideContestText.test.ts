@@ -5,6 +5,7 @@ import noMessages from '@/messages/no.json';
 import { mergeMessages } from '@/lib/i18n/messages';
 import { CLAIM_DISTANCE_MIN_M } from '@/lib/games/sideContest';
 import { formatDistance, stepDistance } from './sideContestText';
+import * as sharedSideContest from '@/lib/games/sideContest';
 
 // #2283 (part D3) — Type A: the distance steps and the number format, and a
 // guard that every message of the row and sheet formats in both catalogs (an
@@ -90,5 +91,11 @@ describe('the catalogs of the row and the sheet', () => {
       }
     }
     expect(errors).toEqual([]);
+  });
+});
+
+describe('#2283: the distance step has one home', () => {
+  it('the web field steps with the lib/games rule the app uses too', () => {
+    expect(stepDistance).toBe(sharedSideContest.stepDistance);
   });
 });

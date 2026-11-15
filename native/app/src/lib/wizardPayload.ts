@@ -252,21 +252,10 @@ interface PlayerSlot {
 
 /**
  * #2283: hullene for én kategori etter at plass `position` (1-basert) har fått
- * `hole`. To plasser i samme kategori kan ikke stå på samme hull (den delte
- * parseren nekter det, siden flighten melder inn per hull), så har den andre
- * plassen hullet, mister den det.
+ * `hole`. Regelen bor i `lib/games/sideSlotHoles.ts`, den samme nettets
+ * oppsett bruker: har den andre plassen hullet, mister den det.
  */
-export function withSlotHole(
-  holes: readonly (number | null)[],
-  position: number,
-  hole: number | null,
-): (number | null)[] {
-  const next = [...holes];
-  while (next.length < position) next.push(null);
-  for (let i = 0; i < next.length; i += 1) if (hole !== null && next[i] === hole) next[i] = null;
-  next[position - 1] = hole;
-  return next;
-}
+export { withSlotHole } from '../../../../lib/games/sideSlotHoles';
 
 /**
  * Trenger denne modusen at hver spiller får et lag/side FØR publisering?

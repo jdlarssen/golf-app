@@ -19,8 +19,7 @@ import {
   type GameMode,
 } from '../../../../lib/scoring/modes/types';
 import { splitFinishRoster } from '../../../../lib/games/finishGate';
-import { isSingleFlightGame } from '../../../../lib/games/flightScope';
-import { holeForSlot, sortClaimsForHole } from '../../../../lib/games/sideContest';
+import { claimFlightKeys, holeForSlot, sortClaimsForHole } from '../../../../lib/games/sideContest';
 import { playerShortName } from '../../../../lib/names/playerName';
 import type { EndRoundFailure, FinishClaim } from '../data/endGame';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
@@ -113,19 +112,14 @@ export function sideSlots(game: BundleGame): FinishSlot[] {
 /**
  * #2283: flightene som kan melde inn, som nøklene `side_claim_flight_key` gir:
  * `[0]` i et spill med én flight (Wolf, eller høyst fire aktive), ellers de
- * aktive spillernes flightnumre. En spiller uten flight i et større spill kan
- * ikke melde inn og regnes ikke med.
+ * aktive spillernes flightnumre. Regelen bor i `claimFlightKeys`
+ * (`lib/games/sideContest.ts`), den samme nettets avslutt-side bruker.
  */
 export function claimFlights(gameMode: string, players: readonly BundlePlayer[]): number[] {
-  const flightPlayers = players.map((p) => ({
-    user_id: p.userId,
-    flight_number: p.flightNumber,
-    withdrawn_at: p.withdrawnAt,
-  }));
-  if (isSingleFlightGame(gameMode as GameMode, flightPlayers)) return [0];
-  const flights = new Set<number>();
-  for (const p of players) if (p.withdrawnAt == null && p.flightNumber != null) flights.add(p.flightNumber);
-  return [...flights].sort((a, b) => a - b);
+  return claimFlightKeys(
+    gameMode as GameMode,
+    players.map((p) => ({ user_id: p.userId, flight_number: p.flightNumber, withdrawn_at: p.withdrawnAt })),
+  );
 }
 
 /** Én flights svar i kåringsarket. `name: null` = «Ingen på green/fairway». */
