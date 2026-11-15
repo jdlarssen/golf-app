@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/Card';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getCupSnapshot, type CupRosterPlayer } from '@/lib/cup/getCupSnapshot';
+import { loadCupSideReports } from '@/lib/cup/loadCupSideReports';
 import type { CupMatchSummary } from '@/lib/cup/computeCupLeaderboard';
 import { matchBlocksOneTapFinish } from '@/lib/cup/matchSubmissionStatus';
 import { formatPoints } from '@/lib/cup/formatPoints';
@@ -169,6 +170,16 @@ export async function CupManagement({
   if (!snapshot) notFound();
 
   const { tournament, leaderboard, roster } = snapshot;
+
+  // #2283 (V4): what the matches reported, under «Etter runden». The routes
+  // gate before this component renders; the read uses the admin client because
+  // the claim tables show a player only their own flight. A failed read is
+  // `'failed'` and the registration works as before.
+  const sideReports = await loadCupSideReports({
+    tournamentId,
+    status: tournament.status,
+    awards: snapshot.sideAwards,
+  });
   const groupId = tournament.group_id;
   const isClub = variant === 'club';
 
@@ -427,6 +438,7 @@ export async function CupManagement({
         configEditable={tournament.status === 'draft'}
         showWinnerRegistration={tournament.status === 'active' || tournament.status === 'finished'}
         cupFinished={tournament.status === 'finished'}
+        sideReports={sideReports}
       />
 
       <CupDoorsSection

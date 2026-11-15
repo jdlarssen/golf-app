@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { SideAwardsPanel } from './SideAwardsPanel';
 import type { CupSideAwardSnapshot } from '@/lib/cup/getCupSnapshot';
+import type { CupSideReports } from '@/lib/cup/cupSideReports';
 
 // Type C render-test per docs/test-discipline.md — verifiserer at panelet
 // veksler mellom redigerbar oppsett-visning og read-only-recap basert på
@@ -139,5 +140,163 @@ describe('SideAwardsPanel', () => {
       awardId: AWARDS[0].id,
       winnerUserId: null,
     });
+  });
+});
+
+// #2283 (V4): «Meldt inn fra kampene» under each award and under both GIR
+// counters. The box is read-only text: the selects and the counters stay as
+// the organiser left them (nothing prefilled), and registering is unchanged.
+describe('SideAwardsPanel: det kampene har meldt inn', () => {
+  const CUP_AWARDS: CupSideAwardSnapshot[] = [
+    { id: 'c1', kind: 'ctp', holeNumber: 3, points: 2, slot: 1, slotCount: 1, winnerUserId: null, winnerTeam: null, noWinner: false },
+    { id: 'c2', kind: 'ld', holeNumber: 9, points: 2, slot: 1, slotCount: 1, winnerUserId: null, winnerTeam: null, noWinner: false },
+    { id: 'c3', kind: 'gir', holeNumber: 5, points: 1.5, maxPerTeam: 2, team1Count: null, team2Count: null },
+  ];
+  const CUP_PROPS = { ...BASE_PROPS, team1Name: 'Rød', team2Name: 'Blå', initialAwards: CUP_AWARDS, configEditable: false, showWinnerRegistration: true };
+
+  const REPORTS: CupSideReports = {
+    slots: [
+      {
+        kind: 'ctp',
+        holeNumber: 3,
+        lines: [
+          { gameId: 'g2', matchLabel: 'Four-ball 2', name: 'Kristian', distanceM: 1.8 },
+          { gameId: 'g1', matchLabel: 'Four-ball 1', name: 'Marte', distanceM: 2.4 },
+        ],
+        missing: [],
+      },
+      {
+        kind: 'ld',
+        holeNumber: 9,
+        lines: [
+          { gameId: 'g1', matchLabel: 'Four-ball 1', name: 'Jonas', distanceM: null },
+          { gameId: 'g2', matchLabel: 'Four-ball 2', name: null, distanceM: null },
+        ],
+        missing: [],
+      },
+    ],
+    gir: [
+      {
+        holeNumber: 5,
+        maxPerTeam: 2,
+        team1: { count: 3, names: ['Jonas', 'Marte', 'Sigrid'] },
+        team2: { count: 1, names: ['Tore'] },
+        reportedMatches: 2,
+        missing: [],
+      },
+    ],
+  };
+
+  const renderPanel = (sideReports?: CupSideReports | 'failed' | null) =>
+    render(<SideAwardsPanel {...CUP_PROPS} sideReports={sideReports} />);
+
+  it('en boks per innslag: kampen som avsender, vinneren, avstanden, og «Ingen på fairway»', () => {
+    renderPanel(REPORTS);
+
+    const ctp = screen.getByTestId('side-reports-ctp-3');
+    expect(within(ctp).getByText('Meldt inn fra kampene')).toBeInTheDocument();
+    const rows = within(ctp).getAllByRole('listitem');
+    // Shortest distance first, as the sender reads it: the match, the winner, the distance.
+    expect(rows[0]).toHaveTextContent('Four-ball 2');
+    expect(rows[0]).toHaveTextContent('Kristian');
+    expect(rows[0]).toHaveTextContent('1,8 m');
+    expect(rows[1]).toHaveTextContent('Four-ball 1');
+    expect(rows[1]).toHaveTextContent('Marte');
+    expect(rows[1]).toHaveTextContent('2,4 m');
+
+    const ld = within(screen.getByTestId('side-reports-ld-9')).getAllByRole('listitem');
+    expect(ld[0]).toHaveTextContent('Jonas');
+    expect(ld[1]).toHaveTextContent('Four-ball 2');
+    expect(ld[1]).toHaveTextContent('Ingen på fairway');
+  });
+
+  it('GIR: én boks under begge tellerne, ett lag per linje, over maks i advarselsfarge', () => {
+    renderPanel(REPORTS);
+
+    const boxes = screen.getAllByTestId('side-reports-gir-5');
+    expect(boxes).toHaveLength(1);
+    const red = within(boxes[0]).getByTestId('side-reports-gir-team1');
+    expect(red).toHaveTextContent('Rød: 3 (Jonas, Marte, Sigrid) · maks 2 GIR');
+    expect(red).toHaveClass('text-warning-text');
+    const blue = within(boxes[0]).getByTestId('side-reports-gir-team2');
+    expect(blue).toHaveTextContent('Blå: 1 (Tore)');
+    expect(blue).not.toHaveClass('text-warning-text');
+    expect(blue).not.toHaveTextContent('maks');
+
+    // Both counters are described by the one box.
+    expect(screen.getByTestId('gir-count-team1')).toHaveAttribute('aria-describedby', boxes[0].id);
+    expect(screen.getByTestId('gir-count-team2')).toHaveAttribute('aria-describedby', boxes[0].id);
+  });
+
+  it('et lag uten treff står som 0, uten parentes og uten advarsel', () => {
+    renderPanel({
+      ...REPORTS,
+      gir: [{ ...REPORTS.gir[0], team1: { count: 2, names: ['Jonas', 'Marte'] }, team2: { count: 0, names: [] } }],
+    });
+    const blue = screen.getByTestId('side-reports-gir-team2');
+    expect(blue).toHaveTextContent(/^Blå: 0$/);
+    expect(screen.getByTestId('side-reports-gir-team1')).not.toHaveClass('text-warning-text');
+  });
+
+  it('en kamp som ikke har meldt inn står med navn i alle tre boksene; en uten navn heter «Match»', () => {
+    renderPanel({
+      slots: [
+        {
+          kind: 'ctp',
+          holeNumber: 3,
+          lines: [{ gameId: 'g1', matchLabel: 'Four-ball 1', name: 'Marte', distanceM: 2.4 }],
+          missing: [{ gameId: 'g2', matchLabel: 'Four-ball 2' }],
+        },
+        { kind: 'ld', holeNumber: 9, lines: [{ gameId: 'g1', matchLabel: 'Four-ball 1', name: 'Jonas', distanceM: null }], missing: [{ gameId: 'g3', matchLabel: null }] },
+      ],
+      gir: [{ ...REPORTS.gir[0], reportedMatches: 1, missing: [{ gameId: 'g2', matchLabel: 'Four-ball 2' }] }],
+    });
+    expect(screen.getByTestId('side-reports-ctp-3')).toHaveTextContent('Four-ball 2 har ikke meldt inn');
+    expect(screen.getByTestId('side-reports-ld-9')).toHaveTextContent('Match har ikke meldt inn');
+    expect(screen.getByTestId('side-reports-gir-5')).toHaveTextContent('Four-ball 2 har ikke meldt inn');
+  });
+
+  it('ingen har meldt inn: «Ingen kamper har meldt inn ennå.» i hver boks, uten navngitte kamper', () => {
+    renderPanel({
+      slots: [
+        { kind: 'ctp', holeNumber: 3, lines: [], missing: [{ gameId: 'g1', matchLabel: 'Four-ball 1' }] },
+        { kind: 'ld', holeNumber: 9, lines: [], missing: [{ gameId: 'g1', matchLabel: 'Four-ball 1' }] },
+      ],
+      gir: [{ ...REPORTS.gir[0], team1: { count: 0, names: [] }, team2: { count: 0, names: [] }, reportedMatches: 0, missing: [{ gameId: 'g1', matchLabel: 'Four-ball 1' }] }],
+    });
+    for (const id of ['side-reports-ctp-3', 'side-reports-ld-9', 'side-reports-gir-5']) {
+      expect(screen.getByTestId(id)).toHaveTextContent('Ingen kamper har meldt inn ennå.');
+      expect(screen.getByTestId(id)).not.toHaveTextContent('har ikke meldt inn');
+    }
+  });
+
+  it('lesefeil: samme linje som avslutt-siden sier, med «kampene», og registreringen virker', () => {
+    renderPanel('failed');
+    for (const id of ['side-reports-ctp-3', 'side-reports-ld-9', 'side-reports-gir-5']) {
+      expect(screen.getByTestId(id)).toHaveTextContent('Fikk ikke hentet det kampene har meldt inn.');
+    }
+    expect(screen.getAllByTestId('side-award-winner-select')).toHaveLength(2);
+    expect(screen.getByTestId('gir-count-team1')).toBeEnabled();
+    expect(screen.getByTestId('gir-count-team2')).toBeEnabled();
+  });
+
+  it('uten lest data (null eller ikke gitt) står ingen boks', () => {
+    for (const sideReports of [null, undefined] as const) {
+      const { unmount } = renderPanel(sideReports);
+      expect(screen.queryByRole('group', { name: 'Meldt inn fra kampene' })).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it('ingenting forhåndsutfylt: velgerne og tellerne står tomme, og registrer er låst til arrangøren svarer', () => {
+    renderPanel(REPORTS);
+    for (const select of screen.getAllByTestId('side-award-winner-select')) {
+      expect(select).toHaveValue('');
+      expect(select).toHaveAttribute('aria-describedby');
+    }
+    expect(screen.getByTestId('gir-count-team1')).toHaveValue(null);
+    expect(screen.getByTestId('gir-count-team2')).toHaveValue(null);
+    for (const button of screen.getAllByTestId('side-award-register')) expect(button).toBeDisabled();
+    expect(screen.getByTestId('gir-register')).toBeDisabled();
   });
 });

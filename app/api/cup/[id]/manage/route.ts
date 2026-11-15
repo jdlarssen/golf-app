@@ -4,11 +4,13 @@ import type { AppCupManageView } from '@/lib/cup/appCupManageView';
 import { buildAppCupManageView } from '@/lib/cup/buildAppCupManageView';
 import { requireCupManager } from '@/lib/cup/cupRouteGate';
 import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
+import { loadCupSideReports } from '@/lib/cup/loadCupSideReports';
 
 // «Styr cupen» i appen (#2752): spillerne, kampene som ikke har startet, og
 // makkervalget. Bare for den som styrer cupen (`requireCupManager`).
 //
-// WIRE (appen speiler den, `lib/cup/appCupManageView.ts`):
+// WIRE (appen speiler den, `lib/cup/appCupManageView.ts`; `sideReports` er det
+// kampene har meldt inn på sidepoengene, #2283):
 //   GET 200 AppCupManageView · 401 unauthorized · 403 not_manager · 404 not_found
 //       500 load_failed
 
@@ -23,8 +25,18 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     const snapshot = await getCupSnapshot(id, APP_CUP_UNKNOWN_PLAYER);
     if (!snapshot) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
+    // #2283 (V3): what the matches reported, read with the admin client behind
+    // the gate above. A read that fails is `'failed'` in the body, never a 500:
+    // the organiser registers as before.
+    const sideReports = await loadCupSideReports({
+      tournamentId: id,
+      status: snapshot.tournament.status,
+      awards: snapshot.sideAwards,
+    });
+
     const body: AppCupManageView = buildAppCupManageView(snapshot, {
       unknownLabel: APP_CUP_UNKNOWN_PLAYER,
+      sideReports,
     });
     return NextResponse.json(body);
   } catch (err) {
