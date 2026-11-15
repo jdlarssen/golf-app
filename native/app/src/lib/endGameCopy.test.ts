@@ -466,6 +466,12 @@ describe('#2283: hullet ved plassen og innmeldingene', () => {
     expect(sheetKickerFor(without)).toBe('Kår vinneren');
   });
 
+  it('skjermleseren hører hullet på raden også', () => {
+    expect(slotRowLabel(withHole, null)).toBe('Nærmest pinnen #1, hull 7. Velg vinner');
+    expect(slotRowLabel(withHole, 'Kristian Holm')).toBe('Nærmest pinnen #1, hull 7: Kristian Holm. Endre vinner');
+    expect(slotRowLabel(without, null)).toBe('Nærmest pinnen #2. Velg vinner');
+  });
+
   it('linjene i boksen', () => {
     expect(REPORTED_TEXT.heading).toBe('Meldt inn fra flightene');
     expect(reportedFlight(2)).toBe('Flight 2');
