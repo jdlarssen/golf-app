@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameForHole, PlayerForHole } from '@/lib/games/getGameWithPlayers';
 import type { HoleClaimsRead, SideClaim } from '@/lib/games/sideClaims';
 import type { CupSideAward } from '@/lib/games/sideContest';
-import { buildSideContestPlayers, canReportSideClaims, resolveSideContest } from './holeSideContest';
+import { buildGameFirstNames, buildSideContestPlayers, canReportSideClaims, resolveSideContest } from './holeSideContest';
 
 // #2283 (part D2) — Type A: what the hole page hands the side-contest row:
 // which contests the hole has, who may report, what the server read.
@@ -200,6 +200,47 @@ describe('resolveSideContest', () => {
       canReport: false,
       claims: null,
       players: [],
+      names: {},
+    });
+  });
+
+  it('names everyone in the game, also the other flights, so «Lagret av» finds a saver who has moved (#2891)', () => {
+    const result = resolve({ allPlayers: BIG });
+    // My flight is Marte, Tore and Per; Xenia, Yngve, Zoe and Ola are in flight 2.
+    expect(result?.players.map((p) => p.userId)).toEqual([ME, 'u-tore', 'u-per']);
+    expect(result?.names).toEqual({
+      [ME]: 'Marte',
+      'u-tore': 'Tore',
+      'u-per': 'Per',
+      'u-x1': 'Xenia',
+      'u-x2': 'Yngve',
+      'u-x3': 'Zoe',
+      'u-x4': 'Ola',
+    });
+  });
+});
+
+describe('buildGameFirstNames', () => {
+  const build = (allPlayers: PlayerForHole[]) => buildGameFirstNames({ allPlayers, unknownPlayer: 'Ukjent' });
+
+  it('is the plain first name, withdrawn players included', () => {
+    expect(build([player(ME, { name: 'Marte Hansen' }), player('u-per', { name: 'Per Olsen', withdrawn: true })])).toEqual({
+      [ME]: 'Marte',
+      'u-per': 'Per',
+    });
+  });
+
+  it('keeps the first name when two share it, as the app does: the row is the flight, this is the whole game', () => {
+    expect(build([player(ME, { name: 'Marte Hansen' }), player('u-m2', { name: 'Marte Berg' })])).toEqual({
+      [ME]: 'Marte',
+      'u-m2': 'Marte',
+    });
+  });
+
+  it('falls back to the nickname, then to the unknown-player text', () => {
+    expect(build([player('u-nick', { name: null, nickname: 'Kalle' }), player('u-none', { name: null })])).toEqual({
+      'u-nick': 'Kalle',
+      'u-none': 'Ukjent',
     });
   });
 });

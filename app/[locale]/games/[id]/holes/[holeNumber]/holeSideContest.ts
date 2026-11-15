@@ -9,7 +9,7 @@ import { claimsNeeded, type HoleClaimsRead } from '@/lib/games/sideClaims';
 import { contestsForHole, sideClaimFlightKey, type SideHolesConfig } from '@/lib/games/sideContest';
 import { teeShotNames } from '@/lib/games/teeShotNames';
 import { nameInitials } from '@/lib/names/initials';
-import { playerName } from '@/lib/names/playerName';
+import { playerFirstName, playerName } from '@/lib/names/playerName';
 import type { HoleSideContestProps, SideContestClaimsSnapshot, SideContestPlayer } from './holeClientProps';
 import type { CupSideAwardsRead } from './holePageData';
 
@@ -77,6 +77,19 @@ export function buildSideContestPlayers(args: {
 }
 
 /**
+ * The first name of everyone in the game, by user id, withdrawn players
+ * included: whoever saved a report may have left my flight since (#2891), so
+ * the lookup cannot stop at the flight. The app's `nameOf` does the same over
+ * the bundle's players, with the plain first name (`shortDisplayName`).
+ */
+export function buildGameFirstNames(args: {
+  allPlayers: readonly PlayerForHole[];
+  unknownPlayer: string;
+}): Record<string, string> {
+  return Object.fromEntries(args.allPlayers.map((p) => [p.user_id, playerFirstName(p.users) ?? args.unknownPlayer]));
+}
+
+/**
  * The side contests on this hole for `HoleClient`, or null when it has none.
  *
  * A failed read never throws and never passes for «nobody has reported»:
@@ -113,7 +126,7 @@ export function resolveSideContest(args: {
   if (contests.length === 0) return null;
 
   const canReport = canReportSideClaims({ game, allPlayers, userId });
-  if (!canReport) return { contests, canReport, claims: null, players: [] };
+  if (!canReport) return { contests, canReport, claims: null, players: [], names: {} };
 
   const need = claimsNeeded(contests);
   let claims: SideContestClaimsSnapshot = { failed: true, side: undefined, gir: undefined };
@@ -139,5 +152,6 @@ export function resolveSideContest(args: {
     canReport,
     claims,
     players: buildSideContestPlayers({ game, allPlayers, userId, unknownPlayer }),
+    names: buildGameFirstNames({ allPlayers, unknownPlayer }),
   };
 }

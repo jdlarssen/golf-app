@@ -38,15 +38,15 @@ export function HoleSideContests({
 }) {
   const text = useSideContestText();
   const online = useOnline();
-  const { contests, players: flight, claims: snapshot } = sideContest;
+  const { contests, players: flight, claims: snapshot, names } = sideContest;
   const claims = useSideClaims(gameId, holeNumber, claimsNeeded(contests), snapshot);
 
   if (contests.length === 0) return null;
 
-  // Names the winners and `entered_by`, withdrawn players included.
+  // Names the winners and `entered_by`: the whole game, since whoever saved may have left my flight (#2891).
   const nameOf = (userId: string): string | null => {
     if (userId === myUserId) return text.you;
-    return flight.find((p) => p.userId === userId)?.shortName ?? null;
+    return names[userId] ?? null;
   };
   // The lines: only the players still in the round (`resolveFlight`'s rule).
   const players: ContestPlayer[] = flight

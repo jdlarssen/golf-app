@@ -1142,6 +1142,7 @@ describe('HoleClient — side contest rows (#2283)', () => {
       teamNumber: null,
       withdrawn: false,
     })),
+    names: Object.fromEntries(makePlayers().map((p) => [p.userId, p.name])),
     ...overrides,
   });
 
@@ -1161,7 +1162,7 @@ describe('HoleClient — side contest rows (#2283)', () => {
   });
 
   it('shows no row when the player cannot report (withdrawn, no flight, or the round is over)', () => {
-    render(<HoleClient {...baseProps({ sideContest: sideContest({ canReport: false, claims: null, players: [] }) })} />);
+    render(<HoleClient {...baseProps({ sideContest: sideContest({ canReport: false, claims: null, players: [], names: {} }) })} />);
     expect(screen.queryByTestId('side-contests')).toBeNull();
   });
 

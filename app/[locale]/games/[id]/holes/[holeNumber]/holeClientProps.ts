@@ -130,6 +130,13 @@ export type HoleSideContestProps = {
    * the winners and `entered_by` («Lagret av Tore»). Empty when I cannot report.
    */
   players: SideContestPlayer[];
+  /**
+   * The first name of everyone in the game, by user id: withdrawn players and
+   * the other flights too. «Lagret av Tore» names whoever saved, and after a
+   * mid-round flight move (#2891) that is no longer someone in my flight. The
+   * same lookup the app does over its bundle's players. Empty when I cannot report.
+   */
+  names: Record<string, string>;
 };
 
 export interface HoleClientProps {
