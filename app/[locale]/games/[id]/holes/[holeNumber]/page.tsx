@@ -34,6 +34,7 @@ import {
   buildTeeShotTeams,
   resolveFlight,
 } from './holePagePlayers';
+import { canReportSideClaims, resolveSideContest } from './holeSideContest';
 import {
   buildHoleStripSibling,
   resolveSegmentBridges,
@@ -212,6 +213,8 @@ export default async function HolePage({ params }: { params: Params }) {
     flightFormerRowOwnerIds,
     siblingMatch,
     modes: { isWolf, isSkins, isBBB, isPatsome },
+    // #2283: whether the hole's side-contest claims are read at all.
+    canReportSideClaims: canReportSideClaims({ game, allPlayers, userId }),
   });
 
   // Error ≠ absence (#1441): fetchHolePageData throws on query failure (error
@@ -298,6 +301,18 @@ export default async function HolePage({ params }: { params: Params }) {
     unknownPlayer,
   });
 
+  // #2283: the side contests on this hole. A failed read is a `failed` marker
+  // on the claims, never a throw: the row is secondary to the score cards.
+  const sideContest = resolveSideContest({
+    game,
+    allPlayers,
+    userId,
+    holeNumber,
+    awardsRes: data.cupAwardsRes,
+    claimsRes: data.holeClaimsRes,
+    unknownPlayer,
+  });
+
   const roundRobinPlayersForClient = buildRoundRobinPlayers({
     isRoundRobin,
     allPlayers,
@@ -374,6 +389,7 @@ export default async function HolePage({ params }: { params: Params }) {
         holeStripSibling={holeStripSibling}
         broBridge={broBridge}
         teeShots={buildTeeShotTeams({ game, allPlayers, flight, unknownPlayer })}
+        sideContest={sideContest}
         players={playersForClient}
       />
     </main>
