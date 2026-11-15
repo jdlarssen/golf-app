@@ -25,6 +25,15 @@ const row = (place: number, name: string, count: number, isViewer = false) => ({
   isViewer,
 });
 
+const moment = (
+  kind: 'hole_in_one' | 'albatross' | 'eagle',
+  name: string,
+  playedOn: string,
+  hole: number,
+  courseName: string | null,
+  isViewer = false,
+) => ({ kind, name, initials: name.slice(0, 2).toUpperCase(), isViewer, hole, courseName, playedOn });
+
 const VIEW: AeresbrettView = {
   seasonYear: 2026,
   seasonOver: false,
@@ -37,6 +46,10 @@ const VIEW: AeresbrettView = {
     birdies: { rows: [row(1, 'Jonas B.', 14)], me: { place: 9, count: 3, toTop5: 4 } },
     rounds: { rows: [row(1, 'Per K.', 31)], me: null },
   },
+  moments: [
+    moment('hole_in_one', 'Jonas B.', '2026-06-12', 7, 'Bogstad'),
+    moment('eagle', 'Sigrid A.', '2026-08-30', 3, 'Grini', true),
+  ],
 };
 
 async function renderScreen(selfInitials?: string) {
@@ -149,6 +162,7 @@ describe('Toppliste', () => {
           birdies: { rows: [], me: null },
           rounds: { rows: [], me: null },
         },
+        moments: [],
       },
     });
     await renderScreen();
@@ -158,6 +172,7 @@ describe('Toppliste', () => {
     );
     expect(screen.queryAllByRole('tab')).toHaveLength(0);
     expect(screen.queryByTestId('toppliste-you')).toBeNull();
+    expect(screen.queryByTestId('toppliste-moments')).toBeNull();
   });
 
   it('says «Du er uten nett» offline, with no tabs, and tries again', async () => {
@@ -212,5 +227,78 @@ describe('Toppliste', () => {
     } finally {
       setBottomInset(0);
     }
+  });
+
+  // «Sjeldne slag» (PR 4): kortet er likt under alle tre fanene.
+  describe('Sjeldne slag', () => {
+    const many = Array.from({ length: 14 }, (_, i) => moment('eagle', `Spiller ${i}`, '2026-07-01', 3, 'Grini'));
+
+    it('shows a few shots below the list, with a label per row and your own row marked «Du»', async () => {
+      fetchMock.mockResolvedValue({ ok: true, view: VIEW });
+      await renderScreen();
+      await screen.findByTestId('toppliste-list');
+
+      expect(screen.getByTestId('toppliste-moments')).toHaveTextContent('Sjeldne slag i 2026', { exact: false });
+      expect(screen.getByTestId('toppliste-moments')).toHaveTextContent('Hole-in-one, albatross og eagle', { exact: false });
+      expect(screen.getByLabelText('Hole-in-one, Jonas B., hull 7 på Bogstad, 12. juni')).toBeTruthy();
+      expect(screen.getByLabelText('Eagle, Sigrid A., hull 3 på Grini, 30. august, deg')).toBeTruthy();
+      expect(screen.getByTestId('toppliste-moment-0')).toHaveTextContent('1', { exact: false });
+      expect(screen.getByTestId('toppliste-moment-0')).toHaveTextContent('12. jun', { exact: false });
+      expect(screen.getByTestId('toppliste-moment-1')).toHaveTextContent('Du', { exact: false });
+      expect(screen.queryByTestId('toppliste-moments-toggle')).toBeNull();
+    });
+
+    it('is the same under every tab', async () => {
+      fetchMock.mockResolvedValue({ ok: true, view: VIEW });
+      await renderScreen();
+      await screen.findByTestId('toppliste-list');
+
+      for (const name of ['Birdies', 'Runder', 'Seire']) {
+        await fireEvent.press(screen.getByRole('tab', { name }));
+        expect(screen.getAllByTestId(/^toppliste-moment-\d$/)).toHaveLength(2);
+      }
+    });
+
+    it('shows five rows and «Vis alle 14», opens them all in the same card, and closes with «Vis færre»', async () => {
+      fetchMock.mockResolvedValue({ ok: true, view: { ...VIEW, moments: many } });
+      await renderScreen();
+      await screen.findByTestId('toppliste-list');
+
+      expect(screen.getAllByTestId(/^toppliste-moment-\d+$/)).toHaveLength(5);
+      expect(screen.getByTestId('toppliste-moments-toggle')).toHaveTextContent('Vis alle 14', { exact: false });
+
+      await fireEvent.press(screen.getByTestId('toppliste-moments-toggle'));
+      expect(screen.getAllByTestId(/^toppliste-moment-\d+$/)).toHaveLength(14);
+      expect(screen.getByTestId('toppliste-moments-toggle')).toHaveTextContent('Vis færre', { exact: false });
+
+      await fireEvent.press(screen.getByTestId('toppliste-moments-toggle'));
+      expect(screen.getAllByTestId(/^toppliste-moment-\d+$/)).toHaveLength(5);
+    });
+
+    it('says «Ingen ennå.» in a running season', async () => {
+      fetchMock.mockResolvedValueOnce({ ok: true, view: { ...VIEW, moments: [] } });
+      await renderScreen();
+      expect(await screen.findByTestId('toppliste-moments-empty')).toHaveTextContent('Ingen ennå.');
+    });
+
+    it('says «Ingen i 2025.» when the season is over', async () => {
+      fetchMock.mockResolvedValue({ ok: true, view: { ...VIEW, seasonYear: 2025, seasonOver: true, moments: [] } });
+      await renderScreen();
+      expect(await screen.findByTestId('toppliste-moments-empty')).toHaveTextContent('Ingen i 2025.');
+    });
+
+    it('lets only the card say so when the strokes could not be read, and tries again', async () => {
+      fetchMock.mockResolvedValueOnce({ ok: true, view: { ...VIEW, moments: null } });
+      fetchMock.mockResolvedValueOnce({ ok: true, view: VIEW });
+      await renderScreen();
+
+      expect(await screen.findByTestId('toppliste-moments-failed')).toHaveTextContent('Fikk ikke hentet slagene.', {
+        exact: false,
+      });
+      // Lista og fanene står som før.
+      expect(screen.getByTestId('toppliste-list')).toBeTruthy();
+      await fireEvent.press(screen.getByTestId('toppliste-moments-failed-retry'));
+      expect(await screen.findByTestId('toppliste-moment-0')).toBeTruthy();
+    });
   });
 });

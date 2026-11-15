@@ -5,8 +5,9 @@
 // (`app/api/aeresbrett/route.ts`) leser med service-rollen bak innloggingen og
 // sender bare tall og kortnavn. Appen viser det som kommer tilbake.
 //
-// Svaret har tre brett. `boards.birdies` er `null` når bare birdie-lesingen
-// feilet; da virker de to andre fanene som vanlig.
+// Svaret har tre brett og lista `moments` til «Sjeldne slag». `boards.birdies` og `moments` er
+// `null` når lesingen av slagene feilet; da virker de to andre fanene som vanlig, og Birdies-fanen
+// og kortet sier fra hver for seg.
 //
 // Utfallet er en typet kode (`webApi.ts`); skjermen leser aldri et statusnummer.
 import type { AeresbrettView } from '../../../../lib/stats/appAeresbrettView';
@@ -28,6 +29,21 @@ function isRow(value: unknown): boolean {
   );
 }
 
+function isMoment(value: unknown): boolean {
+  if (value === null || typeof value !== 'object') return false;
+  const m = value as Record<string, unknown>;
+  return (
+    (m.kind === 'hole_in_one' || m.kind === 'albatross' || m.kind === 'eagle') &&
+    typeof m.name === 'string' &&
+    typeof m.initials === 'string' &&
+    typeof m.isViewer === 'boolean' &&
+    typeof m.hole === 'number' &&
+    (m.courseName === null || typeof m.courseName === 'string') &&
+    typeof m.playedOn === 'string' &&
+    /^\d{4}-\d{2}-\d{2}$/.test(m.playedOn)
+  );
+}
+
 function isBoard(value: unknown): boolean {
   if (value === null || typeof value !== 'object') return false;
   const rows = (value as { rows?: unknown }).rows;
@@ -44,7 +60,8 @@ function isView(body: Record<string, unknown>): boolean {
     typeof body.seasonOver === 'boolean' &&
     isBoard(wins) &&
     (birdies === null || isBoard(birdies)) &&
-    isBoard(rounds)
+    isBoard(rounds) &&
+    (body.moments === null || (Array.isArray(body.moments) && body.moments.every(isMoment)))
   );
 }
 

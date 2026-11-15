@@ -50,6 +50,21 @@ export const TOPPLISTE_TEXT = {
   birdiesFailedHeading: 'Fikk ikke hentet birdiene',
   birdiesFailedBody: 'Seire og runder virker som vanlig.',
   retry: 'Prøv igjen',
+  // «Sjeldne slag i 2026» (PR 4): hole-in-one, albatross og eagle, likt under alle tre fanene.
+  momentsTitle: 'Sjeldne slag i {year}',
+  momentsSubtitle: 'Hole-in-one, albatross og eagle',
+  momentHoleInOne: 'Hole-in-one',
+  momentAlbatross: 'Albatross',
+  momentEagle: 'Eagle',
+  momentWhere: ' · hull {hole} på {course}',
+  momentWhereNoCourse: ' · hull {hole}',
+  momentSpoken: '{kind}, {name}, hull {hole} på {course}, {date}',
+  momentSpokenNoCourse: '{kind}, {name}, hull {hole}, {date}',
+  momentsShowAll: 'Vis alle {count}',
+  momentsShowLess: 'Vis færre',
+  momentsNone: 'Ingen ennå.',
+  momentsNoneOver: 'Ingen i {year}.',
+  momentsFailed: 'Fikk ikke hentet slagene.',
 } as const;
 
 export type TopplisteKey = keyof typeof TOPPLISTE_TEXT;

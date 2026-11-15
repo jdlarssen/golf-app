@@ -5,7 +5,7 @@
 // lederkortet, «Du er på …»-linja, strekene, medaljene og tekstene i hver
 // tilstand.
 import type { AeresbrettView } from '../../../../lib/stats/appAeresbrettView';
-import { buildTopplisteModel, countText, formatTopplisteCount } from './toppliste';
+import { buildMomentsModel, buildTopplisteModel, countText, formatTopplisteCount } from './toppliste';
 
 const row = (place: number, name: string, count: number, isViewer = false) => ({
   place,
@@ -27,6 +27,7 @@ function view(over: Partial<AeresbrettView['boards']> = {}, top: Partial<Aeresbr
       rounds: { rows: [row(1, 'Per K.', 31)], me: null },
       ...over,
     },
+    moments: [],
     ...top,
   };
 }
@@ -211,5 +212,86 @@ describe('buildTopplisteModel: the birdie tab when only it failed', () => {
     });
     expect(buildTopplisteModel(v, 'wins').kind).toBe('board');
     expect(buildTopplisteModel(v, 'rounds').kind).toBe('board');
+  });
+});
+
+describe('buildMomentsModel: «Sjeldne slag»', () => {
+  const moment = (name: string, kind: 'hole_in_one' | 'albatross' | 'eagle', playedOn = '2026-06-12', over = {}) => ({
+    kind,
+    name,
+    initials: name.slice(0, 2).toUpperCase(),
+    isViewer: false,
+    hole: 7,
+    courseName: 'Bogstad',
+    playedOn,
+    ...over,
+  });
+  const withMoments = (moments: AeresbrettView['moments'], top: Partial<AeresbrettView> = {}) => view({}, { moments, ...top });
+
+  it('has no card when no season is known', () => {
+    expect(buildMomentsModel(withMoments([], { seasonYear: null }), false)).toBeNull();
+  });
+
+  it('names the season in the title, and says what counts in the subtitle', () => {
+    const model = buildMomentsModel(withMoments([moment('Jonas B.', 'eagle')]), false);
+    expect(model).toMatchObject({ title: 'Sjeldne slag i 2026', subtitle: 'Hole-in-one, albatross og eagle', state: 'list' });
+  });
+
+  it('writes a row: the golf numeral, the shot, the hole and course, the short date, and a spoken label', () => {
+    const model = buildMomentsModel(
+      withMoments([moment('Jonas B.', 'hole_in_one'), moment('Per K.', 'albatross', '2026-09-03'), moment('Ola N.', 'eagle', '2026-01-02')]),
+      false,
+    );
+    expect(model?.rows).toEqual([
+      {
+        mark: '1',
+        name: 'Jonas B.',
+        isViewer: false,
+        shot: 'Hole-in-one',
+        where: ' · hull 7 på Bogstad',
+        date: '12. jun',
+        spoken: 'Hole-in-one, Jonas B., hull 7 på Bogstad, 12. juni',
+      },
+      expect.objectContaining({ mark: '\u22123', shot: 'Albatross', date: '3. sep' }),
+      expect.objectContaining({ mark: '\u22122', shot: 'Eagle', date: '2. jan' }),
+    ]);
+  });
+
+  it('adds «deg» to your own row, and drops the course when it has no name', () => {
+    const model = buildMomentsModel(withMoments([moment('Kari N.', 'eagle', '2026-06-12', { isViewer: true, courseName: null })]), false);
+    expect(model?.rows[0]).toMatchObject({
+      isViewer: true,
+      where: ' · hull 7',
+      spoken: 'Eagle, Kari N., hull 7, 12. juni, deg',
+    });
+  });
+
+  it('shows five rows and «Vis alle N» when there are more, all rows and «Vis færre» when open', () => {
+    const many = Array.from({ length: 14 }, (_, i) => moment(`Spiller ${i}`, 'eagle'));
+    const closed = buildMomentsModel(withMoments(many), false);
+    expect(closed?.rows).toHaveLength(5);
+    expect(closed?.toggleLabel).toBe('Vis alle 14');
+    expect(closed?.total).toBe(14);
+    const open = buildMomentsModel(withMoments(many), true);
+    expect(open?.rows).toHaveLength(14);
+    expect(open?.toggleLabel).toBe('Vis færre');
+  });
+
+  it('has no toggle with five or fewer', () => {
+    const five = Array.from({ length: 5 }, (_, i) => moment(`Spiller ${i}`, 'eagle'));
+    expect(buildMomentsModel(withMoments(five), false)?.toggleLabel).toBeNull();
+    expect(buildMomentsModel(withMoments(five), true)?.toggleLabel).toBeNull();
+  });
+
+  it('says «Ingen ennå.» in a running season and «Ingen i 2025.» in a season that is over', () => {
+    expect(buildMomentsModel(withMoments([]), false)).toMatchObject({ state: 'empty', emptyText: 'Ingen ennå.' });
+    expect(buildMomentsModel(withMoments([], { seasonYear: 2025, seasonOver: true }), false)).toMatchObject({
+      state: 'empty',
+      emptyText: 'Ingen i 2025.',
+    });
+  });
+
+  it('is a failed card when only the strokes could not be read', () => {
+    expect(buildMomentsModel(withMoments(null), false)).toMatchObject({ state: 'failed', rows: [], toggleLabel: null });
   });
 });
