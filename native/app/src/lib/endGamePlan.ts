@@ -19,8 +19,12 @@ import {
   type GameMode,
 } from '../../../../lib/scoring/modes/types';
 import { splitFinishRoster } from '../../../../lib/games/finishGate';
-import { claimFlightKeys, holeForSlot, sortClaimsForHole } from '../../../../lib/games/sideContest';
-import { playerShortName } from '../../../../lib/names/playerName';
+import { claimFlightKeys, holeForSlot } from '../../../../lib/games/sideContest';
+import {
+  reportsForSlot as sharedReportsForSlot,
+  type ReportedLine,
+  type SlotReports,
+} from '../../../../lib/games/sideClaimReports';
 import type { EndRoundFailure, FinishClaim } from '../data/endGame';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import type { SideWinnerRow } from '../data/sideWinners';
@@ -122,27 +126,13 @@ export function claimFlights(gameMode: string, players: readonly BundlePlayer[])
   );
 }
 
-/** Én flights svar i kåringsarket. `name: null` = «Ingen på green/fairway». */
-export interface ReportedLine {
-  flightNumber: number;
-  name: string | null;
-  distanceM: number | null;
-}
-
-export interface SlotReports {
-  hole: number;
-  /** Korteste avstand først, svar uten avstand sist (`sortClaimsForHole`). */
-  lines: ReportedLine[];
-  /** Flightene som ikke har meldt inn på hullet. */
-  missingFlights: number[];
-}
+export type { ReportedLine, SlotReports };
 
 /**
  * Det flightene har meldt inn for en plass, eller `null` når plassen ikke har
- * hull (da er kåringen som før). Innmeldingene er nøklet på kategori og hull,
- * ikke på plass. Vinneren vises med fornavn, eller fullt navn når en annen i
- * spillet har samme fornavn (`playerShortName`, #2286), siden lista under
- * boksen viser fulle navn.
+ * hull (da er kåringen som før). Regelen (rekkefølge, navn, flighter som
+ * mangler) bor i `lib/games/sideClaimReports.ts`, den samme nettets avslutt-side
+ * leser, så de to flatene viser det samme.
  */
 export function reportsForSlot(
   slot: FinishSlot,
@@ -150,24 +140,7 @@ export function reportsForSlot(
   flights: readonly number[],
   roster: readonly { userId: string; name: string | null }[],
 ): SlotReports | null {
-  if (slot.hole === null) return null;
-  const forHole = claims.filter((c) => c.category === slot.category && c.holeNumber === slot.hole);
-  const reported = new Set(forHole.map((c) => c.flightNumber));
-  return {
-    hole: slot.hole,
-    lines: sortClaimsForHole(forHole).map((c) => ({
-      flightNumber: c.flightNumber,
-      name:
-        c.winnerUserId === null
-          ? null
-          : (playerShortName(
-              c.winner,
-              roster.filter((p) => p.userId !== c.winnerUserId).map((p) => p.name),
-            ) ?? ''),
-      distanceM: c.distanceM,
-    })),
-    missingFlights: flights.filter((f) => !reported.has(f)),
-  };
+  return sharedReportsForSlot(slot, claims, flights, roster);
 }
 
 /**

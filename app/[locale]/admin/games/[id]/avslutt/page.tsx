@@ -12,6 +12,7 @@ import type { GameStatus } from '@/lib/games/status';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { splitFinishRoster, stampsFromRow } from '@/lib/games/finishGate';
+import { loadSideSlotViews } from '@/lib/games/finishSideSlots';
 import { SideWinnersForm, type PlayerOption } from './SideWinnersForm';
 import { endGameWithSideWinners, remindMissingPlayers } from './actions';
 import { TeeShotOrganizerNotice } from '@/components/games/TeeShotOrganizerNotice';
@@ -57,7 +58,7 @@ export default async function AvsluttPage({
   const { data: game } = await supabase
     .from('games')
     .select(
-      'id, name, status, require_peer_approval, game_mode, mode_config, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name)',
+      'id, name, status, require_peer_approval, game_mode, mode_config, side_tournament_enabled, side_ld_count, side_ctp_count, side_ld_holes, side_ctp_holes, courses(name)',
     )
     .eq('id', gameId)
     .single<{
@@ -71,6 +72,9 @@ export default async function AvsluttPage({
       side_tournament_enabled: boolean;
       side_ld_count: number;
       side_ctp_count: number;
+      // #2283: the hole for each slot, for the label and the flights' reports.
+      side_ld_holes: (number | null)[] | null;
+      side_ctp_holes: (number | null)[] | null;
       courses: { name: string } | null;
     }>();
 
@@ -89,12 +93,14 @@ export default async function AvsluttPage({
   const { data: gamePlayers } = await supabase
     .from('game_players')
     .select(
-      'user_id, submitted_at, approved_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname)',
+      'user_id, flight_number, submitted_at, approved_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname)',
     )
     .eq('game_id', gameId)
     .returns<
       {
         user_id: string;
+        // #2283: which flights have not reported on a contest hole.
+        flight_number: number | null;
         submitted_at: string | null;
         approved_at: string | null;
         withdrawn_at: string | null;
@@ -130,6 +136,11 @@ export default async function AvsluttPage({
   }));
 
   const action = endGameWithSideWinners.bind(null, gameId, missing.length > 0);
+
+  // #2283: the hole of each slot and what the flights reported for it. Read
+  // after the gate above; a failed read shows a line in the box, never breaks
+  // the finish.
+  const sideSlots = await loadSideSlotViews(gameId, game, gamePlayers);
 
   return (
     <AdminShell>
@@ -182,6 +193,8 @@ export default async function AvsluttPage({
         ldCount={game.side_ld_count}
         ctpCount={game.side_ctp_count}
         players={players}
+        ldSlots={sideSlots.ld}
+        ctpSlots={sideSlots.ctp}
         action={action}
         error={error}
       />
