@@ -200,8 +200,8 @@ describe('buildCupSideReports: GIR', () => {
       {
         holeNumber: 5,
         maxPerTeam: 2,
-        team1: { count: 3, names: ['Jonas', 'Marte', 'Sigrid'] },
-        team2: { count: 1, names: ['Tore'] },
+        team1: { count: 3, names: ['Jonas', 'Marte', 'Sigrid'], overMax: true },
+        team2: { count: 1, names: ['Tore'], overMax: false },
         reportedMatches: 2,
         missing: [],
       },
@@ -210,13 +210,22 @@ describe('buildCupSideReports: GIR', () => {
     expect(holes[0].team1.count).toBeGreaterThan(holes[0].maxPerTeam);
   });
 
+  it('exactly the max is not over it; one more is (the one home of the rule)', () => {
+    const atMax = build({ girClaims: [gir('g1', 'jonas', true), gir('g1', 'marte', true), gir('g1', 'tore', false), gir('g1', 'kari', false)] });
+    expect(atMax.gir[0].team1).toMatchObject({ count: 2, overMax: false });
+    const overMax = build({
+      girClaims: [gir('g1', 'jonas', true), gir('g1', 'marte', true), gir('g2', 'sigrid', true), gir('g1', 'tore', false)],
+    });
+    expect(overMax.gir[0].team1).toMatchObject({ count: 3, overMax: true });
+  });
+
   it('a team with no hits is 0 with no names, and a match without a report is named', () => {
     const { gir: holes } = build({
       girClaims: [gir('g1', 'jonas', true), gir('g1', 'marte', false), gir('g1', 'tore', false), gir('g1', 'kari', false)],
     });
     expect(holes[0]).toMatchObject({
-      team1: { count: 1, names: ['Jonas'] },
-      team2: { count: 0, names: [] },
+      team1: { count: 1, names: ['Jonas'], overMax: false },
+      team2: { count: 0, names: [], overMax: false },
       reportedMatches: 1,
       missing: [{ gameId: 'g2', matchLabel: 'Four-ball 2' }],
     });
@@ -237,7 +246,7 @@ describe('buildCupSideReports: GIR', () => {
       games: [foursomes, fourball2],
       girClaims: [gir('g1', 'jonas', true), gir('g1', 'marte', true), gir('g1', 'tore', false), gir('g1', 'kari', false)],
     });
-    expect(holes[0].team1).toEqual({ count: 1, names: ['Jonas/Marte'] });
+    expect(holes[0].team1).toEqual({ count: 1, names: ['Jonas/Marte'], overMax: false });
   });
 
   it('a derived single is not a reporter', () => {

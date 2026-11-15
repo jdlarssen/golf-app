@@ -131,8 +131,8 @@ describe('loadCupSideReports', () => {
         {
           holeNumber: 5,
           maxPerTeam: 2,
-          team1: { count: 1, names: ['Jonas'] },
-          team2: { count: 0, names: [] },
+          team1: { count: 1, names: ['Jonas'], overMax: false },
+          team2: { count: 0, names: [], overMax: false },
           reportedMatches: 1,
           missing: [{ gameId: 'g2', matchLabel: 'Four-ball 2' }],
         },

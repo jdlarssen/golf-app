@@ -179,8 +179,8 @@ describe('SideAwardsPanel: det kampene har meldt inn', () => {
       {
         holeNumber: 5,
         maxPerTeam: 2,
-        team1: { count: 3, names: ['Jonas', 'Marte', 'Sigrid'] },
-        team2: { count: 1, names: ['Tore'] },
+        team1: { count: 3, names: ['Jonas', 'Marte', 'Sigrid'], overMax: true },
+        team2: { count: 1, names: ['Tore'], overMax: false },
         reportedMatches: 2,
         missing: [],
       },
@@ -231,7 +231,7 @@ describe('SideAwardsPanel: det kampene har meldt inn', () => {
   it('et lag uten treff står som 0, uten parentes og uten advarsel', () => {
     renderPanel({
       ...REPORTS,
-      gir: [{ ...REPORTS.gir[0], team1: { count: 2, names: ['Jonas', 'Marte'] }, team2: { count: 0, names: [] } }],
+      gir: [{ ...REPORTS.gir[0], team1: { count: 2, names: ['Jonas', 'Marte'], overMax: false }, team2: { count: 0, names: [], overMax: false } }],
     });
     const blue = screen.getByTestId('side-reports-gir-team2');
     expect(blue).toHaveTextContent(/^Blå: 0$/);
@@ -262,7 +262,7 @@ describe('SideAwardsPanel: det kampene har meldt inn', () => {
         { kind: 'ctp', holeNumber: 3, lines: [], missing: [{ gameId: 'g1', matchLabel: 'Four-ball 1' }] },
         { kind: 'ld', holeNumber: 9, lines: [], missing: [{ gameId: 'g1', matchLabel: 'Four-ball 1' }] },
       ],
-      gir: [{ ...REPORTS.gir[0], team1: { count: 0, names: [] }, team2: { count: 0, names: [] }, reportedMatches: 0, missing: [{ gameId: 'g1', matchLabel: 'Four-ball 1' }] }],
+      gir: [{ ...REPORTS.gir[0], team1: { count: 0, names: [], overMax: false }, team2: { count: 0, names: [], overMax: false }, reportedMatches: 0, missing: [{ gameId: 'g1', matchLabel: 'Four-ball 1' }] }],
     });
     for (const id of ['side-reports-ctp-3', 'side-reports-ld-9', 'side-reports-gir-5']) {
       expect(screen.getByTestId(id)).toHaveTextContent('Ingen kamper har meldt inn ennå.');
