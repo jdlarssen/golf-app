@@ -213,6 +213,29 @@ const senders = [
     },
   },
   {
+    // #2483: the evening variant builds its status line from the inbox catalog.
+    name: 'sendOrganizerGameNotice (evening)',
+    invoke: async () => {
+      const { sendOrganizerGameNotice } = await import('../organizerGameNotice');
+      return sendOrganizerGameNotice({
+        to: 'arrangor@example.com',
+        recipientFirstName: 'Kari',
+        gameName: 'Lørdagsrunden',
+        gameId: '11111111-1111-1111-1111-111111111111',
+        variant: 'evening',
+        status: {
+          game_id: '11111111-1111-1111-1111-111111111111',
+          game_name: 'Lørdagsrunden',
+          tee_off_at: '2026-11-21T08:00:00.000Z',
+          confirmed: 7,
+          total: 8,
+          unanswered_names: ['Ola'],
+          unanswered_more: 0,
+        },
+      });
+    },
+  },
+  {
     name: 'sendGameMovedNotification',
     invoke: async () => {
       const { sendGameMovedNotification } = await import('../gameMovedNotification');
