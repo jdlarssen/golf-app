@@ -99,6 +99,9 @@ describe('signupView', () => {
   });
 });
 
+const HOUR_AGO = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+const IN_AN_HOUR = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
 describe('signupOffer', () => {
   it.each<[string, RowOverrides, SignupOffer]>([
     ['on the list', { isAlreadyRegistered: true }, 'in_game'],
@@ -143,6 +146,14 @@ describe('signupOffer', () => {
     ['full, asked already', { isFull: true, requestView: 'self_request', game: { game_mode: 'wolf' } }, 'pending'],
     ['full, asked already, then closed', { isFull: true, requestView: 'self_request', game: { game_mode: 'wolf', signups_closed_at: '2026-11-01T10:00:00Z' } }, 'pending'],
     ['full manual approval', { isFull: true, game: { game_mode: 'wolf', registration_mode: 'manual_approval' } }, 'request'],
+    // #2482: the organiser's deadline closes like «Steng påmeldingen». Offsets
+    // from the clock, never fixed dates (#1000).
+    ['deadline passed', { game: { signup_deadline: HOUR_AGO } }, 'closed'],
+    ['deadline ahead', { game: { signup_deadline: IN_AN_HOUR } }, 'join'],
+    ['deadline passed, started', { game: { status: 'active', signup_deadline: HOUR_AGO } }, 'locked'],
+    ['deadline passed, full', { isFull: true, game: { game_mode: 'wolf', signup_deadline: HOUR_AGO } }, 'closed'],
+    ['deadline passed, asked already', { requestView: 'self_request', game: { signup_deadline: HOUR_AGO } }, 'pending'],
+    ['deadline passed, manual approval', { game: { registration_mode: 'manual_approval', signup_deadline: HOUR_AGO } }, 'closed'],
   ])('%s', (_name, over, expected) => {
     expect(signupOffer(row(over))).toBe(expected);
   });

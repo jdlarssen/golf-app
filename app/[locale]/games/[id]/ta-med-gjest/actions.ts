@@ -18,7 +18,7 @@ import { clampGenderToTee } from '@/lib/games/clampGenderToTee';
 import { TEE_EMBED } from '@/lib/games/joinTeeGenders';
 import { teeAvailabilityOf } from '@/lib/games/teeChoice';
 import type { TeeBoxRatings } from '@/lib/games/teeRating';
-import { registrationPlayerCap } from '@/lib/wizard/fitsPlayerCount';
+import { effectiveRegistrationCap } from '@/lib/wizard/fitsPlayerCount';
 import { maxTeamsForSize, registrationSeatTeamSize } from '@/lib/games/teamFormatLimits';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
@@ -68,12 +68,14 @@ type GameRow = {
   registration_mode: string;
   registration_type: string;
   signups_closed_at: string | null;
+  signup_deadline: string | null;
+  registration_cap: number | null;
   tournament_id: string | null;
   league_round_id: string | null;
   tee_boxes: TeeBoxRatings | null;
 };
 
-const GAME_SELECT = `id, name, status, created_by, game_mode, mode_config, registration_mode, registration_type, signups_closed_at, tournament_id, league_round_id, ${TEE_EMBED}`;
+const GAME_SELECT = `id, name, status, created_by, game_mode, mode_config, registration_mode, registration_type, signups_closed_at, signup_deadline, registration_cap, tournament_id, league_round_id, ${TEE_EMBED}`;
 
 /** The guard's refusals (0230) that the page has words for. */
 const GUARD_CODES = ['brought_guest_limit', 'host_not_on_roster'] as const;
@@ -138,7 +140,8 @@ async function seatGuest(
 ): Promise<BringGuestError | null> {
   const admin = getAdminClient();
   const mode = game.game_mode as GameMode;
-  const cap = registrationPlayerCap(mode, game.mode_config);
+  // #2482: the guest takes a seat under the same cap as the host did.
+  const cap = effectiveRegistrationCap(mode, game.mode_config, game.registration_cap);
   if (cap !== null) {
     const seatTeamSize = registrationSeatTeamSize(mode, game.mode_config?.team_size);
     const { data: claim, error: claimError } = await admin.rpc('claim_open_registration_seat', {

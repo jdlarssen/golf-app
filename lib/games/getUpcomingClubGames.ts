@@ -10,7 +10,7 @@ import type { StartType } from './startType';
  * (#2493).
  */
 export const UPCOMING_CLUB_GAME_SELECT =
-  'id, name, short_id, scheduled_tee_off_at, registration_mode, status, signups_closed_at, created_by, group_id, game_mode, mode_config, hole_segment, start_type, courses(name), groups(name)';
+  'id, name, short_id, scheduled_tee_off_at, registration_mode, status, signups_closed_at, signup_deadline, created_by, group_id, game_mode, mode_config, hole_segment, start_type, courses(name), groups(name)';
 
 /** The Json/text columns the select narrows with `overrideTypes`. */
 export type UpcomingClubGameFormat = {

@@ -15,6 +15,10 @@ import { Banner } from '@/components/ui/Banner';
 import { LinkButton } from '@/components/ui/Button';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
 import { signupView, type SignupView } from '@/lib/games/signupOffer';
+import { signupClosure } from '@/lib/games/signupClosed';
+import { formatOsloDateTimeLocal } from '@/lib/games/gamePayload';
+import { formatTeeOffLongDate } from '@/lib/format/teeOff';
+import { SeatsLine } from './SeatsLine';
 import { isMatchplayMode, countSidePlayers } from '@/lib/games/matchplaySides';
 import { pendingRequestView, type PendingRequestRow } from './pendingRequestView';
 import { shouldShowTeamInvitePointer } from './teamInvitePointer';
@@ -466,6 +470,8 @@ export default async function PåmeldingPage({
             teamForm,
             matchplaySideData,
             src: srcRaw,
+            seats,
+            locale: locale as AppLocale,
           })}
         </Card>
       </div>
@@ -518,6 +524,8 @@ function renderBody({
   teamForm,
   matchplaySideData,
   src,
+  seats,
+  locale,
 }: {
   t: SignupT;
   tModes: ReturnType<typeof getTranslations<'modes'>> extends Promise<infer R> ? R : never;
@@ -531,7 +539,13 @@ function renderBody({
   teamForm: TeamFormProps | null;
   matchplaySideData: MatchplaySideData | null;
   src: string | null;
+  /** #2482: the seats line over the forms; null without a cap. */
+  seats: GameSeats | null;
+  locale: AppLocale;
 }) {
+  const seatsLine = seats?.kind === 'capped' ? <SeatsLine seats={seats} /> : null;
+  // #2482: an open round with the waiting list on («Venteliste når det er fullt»).
+  const hasWaitlist = game.registration_mode === 'open' && game.waitlist_enabled === true;
   switch (view) {
     case 'already_registered':
       return <AlreadyRegisteredView shortId={game.short_id} gameId={game.id} team={ownTeam} />;
@@ -552,7 +566,13 @@ function renderBody({
       );
 
     case 'self_request':
-      return <RequestSentView shortId={game.short_id} withTeam={ownTeam != null} />;
+      return (
+        <RequestSentView
+          shortId={game.short_id}
+          withTeam={ownTeam != null}
+          waitlist={hasWaitlist && ownTeam == null}
+        />
+      );
 
     // #2061: du har sagt ja til laget, og laget venter på arrangøren. Samme
     // beskjed som en sendt forespørsel — ikke påmeldingsskjemaet igjen.
@@ -570,12 +590,19 @@ function renderBody({
 
     // #543: arrangøren har stengt påmeldingen manuelt — viser en melding uten
     // skjema. Gjelder scheduled spill der arrangøren gjør siste justeringer.
-    case 'closed':
+    // #2482: past the deadline the banner says when the signup closed.
+    case 'closed': {
+      const closure = signupClosure(game);
+      const when =
+        closure?.reason === 'deadline'
+          ? formatTeeOffLongDate(formatOsloDateTimeLocal(closure.at), locale)
+          : null;
       return (
-        <Banner tone="info">
-          {t('signupsClosedBanner')}
+        <Banner tone="info" testId={when ? 'signups-closed-deadline' : undefined}>
+          {when ? t('signupsClosedDeadlineBanner', { when }) : t('signupsClosedBanner')}
         </Banner>
       );
+    }
 
     // #442: er du medlem av spillets klubb, kan du melde deg på direkte uansett
     // påmeldingsmåte — også invite_only. Solo-flyt; lag-klubb-spill faller
@@ -583,6 +610,7 @@ function renderBody({
     case 'club_member_form':
       return (
         <div className="space-y-4">
+          {seatsLine}
           <p className="font-sans text-sm leading-relaxed text-text">
             {t('clubMemberDirectIntro')}
           </p>
@@ -600,6 +628,7 @@ function renderBody({
     case 'friend_form':
       return (
         <div className="space-y-4">
+          {seatsLine}
           <p className="font-sans text-sm leading-relaxed text-text">
             {t('friendSkipGateIntro')}
           </p>
@@ -712,9 +741,20 @@ function renderBody({
     // #2837: alle plassene er tatt. I stedet for «Meld meg på», som bare ville
     // feilet, sender du en forespørsel til arrangøren, som på en runde med
     // godkjenning.
+    // #2482: with the waiting list on, the request is a place on the list:
+    // the seats line and «Sett meg på ventelisten», as the artboard draws it.
     case 'solo_open_full':
+      if (hasWaitlist) {
+        return (
+          <div className="flex flex-col gap-2" data-testid="game-full-waitlist">
+            {seatsLine}
+            <RegistrationForm mode="manual_approval" shortId={game.short_id} waitlist />
+          </div>
+        );
+      }
       return (
         <div className="space-y-4">
+          {seatsLine}
           <Banner tone="info" testId="game-full-request">
             {t('soloOpenFullBanner')}
           </Banner>
@@ -728,6 +768,7 @@ function renderBody({
       const mode = view === 'solo_open_form' ? 'open' : 'manual_approval';
       return (
         <div className="space-y-4">
+          {seatsLine}
           {/* For matchplay + open mode, sideData drives the side-picker which replaces
               the standard intro text — we skip the generic text in that case. */}
           {!(mode === 'open' && matchplaySideData) && (

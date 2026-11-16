@@ -44,6 +44,7 @@ type ReceiptRow = {
   short_id: string;
   registration_mode: 'invite_only' | 'manual_approval' | 'open';
   signups_closed_at: string | null;
+  signup_deadline: string | null;
   courses: { name: string } | null;
 };
 
@@ -66,7 +67,7 @@ export default async function PublishReceiptPage({ params }: { params: Params })
     getGameWithPlayers(id),
     supabase
       .from('games')
-      .select('status, short_id, registration_mode, signups_closed_at, courses(name)')
+      .select('status, short_id, registration_mode, signups_closed_at, signup_deadline, courses(name)')
       .eq('id', id)
       .maybeSingle<ReceiptRow>(),
     supabase

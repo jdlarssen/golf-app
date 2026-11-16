@@ -21,7 +21,7 @@ import type { StartType } from './startType';
  * er den ene autoritative regelen (ett hjem): SQL-filteret speiler den for
  * effektivitet, men hver rad gates i tillegg gjennom `isPubliclyViewable` —
  * så et framtidig drift mellom SQL og predikat aldri lekker et spill hit.
- * `status`/`signups_closed_at` hentes kun for å kjøre predikatet og rendres
+ * `status`/`signups_closed_at`/`signup_deadline` hentes kun for å kjøre predikatet og rendres
  * aldri (ikke persondata).
  */
 export async function getPublicDiscoverableGames(): Promise<
@@ -32,7 +32,7 @@ export async function getPublicDiscoverableGames(): Promise<
   const { data } = await admin
     .from('games')
     .select(
-      'id, name, short_id, scheduled_tee_off_at, registration_mode, status, signups_closed_at, game_mode, mode_config, hole_segment, start_type, courses(name)',
+      'id, name, short_id, scheduled_tee_off_at, registration_mode, status, signups_closed_at, signup_deadline, game_mode, mode_config, hole_segment, start_type, courses(name)',
     )
     // Påmeldingsmåten ER synligheten (#357): open + manual_approval er
     // oppdagbare, invite_only er privat. Speiler isPubliclyViewable.
@@ -58,6 +58,7 @@ export async function getPublicDiscoverableGames(): Promise<
         status: row.status,
         registration_mode: row.registration_mode,
         signups_closed_at: row.signups_closed_at,
+        signup_deadline: row.signup_deadline,
       }),
     )
     .map((row) => {

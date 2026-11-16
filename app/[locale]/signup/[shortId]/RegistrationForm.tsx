@@ -28,12 +28,19 @@ export function RegistrationForm({
   shortId,
   sideData = null,
   src = null,
+  waitlist = false,
 }: {
   mode: Mode;
   shortId: string;
   sideData?: MatchplaySideData | null;
   /** #1022: rå `?src=`-verdi fra offentlig flate — sendes videre til action-en. */
   src?: string | null;
+  /**
+   * #2482: a full open round with a waiting list. The same request as «Be om
+   * plass», without the message, under «Sett meg på ventelisten»; the
+   * first on the list gets the next free seat by itself.
+   */
+  waitlist?: boolean;
 }) {
   const t = useTranslations('signup');
   const [isPending, startTransition] = useTransition();
@@ -101,7 +108,7 @@ export function RegistrationForm({
     return (
       <div ref={receiptRef} tabIndex={-1} className="space-y-3">
         <Banner tone="success" testId="request-sent-banner">
-          {t('requestSentBanner')}
+          {waitlist ? t('waitlistBanner') : t('requestSentBanner')}
         </Banner>
         {/* #2562: rendrer ingenting før appen er ute. */}
         <GetTheApp />
@@ -243,6 +250,7 @@ export function RegistrationForm({
       />
 
       {mode === 'manual_approval' &&
+        !waitlist &&
         (showMessage ? (
           <label className="block">
             <span className="mb-1.5 block font-sans text-xs font-medium text-muted">
@@ -278,14 +286,27 @@ export function RegistrationForm({
         </div>
       )}
 
-      <Button
-        type="submit"
-        pending={isPending}
-        pendingLabel={mode === 'open' ? t('signUpPending') : t('sendRequestPending')}
-        className="w-full"
-      >
-        {mode === 'open' ? t('signUpButton') : t('sendRequestButton')}
-      </Button>
+      {waitlist ? (
+        <Button
+          type="submit"
+          variant="outline"
+          pending={isPending}
+          pendingLabel={t('joinWaitlistPending')}
+          className="w-full text-sm font-semibold"
+          data-testid="join-waitlist"
+        >
+          {t('joinWaitlistButton')}
+        </Button>
+      ) : (
+        <Button
+          type="submit"
+          pending={isPending}
+          pendingLabel={mode === 'open' ? t('signUpPending') : t('sendRequestPending')}
+          className="w-full"
+        >
+          {mode === 'open' ? t('signUpButton') : t('sendRequestButton')}
+        </Button>
+      )}
     </form>
   );
 }
