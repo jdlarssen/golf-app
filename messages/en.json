@@ -165,6 +165,16 @@
         "title": "{gameName} has stood still",
         "detail": "No new scores have come in for a day. Finish the game when you are ready."
       },
+      "organizerEveningStatus": {
+        "title": "Tomorrow: {gameName}",
+        "detail": "{confirmed} of {total} have confirmed. {names} {people, plural, one {hasn't} other {haven't}} answered.",
+        "detailCountOnly": "{confirmed} of {total} have confirmed.",
+        "detailAll": "{total, plural, =1 {Everyone has confirmed.} =2 {Both have confirmed.} other {All # have confirmed.}}",
+        "list2": "{a} and {b}",
+        "list3": "{a}, {b} and {c}",
+        "list4": "{a}, {b}, {c} and {d}",
+        "more": "{count} more"
+      },
       "leagueRoundOpen": {
         "title": "{roundLabel} in {leagueName} is open",
         "detail": "Play it when it suits you. The deadline is {closesAt, date, ::EEEEdMMM} at {closesAt, time, ::HHmm}."

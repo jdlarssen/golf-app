@@ -68,6 +68,13 @@ export function notificationDestination(n: DeeplinkInput): string | null {
       const p = n.payload as NotificationPayload<'all_scorecards_delivered'>;
       return `/games/${p.game_id}/avslutt`;
     }
+    case 'organizer_evening_status': {
+      // #2483: «Klar for i morgen?», gated on admin or creator
+      // (`requireAdminOrCreator`). Under /admin, not /games: the app sends
+      // /games/… to its game screen, and this page lives on the web.
+      const p = n.payload as NotificationPayload<'organizer_evening_status'>;
+      return `/admin/games/${p.game_id}/i-morgen`;
+    }
     case 'league_round_open':
     case 'league_round_closing': {
       // #2638: the league page, where «Start runden» is (the app opens League).

@@ -45,6 +45,15 @@ export const testPayloads: { [K in NotificationKind]: NotificationPayload<K> } =
   missing_score_reminder: { game_id: TEST_GAME_ID, game_name: 'X', holes: [10, 11] },
   all_scorecards_delivered: { game_id: TEST_GAME_ID, game_name: 'X' },
   game_stale_reminder: { game_id: TEST_GAME_ID, game_name: 'X' },
+  organizer_evening_status: {
+    game_id: TEST_GAME_ID,
+    game_name: 'X',
+    tee_off_at: '2026-11-21T08:00:00.000Z',
+    confirmed: 7,
+    total: 8,
+    unanswered_names: ['Kari'],
+    unanswered_more: 0,
+  },
   league_round_open: {
     league_id: TEST_LEAGUE_ID,
     league_name: 'Liga',

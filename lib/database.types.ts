@@ -970,6 +970,7 @@ export type Database = {
           mode_config: Json
           name: string
           organizer_all_delivered_notified_at: string | null
+          organizer_evening_notice_sent_at: string | null
           organizer_stale_reminder_sent_at: string | null
           payment_link: string | null
           prizes: Json
@@ -1019,6 +1020,7 @@ export type Database = {
           mode_config?: Json
           name: string
           organizer_all_delivered_notified_at?: string | null
+          organizer_evening_notice_sent_at?: string | null
           organizer_stale_reminder_sent_at?: string | null
           payment_link?: string | null
           prizes?: Json
@@ -1068,6 +1070,7 @@ export type Database = {
           mode_config?: Json
           name?: string
           organizer_all_delivered_notified_at?: string | null
+          organizer_evening_notice_sent_at?: string | null
           organizer_stale_reminder_sent_at?: string | null
           payment_link?: string | null
           prizes?: Json

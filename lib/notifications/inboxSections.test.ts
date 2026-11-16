@@ -130,6 +130,7 @@ describe('inboxActionKey', () => {
     ['idea_built', null],
     ['game_cancelled', null],
     ['friend_achievement', null],
+    ['organizer_evening_status', null],
   ] as const)('%s → %s', (kind, expected) => {
     expect(inboxActionKey({ kind, payload: {} as NotificationPayload })).toBe(expected);
   });

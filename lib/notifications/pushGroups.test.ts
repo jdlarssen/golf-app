@@ -31,6 +31,7 @@ const EXPECTED: Record<NotificationKind, PushGroupId> = {
   cup_lineup_revealed: 'rounds',
   league_round_open: 'rounds',
   league_round_closing: 'rounds',
+  organizer_evening_status: 'rounds',
   peer_approval_request: 'scorecards',
   scorecard_submitted: 'scorecards',
   scorecard_approved: 'scorecards',

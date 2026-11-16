@@ -47,7 +47,8 @@ export type NotificationKind =
   | 'idea_built'
   | 'payment_reminder'
   | 'game_cancelled'
-  | 'friend_achievement';
+  | 'friend_achievement'
+  | 'organizer_evening_status';
 
 // `z.guid()` aksepterer enhver UUID-shaped string (8-4-4-4-12 hex), inkludert
 // nil-UUID og ikke-versjonerte kanoniske test-sentinels som "11111111-...".
@@ -548,6 +549,26 @@ const friendAchievementSchema = z.object({
     .min(1),
 });
 
+// organizer_evening_status (#2483): the evening before a scheduled round, from
+// 18:00 Oslo, the organiser hears how many have confirmed and who has not
+// answered. To `games.created_by`, once per round (the claim on
+// `games.organizer_evening_notice_sent_at`, sent by the sweep
+// `evening-before`). The payload is a picture of that evening: the page it
+// links to (/admin/games/[game_id]/i-morgen) always shows the list as it is
+// now. `unanswered_names` are first names, at most three
+// (`summarizeUnanswered`); `unanswered_more` counts the rest, also those
+// without a name, so the payload holds no text in the sender's language
+// (#583). `tee_off_at` is ISO, kept for the card and the mail to format.
+const organizerEveningStatusSchema = z.object({
+  game_id: uuid,
+  game_name: z.string().min(1),
+  tee_off_at: z.string().refine((v) => !Number.isNaN(Date.parse(v))),
+  confirmed: z.number().int().nonnegative(),
+  total: z.number().int().positive(),
+  unanswered_names: z.array(z.string().min(1)),
+  unanswered_more: z.number().int().nonnegative(),
+});
+
 const schemas = {
   invite: inviteSchema,
   peer_approval_request: peerApprovalRequestSchema,
@@ -588,6 +609,7 @@ const schemas = {
   payment_reminder: paymentReminderSchema,
   game_cancelled: gameCancelledSchema,
   friend_achievement: friendAchievementSchema,
+  organizer_evening_status: organizerEveningStatusSchema,
 } as const;
 
 /**
