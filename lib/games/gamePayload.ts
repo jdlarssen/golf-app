@@ -12,6 +12,7 @@
 // fase 4. Eksisterende admin-flyt produserer derfor samme payload som før.
 
 import { parseStartType, type StartType } from './startType';
+import { effectiveRegistrationCap, organizerCapBounds } from '@/lib/wizard/fitsPlayerCount';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { hcpAllowanceInPlay } from './hcpAllowance';
 import {
@@ -270,7 +271,17 @@ export type GameValidationErrorCode =
   //   men server-side gate beskytter mot DevTools-tampering.
   | 'bad_registration_mode'
   | 'bad_registration_type'
-  | 'team_registration_unsupported_mode';
+  | 'team_registration_unsupported_mode'
+  // #2482: «Plasser og frist».
+  // - bad_registration_cap: the organiser's cap outside 2..min(200, format cap).
+  // - bad_signup_deadline: a deadline that is not a datetime.
+  // - signup_deadline_after_tee_off: the deadline lies after the tee-off (U13).
+  // - registration_cap_below_held: «Rediger» set a cap below the seats already
+  //   taken (U12); nobody is put off the list.
+  | 'bad_registration_cap'
+  | 'bad_signup_deadline'
+  | 'signup_deadline_after_tee_off'
+  | 'registration_cap_below_held';
 
 export type ParsedPayload = {
   name: string;
@@ -319,6 +330,14 @@ export type ParsedPayload = {
    * `canRepeatWeekly`). Fail-closed: a caller that does not decide gets false.
    */
   repeat_weekly: boolean;
+  /**
+   * #2482: the organiser's cap on self-registration, deadline (ISO) and
+   * waiting list. null/null/false outside open and manual approval; no cap and
+   * no list on matchplay (U11); the list only on open rounds with a cap.
+   */
+  registration_cap: number | null;
+  signup_deadline: string | null;
+  waitlist_enabled: boolean;
   errorCode?: GameValidationErrorCode;
 };
 
@@ -332,6 +351,9 @@ type ParsedBase = Omit<
   | 'registration_type'
   | 'let_friends_skip_gate'
   | 'repeat_weekly'
+  | 'registration_cap'
+  | 'signup_deadline'
+  | 'waitlist_enabled'
   | 'errorCode'
 >;
 
@@ -2394,6 +2416,9 @@ export function buildGameInsertPayload(
     registration_type: 'solo',
     let_friends_skip_gate: false,
     repeat_weekly: false,
+    registration_cap: null,
+    signup_deadline: null,
+    waitlist_enabled: false,
     errorCode,
   });
 
@@ -2500,6 +2525,13 @@ export function buildGameInsertPayload(
     registrationMode === 'manual_approval' &&
     formData.get('let_friends_skip_gate') === '1';
 
+  const signup = parseSignupSettings(formData, {
+    registrationMode,
+    gameMode,
+    modeConfig: modeResult.mode_config as { team_size?: number },
+  });
+  if ('errorCode' in signup) return errorPayload(signup.errorCode);
+
   return {
     ...base,
     // #2210: formats with their own percentage in mode_config store 100, the
@@ -2513,5 +2545,74 @@ export function buildGameInsertPayload(
     registration_type: registrationType,
     let_friends_skip_gate: letFriendsSkipGate,
     repeat_weekly: parseRepeatWeekly(formData, opts.repeatAllowed),
+    ...signup,
   };
+}
+
+/**
+ * #2482: «Plasser og frist» from the form (`registration_cap`,
+ * `signup_deadline` as an Oslo `datetime-local`, `waitlist_enabled` = '1').
+ * Only open signup and manual approval take them; any other mode stores
+ * none, so a stale field never leaks. Matchplay fills per side and gets no
+ * cap and no list (U11). The list needs an open round with a cap to fill.
+ * The deadline against the tee-off is the caller's check
+ * (`signupDeadlineAfterTeeOff`): only the action knows the tee-off it saves.
+ */
+export function parseSignupSettings(
+  formData: FormData,
+  ctx: {
+    registrationMode: RegistrationMode;
+    gameMode: GameMode;
+    modeConfig: { team_size?: number } | null;
+  },
+):
+  | { registration_cap: number | null; signup_deadline: string | null; waitlist_enabled: boolean }
+  | { errorCode: GameValidationErrorCode } {
+  if (ctx.registrationMode !== 'open' && ctx.registrationMode !== 'manual_approval') {
+    return { registration_cap: null, signup_deadline: null, waitlist_enabled: false };
+  }
+
+  let signup_deadline: string | null = null;
+  const rawDeadline = String(formData.get('signup_deadline') ?? '').trim();
+  if (rawDeadline !== '') {
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(rawDeadline)) {
+      return { errorCode: 'bad_signup_deadline' };
+    }
+    try {
+      signup_deadline = parseOsloDateTimeLocal(rawDeadline);
+    } catch {
+      return { errorCode: 'bad_signup_deadline' };
+    }
+  }
+
+  const bounds = organizerCapBounds(ctx.gameMode, ctx.modeConfig);
+  let registration_cap: number | null = null;
+  const rawCap = String(formData.get('registration_cap') ?? '').trim();
+  if (bounds && rawCap !== '') {
+    const cap = Number(rawCap);
+    if (!Number.isInteger(cap) || cap < bounds.min || cap > bounds.max) {
+      return { errorCode: 'bad_registration_cap' };
+    }
+    registration_cap = cap;
+  }
+
+  const waitlist_enabled =
+    ctx.registrationMode === 'open' &&
+    formData.get('waitlist_enabled') === '1' &&
+    effectiveRegistrationCap(ctx.gameMode, ctx.modeConfig, registration_cap) !== null;
+
+  return { registration_cap, signup_deadline, waitlist_enabled };
+}
+
+/**
+ * #2482 (U13): a deadline after the tee-off is refused. Checked by the
+ * actions, which know the tee-off they save; not a DB CHECK, since «Rediger»
+ * can move both in one save.
+ */
+export function signupDeadlineAfterTeeOff(
+  signupDeadline: string | null,
+  scheduledTeeOffAt: string | null,
+): boolean {
+  if (signupDeadline == null || scheduledTeeOffAt == null) return false;
+  return new Date(signupDeadline).getTime() > new Date(scheduledTeeOffAt).getTime();
 }

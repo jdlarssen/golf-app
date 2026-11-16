@@ -102,6 +102,9 @@ export type PersistedInitialValues = Pick<
   | 'kr_per_unit'
   | 'entry_fee_kr'
   | 'payment_link'
+  | 'registration_cap'
+  | 'signup_deadline'
+  | 'waitlist_enabled'
   | 'prizes'
   | 'registration_mode'
   | 'registration_type'
@@ -293,6 +296,10 @@ export function wizardDraftFromState({
       // speiler samme grense i stedet for å lagre en 0-er som ikke overlever.
       entry_fee_kr: positiveOrUndefined(state.entryFeeKr),
       payment_link: state.paymentLink,
+      // #2482: «Plasser og frist».
+      registration_cap: state.registrationCap,
+      signup_deadline: state.signupDeadline,
+      waitlist_enabled: state.waitlistEnabled,
       prizes: prizeListFromDraft(state.prizeDraft),
       // Den EFFEKTIVE påmeldings-modusen (klubb-scope tvinger 'invite_only').
       // Et klubb-spill som senere løsrives mister dermed det rå valget ved

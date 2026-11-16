@@ -11,6 +11,7 @@ import { findGuestIds } from '@/lib/games/createGuestPlayer';
 import { asTeeChoice, teeChoiceToDb } from '@/lib/games/teeChoice';
 import {
   buildGameInsertPayload,
+  signupDeadlineAfterTeeOff,
   resolveTeeOffForSave,
   parsePrizesFromFormData,
 } from '@/lib/games/gamePayload';
@@ -26,7 +27,8 @@ import {
 } from '@/lib/games/rosterEdit';
 import { expectAffected, expectOne } from '@/lib/supabase/affectedRows';
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
-import { isMatchplayFamily } from '@/lib/scoring/modes/types';
+import { isMatchplayFamily, type GameMode } from '@/lib/scoring/modes/types';
+import { registrationSeatTeamSize } from '@/lib/games/teamFormatLimits';
 import { isEditSection } from '@/lib/games/editSections';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { notifyRosterInvites } from '@/lib/games/notifyRosterInvites';
@@ -212,6 +214,22 @@ async function updateGameInternal(
     redirect({ href: editHref({ error: teeOff.error }), locale });
   }
   const scheduledTeeOffAt = teeOff.ok ? teeOff.iso : null;
+  // #2482 (U13): the signup deadline lies before the tee-off. Checked here,
+  // where both are known: one save can move them both.
+  if (signupDeadlineAfterTeeOff(payload.signup_deadline, scheduledTeeOffAt)) {
+    redirect({ href: editHref({ error: 'signup_deadline_after_tee_off' }), locale });
+  }
+  // #2482 (U12): a cap below the seats already taken is refused; nobody is
+  // put off the list. Only a scheduled round has signups to count.
+  if (payload.registration_cap != null && existing.status === 'scheduled') {
+    const held = await seatsHeld(gameId, payload.game_mode, payload.mode_config as { team_size?: number });
+    if (held > payload.registration_cap) {
+      redirect({
+        href: editHref({ error: 'registration_cap_below_held', held: String(held) }),
+        locale,
+      });
+    }
+  }
 
   // Side-tournament config (parsed up front; persisted below only if the row
   // is still in an editable state).
@@ -346,6 +364,10 @@ async function updateGameInternal(
       // #369: kun satt til true når registration_mode = 'manual_approval' +
       // checkbox er avhuket — gamePayload.ts force-false ellers.
       let_friends_skip_gate: payload.let_friends_skip_gate,
+      // #2482: «Plasser og frist». Same optimistic lock on status as above.
+      registration_cap: payload.registration_cap,
+      signup_deadline: payload.signup_deadline,
+      waitlist_enabled: payload.waitlist_enabled,
       // #1049: startkontingent + betalingsmåte. Informativ — samme draft/
       // scheduled-gating som feltene over (optimistic-lock på status nedenfor).
       entry_fee_kr: payload.entry_fee_kr,
@@ -557,6 +579,27 @@ async function updateGameInternal(
 }
 
 type RequestClient = Awaited<ReturnType<typeof getServerClient>>;
+
+/**
+ * #2482 (U12): the seats the active roster holds, by the count the seat claim
+ * uses (`registration_seats_held`, service role only). A failed count throws
+ * to the route's error boundary rather than letting a cap through unchecked.
+ */
+async function seatsHeld(
+  gameId: string,
+  gameMode: GameMode,
+  modeConfig: { team_size?: number } | null,
+): Promise<number> {
+  const { data, error } = await getAdminClient().rpc('registration_seats_held', {
+    p_game_ids: [gameId],
+    p_seat_team_sizes: [registrationSeatTeamSize(gameMode, modeConfig?.team_size)],
+  });
+  if (error) {
+    console.error('[updateGame] seat count failed', { gameId, error });
+    throw error;
+  }
+  return data?.[0]?.seats ?? 0;
+}
 
 /**
  * #2210: writes a roster plan — updates, then inserts, then deletes — and
