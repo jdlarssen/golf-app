@@ -13,12 +13,14 @@ import {
   TEAM_NAME_MAX,
   TEAM_NAME_MIN,
 } from '@/lib/games/registration';
-import { maxTeamsForSize, teamModePlayerCap } from '@/lib/games/teamFormatLimits';
+import { isSignupClosed } from '@/lib/games/signupClosed';
+import { maxTeamsForSize } from '@/lib/games/teamFormatLimits';
 import { flightForTeam, type TeamPlayer } from '@/lib/games/teamScope';
 import { notify } from '@/lib/notifications/notify';
 import { notifyInvitedToTeam } from '@/lib/notifications/notifyInvitedToTeam';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { effectiveRegistrationCap } from '@/lib/wizard/fitsPlayerCount';
 
 /**
  * Team registration (#199 chunks 8+9), shared by the web actions in
@@ -216,8 +218,8 @@ export async function submitTeamRegistrationCore(
   if (game.status !== 'scheduled') {
     return { ok: false, error: 'game_locked' };
   }
-  // #543: closed signups, as in the solo flow.
-  if (game.signups_closed_at != null) {
+  // #543: closed signups, as in the solo flow. #2482: also past the deadline.
+  if (isSignupClosed(game)) {
     return { ok: false, error: 'signup_closed' };
   }
   if (!gameModeSupportsTeams(game.game_mode)) {
@@ -298,7 +300,8 @@ export async function submitTeamRegistrationCore(
   // number is the lowest in 1..maxTeamsForSize(teamSize) no active row has.
   let assignedTeamNumber: number | null = null;
   if (captainStatus === 'approved') {
-    const cap = teamModePlayerCap(game.game_mode, teamSize);
+    // #2482: the format's team cap or the organiser's, whichever is lower.
+    const cap = effectiveRegistrationCap(game.game_mode, { team_size: teamSize }, game.registration_cap);
     // #2209: the captain's tee category from the profile, clamped to the tee.
     const captainTee = (await joinTeeGenders(game.id, [userId]))[userId];
     const { data: claim, error: claimError } = await admin.rpc('claim_open_registration_seat', {
@@ -569,8 +572,8 @@ export async function acceptTeamInviteCore(
   if (game.status !== 'scheduled') {
     return { ok: false, error: 'game_locked' };
   }
-  // #543: closed signups freeze a teammate's yes too.
-  if (game.signups_closed_at != null) {
+  // #543: closed signups freeze a teammate's yes too. #2482: so does the deadline.
+  if (isSignupClosed(game)) {
     return { ok: false, error: 'signup_closed' };
   }
 

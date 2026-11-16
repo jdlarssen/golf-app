@@ -151,6 +151,7 @@ type GameRow = {
   short_id: string;
   // #2570: the share link hides after «Steng påmeldingen».
   signups_closed_at: string | null;
+  signup_deadline: string | null;
   // #1049: startkontingent — driver betaling-telle-kortet (vises kun når > 0).
   entry_fee_kr: number;
   // #2275: live-follow on the desk's Live tab (null while it is off).
@@ -300,7 +301,7 @@ export default async function GameDetailPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, game_mode, league_round_id, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, hole_segment, start_type, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, registration_mode, registration_type, short_id, signups_closed_at, entry_fee_kr, spectate_token, prizes, courses(name), tee_boxes(name)',
+      'id, name, status, game_mode, league_round_id, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, hole_segment, start_type, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, registration_mode, registration_type, short_id, signups_closed_at, signup_deadline, entry_fee_kr, spectate_token, prizes, courses(name), tee_boxes(name)',
     )
     .eq('id', id)
     .maybeSingle<GameRow>();
@@ -779,6 +780,7 @@ async function buildSections({
       gameStatus={game.status}
       shortId={game.short_id}
       signupsClosedAt={game.signups_closed_at}
+      signupDeadline={game.signup_deadline}
       selfRegisteredCount={players.length}
     />
   ) : (

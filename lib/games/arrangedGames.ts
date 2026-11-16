@@ -1,6 +1,7 @@
 import type { Database } from '@/lib/database.types';
 import { deliveryCounts, type DeliveryCounts } from './organizerDesk';
 import { isOpenForSignups } from './publicSignupVisibility';
+import { isSignupClosed } from './signupClosed';
 import type { StartBlock } from './startBlockReason';
 import { STRUCTURAL_BLOCK_REASONS, type StructuralBlockReason } from './startBlockReasons';
 import type { GameStatus } from './status';
@@ -48,6 +49,8 @@ export type ArrangedGame = {
   require_peer_approval: boolean;
   registration_mode: Database['public']['Enums']['registration_mode'];
   signups_closed_at: string | null;
+  /** #2482: past the deadline the round reads closed, as closing by hand does. */
+  signup_deadline?: string | null;
   /** The club the round belongs to; its members sign up without an invitation. */
   group_id: string | null;
   courses: { name: string } | null;
@@ -163,7 +166,7 @@ export function scheduledRowNote(
 
 function signupState(game: ArrangedGame): SignupState {
   if (isOpenForSignups(game)) return 'open';
-  if (game.signups_closed_at != null) return 'closed';
+  if (isSignupClosed(game)) return 'closed';
   return null;
 }
 

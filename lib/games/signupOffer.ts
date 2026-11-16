@@ -1,6 +1,7 @@
 import type { PendingRequestView } from '@/app/[locale]/signup/[shortId]/pendingRequestView';
 import { resolveRegistrationTypeView } from '@/app/[locale]/signup/[shortId]/registrationTypeView';
 import { isMatchplayMode } from '@/lib/games/matchplaySides';
+import { isSignupClosed } from '@/lib/games/signupClosed';
 import {
   gameModeSupportsTeams,
   type RegistrationMode,
@@ -23,6 +24,8 @@ export type SignupFacts = {
     registration_type: RegistrationType;
     game_mode: GameMode;
     signups_closed_at: string | null;
+    /** #2482: the organiser's deadline; past it the signup is closed. */
+    signup_deadline?: string | null;
     let_friends_skip_gate: boolean;
   };
   /** A withdrawn player's row counts: the page sends them to the game. */
@@ -86,7 +89,8 @@ function formView(facts: SignupFacts): SignupView {
 
   if (game.status === 'active' || game.status === 'finished') return 'locked';
   // #543: closed by hand comes after locked, so a started round never says «closed».
-  if (game.signups_closed_at != null) return 'closed';
+  // #2482: so does a deadline that has passed (`isSignupClosed`).
+  if (isSignupClosed(game)) return 'closed';
 
   // #442: club membership IS the invitation, whatever the mode. Solo only; a
   // club round with teams falls through to the team logic below.

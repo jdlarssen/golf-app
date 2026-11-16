@@ -53,6 +53,11 @@ import { isUuid } from '@/lib/url/isUuid';
 // som venter, kan trekkes (`intent: 'cancel'`) når `canCancelRequest` er sann,
 // også etter at arrangøren har stengt påmeldingen.
 //
+// Tak, frist og venteliste (#2482): `seats.cap` er arrangørens tak når det er
+// lavere enn formatets, `seats.waitlist` antallet på ventelista, og `closure`
+// grunnen når `offer` er `closed` (for hånd eller fristen). Etter fristen svarer
+// POST `signup_closed`, som etter «Steng påmeldingen».
+//
 // WIRE (typene står i `lib/games/appRoundInviteView.ts`):
 //   GET  200 AppRoundInviteView
 //        401 { error: 'unauthorized' }   404 { error: 'game_not_found' }

@@ -13,6 +13,8 @@ type Props = {
   shortId: string;
   /** #2570: the share link hides once the organiser has closed signups. */
   signupsClosedAt: string | null;
+  /** #2482: past the deadline the share link is gone, as after closing by hand. */
+  signupDeadline: string | null;
   selfRegisteredCount: number;
 };
 
@@ -34,6 +36,7 @@ export async function RegistrationOverviewSection({
   gameStatus,
   shortId,
   signupsClosedAt,
+  signupDeadline,
   selfRegisteredCount,
 }: Props) {
   const supabase = await getServerClient();
@@ -69,6 +72,7 @@ export async function RegistrationOverviewSection({
     status: gameStatus,
     registration_mode: registrationMode,
     signups_closed_at: signupsClosedAt,
+    signup_deadline: signupDeadline,
   });
   const modeLabel =
     registrationMode === 'open'

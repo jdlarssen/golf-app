@@ -2,6 +2,7 @@ import type { GameMode } from '@/lib/scoring/modes/types';
 import type { RegistrationType } from '@/lib/games/registration';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
 import { isMatchplayMode } from '@/lib/games/matchplaySides';
+import { isSignupClosed } from '@/lib/games/signupClosed';
 import { resolveRegistrationTypeView } from '@/app/[locale]/signup/[shortId]/registrationTypeView';
 
 // «Ta med en gjest» (#2607, fase 2): hvem som får raden på spillets side,
@@ -23,6 +24,8 @@ export type BringGuestGame = {
   registration_mode: string;
   registration_type: string;
   signups_closed_at: string | null;
+  /** #2482: past the organiser's deadline nobody new comes in, guests neither. */
+  signup_deadline?: string | null;
   tournament_id: string | null;
   league_round_id: string | null;
 };
@@ -59,7 +62,7 @@ export function bringGuestBlock(game: BringGuestGame, player: BringGuestPlayer):
   if (game.registration_mode !== 'open' && game.registration_mode !== 'manual_approval') {
     return 'wrong_mode';
   }
-  if (game.signups_closed_at != null) return 'signup_closed';
+  if (isSignupClosed(game)) return 'signup_closed';
   if (game.tournament_id != null) return 'cup';
   if (game.league_round_id != null) return 'league';
   const mode = game.game_mode as GameMode;

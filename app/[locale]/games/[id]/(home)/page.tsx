@@ -712,12 +712,13 @@ export default async function GameHomePage({
         .single<{ hcp_index: number; handicap_updated_at: string }>(),
       supabase
         .from('games')
-        .select('registration_mode, registration_type, signups_closed_at')
+        .select('registration_mode, registration_type, signups_closed_at, signup_deadline')
         .eq('id', id)
         .maybeSingle<{
           registration_mode: string;
           registration_type: string;
           signups_closed_at: string | null;
+          signup_deadline: string | null;
         }>(),
     ]);
     // The row shows only where the player may bring a guest; a failed read
