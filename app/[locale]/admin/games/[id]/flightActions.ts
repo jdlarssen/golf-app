@@ -3,6 +3,7 @@
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { expireGameCache } from '@/lib/games/expireGameCache';
+import { promoteWaitlist } from '@/lib/games/promoteWaitlist';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -628,6 +629,9 @@ export async function toggleSignupsClosed(
 
   expireFlightCaches(gameId);
   revalidatePath(`/signup`);
+  // #2482: seats that freed while the signup was closed go to the waiting
+  // list when it opens again, before a newcomer can take them. Never throws.
+  if (!closedNow) await promoteWaitlist(gameId);
   redirect({
     href: `${signupsPath}?status=${closedNow ? 'signups_closed' : 'signups_reopened'}`,
     locale,
