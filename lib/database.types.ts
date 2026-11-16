@@ -2772,6 +2772,15 @@ export type Database = {
           seats: number
         }[]
       }
+      registration_waitlist: {
+        Args: { p_game_ids: string[] }
+        Returns: {
+          game_id: string
+          place: number
+          request_id: string
+          user_id: string
+        }[]
+      }
       remove_friend: { Args: { p_other: string }; Returns: string }
       respond_friend_request: {
         Args: { p_accept: boolean; p_request_id: string }

@@ -7,7 +7,8 @@
 --      skipped, and never past the cap.
 --   2. It does nothing when the list is off, the game was closed by hand, is
 --      not open or has started. After the deadline it still moves up.
---   3. Only service_role may call it.
+--   3. Only service_role may call it, and registration_waitlist (the queue's
+--      one home) lists the queue in that order.
 --   4. The three new games columns: the cap's CHECK bounds, and a player who is
 --      not the organiser changes none of them with a direct PATCH (#440).
 --
@@ -30,7 +31,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(33);
+select plan(37);
 
 create schema if not exists torny_pws;
 
@@ -177,6 +178,21 @@ select torny_pws.request(8, 10, 10);
 select torny_pws.seed_game(9);
 insert into public.game_registration_requests (id, game_id, user_id, status, is_team_captain, team_name)
 values (torny_pws.rid(9, 10), torny_pws.gid(9), torny_pws.uid(10), 'pending', true, 'Laget');
+
+-- ── 0. The queue itself ──────────────────────────────────────────────────────
+select results_eq(
+  $$ select user_id, place from public.registration_waitlist(array[torny_pws.gid(1)]) $$,
+  $$ values (torny_pws.uid(10), 1), (torny_pws.uid(11), 2), (torny_pws.uid(12), 3) $$,
+  'registration_waitlist: oldest first, places 1–3');
+select results_eq(
+  $$ select user_id, place from public.registration_waitlist(array[torny_pws.gid(3), torny_pws.gid(9)]) $$,
+  $$ values (torny_pws.uid(23), 1) $$,
+  'registration_waitlist: a requester on the roster and a captain are not on the list');
+select ok(has_function_privilege('service_role', 'public.registration_waitlist(uuid[])', 'execute'),
+  'service_role can execute registration_waitlist');
+select ok(not has_function_privilege('authenticated', 'public.registration_waitlist(uuid[])', 'execute')
+          and not has_function_privilege('anon', 'public.registration_waitlist(uuid[])', 'execute'),
+  'authenticated and anon cannot execute registration_waitlist');
 
 -- ── 1. The queue and the cap ─────────────────────────────────────────────────
 select is(torny_pws.outcome(1, 11), 'not_first', 'second in the queue → not_first');
