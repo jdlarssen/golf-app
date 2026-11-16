@@ -128,7 +128,17 @@ konflikt da #2367 ble merget, og måtte erstattes av #2370. Presedens: #2368 →
 - **Rød som blir grønn ved re-kjøring uten endring = flake-kandidat.** Fil eget
   issue (label `bug`, milestone 9, tittel «Flake-kandidat: <test>») og IKKE
   regn funnet som løst. Dette er dataene som evt. rettferdiggjør en flake-jeger
-  senere (#1073 forkastet den inntil videre).
+  senere (#1073 forkastet den inntil videre). Presisering etter #2911:
+  - En **re-kjøring** («Re-run jobs») bruker samme merge-commit som den røde
+    kjøringen. Grønt der uten endring er en flake-kandidat.
+  - Grønt etter en **ny push** (ny `pull_request`-hendelse) bruker en ny
+    merge-commit mot dagens main. Det teller bare som flake hvis main ikke fikk
+    nye commits mellom de to kjøringene: `git log --oneline <rød-tid>..<grønn-tid> origin/main`.
+  - Mistenker du versjonsavvik, les lockfila fra kjøringens egen commit
+    (`git show <sha>:package-lock.json`), aldri fra lokal main.
+  - Fikk main en relevant fiks i mellomtiden, er det ikke flake. Kommenter
+    funnet med fiks-PR-en og lukk, ikke fil flake-issue (#2911: Playwright 1.60.0
+    mot `ubuntu-latest` på 26.04, rettet av #2910 på main).
 - Klarer du ikke reprodusere og det heller ikke er flake (f.eks. miljøfeil i
   Actions): kommenter funnet med logglinjene og la varsel-issuet stå åpent.
 
