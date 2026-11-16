@@ -34,11 +34,45 @@ mark_handled() { # forteller workflowen at issuet alt er filet/finnes — unngå
   return 0
 }
 
-open_or_note_issue() { # title body — dedupet: hopper over hvis åpent issue med samme tittel finnes
-  local title="$1" body="$2" existing issue_url
-  existing=$(gh issue list --repo "$REPO" --state open --search "in:title \"$title\"" --json number --jq 'length')
-  if [ "$existing" -gt 0 ]; then
-    echo "Åpent issue «${title}» finnes allerede — hopper over."
+new_signal_lines() { # tråd-fil < signal-linjer → linjene som ikke står på egen linje i tråden
+  # Nøkkelen er linja uten «: <antall>», så pg:42501: 3 og pg:42501: 4 er samme
+  # signal. Bare hele linjer teller: en kode nevnt i prosa (Management API-linja)
+  # skjuler ikke en ny forekomst fra appen. \r fjernes (GitHub lagrer CRLF).
+  awk 'function key(s) { sub(/\r$/, "", s); sub(/: [0-9]+$/, "", s); return s }
+       FILENAME == ARGV[1] { seen[key($0)] = 1; next }
+       $0 != "" && !(key($0) in seen)' "$1" -
+}
+
+open_or_note_issue() { # title body [signal-linjer] — dedupet på eksakt tittel (søket er substreng)
+  # Finnes et åpent issue og det er sendt signal-linjer (advisory-nøkler og
+  # «pg:<kode>: <antall>»), kommenteres de linjene som ikke står i issuet eller
+  # kommentarene fra før. Ellers ville et nytt signal blitt borte så lenge et
+  # gammelt varsel står åpent (#2785). Samme signal neste dag gir ingen kommentar.
+  local title="$1" body="$2" signal="${3:-}" existing issue_url fresh comment_url
+  existing=$(gh issue list --repo "$REPO" --state open --search "in:title \"$title\"" --json number,title --jq '.[] | "\(.number)\t\(.title)"' \
+    | awk -F'\t' -v t="$title" '$2 == t { print $1; exit }')
+  if [ -n "$existing" ]; then
+    if [ -z "$signal" ]; then
+      echo "Åpent issue «${title}» finnes allerede (#${existing}) — hopper over."
+      return 0
+    fi
+    # Uten tråden vet vi ikke hva som er nytt: rødt, ikke stille (handled settes ikke).
+    if ! gh issue view "$existing" --repo "$REPO" --json body,comments --jq '.body, .comments[].body' > "$TMP/thread"; then
+      echo "::warning::fikk ikke lest #${existing}, så nye signaler kan ikke skilles fra gamle"
+      return 1
+    fi
+    fresh=$(printf '%s\n' "$signal" | new_signal_lines "$TMP/thread")
+    if [ -z "$fresh" ]; then
+      echo "Åpent issue «${title}» (#${existing}): dagens signal står der fra før — hopper over."
+      return 0
+    fi
+    comment_url=$(gh issue comment "$existing" --repo "$REPO" --body "$(signal_comment "$fresh")") || comment_url=""
+    if [ -z "$comment_url" ]; then
+      echo "::warning::gh klarte ikke kommentere nytt signal på #${existing}"
+      return 1
+    fi
+    echo "Kommenterte nytt signal: $comment_url"
+    bash .github/scripts/discord-notify.sh "🚨 **$title**: nytt signal — $comment_url"
     return 0
   fi
   issue_url=$(gh api "repos/$REPO/issues" \
@@ -170,11 +204,12 @@ $NEW_ADV
 Bevisste valg → legg nøkkelen i \`docs/loops/prod-vakta-baseline.txt\` via PR. Reelle funn → fiks.
 "
 fi
+PG_NEW_LINES=$(awk -F'\t' '{ print $1 ": " $2 }' "$TMP/pg_new")
 PG_SECTION=""
 if [ -s "$TMP/pg_new" ]; then
   PG_SECTION="**Nye typer postgres-feil siste 24 t** (ERROR/FATAL/PANIC, SQLSTATE-kode: antall):
 \`\`\`
-$(awk -F'\t' '{ print $1 ": " $2 }' "$TMP/pg_new")
+${PG_NEW_LINES}
 \`\`\`
 "
 fi
@@ -194,4 +229,33 @@ fi
 BODY=$(printf 'Prod-vakta fant signaler i prod-telemetrien (%s):\n\n%s\n%s\nKjøring: %s/%s/actions/runs/%s\n\nHåndtering: docs/loops/ci-vakta.md → «Prod-vakt-issues». Issuet lukkes når signalet er diagnostisert og enten fikset eller baselinet.' \
   "$(date -u +%Y-%m-%d)" "$ADV_SECTION" "$PG_SECTION" "${GITHUB_SERVER_URL:-https://github.com}" "$REPO" "${GITHUB_RUN_ID:-?}")
 
-open_or_note_issue "Prod-vakt: signaler i prod-telemetrien" "$BODY"
+signal_comment() { # ferske signal-linjer → kommentar på det åpne issuet, samme seksjoner som issuet
+  local adv pg text
+  adv=$(printf '%s\n' "$1" | grep -v '^pg:' || true)
+  pg=$(printf '%s\n' "$1" | grep '^pg:' || true)
+  text="Prod-vakta fant nye signaler ($(date -u +%Y-%m-%d)) mens dette issuet står åpent. Bare det som ikke står i issuet eller kommentarene fra før:
+"
+  if [ -n "$adv" ]; then
+    text="${text}
+**Nye security-advisories utenfor baseline:**
+\`\`\`
+${adv}
+\`\`\`
+"
+  fi
+  if [ -n "$pg" ]; then
+    text="${text}
+**Nye typer postgres-feil siste 24 t** (ERROR/FATAL/PANIC, SQLSTATE-kode: antall):
+\`\`\`
+${pg}
+\`\`\`
+"
+  fi
+  printf '%s\nKjøring: %s/%s/actions/runs/%s\n\nSamme håndtering som issuet: bevisste valg → baseline via PR, reelle feil → fiks.' \
+    "$text" "${GITHUB_SERVER_URL:-https://github.com}" "$REPO" "${GITHUB_RUN_ID:-?}"
+}
+
+# Signal-linjene er de samme linjene som står i kodeblokkene over, så dedupen
+# mot et åpent issue kjenner dem igjen.
+SIGNAL_LINES=$(printf '%s\n%s\n' "$NEW_ADV" "$PG_NEW_LINES")
+open_or_note_issue "Prod-vakt: signaler i prod-telemetrien" "$BODY" "$SIGNAL_LINES"
