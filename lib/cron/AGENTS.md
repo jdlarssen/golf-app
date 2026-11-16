@@ -13,6 +13,7 @@ pg_cron (every minute) → EXISTS gate in the job body → `net.http_post` (pg_n
 | `delivery-reminder-sweep` (every 5 min) | 0192 | an active, non-derived game started in the last 2 days has a player with `submitted_at`, `withdrawn_at` and `deliver_reminder_sent_at` all null | `app/api/cron/delivery-reminder/route.ts` |
 | `stale-game-reminder-sweep` (hourly, :17) | 0205 | an active game that is not a cup match or derived, has a `created_by`, started over 24 h ago and has `organizer_stale_reminder_sent_at is null` | `app/api/cron/stale-game-reminder/route.ts` |
 | `league-round-reminder-sweep` (hourly, :41) | 0217 (stamps), 0218 | an open round (`opens_at <= now() < closes_at`) of an `active` league has `opening_notice_sent_at is null`, or `closing_reminder_sent_at is null` with under 48 h left | `app/api/cron/league-round-reminder/route.ts` |
+| `evening-before-sweep` (every 15 min) | 0241 (stamp), 0242 | it is 18:00 or later in Oslo, and a scheduled game that is not a cup match, derived game or league flight, has a `created_by`, `organizer_evening_notice_sent_at is null`, tee-off on tomorrow's Oslo date, was created before 18:00 Oslo today, and has another non-guest, non-withdrawn player than the organiser | `app/api/cron/evening-before/route.ts` |
 
 `/api/cron/product-update-digest` is not pg_cron: it is the one Vercel Cron in `vercel.json` (daily, GET). Both transports send the same `Authorization: Bearer <CRON_SECRET>`.
 
@@ -70,6 +71,19 @@ select l.name, r.sequence, r.opens_at, r.opening_notice_sent_at,
 from public.league_rounds r join public.leagues l on l.id = r.league_id
 where l.status = 'active'
 order by r.closes_at desc limit 20;
+```
+
+```sql
+-- 3e. The organiser's evening status (#2483): when each scheduled round told its
+--     organiser, against its tee-off. Due from 18:00 Oslo the evening before;
+--     the sweep runs every 15 minutes, so the stamp lands between 18:00 and 18:15
+--     Oslo (later only for a round set up or moved that evening). Moving the
+--     tee-off clears the stamp.
+select id, name, scheduled_tee_off_at,
+       organizer_evening_notice_sent_at at time zone 'Europe/Oslo' as told_oslo
+from public.games
+where organizer_evening_notice_sent_at is not null
+order by organizer_evening_notice_sent_at desc limit 20;
 ```
 
 A start within ~2 minutes of tee-off and a tail within ~1 minute of `ended_at` mean the chain works, whatever signals 1 and 2 look like. A reminder lands between 15 and 20 minutes after a card's last hole (in the one-ball formats the last hole sits on the captain's rows).
