@@ -7133,7 +7133,14 @@
       "bodyTextStale": "Det har ikke kommet nye slag i {gameName} på et døgn. Avslutt spillet når du er klar, så får spillerne resultatlista.",
       "button": "Avslutt spillet",
       "buttonText": "Avslutt spillet: {url}",
-      "footer": "Du får denne meldingen fordi du arrangerer spillet. Logg inn på <link>tornygolf.no</link> for å avslutte det."
+      "footer": "Du får denne meldingen fordi du arrangerer spillet. Logg inn på <link>tornygolf.no</link> for å avslutte det.",
+      "subjectEvening": "I morgen: {gameName}",
+      "headingEvening": "Klar for i morgen?",
+      "bodyEvening": "<strong>{gameName}</strong> spilles i morgen. {status}",
+      "bodyTextEvening": "{gameName} spilles i morgen. {status}",
+      "buttonEvening": "Se hvem som kommer",
+      "buttonTextEvening": "Se hvem som kommer: {url}",
+      "footerEvening": "Du får denne meldingen fordi du arrangerer runden. Logg inn på <link>tornygolf.no</link> for å se den."
     },
     "paymentReminder": {
       "subject": "Startkontingent — {gameName}",
