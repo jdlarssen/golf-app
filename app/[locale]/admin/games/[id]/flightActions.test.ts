@@ -78,6 +78,13 @@ vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => serverMock,
 }));
 
+// #2482: the waiting list's promotion has its own suite; here only that
+// reopening the signup asks for it and closing does not.
+const promoteWaitlistMock = vi.fn(async (..._args: unknown[]) => [] as string[]);
+vi.mock('@/lib/games/promoteWaitlist', () => ({
+  promoteWaitlist: (...args: unknown[]) => promoteWaitlistMock(...args),
+}));
+
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => adminMock,
 }));
@@ -873,6 +880,7 @@ describe('toggleSignupsClosed', () => {
     await expect(toggleSignupsClosed(GAME_ID, true)).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}/signups?status=signups_closed`);
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+    expect(promoteWaitlistMock).not.toHaveBeenCalled();
   });
 
   it('gjenåpner påmeldingen → redirect til ?status=signups_reopened', async () => {
@@ -893,6 +901,8 @@ describe('toggleSignupsClosed', () => {
     const { toggleSignupsClosed } = await import('./flightActions');
     await expect(toggleSignupsClosed(GAME_ID, false)).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}/signups?status=signups_reopened`);
+    // #2482: seats freed while closed go to the waiting list on reopening.
+    expect(promoteWaitlistMock).toHaveBeenCalledWith(GAME_ID);
   });
 
   it('0-rad-skriving rapporteres som feil, ikke suksess (#2293)', async () => {

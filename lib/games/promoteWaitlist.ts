@@ -8,7 +8,7 @@ import { sendRegistrationApprovedMail } from '@/lib/mail/registrationApproved';
 import { notify } from '@/lib/notifications/notify';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { effectiveRegistrationCap } from '@/lib/wizard/fitsPlayerCount';
+import { effectiveRegistrationCap, REGISTRATION_CAP_MAX } from '@/lib/wizard/fitsPlayerCount';
 
 /**
  * #2482: a seat freed before the start goes to the first one on the waiting
@@ -22,7 +22,8 @@ import { effectiveRegistrationCap } from '@/lib/wizard/fitsPlayerCount';
  * loop only picks the head of the queue, works out the tee category
  * (`joinTeeGenders`, as the seat claim's callers do) and sends the varsel. It
  * stops at the first answer that is not `ok`, and never runs more rounds than
- * there were free seats.
+ * there were free seats. Without a cap (the organiser removed it) nothing is
+ * full, so the whole queue moves up (#2482 F2), at most 200 in one call.
  *
  * Best-effort and never throws: the caller's write is done whatever happens
  * here. A promotion that does not happen leaves the request waiting in the
@@ -78,19 +79,20 @@ async function promote(gameId: string): Promise<string[]> {
     return [];
   }
   const cap = effectiveRegistrationCap(game.game_mode, game.mode_config, game.registration_cap);
-  // Without a cap nothing is ever full, and the requests wait for «Godta».
-  if (cap === null) return [];
   const seatTeamSize = registrationSeatTeamSize(game.game_mode, game.mode_config?.team_size);
 
-  const { data: held, error: heldError } = await admin.rpc('registration_seats_held', {
-    p_game_ids: [gameId],
-    p_seat_team_sizes: [seatTeamSize],
-  });
-  if (heldError) {
-    console.error('[promoteWaitlist] seat count failed', { gameId, error: heldError });
-    return [];
+  let free = REGISTRATION_CAP_MAX;
+  if (cap !== null) {
+    const { data: held, error: heldError } = await admin.rpc('registration_seats_held', {
+      p_game_ids: [gameId],
+      p_seat_team_sizes: [seatTeamSize],
+    });
+    if (heldError) {
+      console.error('[promoteWaitlist] seat count failed', { gameId, error: heldError });
+      return [];
+    }
+    free = cap - (held?.[0]?.seats ?? 0);
   }
-  const free = cap - (held?.[0]?.seats ?? 0);
 
   const promoted: string[] = [];
   for (let round = 0; round < free; round += 1) {
@@ -108,7 +110,8 @@ async function promote(gameId: string): Promise<string[]> {
     const { data: answer, error: promoteError } = await admin.rpc('promote_waitlist_seat', {
       p_game_id: gameId,
       p_request_id: head.request_id,
-      p_cap: cap,
+      // The generated Args type has no null; the SQL reads null as «no cap».
+      p_cap: cap as number,
       p_seat_team_size: seatTeamSize,
       p_tee_gender: teeGender,
     });

@@ -159,11 +159,21 @@ describe('promoteWaitlist', () => {
     ['closed by hand', { signups_closed_at: '2026-10-01T10:00:00Z' }],
     ['started', { status: 'active' }],
     ['matchplay', { game_mode: 'singles_matchplay', mode_config: { team_size: 1 } }],
-    ['no cap at all', { registration_cap: null }],
   ])('%s: no RPC at all', async (_name, over) => {
     game = openGame(over);
     expect(await run()).toEqual([]);
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  // #2482 F2: the organiser removed the cap; nothing is full any more, so
+  // everyone waiting gets in, as a newcomer would.
+  it('no cap at all: the whole queue moves up, with p_cap null', async () => {
+    game = openGame({ registration_cap: null });
+    queue = q('u1', 'u2', 'u3');
+    expect(await run()).toEqual(['u1', 'u2', 'u3']);
+    expect(promoteCalls()).toHaveLength(3);
+    expect(promoteCalls()[0]![1]).toMatchObject({ p_cap: null });
+    expect(rpc.mock.calls.some(([fn]) => fn === 'registration_seats_held')).toBe(false);
   });
 
   it('a claim took the seat first (game_full): stops, no varsel', async () => {

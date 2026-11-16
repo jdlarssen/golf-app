@@ -20,6 +20,7 @@ import {
   formOwnsFlight,
   parseLoadedRoster,
   planRosterEdit,
+  seatsFreedByPlan,
   plannedInsertIds,
   touchesCupRoster,
   type DesiredRosterRow,
@@ -219,18 +220,6 @@ async function updateGameInternal(
   if (signupDeadlineAfterTeeOff(payload.signup_deadline, scheduledTeeOffAt)) {
     redirect({ href: editHref({ error: 'signup_deadline_after_tee_off' }), locale });
   }
-  // #2482 (U12): a cap below the seats already taken is refused; nobody is
-  // put off the list. Only a scheduled round has signups to count.
-  if (payload.registration_cap != null && existing.status === 'scheduled') {
-    const held = await seatsHeld(gameId, payload.game_mode, payload.mode_config as { team_size?: number });
-    if (held > payload.registration_cap) {
-      redirect({
-        href: editHref({ error: 'registration_cap_below_held', held: String(held) }),
-        locale,
-      });
-    }
-  }
-
   // Side-tournament config (parsed up front; persisted below only if the row
   // is still in an editable state).
   const sideResult = parseSideTournamentFromFormData(formData);
@@ -318,6 +307,21 @@ async function updateGameInternal(
   // means «not a cup».
   if (existing.tournament_id != null && !ctx.isAdmin && touchesCupRoster(plan)) {
     redirect({ href: editHref({ error: 'cup_roster_locked' }), locale });
+  }
+
+  // #2482 (U12): a cap below the seats taken is refused; nobody is put off
+  // the list. Only a scheduled round has signups to count. The players this
+  // same save removes give their seats back first: one seat each for a row
+  // outside a team (a team keeps its full size, registration_seats_held).
+  if (payload.registration_cap != null && existing.status === 'scheduled') {
+    const held = await seatsHeld(gameId, payload.game_mode, payload.mode_config as { team_size?: number });
+    const heldAfter = held - seatsFreedByPlan(priorRosterRows, plan.deletes);
+    if (heldAfter > payload.registration_cap) {
+      redirect({
+        href: editHref({ error: 'registration_cap_below_held', held: String(heldAfter) }),
+        locale,
+      });
+    }
   }
 
   // Optimistic lock: only update if the row's current status matches the
