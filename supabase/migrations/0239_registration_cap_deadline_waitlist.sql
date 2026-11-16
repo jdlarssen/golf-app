@@ -31,18 +31,21 @@
 -- given without a varsel is worse than one not given — the request then still
 -- waits in the organiser's inbox.
 --
--- The queue: pending requests of the player's own (not a captain, not a
--- teammate's row, not a brought guest) whose player has no roster row, oldest
--- created_at first, id on a tie. A requester the organiser already added never
--- blocks the queue. A player cannot move up: the self-update policy (0042)
--- only lets a pending request become withdrawn.
+-- registration_waitlist (new): the queue, the rule's one home. Pending
+-- requests of the player's own (not a captain, not a teammate's row, not a
+-- brought guest) whose player has no roster row, oldest created_at first, id
+-- on a tie, with each one's place. promote_waitlist_seat checks place 1 with
+-- it, and the server counts «N på venteliste» and picks the head with it. A
+-- requester the organiser already added never blocks the queue. A player
+-- cannot move up: the self-update policy (0042) only lets a pending request
+-- become withdrawn.
 --
 -- After the deadline the list still moves up until the start; after «Steng
 -- påmeldingen» (signups_closed_at) it does not (the owner's answer, 16.11).
 --
 -- RLS: the columns are on games, under the existing update policies (creator
--- or admin). No new policy. promote_waitlist_seat is service_role only, like
--- the claim.
+-- or admin). No new policy. registration_waitlist and promote_waitlist_seat
+-- are service_role only, like the claim.
 --
 -- Order against prod: migration FIRST, then merge. Backwards compatible: the
 -- code on main never sets the columns, and the claim answers as before while
@@ -184,6 +187,43 @@ revoke all on function public.claim_open_registration_seat(uuid, uuid, integer, 
 revoke execute on function public.claim_open_registration_seat(uuid, uuid, integer, integer, timestamptz, integer, integer, text, public.player_tee_gender) from anon, authenticated;
 grant execute on function public.claim_open_registration_seat(uuid, uuid, integer, integer, timestamptz, integer, integer, text, public.player_tee_gender) to service_role;
 
+create function public.registration_waitlist(p_game_ids uuid[])
+returns table (game_id uuid, request_id uuid, user_id uuid, place integer)
+language sql
+stable
+security invoker
+set search_path = ''
+as $function$
+  select r.game_id,
+         r.id,
+         r.user_id,
+         (row_number() over (partition by r.game_id order by r.created_at, r.id))::integer
+    from public.game_registration_requests r
+   where r.game_id = any (p_game_ids)
+     and r.status = 'pending'
+     and not r.is_team_captain
+     and r.team_request_id is null
+     and r.brought_by_user_id is null
+     and not exists (
+       select 1 from public.game_players gp
+        where gp.game_id = r.game_id
+          and gp.user_id = r.user_id
+     )
+   order by r.game_id, r.created_at, r.id;
+$function$;
+
+comment on function public.registration_waitlist(uuid[]) is
+  '#2482 (0239): the waiting list of each game, in order: pending solo requests '
+  'of the player''s own (no captain, no teammate row, no brought guest) whose '
+  'player has no roster row, created_at then id, with place 1, 2, …. Read by '
+  'promote_waitlist_seat (place 1) and by the server for «N på venteliste» and '
+  'the head of the queue. Whether the list moves up is waitlist_enabled''s. '
+  'Kun service_role.';
+
+revoke all on function public.registration_waitlist(uuid[]) from public;
+revoke execute on function public.registration_waitlist(uuid[]) from anon, authenticated;
+grant execute on function public.registration_waitlist(uuid[]) to service_role;
+
 create function public.promote_waitlist_seat(
   p_game_id uuid,
   p_request_id uuid,
@@ -256,23 +296,10 @@ as $function$
       return jsonb_build_object('outcome', 'already_on_roster', 'user_id', v_request.user_id);
     end if;
 
-    -- 3. First in the queue: no older waiting request (id on a tie) whose
-    --    player is not on the roster.
-    if exists (
-      select 1
-        from public.game_registration_requests r
-       where r.game_id = p_game_id
-         and r.status = 'pending'
-         and not r.is_team_captain
-         and r.team_request_id is null
-         and r.brought_by_user_id is null
-         and (r.created_at, r.id) < (v_request.created_at, v_request.id)
-         and not exists (
-           select 1 from public.game_players gp
-            where gp.game_id = p_game_id
-              and gp.user_id = r.user_id
-         )
-    ) then
+    -- 3. First in the queue (registration_waitlist, the queue's one home).
+    if (select w.request_id
+          from public.registration_waitlist(array[p_game_id]) w
+         where w.place = 1) is distinct from v_request.id then
       return jsonb_build_object('outcome', 'not_first', 'user_id', null);
     end if;
 
@@ -310,8 +337,8 @@ comment on function public.promote_waitlist_seat(uuid, uuid, integer, integer, p
   'Locks the games row like claim_open_registration_seat, re-checks status, '
   'registration_mode = open, waitlist_enabled and signups_closed_at (the deadline '
   'is not checked: the list moves up until the start), that the request is a '
-  'pending solo request of the player''s own and first in the queue (created_at, '
-  'id; requesters already on the roster skipped), and that registration_seats_held '
+  'pending solo request of the player''s own and place 1 in registration_waitlist, '
+  'and that registration_seats_held '
   '+ 1 <= p_cap. Then approves the request and inserts the roster row with '
   'p_tee_gender. Returns jsonb {outcome, user_id}; outcome is ok | not_first | '
   'not_pending | already_on_roster | game_full | waitlist_off | wrong_mode | '

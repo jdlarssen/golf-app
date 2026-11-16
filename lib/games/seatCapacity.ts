@@ -6,13 +6,17 @@
  */
 
 /**
- * Seats on a game, from `getRegistrationSeats`. `capped`: a format with a
- * player cap, and the seats the active roster holds (the same count the seat
- * claim checks). `matchplay`: whether both sides are full. A game without a cap
- * that is not matchplay has no entry.
+ * Seats on a game, from `getRegistrationSeats`. `capped`: a round with a
+ * player cap (the format's or the organiser's, #2482), and the seats the active
+ * roster holds (the same count the seat claim checks). `matchplay`: whether
+ * both sides are full. A game without a cap that is not matchplay has no entry.
+ *
+ * `waitlist` (#2482): requests on the waiting list, on an open round with the
+ * list on. Absent when the list is off, and from an older server, so an app
+ * build from before reads the same type.
  */
 export type GameSeats =
-  | { kind: 'capped'; cap: number; held: number }
+  | { kind: 'capped'; cap: number; held: number; waitlist?: number }
   | { kind: 'matchplay'; full: boolean };
 
 export type CapacityTone = 'normal' | 'low' | 'full';
