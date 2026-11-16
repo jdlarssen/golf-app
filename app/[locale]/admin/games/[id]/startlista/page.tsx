@@ -15,7 +15,7 @@ import {
   type StartlistaFocus,
   type StartlistaPlayer,
 } from './StartlistaClient';
-import { eligibleForFlightAssignment } from '@/lib/games/flightScope';
+import { hasStartlista } from '@/lib/games/flightScope';
 import { expectedTeamSize } from '@/lib/games/teamScope';
 import { buildStartlist } from '@/lib/games/startlist';
 import { localizeGameName } from '@/lib/games/autoGameName';
@@ -76,9 +76,9 @@ const HEADING_ID = 'startlista-heading';
  * game's organiser, who reaches it from «Styr spillere» and the start-block
  * notice on the game page; the admin also from the game page and the desk.
  *
- * Only for a game that takes a free flight split (`eligibleForFlightAssignment`:
- * a solo format, not wolf, more than four active) while it is scheduled or in
- * progress. Anything else is sent on to the game.
+ * Only for a game that takes a free flight split (`hasStartlista`: a solo
+ * format, not wolf, more than four active, while it is scheduled or in
+ * progress). Anything else is sent on to the game.
  */
 export default async function StartlistaPage({
   params,
@@ -121,10 +121,7 @@ export default async function StartlistaPage({
   if (rosterError) throw rosterError;
   const roster = rows ?? [];
 
-  if (
-    (game.status !== 'scheduled' && game.status !== 'active') ||
-    !eligibleForFlightAssignment(game.game_mode, expectedTeamSize(game.mode_config), roster)
-  ) {
+  if (!hasStartlista(game.status, game.game_mode, expectedTeamSize(game.mode_config), roster)) {
     redirect({ href: gameHref, locale });
   }
 

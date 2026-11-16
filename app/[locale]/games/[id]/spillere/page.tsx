@@ -15,11 +15,7 @@ import { GuestBadge } from '@/components/ui/GuestBadge';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { supportsWithdrawal } from '@/lib/scoring';
 import { ApprovePlayerButton } from '@/app/[locale]/admin/games/[id]/ApprovePlayerButton';
-import {
-  eligibleForFlightAssignment,
-  flightBuckets,
-  organizerApprovalRow,
-} from '@/lib/games/flightScope';
+import { flightBuckets, hasStartlista, organizerApprovalRow } from '@/lib/games/flightScope';
 import { expectedTeamSize } from '@/lib/games/teamScope';
 import { ReopenScorecardButton } from '@/app/[locale]/admin/games/[id]/ReopenScorecardButton';
 import {
@@ -255,9 +251,12 @@ export default async function CreatorSpillerePage({
   const status = game.status;
   // #2289: the organiser's way to the Startlista, where they split the players
   // into flights. Same guard as the page itself and the game page's row.
-  const showStartlistaLink =
-    (status === 'scheduled' || status === 'active') &&
-    eligibleForFlightAssignment(game.game_mode, expectedTeamSize(game.mode_config), players);
+  const showStartlistaLink = hasStartlista(
+    status,
+    game.game_mode,
+    expectedTeamSize(game.mode_config),
+    players,
+  );
   const unassignedFlightCount = showStartlistaLink ? flightBuckets(players).unassigned.length : 0;
   const tFlights = await getTranslations('admin.game.flights');
   const isPreStart = status === 'draft' || status === 'scheduled';

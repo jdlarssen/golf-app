@@ -348,6 +348,25 @@ export function eligibleForFlightAssignment(
 }
 
 /**
+ * Does the round have a Startlista (#2289), the page where the organiser
+ * splits the players into flights? While it is scheduled or in progress, and
+ * only for a free flight split (`eligibleForFlightAssignment`). The one rule
+ * for the Startlista's own guard, the link on «Styr spillere», the Flighter
+ * row on the admin page and «Se startlista» on «Klar for i morgen?» (#2483).
+ */
+export function hasStartlista(
+  status: string,
+  gameMode: GameMode,
+  teamSize: number,
+  players: FlightPlayer[],
+): boolean {
+  return (
+    (status === 'scheduled' || status === 'active') &&
+    eligibleForFlightAssignment(gameMode, teamSize, players)
+  );
+}
+
+/**
  * Grupperer aktive spillere i en Map keyed på flight_number, pluss en
  * `unassigned`-liste for spillere uten flight. Trukkede ekskluderes.
  *
