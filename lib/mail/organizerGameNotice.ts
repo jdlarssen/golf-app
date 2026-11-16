@@ -1,18 +1,25 @@
-// Sends the organiser one of two mails about their round (#2203):
-//  - `all_delivered`: every card is in, «Alle har levert. Avslutt spillet.»
-//  - `stale`: the round has stood still for a day. It goes whether or not
-//    anyone is still missing, so the text says neither.
+// Sends the organiser one of three mails about their round:
+//  - `all_delivered` (#2203): every card is in, «Alle har levert. Avslutt
+//    spillet.»
+//  - `stale` (#2203): the round has stood still for a day. It goes whether or
+//    not anyone is still missing, so the text says neither.
+//  - `evening` (#2483): the evening before a scheduled round, how many have
+//    confirmed and who has not answered, with a link to «Klar for i morgen?».
 //
-// Sent from lib/notifications/organizerNotices.ts, and ONLY when the organiser
-// is off-app (notify() returns shouldAlsoSendMail); an organiser in the app
-// gets the in-app varsel and push alone. Never for a single delivery (the
-// owner's answer 2026-10-05). Best-effort: the caller catches and logs, and a
-// mail error never reaches the delivery, approval or sweep that set it off.
+// Sent from lib/notifications/organizerNotices.ts and eveningStatusNotice.ts,
+// and ONLY when the organiser is off-app (notify() returns
+// shouldAlsoSendMail); an organiser in the app gets the in-app varsel and push
+// alone. Never for a single delivery (the owner's answer 2026-10-05).
+// Best-effort: the caller catches and logs, and a mail error never reaches the
+// delivery, approval or sweep that set it off.
 //
 // Locale-aware (i18n Fase M, #594): user-visible text comes from the `mail`
 // catalog for the recipient's locale.
 
-import { gameMailUrl, getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
+import { createTranslator } from 'next-intl';
+import { buildNotificationText, type NotificationTranslator } from '@/lib/notifications/cardContent';
+import type { NotificationPayload } from '@/lib/notifications/types';
+import { gameMailUrl, getMailMessages, getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
 import { sendMail } from './send';
 import { mailWordmarkHtml } from './wordmark';
 import { escapeHtml } from './escapeHtml';
@@ -23,23 +30,51 @@ export type OrganizerGameNoticeParams = {
   recipientFirstName: string | null;
   /** The game's display name, used in subject + body. */
   gameName: string;
-  /** Game id, for the link to the page that ends the round. */
+  /** Game id, for the link to the page the mail is about. */
   gameId: string;
   /** The recipient's locale (#594). Usually undefined → Norwegian. */
   locale?: string | null;
-  variant: 'all_delivered' | 'stale';
-};
+} & (
+  | { variant: 'all_delivered' | 'stale' }
+  | {
+      variant: 'evening';
+      /** The varsel's payload: the mail says what the inbox card says. */
+      status: NotificationPayload<'organizer_evening_status'>;
+    }
+);
 
 export async function sendOrganizerGameNotice(params: OrganizerGameNoticeParams): Promise<void> {
   const { to, recipientFirstName, gameName, gameId, locale, variant } = params;
   const loc = resolveMailLocale(locale);
   const t = await getMailTranslator(locale);
   const allDelivered = variant === 'all_delivered';
+  const evening = params.variant === 'evening';
 
-  const subject = allDelivered
-    ? t('organizerGameNotice.subjectAllDelivered', { gameName })
-    : t('organizerGameNotice.subjectStale', { gameName });
-  const finishUrl = gameMailUrl(locale, gameId, 'avslutt');
+  // The evening mail's status line is the inbox card's detail («7 av 8 har
+  // bekreftet. Kari har ikke svart.»), from the same catalog, so the two
+  // cannot say different things.
+  const statusLine =
+    params.variant === 'evening'
+      ? buildNotificationText(
+          'organizer_evening_status',
+          params.status,
+          createTranslator({
+            locale: loc,
+            messages: await getMailMessages(loc),
+            namespace: 'inbox',
+            timeZone: 'Europe/Oslo',
+          }) as unknown as NotificationTranslator,
+        ).detail
+      : '';
+
+  const subject = evening
+    ? t('organizerGameNotice.subjectEvening', { gameName })
+    : allDelivered
+      ? t('organizerGameNotice.subjectAllDelivered', { gameName })
+      : t('organizerGameNotice.subjectStale', { gameName });
+  const finishUrl = evening
+    ? mailUrl(locale, `/admin/games/${gameId}/i-morgen`)
+    : gameMailUrl(locale, gameId, 'avslutt');
   const homeUrl = mailUrl(locale, '');
 
   const salutation = recipientFirstName
@@ -47,20 +82,33 @@ export async function sendOrganizerGameNotice(params: OrganizerGameNoticeParams)
     : t('organizerGameNotice.salutationGeneric');
 
   const bodyHtml = t.markup(
-    allDelivered ? 'organizerGameNotice.bodyAllDelivered' : 'organizerGameNotice.bodyStale',
+    evening
+      ? 'organizerGameNotice.bodyEvening'
+      : allDelivered
+        ? 'organizerGameNotice.bodyAllDelivered'
+        : 'organizerGameNotice.bodyStale',
     {
       gameName: escapeHtml(gameName),
+      status: escapeHtml(statusLine),
       strong: (c) => `<strong>${c}</strong>`,
     },
   );
-  const bodyText = allDelivered
-    ? t('organizerGameNotice.bodyTextAllDelivered', { gameName })
-    : t('organizerGameNotice.bodyTextStale', { gameName });
-  const heading = allDelivered
-    ? t('organizerGameNotice.headingAllDelivered')
-    : t('organizerGameNotice.headingStale');
+  const bodyText = evening
+    ? t('organizerGameNotice.bodyTextEvening', { gameName, status: statusLine })
+    : allDelivered
+      ? t('organizerGameNotice.bodyTextAllDelivered', { gameName })
+      : t('organizerGameNotice.bodyTextStale', { gameName });
+  const heading = evening
+    ? t('organizerGameNotice.headingEvening')
+    : allDelivered
+      ? t('organizerGameNotice.headingAllDelivered')
+      : t('organizerGameNotice.headingStale');
+  const button = evening ? t('organizerGameNotice.buttonEvening') : t('organizerGameNotice.button');
+  const buttonText = evening
+    ? t('organizerGameNotice.buttonTextEvening', { url: finishUrl })
+    : t('organizerGameNotice.buttonText', { url: finishUrl });
 
-  const footerHtml = t.markup('organizerGameNotice.footer', {
+  const footerHtml = t.markup(evening ? 'organizerGameNotice.footerEvening' : 'organizerGameNotice.footer', {
     link: (c) =>
       `<a href="${homeUrl}" style="color:#1B4332;text-decoration:underline;">${c}</a>`,
   });
@@ -94,7 +142,7 @@ export async function sendOrganizerGameNotice(params: OrganizerGameNoticeParams)
             </p>
             <div style="margin:32px 0;">
               <a href="${finishUrl}" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:9999px;font-weight:600;font-size:15px;">
-                ${t('organizerGameNotice.button')}
+                ${button}
               </a>
             </div>
             <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E5E0D3;padding-top:24px;">
@@ -112,7 +160,7 @@ export async function sendOrganizerGameNotice(params: OrganizerGameNoticeParams)
     `${subject}\n\n` +
     `${salutation}\n\n` +
     `${bodyText}\n\n` +
-    `${t('organizerGameNotice.buttonText', { url: finishUrl })}\n\n` +
+    `${buttonText}\n\n` +
     `${t('common.footerTagline')}\n`;
 
   await sendMail({

@@ -7133,7 +7133,14 @@
       "bodyTextStale": "There have been no new scores in {gameName} for a day. Finish the game when you are ready, and the players get the results.",
       "button": "Finish the game",
       "buttonText": "Finish the game: {url}",
-      "footer": "You are getting this because you organise the game. Log in at <link>tornygolf.no</link> to finish it."
+      "footer": "You are getting this because you organise the game. Log in at <link>tornygolf.no</link> to finish it.",
+      "subjectEvening": "Tomorrow: {gameName}",
+      "headingEvening": "Ready for tomorrow?",
+      "bodyEvening": "<strong>{gameName}</strong> is tomorrow. {status}",
+      "bodyTextEvening": "{gameName} is tomorrow. {status}",
+      "buttonEvening": "See who is coming",
+      "buttonTextEvening": "See who is coming: {url}",
+      "footerEvening": "You are getting this because you organise the round. Log in at <link>tornygolf.no</link> to see it."
     },
     "paymentReminder": {
       "subject": "Entry fee — {gameName}",

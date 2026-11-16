@@ -105,6 +105,67 @@ describe('sendOrganizerGameNotice', () => {
     expect(bodyLineHtml(stale.html)).toMatchInlineSnapshot(`"There have been no new scores in <strong>Sommercup 2026</strong> for a day. Finish the game when you are ready, and the players get the results."`);
   });
 
+  // #2483: the evening before, the inbox card's status line and a link to
+  // «Klar for i morgen?».
+  const evening = {
+    ...baseParams,
+    variant: 'evening',
+    status: {
+      game_id: baseParams.gameId,
+      game_name: 'Sommercup 2026',
+      tee_off_at: '2026-11-21T08:00:00.000Z',
+      confirmed: 7,
+      total: 8,
+      unanswered_names: ['Ola'],
+      unanswered_more: 0,
+    },
+  } satisfies OrganizerGameNoticeParams;
+
+  it('evening: who has confirmed, who has not, and the link to «Klar for i morgen?»', async () => {
+    const payload = await send(evening);
+    expect(payload.subject).toMatchInlineSnapshot(`"I morgen: Sommercup 2026"`);
+    expect(payload.text).toMatchInlineSnapshot(`
+      "I morgen: Sommercup 2026
+
+      Hei Kari!
+
+      Sommercup 2026 spilles i morgen. 7 av 8 har bekreftet. Ola har ikke svart.
+
+      Se hvem som kommer: https://tornygolf.no/admin/games/11111111-1111-1111-1111-111111111111/i-morgen
+
+      Tørny — fyr opp golfturneringen på et par minutter.
+      "
+    `);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"<strong>Sommercup 2026</strong> spilles i morgen. 7 av 8 har bekreftet. Ola har ikke svart."`);
+  });
+
+  it('evening, everyone confirmed, in English, a name with HTML escaped', async () => {
+    const payload = await send({
+      ...evening,
+      locale: 'en',
+      status: { ...evening.status, confirmed: 8, unanswered_names: [] },
+    });
+    expect(payload.subject).toMatchInlineSnapshot(`"Tomorrow: Sommercup 2026"`);
+    expect(payload.text).toMatchInlineSnapshot(`
+      "Tomorrow: Sommercup 2026
+
+      Hi Kari!
+
+      Sommercup 2026 is tomorrow. All 8 have confirmed.
+
+      See who is coming: https://tornygolf.no/en/admin/games/11111111-1111-1111-1111-111111111111/i-morgen
+
+      Tørny — fire up your golf tournament in a couple of minutes.
+      "
+    `);
+    sendMock.mockClear();
+    const escaped = await send({
+      ...evening,
+      status: { ...evening.status, unanswered_names: ['<b>Ola</b>'] },
+    });
+    expect(bodyLineHtml(escaped.html)).toMatchInlineSnapshot(`"<strong>Sommercup 2026</strong> spilles i morgen. 7 av 8 har bekreftet. &lt;b&gt;Ola&lt;/b&gt; har ikke svart."`);
+  });
+
   it('escapes HTML in the game name', async () => {
     const payload = await send({ ...baseParams, gameName: 'Cup <b>& co</b>' });
     expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Alle scorekortene i <strong>Cup &lt;b&gt;&amp; co&lt;/b&gt;</strong> er levert. Avslutt spillet, så får spillerne resultatlista."`);
