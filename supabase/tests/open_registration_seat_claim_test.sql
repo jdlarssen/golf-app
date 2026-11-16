@@ -1,6 +1,6 @@
 -- supabase/tests/open_registration_seat_claim_test.sql
 -- ─────────────────────────────────────────────────────────────────────────────
--- Runtime test for migrations 0177 (#2062, #2060) and 0187 (#2209).
+-- Runtime test for migrations 0177 (#2062, #2060), 0187 (#2209) and 0239 (#2482).
 --
 --   1. claim_open_registration_seat counts seats the way tallyActiveRoster did
 --      in submitTeamRegistration (#2011) — the table below mirrors those unit
@@ -11,6 +11,8 @@
 --      longer insert its own row into an open draft game; admin still can.
 --   4. (0187) The claim writes the tee category it is given; without one the
 --      row gets the column default 'mens'. Only the 9-argument signature exists.
+--   5. (0239) A passed signup_deadline closes the claim like signups_closed_at;
+--      a deadline still ahead does not.
 --
 -- Every claim is called in its own statement and its effect is read in the
 -- NEXT statement: a statement does not see its own writes (#1910).
@@ -26,7 +28,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(29);
+select plan(31);
 
 -- ── Fixture ids ──────────────────────────────────────────────────────────────
 create schema if not exists torny_osc;
@@ -191,6 +193,11 @@ select torny_osc.seed_game(10, 'texas_scramble', 4, 'scheduled', true);
 select torny_osc.seed_game(11, 'stableford', 1);
 -- 0187: open stableford game for the tee-category claims.
 select torny_osc.seed_game(13, 'stableford', 1);
+-- 0239: a deadline that has passed, and one still ahead.
+select torny_osc.seed_game(14, 'stableford', 1, 'scheduled');
+select torny_osc.seed_game(15, 'stableford', 1, 'scheduled');
+update public.games set signup_deadline = now() - interval '1 minute' where id = torny_osc.gid(14);
+update public.games set signup_deadline = now() + interval '1 day' where id = torny_osc.gid(15);
 
 -- ── 1. Seat count and team number ────────────────────────────────────────────
 select is(torny_osc.claim(1, 50, 16, 4, 4), '{"outcome":"game_full","team_number":null}'::jsonb,
@@ -237,6 +244,10 @@ select is(torny_osc.active(2), 13::bigint, 'already on the roster: no second row
 select is(torny_osc.claim(9, 50, 16, 4, 4)->>'outcome', 'game_locked', 'active game → game_locked');
 select is(torny_osc.claim(10, 50, 16, 4, 4)->>'outcome', 'signup_closed', 'signups closed → signup_closed');
 select is(torny_osc.claim(12, 50, 16, 4, 4)->>'outcome', 'game_not_found', 'missing game → game_not_found');
+select is(torny_osc.claim(14, 50, null, 1, null)->>'outcome', 'signup_closed',
+  '0239: deadline passed → signup_closed');
+select is(torny_osc.claim(15, 50, null, 1, null)->>'outcome', 'ok',
+  '0239: deadline ahead → ok');
 
 -- ── Tee category (0187, #2209) ───────────────────────────────────────────────
 select is(torny_osc.claim_tee(13, 52, 'ladies')->>'outcome', 'ok',
