@@ -48,10 +48,6 @@ const ALLOWED: Record<string, Allowed> = {
     reason:
       '(b) admin-klient bak requireAdminOrCreator: e-post bare når kalleren er admin; arrangøren får navnet (#2440)',
   },
-  'app/[locale]/admin/games/[id]/status/actions.ts': {
-    receivers: ['getAdminClient()', 'admin'],
-    reason: `${B}; (c) serverside utsending av påminnelse`,
-  },
   'app/[locale]/admin/games/[id]/status/page.tsx': {
     receivers: ['getAdminClient()'],
     reason: B,
@@ -181,6 +177,11 @@ const ALLOWED: Record<string, Allowed> = {
   'lib/games/registrationDecisionCore.ts': {
     receivers: ['admin', 'admin'],
     reason: '(c) serverside utsending av svar på påmelding',
+  },
+  'lib/games/remindUnconfirmed.ts': {
+    receivers: ['admin'],
+    reason:
+      '(c) serverside utsending av påminnelse om å bekrefte (#463, kjernen siden #2483): arrangørens navn i varselet, maskert når navnet mangler',
   },
   'lib/games/remindUnsubmitted.ts': {
     receivers: ['admin'],
