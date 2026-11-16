@@ -179,6 +179,10 @@ const ALLOWED: Record<string, Allowed> = {
     reason: `${B}: bare når includeEmail er satt og kalleren er admin`,
   },
   // #2263: moved from `app/[locale]/admin/games/[id]/signups/actions.ts`.
+  'lib/games/promoteWaitlist.ts': {
+    receivers: ['getAdminClient()'],
+    reason: '(c) serverside utsending av «Du fikk plass fra ventelista» (#2482), som svaret på påmelding',
+  },
   'lib/games/registrationDecisionCore.ts': {
     receivers: ['admin', 'admin'],
     reason: '(c) serverside utsending av svar på påmelding',
