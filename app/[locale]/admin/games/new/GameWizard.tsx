@@ -1608,6 +1608,9 @@ function FormDataInputs({
     krPerUnit,
     isWagerFormat,
     entryFeeKr,
+    registrationCapForSave,
+    signupDeadline,
+    waitlistEnabled,
     paymentLink,
     prizeDraft,
     nassauScoring,
@@ -1783,6 +1786,10 @@ function FormDataInputs({
       {/* #1049: startkontingent + betalingsmåte — gjelder alle formater, så
           alltid serialisert (tom = ingen kontingent). */}
       <input type="hidden" name="entry_fee_kr" value={entryFeeKr} />
+      {/* #2482: «Plasser og frist», mirrored like the fee (#1011). */}
+      <input type="hidden" name="registration_cap" value={registrationCapForSave ?? ''} />
+      <input type="hidden" name="signup_deadline" value={signupDeadline} />
+      <input type="hidden" name="waitlist_enabled" value={waitlistEnabled ? '1' : ''} />
       <input type="hidden" name="payment_link" value={paymentLink} />
       {/* #1051: premiebord — alle faste slott alltid serialisert (tomt = av).
           Serveren beskjærer til gyldige slott for modus + side-counts

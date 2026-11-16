@@ -37,7 +37,7 @@ export function RegistrationForm({
   src?: string | null;
   /**
    * #2482: a full open round with a waiting list. The same request as «Be om
-   * plass», without the message, under «Sett meg på ventelisten»; the
+   * plass», without the message, under «Sett meg på ventelista»; the
    * first on the list gets the next free seat by itself.
    */
   waitlist?: boolean;

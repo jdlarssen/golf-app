@@ -20,7 +20,8 @@ import type { AppLocale } from '@/i18n/routing';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { RegistrationMode } from '@/lib/games/registration';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { registrationPlayerCap } from '@/lib/wizard/fitsPlayerCount';
+import { effectiveRegistrationCap } from '@/lib/wizard/fitsPlayerCount';
+import { getRegistrationSeats } from '@/lib/games/getRegistrationSeats';
 import {
   canToggleSignups,
   firstNamesLine,
@@ -60,6 +61,8 @@ type GameRow = {
   scheduled_tee_off_at: string | null;
   signups_closed_at: string | null;
   signup_deadline: string | null;
+  registration_cap: number | null;
+  waitlist_enabled: boolean;
   group_id: string | null;
   // #624 — banenavn for re-lokalisering av auto-genererte spillnavn.
   courses: { name: string } | null;
@@ -214,7 +217,7 @@ export default async function PåmeldingerPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, short_id, status, registration_mode, registration_type, game_mode, mode_config, scheduled_tee_off_at, signups_closed_at, signup_deadline, group_id, courses(name)',
+      'id, name, short_id, status, registration_mode, registration_type, game_mode, mode_config, scheduled_tee_off_at, signups_closed_at, signup_deadline, registration_cap, waitlist_enabled, group_id, courses(name)',
     )
     .eq('id', id)
     .maybeSingle<GameRow>();
@@ -229,8 +232,14 @@ export default async function PåmeldingerPage({
   // #2291: «med» is the roster (non-withdrawn game_players rows), never the
   // approved requests.
   const counts = inboxCounts({ roster, requests });
-  const cap = registrationPlayerCap(game.game_mode, game.mode_config);
+  // #2482: the organiser's cap when it is lower than the format's.
+  const cap = effectiveRegistrationCap(game.game_mode, game.mode_config, game.registration_cap);
   const capacity = signupCapacity({ cap, rosterCount: counts.rosterCount, queued: counts.queued });
+  // #2482: the waiting list as its own row, by the signup page's count
+  // (`registration_waitlist`). Null when the round has no list, or the count
+  // failed (best-effort, as on the lists).
+  const waitlist =
+    game.waitlist_enabled && game.registration_mode === 'open' ? await waitlistCount(game) : null;
   const historyCounts = Object.fromEntries(
     HISTORY.map((s) => [s, historyGroups(requests, s).reduce((n, g) => n + g.length, 0)]),
   ) as Record<HistoryStatus, number>;
@@ -289,6 +298,7 @@ export default async function PåmeldingerPage({
           cap={cap}
           rosterCount={counts.rosterCount}
           queued={counts.queued}
+          waitlist={waitlist}
         />
       )}
 
@@ -437,4 +447,10 @@ async function HistoryLine({ links, current }: { links: HistoryLink[]; current: 
       })}
     </p>
   );
+}
+
+/** #2482: «N på ventelista», the signup page's own count (`getRegistrationSeats`). */
+async function waitlistCount(game: Parameters<typeof getRegistrationSeats>[0][number]): Promise<number | null> {
+  const seats = (await getRegistrationSeats([game])).get(game.id);
+  return seats?.kind === 'capped' ? (seats.waitlist ?? null) : null;
 }

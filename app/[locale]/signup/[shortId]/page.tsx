@@ -742,7 +742,7 @@ function renderBody({
     // feilet, sender du en forespørsel til arrangøren, som på en runde med
     // godkjenning.
     // #2482: with the waiting list on, the request is a place on the list:
-    // the seats line and «Sett meg på ventelisten», as the artboard draws it.
+    // the seats line and «Sett meg på ventelista», as the artboard draws it.
     case 'solo_open_full':
       if (hasWaitlist) {
         return (

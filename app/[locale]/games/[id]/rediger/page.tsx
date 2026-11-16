@@ -57,6 +57,8 @@ import {
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
   error?: string | string[];
+  /** #2482: the seats already taken, for `registration_cap_below_held`. */
+  held?: string | string[];
   /** #2322: the part of a scheduled game that is open (`EDIT_SECTIONS`). */
   del?: string | string[];
   status?: string | string[];
@@ -80,7 +82,7 @@ export default async function CreatorEditGamePage({
     if (!errorCode) return undefined;
     const key = errorCode as Parameters<typeof tErrors>[0];
     if (!tErrors.has(key)) return undefined;
-    return tErrors(key, { list: '' });
+    return tErrors(key, { list: '', held: Number(first(sp.held)) || 0 });
   }
   const errorMessage = buildErrorMessage();
 

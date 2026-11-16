@@ -26,6 +26,8 @@ import {
 import { AdvancedSettingsSection } from './sections/AdvancedSettingsSection';
 import { RepeatWeeklyCard } from './sections/RepeatWeeklyCard';
 import { RegistrationSection } from './sections/RegistrationSection';
+import { SeatsAndDeadlineCard } from './sections/SeatsAndDeadlineCard';
+import { showsSeatsAndDeadline } from './sections/seatsAndDeadlineRules';
 import { Disclosure } from '@/components/ui/Disclosure';
 import { LIST_CARD_CLASS } from '@/components/ui/FormSection';
 import { parseOsloDateTimeLocal } from '@/lib/games/gamePayload';
@@ -265,6 +267,15 @@ export type InitialValues = {
    * #1049: Vipps-nummer eller betalingslenke. Pre-fylles fra DB i edit-flyt.
    */
   payment_link?: string;
+  /**
+   * #2482: «Plasser og frist». The organiser's cap (null = none), the
+   * deadline as an Oslo `datetime-local` ('' = none) and the waiting list.
+   * Pre-filled from the DB in the edit flow; a new game has no cap, no
+   * deadline and the list on.
+   */
+  registration_cap?: number | null;
+  signup_deadline?: string;
+  waitlist_enabled?: boolean;
   /**
    * #1051: premiebord (premie + valgfri sponsor per slott). Pre-fylles fra DB
    * i edit-flyt; udefinert / tomt = ingen premier. Beskjæres til gyldige slott
@@ -704,6 +715,10 @@ export function GameForm({
           wizard mirrors them in FormDataInputs). Without these two, saving a
           scheduled game wrote 0 kr and an empty link over the organiser's. */}
       <input type="hidden" name="entry_fee_kr" value={state.entryFeeKr} />
+      {/* #2482: «Plasser og frist», always mounted (#1011). */}
+      <input type="hidden" name="registration_cap" value={state.registrationCapForSave ?? ''} />
+      <input type="hidden" name="signup_deadline" value={state.signupDeadline} />
+      <input type="hidden" name="waitlist_enabled" value={state.waitlistEnabled ? '1' : ''} />
       <input type="hidden" name="payment_link" value={state.paymentLink} />
       {initialValues?.tournament_id && (
         <>
@@ -1214,6 +1229,10 @@ export function GameForm({
         {/* #2433: like ReadyStep, a club tournament has no mode choice —
             membership is the invitation (#643). */}
         <RegistrationSection state={state} hideHeading hideModeChoice={state.isClubScoped} />
+        {/* #2482: «Plasser og frist», the same card as on «Klar?». */}
+        {showsSeatsAndDeadline(state.registrationMode, state.isClubScoped) && (
+          <SeatsAndDeadlineCard state={state} />
+        )}
       </Panel>
 
       {/* Section 4/5: Matchplay sides / team grid / flights / per-spiller-tee.

@@ -18,6 +18,7 @@ import { normalizeSlotHoles, withSlotHole } from '@/lib/games/sideSlotHoles';
 import { clampMinTeeShots, type MinTeeShots } from '@/lib/games/teeShots';
 import { ambroseDefaultPct, defaultFloridaHandicapPct } from '@/lib/scoring';
 import type { TeamSize } from './TeamSizeSelector';
+import { capInBounds } from './sections/seatsAndDeadlineRules';
 import type { CourseOption, InitialValues, PlayerOption } from './GameForm';
 import { listedTeeId } from './listedTee';
 import { playerGenderDefault } from '@/lib/games/playerGenderDefault';
@@ -274,7 +275,7 @@ export function cryptoShuffle<T>(input: T[]): T[] {
 import type { Intent } from '@/lib/wizard/intent';
 import { isValidClubChoice, startClubId } from '@/lib/wizard/clubChoice';
 import type { StartType } from '@/lib/games/startType';
-import { fitsPlayerCount as fitsPlayerCountFn } from '@/lib/wizard/fitsPlayerCount';
+import { fitsPlayerCount as fitsPlayerCountFn, organizerCapBounds } from '@/lib/wizard/fitsPlayerCount';
 import { isPlausibleInviteEmail, normalizeInviteEmail } from '@/lib/games/inviteEmail';
 
 type UseGameFormStateInput = {
@@ -668,6 +669,19 @@ export function useGameFormState({
   );
   const [paymentLink, setPaymentLink] = useState<string>(
     initialValues?.payment_link ?? '',
+  );
+  // #2482: «Plasser og frist». The cap is a number or none; the deadline an
+  // Oslo `datetime-local` ('' = none); the waiting list on for a new game
+  // (the stored value in «Rediger»: old games have it off). gamePayload
+  // stores none of them outside open signup and manual approval.
+  const [registrationCap, setRegistrationCap] = useState<number | null>(
+    initialValues?.registration_cap ?? null,
+  );
+  const [signupDeadline, setSignupDeadline] = useState<string>(
+    initialValues?.signup_deadline ?? '',
+  );
+  const [waitlistEnabled, setWaitlistEnabled] = useState<boolean>(
+    initialValues?.waitlist_enabled ?? true,
   );
   // #1051: premiebord-utkast — fritekst per fast slott (tomt premie-felt = av).
   // Pre-fylles fra initialValues.prizes i edit-flyt; serialiseres til faste
@@ -2256,6 +2270,19 @@ export function useGameFormState({
     setEntryFeeKr,
     paymentLink,
     setPaymentLink,
+    // #2482: «Plasser og frist».
+    registrationCap,
+    setRegistrationCap,
+    signupDeadline,
+    setSignupDeadline,
+    waitlistEnabled,
+    setWaitlistEnabled,
+    // The cap the form posts: clamped to the format chosen now, none on
+    // matchplay (U11), so a format picked after the cap never fails the save.
+    registrationCapForSave: capInBounds(
+      registrationCap,
+      organizerCapBounds(gameMode, { team_size: teamSize }),
+    ),
     // #1051: premiebord-utkast + per-slott-setter.
     prizeDraft,
     setPrizeField,

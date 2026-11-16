@@ -7,7 +7,8 @@
  * invitasjonskort med spillnavnet som felt midt i kortet — og en sjekkliste
  * med fire rader (Bane, Format, Tee-off, Spillere), hver med status og
  * «Endre». Spillere-raden sier hvordan spillerne kommer (valget står på steg
- * 4, #2447). Under lista står INNSTILLINGER (#2457): Handicap, Startkontingent,
+ * 4, #2447). Ved åpen påmelding og godkjenning står «Plasser og frist» under
+ * lista (#2482). Under det står INNSTILLINGER (#2457): Handicap, Startkontingent,
  * Under runden og Sideturnering og premier som korte rader med verdien som er
  * satt; «Endre» åpner et bunn-ark med bare den radens felt (ReadySettings).
  * Under dem står «Gjenta hver uke» for Kompis og Solo (#2460).
@@ -42,6 +43,8 @@ import { InvitationPreviewCard } from './InvitationPreviewCard';
 import { ReadyChecklist, type ReadyChecklistItem } from './ReadyChecklist';
 import { ReadySettings } from './ReadySettings';
 import { RepeatWeeklyCard } from './RepeatWeeklyCard';
+import { SeatsAndDeadlineCard } from './SeatsAndDeadlineCard';
+import { showsSeatsAndDeadline } from './seatsAndDeadlineRules';
 import type { ReadySettingsKey } from './readySettingsRules';
 import {
   formatRowParts,
@@ -402,6 +405,11 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
         />
 
         <ReadyChecklist items={checklistItems} onEdit={handleEdit} />
+
+        {/* #2482: «Plasser og frist» for open signup and manual approval. */}
+        {showsSeatsAndDeadline(registrationMode, isClubScoped) && (
+          <SeatsAndDeadlineCard state={state} />
+        )}
 
         <div ref={settingsRef}>
           <ReadySettings state={state} openKey={openSheet} onOpenChange={setOpenSheet} />

@@ -18,6 +18,7 @@ export async function SignupCapacity({
   cap,
   rosterCount,
   queued,
+  waitlist = null,
 }: {
   statusLine: string;
   /** `signupInboxState`, for e2e and the staging check. */
@@ -26,6 +27,11 @@ export async function SignupCapacity({
   cap: number | null;
   rosterCount: number;
   queued: number;
+  /**
+   * #2482: the waiting list, on an open round with the list on; null without
+   * one. Its own row under the legend: the queue moves up by itself.
+   */
+  waitlist?: number | null;
 }) {
   const t = await getTranslations('admin.game.signups');
   const withPct = capacity && cap ? Math.min((capacity.taken / cap) * 100, 100) : 0;
@@ -76,6 +82,12 @@ export async function SignupCapacity({
             <span>{t('legendFree', { count: capacity.free })}</span>
           ))}
       </div>
+
+      {waitlist !== null && (
+        <p data-testid="signup-waitlist-row" data-waitlist={waitlist} className="mt-1.5 text-[11px] text-muted">
+          {t('waitlistRow', { count: waitlist })}
+        </p>
+      )}
     </div>
   );
 }
