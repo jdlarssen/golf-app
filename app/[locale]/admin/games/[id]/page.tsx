@@ -61,11 +61,7 @@ import { InviteToGameSection } from './InviteToGameSection';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
 import { FlighterSeksjon } from './FlighterSeksjon';
 import { LagSeksjon } from './LagSeksjon';
-import {
-  eligibleForFlightAssignment,
-  flightBuckets,
-  type FlightPlayer,
-} from '@/lib/games/flightScope';
+import { flightBuckets, hasStartlista, type FlightPlayer } from '@/lib/games/flightScope';
 import {
   modeRequiresTeamNumber,
   expectedTeamSize,
@@ -943,23 +939,19 @@ async function buildSections({
   })();
 
   // #543: Flighter-seksjon for solo-spill >4 aktive — scheduled og active.
-  // eligibleForFlightAssignment er den delte sannhetskilden for om seksjonen
-  // vises, slik at admin-UI og start-vakten holder seg i sync. I lag-formater
+  // hasStartlista (eligibleForFlightAssignment + status) er den delte
+  // sannhetskilden for om seksjonen vises, slik at admin-UI og start-vakten
+  // holder seg i sync. I lag-formater
   // er flighten laget, og seksjonen finnes ikke (#2290). Since #2289 it is a
   // row that opens the Startlista, where the flights are moved.
   const flighterSeksjon = (() => {
-    if (game.status !== 'scheduled' && game.status !== 'active') return null;
     const flightPlayers: FlightPlayer[] = players.map((p) => ({
       user_id: p.user_id,
       flight_number: p.flight_number,
       withdrawn_at: p.withdrawn_at,
     }));
     if (
-      !eligibleForFlightAssignment(
-        game.game_mode,
-        expectedTeamSize(game.mode_config),
-        flightPlayers,
-      )
+      !hasStartlista(game.status, game.game_mode, expectedTeamSize(game.mode_config), flightPlayers)
     ) {
       return null;
     }
