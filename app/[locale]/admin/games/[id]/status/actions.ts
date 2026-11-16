@@ -4,11 +4,9 @@ import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
-import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/admin/auth';
 import { sendReminders } from '@/lib/games/remindUnsubmitted';
-import { notify } from '@/lib/notifications/notify';
-import { displayNameForOthers } from '@/lib/users/displayName';
+import { sendUnconfirmedReminders } from '@/lib/games/remindUnconfirmed';
 
 /**
  * Admin-purring (#376): send «husk å levere»-påminnelse til alle spillere som
@@ -41,19 +39,14 @@ export async function remindUnsubmittedPlayers(gameId: string) {
   redirect({ href: `${statusPath}?status=reminded&count=${result.reminded}`, locale });
 }
 
-type UnconfirmedPlayerRow = {
-  user_id: string;
-  withdrawn_at: string | null;
-  accepted_at: string | null;
-  users: { email: string | null; name: string | null } | null;
-};
-
 /**
  * Admin-purring (#463): send «bekreft at du er med»-påminnelse (player_added-
- * kind) til alle spillere som ennå ikke har bekreftet deltakelse
- * (accepted_at is null) og ikke er trukket. Ingen idempotens-guard siden
- * admin kan sende på nytt ved behov. Best-effort (Promise.allSettled).
- * Avbryter aldri på notify-feil.
+ * kind) til alle spillere som ennå ikke har bekreftet deltakelse og ikke er
+ * trukket. Regelen — hvem som er mål og sendingen — bor i
+ * `lib/games/remindUnconfirmed.ts` (#2483), fordi arrangørens «Klar for i
+ * morgen?» purrer én spiller gjennom den samme kjernen. Denne action-en er
+ * porten (`requireAdmin`) og redirect-semantikken. Ingen idempotens-guard:
+ * admin kan sende på nytt ved behov.
  */
 export async function remindUnconfirmedPlayers(gameId: string) {
   const locale = await getLocale();
@@ -62,58 +55,11 @@ export async function remindUnconfirmedPlayers(gameId: string) {
 
   const statusPath = `/admin/games/${gameId}/status`;
 
-  const { data: game } = await supabase
-    .from('games')
-    .select('id, name, created_by')
-    .eq('id', gameId)
-    .single<{ id: string; name: string; created_by: string | null }>();
-
-  if (!game) {
-    redirect({ href: `${statusPath}?error=not_found`, locale });
+  const result = await sendUnconfirmedReminders(gameId);
+  if (!result.ok) {
+    redirect({ href: `${statusPath}?error=${result.reason}`, locale });
   }
-
-  const { data: players } = await getAdminClient()
-    .from('game_players')
-    .select(
-      'user_id, withdrawn_at, accepted_at, users!game_players_user_id_fkey(email, name)',
-    )
-    .eq('game_id', gameId)
-    .is('accepted_at', null)
-    .returns<UnconfirmedPlayerRow[]>();
-
-  const unconfirmed = (players ?? []).filter((p) => !p.withdrawn_at);
-
-  // Lookup creator name for the notification message. Falls back to 'Tørny'.
-  let adderName = 'Tørny';
-  if (game.created_by) {
-    const admin = getAdminClient();
-    const { data: creator } = await admin
-      .from('users')
-      .select('name, email')
-      .eq('id', game.created_by)
-      .maybeSingle<{ name: string | null; email: string | null }>();
-    if (creator) {
-      // The players see this, so a nameless creator shows masked (#2271).
-      adderName = displayNameForOthers(creator) ?? 'Tørny';
-    }
-  }
-
-  await Promise.allSettled(
-    unconfirmed.map((p) =>
-      notify({
-        userId: p.user_id,
-        kind: 'player_added',
-        payload: {
-          game_id: game.id,
-          game_name: game.name,
-          added_by_name: adderName,
-        },
-      }).catch((err) => {
-        console.error('[remindUnconfirmedPlayers] notify failed', err);
-      }),
-    ),
-  );
 
   revalidatePath(statusPath);
-  redirect({ href: `${statusPath}?status=reminded_unconfirmed&count=${unconfirmed.length}`, locale });
+  redirect({ href: `${statusPath}?status=reminded_unconfirmed&count=${result.reminded}`, locale });
 }
