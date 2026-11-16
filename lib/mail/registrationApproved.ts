@@ -21,12 +21,14 @@ export type RegistrationApprovedMailParams = {
   gameId: string;
   /** Mottakerens locale (#594). Normalt udefinert → norsk. */
   locale?: string | null;
+  /** #2482: plassen kom fra ventelista, ikke fra arrangørens «Godta». */
+  fromWaitlist?: boolean;
 };
 
 export async function sendRegistrationApprovedMail(
   params: RegistrationApprovedMailParams,
 ): Promise<void> {
-  const { to, gameName, gameId, locale } = params;
+  const { to, gameName, gameId, locale, fromWaitlist = false } = params;
   const loc = resolveMailLocale(locale);
   const t = await getMailTranslator(locale);
 
@@ -34,11 +36,14 @@ export async function sendRegistrationApprovedMail(
   const gameUrl = gameMailUrl(locale, gameId);
   const homeUrl = mailUrl(locale, '');
 
-  const bodyHtml = t.markup('registrationApproved.body', {
+  const bodyHtml = t.markup(fromWaitlist ? 'registrationApproved.bodyFromWaitlist' : 'registrationApproved.body', {
     gameName: escapeHtml(gameName),
     strong: (c) => `<strong>${c}</strong>`,
   });
-  const bodyText = t('registrationApproved.bodyText', { gameName });
+  const bodyText = t(
+    fromWaitlist ? 'registrationApproved.bodyTextFromWaitlist' : 'registrationApproved.bodyText',
+    { gameName },
+  );
   const footerHtml = t.markup('registrationApproved.footer', {
     link: (c) =>
       `<a href="${homeUrl}" style="color:#1B4332;text-decoration:underline;">${c}</a>`,

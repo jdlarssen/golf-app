@@ -6,6 +6,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { expireGameCache } from '@/lib/games/expireGameCache';
+import { promoteWaitlist } from '@/lib/games/promoteWaitlist';
 import { bringGuestBlock, type BringGuestBlock } from '@/lib/games/bringGuest';
 import {
   createGuestUser,
@@ -417,5 +418,7 @@ export async function removeBroughtGuest(gameId: string, formData: FormData): Pr
   }
 
   expireGameCache(gameId);
+  // #2482: a seated guest's seat goes to the first on the waiting list.
+  await promoteWaitlist(gameId);
   redirect({ href: page, locale });
 }
