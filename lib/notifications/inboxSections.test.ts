@@ -467,6 +467,21 @@ describe('buildInboxEntryView', () => {
     expect(v.avatar).toEqual({ kind: 'people', initials: ['AM'], more: 0 });
   });
 
+  // #2482: a seat from the waiting list says so; «Godta» keeps the game name.
+  it('registration_approved fromWaitlist → «Du fikk plass fra ventelista» as the subtitle', () => {
+    const at = new Date(NOW - 3_600_000).toISOString();
+    const fromList = view(
+      [row('registration_approved', { game_id: 'g1', game_name: 'Lørdagsrunden', fromWaitlist: true }, { at })],
+      'today',
+    );
+    expect(fromList.subtitle).toBe('Du fikk plass fra ventelista · for 1 time siden');
+    const approved = view(
+      [row('registration_approved', { game_id: 'g1', game_name: 'Lørdagsrunden' }, { at })],
+      'today',
+    );
+    expect(approved.subtitle).toBe('Lørdagsrunden · for 1 time siden');
+  });
+
   it('en friendship texts', () => {
     const v = view([row('friend_accepted', { actor_id: MARTE, actor_name: 'Anders', via: 'link' })], 'today', ctx('en'));
     expect(v.title).toBe('Anders added you as a friend');
