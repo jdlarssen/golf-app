@@ -2767,3 +2767,30 @@ describe('useGameFormState — handicapprosent i shamble (#2570)', () => {
     expect(resumed.current.shambleScoring).toBe('net');
   });
 });
+
+// #2482 (F3): «Venteliste når det er fullt» is on for a new round, with no cap
+// and no deadline; «Rediger» starts from what is stored.
+describe('useGameFormState — Plasser og frist', () => {
+  it('a new round: no cap, no deadline, the waiting list on', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+    expect(result.current.registrationCap).toBeNull();
+    expect(result.current.registrationCapForSave).toBeNull();
+    expect(result.current.signupDeadline).toBe('');
+    expect(result.current.waitlistEnabled).toBe(true);
+  });
+
+  it('a stored round keeps its values, the list off included', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialValues: { registration_cap: 12, signup_deadline: '2026-10-02T18:00', waitlist_enabled: false },
+      }),
+    );
+    expect(result.current.registrationCapForSave).toBe(12);
+    expect(result.current.signupDeadline).toBe('2026-10-02T18:00');
+    expect(result.current.waitlistEnabled).toBe(false);
+  });
+});
