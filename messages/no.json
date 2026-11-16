@@ -165,6 +165,16 @@
         "title": "{gameName} står stille",
         "detail": "Det har ikke kommet nye slag på et døgn. Avslutt spillet når du er klar."
       },
+      "organizerEveningStatus": {
+        "title": "I morgen: {gameName}",
+        "detail": "{confirmed} av {total} har bekreftet. {names} har ikke svart.",
+        "detailCountOnly": "{confirmed} av {total} har bekreftet.",
+        "detailAll": "{total, plural, =1 {Alle har bekreftet.} =2 {Begge har bekreftet.} other {Alle # har bekreftet.}}",
+        "list2": "{a} og {b}",
+        "list3": "{a}, {b} og {c}",
+        "list4": "{a}, {b}, {c} og {d}",
+        "more": "{count} til"
+      },
       "leagueRoundOpen": {
         "title": "{roundLabel} i {leagueName} er åpen",
         "detail": "Spill den når det passer deg. Fristen er {closesAt, date, ::EEEEdMMM} kl. {closesAt, time, ::HHmm}."

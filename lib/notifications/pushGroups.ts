@@ -63,6 +63,8 @@ const PUSH_GROUP_OF_KIND: Record<NotificationKind, PushGroupId> = {
   game_started: 'rounds',
   game_moved: 'rounds',
   game_cancelled: 'rounds',
+  // #2483: the organiser's own round, the evening before it.
+  organizer_evening_status: 'rounds',
   auto_start_blocked: 'rounds',
   game_finished: 'rounds',
   game_reopened: 'rounds',

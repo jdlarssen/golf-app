@@ -469,3 +469,68 @@ describe('buildNotificationText — friend_achievement (#2800)', () => {
     expect(text(league, 'en').title).toBe('A player got an eagle');
   });
 });
+
+// #2483: the organiser's status the evening before, in both languages. The
+// Norwegian chain from the roster is in eveningBeforeRules.test.ts.
+describe('buildNotificationText — organizer_evening_status (#2483)', () => {
+  const real = (locale: 'no' | 'en') =>
+    createTranslator({
+      locale,
+      messages: locale === 'no' ? noMessages : enMessages,
+      namespace: 'inbox',
+      timeZone: 'Europe/Oslo',
+    }) as unknown as NotificationTranslator;
+  const base = {
+    game_id: '11111111-1111-1111-1111-111111111111',
+    game_name: 'Lørdagsrunden',
+    tee_off_at: '2026-11-21T08:00:00.000Z',
+    confirmed: 7,
+    total: 8,
+    unanswered_names: ['Kari'],
+    unanswered_more: 0,
+  };
+  const text = (p: object, locale: 'no' | 'en') =>
+    buildNotificationText('organizer_evening_status', p as NotificationPayload, real(locale));
+
+  it('one, two and many who have not answered, in English with the right verb', () => {
+    expect(text(base, 'en')).toEqual({
+      title: 'Tomorrow: Lørdagsrunden',
+      detail: "7 of 8 have confirmed. Kari hasn't answered.",
+    });
+    expect(text({ ...base, confirmed: 6, unanswered_names: ['Kari', 'Ola'] }, 'en').detail).toBe(
+      "6 of 8 have confirmed. Kari and Ola haven't answered.",
+    );
+    expect(
+      text({ ...base, confirmed: 3, unanswered_names: ['Kari', 'Ola', 'Per'], unanswered_more: 2 }, 'en').detail,
+    ).toBe("3 of 8 have confirmed. Kari, Ola, Per and 2 more haven't answered.");
+  });
+
+  it('a nameless player is counted, not named', () => {
+    expect(text({ ...base, unanswered_names: ['Kari'], unanswered_more: 1, confirmed: 6 }, 'no').detail).toBe(
+      '6 av 8 har bekreftet. Kari og 1 til har ikke svart.',
+    );
+    expect(text({ ...base, unanswered_names: [], unanswered_more: 1 }, 'no').detail).toBe(
+      '7 av 8 har bekreftet.',
+    );
+  });
+
+  it('everyone confirmed', () => {
+    const all = { ...base, confirmed: 8, unanswered_names: [] };
+    expect([text(all, 'no').detail, text(all, 'en').detail]).toEqual([
+      'Alle 8 har bekreftet.',
+      'All 8 have confirmed.',
+    ]);
+  });
+
+  it('title and detail fit the push caps with the longest game name on staging (51 characters)', () => {
+    const long = {
+      ...base,
+      game_name: 'TEST-Mode-singles_matchplay-1786714894544-matchplay',
+      confirmed: 3,
+      unanswered_names: ['Kristoffer', 'Alexandra', 'Margrethe'],
+      unanswered_more: 12,
+    };
+    const t = text(long, 'no');
+    expect([t.title.length <= TITLE_MAX, t.detail.length <= BODY_MAX]).toEqual([true, true]);
+  });
+});
