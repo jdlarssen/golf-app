@@ -16,7 +16,9 @@ import { notifyGameMoved } from '@/lib/notifications/notifyGameMoved';
  *
  * `requireAdminOrCreator` is the gate, the same as the page's. The write uses
  * the caller's client, so RLS decides as it does for «Rediger». Only
- * `scheduled_tee_off_at` changes, and only while the game is still scheduled:
+ * `scheduled_tee_off_at` changes, and only while the game is still scheduled
+ * (with it, the evening varsel's stamp is cleared, #2483, so the organiser
+ * hears the status again the evening before the new day):
  * a round that started while the page was open matches no row, writes
  * nothing and lands on «kan ikke redigeres» (trap 2: 0 rows is a refusal, not
  * a success). The same time as before, or a round with no tee-off to move,
@@ -56,7 +58,7 @@ export async function moveGameAction(gameId: string, formData: FormData) {
     expectOne(
       await supabase
         .from('games')
-        .update({ scheduled_tee_off_at: teeOffAt })
+        .update({ scheduled_tee_off_at: teeOffAt, organizer_evening_notice_sent_at: null })
         .eq('id', gameId)
         .eq('status', 'scheduled')
         .select('id'),
