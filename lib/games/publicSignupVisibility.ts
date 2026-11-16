@@ -1,5 +1,6 @@
 import { roundInviteLinkPath } from '@/lib/appLinks/appLinkPaths';
 import type { ShortIdGame } from './getGameByShortId';
+import { isSignupClosed } from './signupClosed';
 
 /**
  * Én regel, ett hjem (#1022): avgjør om et spill får en offentlig
@@ -10,6 +11,7 @@ import type { ShortIdGame } from './getGameByShortId';
  *   - registration_mode 'open' eller 'manual_approval' (invite_only er privat
  *     og skal aldri eksponere spilldata uten innlogging)
  *   - signups_closed_at ikke satt (#543 — arrangøren har ikke stengt manuelt)
+ *     og fristen ikke passert (#2482, `isSignupClosed`)
  *
  * Alt annet beholder dagens oppførsel for uinnloggede: redirect til /login
  * med next-param (#559 — aldri 404 på en lenke som kan være gyldig etter
@@ -22,7 +24,7 @@ import type { ShortIdGame } from './getGameByShortId';
  */
 export type PublicSignupVisibilityInput = Pick<
   ShortIdGame,
-  'status' | 'registration_mode' | 'signups_closed_at'
+  'status' | 'registration_mode' | 'signups_closed_at' | 'signup_deadline'
 >;
 
 /**
@@ -33,9 +35,9 @@ export type PublicSignupVisibilityInput = Pick<
  * goes through `isPubliclyViewable`, which adds the registration mode.
  */
 export function isSignupWindowOpen(
-  game: Pick<PublicSignupVisibilityInput, 'status' | 'signups_closed_at'>,
+  game: Pick<PublicSignupVisibilityInput, 'status' | 'signups_closed_at' | 'signup_deadline'>,
 ): boolean {
-  return game.status === 'scheduled' && game.signups_closed_at == null;
+  return game.status === 'scheduled' && !isSignupClosed(game);
 }
 
 /**

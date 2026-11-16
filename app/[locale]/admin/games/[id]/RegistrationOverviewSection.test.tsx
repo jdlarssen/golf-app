@@ -22,6 +22,7 @@ const PROPS = {
   gameStatus: 'scheduled' as const,
   shortId: 'abc123',
   signupsClosedAt: null as string | null,
+  signupDeadline: null as string | null,
   selfRegisteredCount: 0,
 };
 

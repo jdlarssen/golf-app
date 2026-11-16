@@ -17,6 +17,7 @@ import type { Database } from '@/lib/database.types';
 import { maybeAutoConfirmParticipation } from '@/lib/games/confirmParticipation';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
+import { isSignupClosed } from '@/lib/games/signupClosed';
 import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
 import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import {
@@ -352,8 +353,9 @@ export async function attachToCaptainTeamCore(
   if (game.status !== 'scheduled') {
     return { ok: false, error: 'game_locked' };
   }
-  // #543: closed signups apply to e-mail-invited teammates too.
-  if (game.signups_closed_at != null) {
+  // #543: closed signups apply to e-mail-invited teammates too. #2482: and
+  // past the deadline.
+  if (isSignupClosed(game)) {
     return { ok: false, error: 'signup_closed' };
   }
 
@@ -611,7 +613,7 @@ export async function addTeamMemberCore(
   if (game.status !== 'scheduled') {
     return { ok: false, error: 'game_locked' };
   }
-  if (game.signups_closed_at != null) {
+  if (isSignupClosed(game)) {
     return { ok: false, error: 'signup_closed' };
   }
   const teamSize = resolveTeamSize(game.mode_config);
@@ -821,7 +823,7 @@ export async function loadTeamDashboard(
     name: game.name,
     courseName: game.courses?.name ?? null,
     joinEffect: game.registration_mode === 'open' ? 'instant' : 'approval',
-    signupsClosed: game.signups_closed_at != null && game.status === 'scheduled',
+    signupsClosed: isSignupClosed(game) && game.status === 'scheduled',
     teamSize: resolveTeamSize(game.mode_config),
     teeOffAt: game.scheduled_tee_off_at,
   };

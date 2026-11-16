@@ -28,7 +28,9 @@ import { isOrganisedBy, isPubliclyViewable, isSignupWindowOpen } from './publicS
  * filters are the authoritative gate. The SQL filters only mirror them so the
  * `.limit(50)` window isn't spent on rows the gate drops: `signups_closed_at
  * is null` everywhere, and `.neq('created_by')` on the club and friend queries
- * but a null-preserving `.or` on the open query (see there).
+ * but a null-preserving `.or` on the open query (see there). #2482: the
+ * deadline is the gate's alone (`isSignupClosed`); a round past it costs a
+ * slot in the window until it starts.
  */
 
 export type {
@@ -135,7 +137,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
   if (friendIds.length > 0) {
     let friendQuery = admin
       .from('games')
-      .select('id, name, short_id, scheduled_tee_off_at, registration_mode, status, signups_closed_at, created_by, let_friends_skip_gate, game_mode, mode_config, hole_segment, start_type, courses(name)')
+      .select('id, name, short_id, scheduled_tee_off_at, registration_mode, status, signups_closed_at, signup_deadline, created_by, let_friends_skip_gate, game_mode, mode_config, hole_segment, start_type, courses(name)')
       .in('created_by', friendIds)
       .in('registration_mode', ['open', 'manual_approval'])
       // #2445: a draft is hidden from everyone but its organiser.
@@ -192,7 +194,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
 
   let openQuery = admin
     .from('games')
-    .select('id, name, short_id, scheduled_tee_off_at, registration_mode, status, signups_closed_at, created_by, game_mode, mode_config, hole_segment, start_type, courses(name)')
+    .select('id, name, short_id, scheduled_tee_off_at, registration_mode, status, signups_closed_at, signup_deadline, created_by, game_mode, mode_config, hole_segment, start_type, courses(name)')
     // Påmeldingsmåten ER synligheten: open + manual_approval er oppdagbare,
     // invite_only er privat (#357). Ingen egen synlighets-bryter.
     .in('registration_mode', ['open', 'manual_approval'])

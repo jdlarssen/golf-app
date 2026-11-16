@@ -8,6 +8,7 @@
  * many seats are taken) — this module only shapes it.
  */
 
+import { isSignupClosed } from './signupClosed';
 import { osloParts } from '@/lib/format/teeOff';
 import {
   osloDateKey,
@@ -129,6 +130,8 @@ export type ClubRoundEntry = TerminEntry & {
 export type ClubRoundGame = TerminGame & {
   created_by: string | null;
   signups_closed_at: string | null;
+  /** #2482: a passed deadline drops the round as closing by hand does. */
+  signup_deadline?: string | null;
 };
 
 /**
@@ -141,8 +144,9 @@ export type ClubRoundGame = TerminGame & {
  * The button is always direct: membership is the invitation (#442).
  *
  * Dropped: a round dated before today's Oslo date (still `scheduled` after
- * its day, so it is stuck), and a round whose signups the organiser closed
- * when it is not yours — its button would lead to a closed signup.
+ * its day, so it is stuck), and a round whose signups are closed (by hand or
+ * by the deadline, `isSignupClosed`) when it is not yours — its button would
+ * lead to a closed signup.
  */
 export function buildClubRoundEntries(
   games: readonly ClubRoundGame[],
@@ -165,7 +169,7 @@ export function buildClubRoundEntries(
   const rows: ClubRoundEntry[] = [];
   for (const game of games) {
     const mine = mineOf(game);
-    if (mine === null && game.signups_closed_at !== null) continue;
+    if (mine === null && isSignupClosed(game, opts.now)) continue;
     const entry: ClubRoundEntry = {
       ...pickGame(game),
       source: 'club',

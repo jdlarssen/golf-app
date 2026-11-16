@@ -206,6 +206,8 @@ export function signupInboxState(game: {
   status: GameStatus;
   registration_mode: RegistrationMode;
   signups_closed_at: string | null;
+  /** #2482: past the deadline the inbox says closed, as after closing by hand. */
+  signup_deadline?: string | null;
   group_id: string | null;
 }): SignupInboxState {
   if (isRosterLocked(game.status)) return 'locked';

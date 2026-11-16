@@ -18,13 +18,14 @@ import {
   signupView,
   type SignupView,
 } from '@/lib/games/signupOffer';
+import { isSignupClosed } from '@/lib/games/signupClosed';
 import { maxTeamsForSize, registrationSeatTeamSize } from '@/lib/games/teamFormatLimits';
 import { sendRegistrationRequestMail } from '@/lib/mail/registrationRequest';
 import { notify } from '@/lib/notifications/notify';
 import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { displayNameForOthers } from '@/lib/users/displayName';
-import { registrationPlayerCap } from '@/lib/wizard/fitsPlayerCount';
+import { effectiveRegistrationCap } from '@/lib/wizard/fitsPlayerCount';
 
 /**
  * Signing up for a round yourself (#199), shared by the web actions on
@@ -212,7 +213,8 @@ export async function registerForOpenGameCore({
   }
   // #543: arrangøren kan stenge påmeldingen manuelt. Stengt slår inn etter
   // game_locked slik at «stengt» ikke vises for spill som allerede er aktive.
-  if (game.signups_closed_at != null) {
+  // #2482: fristen stenger på samme måte (`isSignupClosed`).
+  if (isSignupClosed(game)) {
     return { ok: false, error: 'signup_closed' };
   }
   // #1792 (HCD F5): gaten speiler signup-sidens visning. Alt annet enn
@@ -270,7 +272,8 @@ export async function registerForOpenGameCore({
   // the row gets the column default 'mens'.
   const teeGender = (await joinTeeGenders(game.id, [userId]))[userId];
   const modeConfig = game.mode_config as { team_size?: number } | null;
-  const cap = registrationPlayerCap(game.game_mode, modeConfig);
+  // #2482: the format's cap or the organiser's, whichever is lower.
+  const cap = effectiveRegistrationCap(game.game_mode, modeConfig, game.registration_cap);
   if (cap !== null && !isMatchplayMode(game.game_mode)) {
     const seatTeamSize = registrationSeatTeamSize(game.game_mode, modeConfig?.team_size);
     const { data: claim, error: claimError } = await admin.rpc(
@@ -508,8 +511,9 @@ export async function requestApprovalCore({
   if (game.status !== 'scheduled') {
     return { ok: false, error: 'game_locked' };
   }
-  // #543: steng-påmelding-guard — speilar registerForOpenGame.
-  if (game.signups_closed_at != null) {
+  // #543: steng-påmelding-guard — speilar registerForOpenGame. #2482: også
+  // etter fristen: nye kommer ikke på ventelista når påmeldingen er stengt.
+  if (isSignupClosed(game)) {
     return { ok: false, error: 'signup_closed' };
   }
   // manual_approval OG invite_only tar imot «be om å bli med»-forespørsler

@@ -59,6 +59,7 @@ type GameRow = {
   mode_config: { team_size?: number } | null;
   scheduled_tee_off_at: string | null;
   signups_closed_at: string | null;
+  signup_deadline: string | null;
   group_id: string | null;
   // #624 — banenavn for re-lokalisering av auto-genererte spillnavn.
   courses: { name: string } | null;
@@ -213,7 +214,7 @@ export default async function PåmeldingerPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, short_id, status, registration_mode, registration_type, game_mode, mode_config, scheduled_tee_off_at, signups_closed_at, group_id, courses(name)',
+      'id, name, short_id, status, registration_mode, registration_type, game_mode, mode_config, scheduled_tee_off_at, signups_closed_at, signup_deadline, group_id, courses(name)',
     )
     .eq('id', id)
     .maybeSingle<GameRow>();

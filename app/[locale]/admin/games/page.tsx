@@ -85,7 +85,7 @@ const LEDGER_SELECT =
 /** The default view's rows: the grouping's columns plus the format, for `ModeChip`. */
 type DefaultGameRow = ArrangedGame & { game_mode: GameMode; mode_config: GameModeConfig };
 
-const DEFAULT_SELECT = `${LEDGER_SELECT}, require_peer_approval, registration_mode, signups_closed_at, group_id`;
+const DEFAULT_SELECT = `${LEDGER_SELECT}, require_peer_approval, registration_mode, signups_closed_at, signup_deadline, group_id`;
 
 const getAdminGamesContext = cache(async () => {
   const supabase = await getServerClient();

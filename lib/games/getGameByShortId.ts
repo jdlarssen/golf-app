@@ -39,6 +39,12 @@ export type ShortIdGame = {
   let_friends_skip_gate: boolean;
   // #543: arrangøren kan stenge påmeldingen manuelt.
   signups_closed_at: string | null;
+  // #2482: arrangørens tak, frist og venteliste. Valgfrie så literal-
+  // konstruktører/tester ikke må sette dem: `isSignupClosed` og
+  // `effectiveRegistrationCap` leser manglende felt som «ikke satt».
+  signup_deadline?: string | null;
+  registration_cap?: number | null;
+  waitlist_enabled?: boolean;
   // #1049: startkontingent + betalingsmåte — vises i påmeldingsflyten så folk
   // vet kostnaden før de melder seg på. Trygge å eksponere uten autentisering.
   entry_fee_kr: number;
@@ -65,7 +71,7 @@ export const getGameByShortId = cache(async function getGameByShortId(
   const { data, error } = await admin
     .from('games')
     .select(
-      'id, name, short_id, status, registration_mode, registration_type, game_mode, mode_config, course_id, courses(name), tee_box:tee_boxes!games_tee_box_id_fkey(name), scheduled_tee_off_at, created_by, group_id, let_friends_skip_gate, signups_closed_at, entry_fee_kr, payment_link, prizes',
+      'id, name, short_id, status, registration_mode, registration_type, game_mode, mode_config, course_id, courses(name), tee_box:tee_boxes!games_tee_box_id_fkey(name), scheduled_tee_off_at, created_by, group_id, let_friends_skip_gate, signups_closed_at, signup_deadline, registration_cap, waitlist_enabled, entry_fee_kr, payment_link, prizes',
     )
     .eq('short_id', shortId)
     .maybeSingle<ShortIdGame>();

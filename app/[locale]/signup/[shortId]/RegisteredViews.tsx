@@ -49,16 +49,19 @@ export function RequestSentView({
   shortId,
   withTeam,
   testId,
+  waitlist = false,
 }: {
   shortId: string;
   withTeam: boolean;
   testId?: string;
+  /** #2482: the request stands on the round's waiting list. */
+  waitlist?: boolean;
 }) {
   const t = useTranslations('signup');
   return (
     <div className="space-y-4">
       <Banner tone="info" testId={testId}>
-        {t('pendingRequestBanner')}
+        {waitlist ? t('waitlistBanner') : t('pendingRequestBanner')}
       </Banner>
       {withTeam && (
         <LinkButton href={`/signup/${shortId}/team`} full>

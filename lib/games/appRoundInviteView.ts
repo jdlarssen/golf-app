@@ -1,6 +1,7 @@
 import { formatDisplayLabel } from '@/lib/games/formatLabel';
 import type { SignupOffer } from '@/lib/games/signupOffer';
 import type { GameSeats } from '@/lib/games/seatCapacity';
+import { signupClosure, type SignupClosure } from '@/lib/games/signupClosed';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 
 /**
@@ -39,6 +40,12 @@ export type AppRoundInviteView = {
   teamSignup?: AppTeamSignup | null;
   /** #2840: you are captain or teammate on a team in this round («Se laget»). */
   hasTeamPage?: boolean;
+  /**
+   * #2482: at `closed`, why and since when: by hand, or the organiser's
+   * deadline. Optional: an older server sends none, and an older build ignores
+   * it (the app's text for this is the next build's).
+   */
+  closure?: SignupClosure | null;
 };
 
 /**
@@ -206,6 +213,9 @@ export type AppRoundInviteViewGame = {
   tee_box: { name: string } | null;
   scheduled_tee_off_at: string | null;
   entry_fee_kr: number;
+  /** #2482: for `closure`. Optional, as on `ShortIdGame`. */
+  signups_closed_at?: string | null;
+  signup_deadline?: string | null;
 };
 
 export function buildAppRoundInviteView(
@@ -235,5 +245,6 @@ export function buildAppRoundInviteView(
     signupPath: `/signup/${game.short_id}`,
     teamSignup: team.teamSignup,
     hasTeamPage: team.hasTeamPage,
+    ...(offer === 'closed' ? { closure: signupClosure(game) } : {}),
   };
 }

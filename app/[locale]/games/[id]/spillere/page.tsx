@@ -208,13 +208,14 @@ export default async function CreatorSpillerePage({
   const [modeRes, pendingRes] = await Promise.all([
     supabase
       .from('games')
-      .select('registration_mode, group_id, status, signups_closed_at, short_id')
+      .select('registration_mode, group_id, status, signups_closed_at, signup_deadline, short_id')
       .eq('id', gameId)
       .maybeSingle<{
         registration_mode: 'invite_only' | 'manual_approval' | 'open';
         group_id: string | null;
         status: 'draft' | 'scheduled' | 'active' | 'finished';
         signups_closed_at: string | null;
+        signup_deadline: string | null;
         short_id: string;
       }>(),
     supabase

@@ -44,6 +44,7 @@ type GameRow = {
   registration_mode: string;
   registration_type: string;
   signups_closed_at: string | null;
+  signup_deadline: string | null;
   tournament_id: string | null;
   league_round_id: string | null;
   courses: { name: string } | null;
@@ -75,7 +76,7 @@ export default async function BringGuestPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      `id, name, status, created_by, game_mode, registration_mode, registration_type, signups_closed_at, tournament_id, league_round_id, courses(name), ${TEE_EMBED}`,
+      `id, name, status, created_by, game_mode, registration_mode, registration_type, signups_closed_at, signup_deadline, tournament_id, league_round_id, courses(name), ${TEE_EMBED}`,
     )
     .eq('id', id)
     .maybeSingle<GameRow>();

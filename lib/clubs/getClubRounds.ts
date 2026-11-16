@@ -64,6 +64,7 @@ export async function getClubRounds(
     start_type: row.start_type,
     created_by: row.created_by as string | null,
     signups_closed_at: row.signups_closed_at as string | null,
+    signup_deadline: row.signup_deadline as string | null,
   }));
   const entries = buildClubRoundEntries(games, {
     joinedIds: new Set((joinedRes.data ?? []).map((r) => r.game_id)),
