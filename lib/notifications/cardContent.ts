@@ -246,6 +246,13 @@ export function buildNotificationText(
         detail: t('kinds.gameStaleReminder.detail'),
       };
     }
+    case 'organizer_evening_status': {
+      const p = payload as NotificationPayload<'organizer_evening_status'>;
+      return {
+        title: t('kinds.organizerEveningStatus.title', { gameName: p.game_name }),
+        detail: eveningStatusDetail(p, t),
+      };
+    }
     // #2638: the deadline is formatted by the catalog (ICU date/time), in the
     // recipient's locale and Oslo time: both translators carry the zone.
     case 'league_round_open': {
@@ -532,4 +539,34 @@ export function blockReasonText(reason: string, t: NotificationTranslator): stri
     return t(`blockReasons.${reason as StructuralBlockReason}`);
   }
   return t('blockReasons.default');
+}
+
+/**
+ * #2483: «7 av 8 har bekreftet. Kari har ikke svart.», «… Kari, Ola, Per og 2
+ * til har ikke svart.», or «Alle 8 har bekreftet.». The names are joined by
+ * the catalog, so each language has its own «og»; with no name at all (only
+ * nameless players missing) the count stands alone.
+ */
+function eveningStatusDetail(
+  p: NotificationPayload<'organizer_evening_status'>,
+  t: NotificationTranslator,
+): string {
+  const key = 'kinds.organizerEveningStatus';
+  const people = p.unanswered_names.length + p.unanswered_more;
+  if (people === 0) return t(`${key}.detailAll`, { total: p.total });
+  if (p.unanswered_names.length === 0) {
+    return t(`${key}.detailCountOnly`, { confirmed: p.confirmed, total: p.total });
+  }
+  const parts = [...p.unanswered_names];
+  if (p.unanswered_more > 0) parts.push(t(`${key}.more`, { count: p.unanswered_more }));
+  const [a, b, c, d] = parts;
+  const names =
+    parts.length === 1
+      ? a
+      : parts.length === 2
+        ? t(`${key}.list2`, { a, b })
+        : parts.length === 3
+          ? t(`${key}.list3`, { a, b, c })
+          : t(`${key}.list4`, { a, b, c, d });
+  return t(`${key}.detail`, { confirmed: p.confirmed, total: p.total, names, people });
 }

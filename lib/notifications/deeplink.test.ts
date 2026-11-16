@@ -33,6 +33,22 @@ describe('notificationDestination', () => {
     ).toBe(`/games/${GAME}/avslutt`);
   });
 
+  it('#2483: the evening status opens «Klar for i morgen?» under /admin, on the web', () => {
+    expect(
+      notificationDestination(
+        n('organizer_evening_status', {
+          game_id: GAME,
+          game_name: 'X',
+          tee_off_at: '2026-11-21T08:00:00.000Z',
+          confirmed: 7,
+          total: 8,
+          unanswered_names: ['Kari'],
+          unanswered_more: 0,
+        }),
+      ),
+    ).toBe(`/admin/games/${GAME}/i-morgen`);
+  });
+
   it('#2638: both league round messages land on the league page', () => {
     const LEAGUE = '55555555-5555-5555-5555-555555555555';
     const payload = {

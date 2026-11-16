@@ -55,6 +55,8 @@ export const NOTIFICATION_ICON: Record<NotificationKind, NotificationIconName> =
   all_scorecards_delivered: 'scorekort',
   // #2203: the round has stood still for a day.
   game_stale_reminder: 'flagg',
+  // #2483: the organiser's status the evening before the round.
+  organizer_evening_status: 'flagg',
   // #2638: a league round opens, and closes in under two days.
   league_round_open: 'kalender',
   league_round_closing: 'kalender',

@@ -162,6 +162,8 @@ export function inboxActionKey(row: Pick<InboxRow, 'kind' | 'payload'>): ActionK
     case 'idea_built':
     case 'game_cancelled':
     case 'friend_achievement':
+    // #2483: a status; the page it opens is where the reminders are.
+    case 'organizer_evening_status':
       return null;
     default: {
       const unhandled: never = row.kind;
@@ -733,6 +735,8 @@ const DETAIL_KINDS: ReadonlySet<NotificationKind> = new Set([
   'game_moved',
   // #2800: the title names who and what; the detail gives the holes and course.
   'friend_achievement',
+  // #2483: the title names the game; the detail says who has confirmed.
+  'organizer_evening_status',
 ]);
 
 /** Kinds whose detail carries a person's own words. */

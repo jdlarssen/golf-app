@@ -12,6 +12,7 @@ export type VisitSurface =
   | 'gameSubmit'
   | 'gameHole'
   | 'gameFinish'
+  | 'gameTomorrow'
   | 'adminGame'
   | 'adminSignups'
   | 'teamSignup'
@@ -72,6 +73,8 @@ export const READ_ON_VISIT: Record<VisitSurface, VisitRule> = {
   gameHole: { kinds: ['missing_score_reminder'], key: 'game_id' },
   // #2203: the organiser's «Avslutt spillet» page.
   gameFinish: { kinds: ['all_scorecards_delivered', 'game_stale_reminder'], key: 'game_id' },
+  // #2483: the organiser's «Klar for i morgen?».
+  gameTomorrow: { kinds: ['organizer_evening_status'], key: 'game_id' },
   adminGame: {
     kinds: ['scorecard_submitted', 'invite', 'auto_start_blocked'],
     key: 'game_id',

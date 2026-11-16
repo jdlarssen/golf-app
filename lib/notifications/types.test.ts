@@ -222,6 +222,34 @@ describe('parseNotificationPayload', () => {
     });
   });
 
+  describe('organizer_evening_status (#2483)', () => {
+    const valid = {
+      game_id: '11111111-1111-1111-1111-111111111111',
+      game_name: 'Lørdagsrunden',
+      tee_off_at: '2026-11-21T08:00:00.000Z',
+      confirmed: 7,
+      total: 8,
+      unanswered_names: ['Kari'],
+      unanswered_more: 0,
+    };
+
+    it('aksepterer gyldig payload, også når alle har bekreftet', () => {
+      expect(parseNotificationPayload('organizer_evening_status', valid).payload).toEqual(valid);
+      const all = { ...valid, confirmed: 8, unanswered_names: [] };
+      expect(parseNotificationPayload('organizer_evening_status', all).payload).toEqual(all);
+    });
+
+    it('avviser tom liste, tomt navn og en tee-tid som ikke er en dato', () => {
+      expect(() => parseNotificationPayload('organizer_evening_status', { ...valid, total: 0 })).toThrow();
+      expect(() =>
+        parseNotificationPayload('organizer_evening_status', { ...valid, unanswered_names: [''] }),
+      ).toThrow();
+      expect(() =>
+        parseNotificationPayload('organizer_evening_status', { ...valid, tee_off_at: 'i morgen' }),
+      ).toThrow();
+    });
+  });
+
   describe('player_added (#463)', () => {
     const validUuid = '11111111-1111-1111-1111-111111111111';
 
