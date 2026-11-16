@@ -28,7 +28,7 @@ import type { StartType } from './startType';
  * `editGameInitialValues.test.ts` checks it against the update's columns.
  */
 export const EDIT_FORM_COLUMNS =
-  'id, name, status, course_id, courses(name), tee_box_id, scheduled_tee_off_at, start_type, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_ld_holes, side_ctp_holes, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type, let_friends_skip_gate, entry_fee_kr, payment_link, prizes';
+  'id, name, status, course_id, courses(name), tee_box_id, scheduled_tee_off_at, start_type, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_ld_holes, side_ctp_holes, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type, let_friends_skip_gate, entry_fee_kr, payment_link, prizes, registration_cap, signup_deadline, waitlist_enabled';
 
 /**
  * What both edit pages select: the form's columns plus the club, cup and league
@@ -85,6 +85,11 @@ export type EditGameRow = {
   // dra med seg penge-oppsettet automatisk, arrangøren bestemmer på nytt.
   entry_fee_kr?: number;
   payment_link?: string | null;
+  // #2482 — «Plasser og frist». Valgfrie av samme grunn: revansjen starter
+  // uten tak og frist, med ventelista på, som et nytt spill.
+  registration_cap?: number | null;
+  signup_deadline?: string | null;
+  waitlist_enabled?: boolean;
   // #1051 — premiebord (jsonb). Valgfri på row-typen; edit-flytene selekterer
   // den (pre-fyller), revansje-flyten utelater den (samme prinsipp som
   // entry_fee — en rematch skal ikke dra premiebordet med automatisk).
@@ -291,6 +296,15 @@ export function buildEditInitialValues(
     // så feltet vises tomt (av) i stedet for «0» (og revansje ikke drar det med).
     entry_fee_kr: (game.entry_fee_kr ?? 0) > 0 ? game.entry_fee_kr : undefined,
     payment_link: game.payment_link ?? undefined,
+    // #2482: pre-fyller «Plasser og frist». Fristen som Oslo-`datetime-local`.
+    // Utelatt (revansjen) → som et nytt spill.
+    ...(game.waitlist_enabled !== undefined
+      ? {
+          registration_cap: game.registration_cap ?? null,
+          signup_deadline: formatForDateTimeLocalInOslo(game.signup_deadline ?? null),
+          waitlist_enabled: game.waitlist_enabled,
+        }
+      : {}),
     // #1051: pre-fyller premiebordet. safeParsePrizes → [] når ingen/ugyldig,
     // så draften starter tom. Revansje utelater game.prizes → tom draft.
     prizes: safeParsePrizes(game.prizes),

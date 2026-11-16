@@ -1220,6 +1220,22 @@
           "open": "Åpen påmelding"
         }
       },
+      "seatsAndDeadline": {
+        "kicker": "Plasser og frist",
+        "seatsTitle": "Antall plasser",
+        "seatsNone": "Ingen grense",
+        "seatsFlights": "{flights, plural, one {# flight à 4} other {# flights à 4}}",
+        "seatsLess": "Én plass mindre",
+        "seatsMore": "Én plass til",
+        "deadlineTitle": "Påmeldingsfrist",
+        "deadlineNone": "Ingen frist",
+        "deadlineAfterTeeOff": "må være før tee-off",
+        "deadlineLabel": "Dato og klokkeslett",
+        "deadlineHint": "Etter fristen kan ingen nye melde seg på.",
+        "deadlineRemove": "Fjern fristen",
+        "waitlistTitle": "Venteliste når det er fullt",
+        "waitlistHint": "Trekker noen seg, får den første på lista plassen"
+      },
       "settings": {
         "kicker": "Innstillinger",
         "rows": {
@@ -1591,6 +1607,10 @@
       "bad_registration_mode": "Valget for hvem som kan melde seg på er ugyldig. Sett det på nytt under «Hvem kan melde seg på?».",
       "bad_registration_type": "Typen påmelding er ugyldig. Velg «Individuelt» eller «Lag».",
       "team_registration_unsupported_mode": "Lagpåmelding funker ikke med dette formatet. Velg «Individuelt», eller bytt til et format som spilles i lag.",
+      "bad_registration_cap": "Antall plasser passer ikke med formatet. Sett et nytt tall under «Plasser og frist».",
+      "bad_signup_deadline": "Påmeldingsfristen er ugyldig. Velg dato og klokkeslett på nytt.",
+      "signup_deadline_after_tee_off": "Påmeldingsfristen må være før tee-off.",
+      "registration_cap_below_held": "{held, plural, one {# spiller er} other {# spillere er}} alt med, så antall plasser kan ikke være lavere.",
       "unexpected": "Klarte ikke å lagre spillet ({code}). Bane, tid, format og spillere står som du satte dem, så prøv en gang til."
     },
     "page": {
@@ -4750,6 +4770,7 @@
         "legendWith": "{count} med",
         "legendWaiting": "{count} venter på deg",
         "legendFree": "{count, plural, one {# plass ledig} other {# plasser ledig}}",
+        "waitlistRow": "{count, plural, =0 {Ventelista er tom} other {# på ventelista}} · den første får neste ledige plass",
         "legendOver": "{count} over taket",
         "waitingHeading": "Venter på deg · {count}",
         "withHeading": "Med · {count}",
@@ -6719,9 +6740,9 @@
     "seatsLine": "{held} av {cap} plasser",
     "seatsFull": "Fullt",
     "seatsFullWaitlist": "Fullt · {count} på venteliste",
-    "joinWaitlistButton": "Sett meg på ventelisten",
-    "joinWaitlistPending": "Setter deg på ventelisten …",
-    "waitlistBanner": "Du står på ventelisten. Trekker noen seg, får du plassen og et varsel.",
+    "joinWaitlistButton": "Sett meg på ventelista",
+    "joinWaitlistPending": "Setter deg på ventelista …",
+    "waitlistBanner": "Du står på ventelista. Trekker noen seg, får du plassen og et varsel.",
     "signupsClosedDeadlineBanner": "Påmeldingen stengte {when}.",
     "sidePickerIntro": "Velg hvilken side du vil spille på.",
     "sidePickerAriaLabel": "Velg side",

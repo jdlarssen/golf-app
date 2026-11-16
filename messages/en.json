@@ -1220,6 +1220,22 @@
           "open": "Open registration"
         }
       },
+      "seatsAndDeadline": {
+        "kicker": "Spots and deadline",
+        "seatsTitle": "Number of spots",
+        "seatsNone": "No limit",
+        "seatsFlights": "{flights, plural, one {# flight of 4} other {# flights of 4}}",
+        "seatsLess": "One spot fewer",
+        "seatsMore": "One more spot",
+        "deadlineTitle": "Signup deadline",
+        "deadlineNone": "No deadline",
+        "deadlineAfterTeeOff": "must be before tee-off",
+        "deadlineLabel": "Date and time",
+        "deadlineHint": "After the deadline nobody new can sign up.",
+        "deadlineRemove": "Remove the deadline",
+        "waitlistTitle": "Waiting list when full",
+        "waitlistHint": "If someone drops out, the first on the list gets the spot"
+      },
       "settings": {
         "kicker": "Settings",
         "rows": {
@@ -1591,6 +1607,10 @@
       "bad_registration_mode": "The sign-up setting is invalid. Set it again under \"Who can sign up?\".",
       "bad_registration_type": "The sign-up type is invalid. Choose \"Individual\" or \"Team\".",
       "team_registration_unsupported_mode": "Team sign-up doesn't work with this format. Choose \"Individual\", or pick a format played in teams.",
+      "bad_registration_cap": "The number of spots doesn't fit the format. Set a new number under «Spots and deadline».",
+      "bad_signup_deadline": "The signup deadline is invalid. Pick the date and time again.",
+      "signup_deadline_after_tee_off": "The signup deadline must be before tee-off.",
+      "registration_cap_below_held": "{held, plural, one {# player is} other {# players are}} already in, so the number of spots can't be lower.",
       "unexpected": "Couldn't save the game ({code}). The course, time, format and players are still as you set them, so give it another go."
     },
     "page": {
@@ -4750,6 +4770,7 @@
         "legendWith": "{count} playing",
         "legendWaiting": "{count} waiting for you",
         "legendFree": "{count, plural, one {# spot free} other {# spots free}}",
+        "waitlistRow": "{count, plural, =0 {The waiting list is empty} other {# on the waiting list}} · the first gets the next free spot",
         "legendOver": "{count} over the cap",
         "waitingHeading": "Waiting for you · {count}",
         "withHeading": "Playing · {count}",

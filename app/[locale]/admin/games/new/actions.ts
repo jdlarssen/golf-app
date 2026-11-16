@@ -8,6 +8,7 @@ import { findGuestIds } from '@/lib/games/createGuestPlayer';
 import { asTeeChoice, teeChoiceToDb } from '@/lib/games/teeChoice';
 import {
   buildGameInsertPayload,
+  signupDeadlineAfterTeeOff,
   resolveTeeOffForSave,
   parsePrizesFromFormData,
 } from '@/lib/games/gamePayload';
@@ -159,6 +160,10 @@ async function createGameInternal(
     return { error: teeOff.error };
   }
   const scheduledTeeOffAt = teeOff.iso;
+  // #2482 (U13): the signup deadline lies before the tee-off.
+  if (signupDeadlineAfterTeeOff(payload.signup_deadline, scheduledTeeOffAt)) {
+    return { error: 'signup_deadline_after_tee_off' };
+  }
 
   // Side-tournament config. Master toggle gates the LD/CTP counts; when off,
   // both counts persist as 0 (matches the DB CHECK in 0024_side_tournament).
@@ -231,6 +236,10 @@ async function createGameInternal(
       // #369: kun satt til true når registration_mode = 'manual_approval' +
       // checkbox er avhuket — gamePayload.ts force-false ellers.
       let_friends_skip_gate: payload.let_friends_skip_gate,
+      // #2482: «Plasser og frist» — the organiser's cap, deadline and list.
+      registration_cap: payload.registration_cap,
+      signup_deadline: payload.signup_deadline,
+      waitlist_enabled: payload.waitlist_enabled,
       // #1049: startkontingent + betalingsmåte. entry_fee_kr = 0 (default) betyr
       // ingen kontingent; payment_link er null når det ikke er noe beløp.
       entry_fee_kr: payload.entry_fee_kr,
