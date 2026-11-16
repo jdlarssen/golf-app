@@ -208,6 +208,11 @@ const ALLOWED: Record<string, Allowed> = {
     reason:
       '(a) egen rad i «Last ned dataene dine» (#2332): id-en er verifisert av proxy (nettsiden) eller av GoTrue fra Bearer-tokenet (appen) før kjernen kalles',
   },
+  'lib/notifications/eveningStatusNotice.ts': {
+    receivers: ['admin'],
+    reason:
+      '(c) serverside utsending (#2483): fornavnene i arrangørens kveldsvarsel, maskert adresse når navnet mangler (displayNameForOthers)',
+  },
   'lib/notifications/notifyGameMoved.ts': {
     receivers: ['admin'],
     reason:
