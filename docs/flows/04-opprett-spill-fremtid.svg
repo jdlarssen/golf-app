@@ -100,32 +100,33 @@
   <line x1="610" y1="524" x2="610" y2="536" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
 
   <!-- step 5 ready (changed) -->
-  <rect x="290" y="538" width="640" height="76" rx="13" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
+  <rect x="290" y="538" width="640" height="95" rx="13" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
   <circle cx="328" cy="569" r="16" fill="#B8973F"/><text x="328" y="574" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">5</text>
   <text x="362" y="565" font-size="15.5" font-weight="600" fill="#213029">Klar? — oppsummering + valg</text>
   <text x="362" y="585" font-size="12.5" fill="#6B5526">✓ Peer-godkjenning nå AV som standard (#371) — ingen låse-risiko</text>
   <text x="362" y="603" font-size="12" fill="#8A7333">Spillere-raden viser valget fra steg 4 · «Endre» går dit</text>
-  <line x1="610" y1="614" x2="610" y2="622" stroke="#8A6D27" stroke-width="1.6" marker-end="url(#a)"/>
+  <text x="362" y="621" font-size="12" fill="#8A7333">Plasser og frist: antall plasser, frist og venteliste ved påmelding (NY #2482)</text>
+  <line x1="610" y1="633" x2="610" y2="641" stroke="#8A6D27" stroke-width="1.6" marker-end="url(#a)"/>
 
   <!-- fork -->
-  <rect x="320" y="624" width="270" height="50" rx="14" fill="#ECEAE3" stroke="#B9B3A7" stroke-width="1.4"/>
-  <text x="455" y="647" text-anchor="middle" font-size="14" font-weight="600" fill="#6B6258">Lagre som utkast</text>
-  <text x="455" y="665" text-anchor="middle" font-size="11.5" fill="#857C70">skjult, ikke sendt · på serveren</text>
-  <rect x="630" y="624" width="270" height="50" rx="14" fill="#F4EBD7" stroke="#C9A961" stroke-width="1.6"/>
-  <text x="765" y="647" text-anchor="middle" font-size="14" font-weight="700" fill="#8A6D27">Publiser &amp; inviter</text>
-  <text x="765" y="665" text-anchor="middle" font-size="11.5" fill="#9C8552">spillerne får beskjed</text>
-  <line x1="765" y1="674" x2="765" y2="690" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="320" y="643" width="270" height="50" rx="14" fill="#ECEAE3" stroke="#B9B3A7" stroke-width="1.4"/>
+  <text x="455" y="666" text-anchor="middle" font-size="14" font-weight="600" fill="#6B6258">Lagre som utkast</text>
+  <text x="455" y="684" text-anchor="middle" font-size="11.5" fill="#857C70">skjult, ikke sendt · på serveren</text>
+  <rect x="630" y="643" width="270" height="50" rx="14" fill="#F4EBD7" stroke="#C9A961" stroke-width="1.6"/>
+  <text x="765" y="666" text-anchor="middle" font-size="14" font-weight="700" fill="#8A6D27">Publiser &amp; inviter</text>
+  <text x="765" y="684" text-anchor="middle" font-size="11.5" fill="#9C8552">spillerne får beskjed</text>
+  <line x1="765" y1="693" x2="765" y2="709" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
 
   <!-- receipt (#2458) -->
-  <rect x="565" y="692" width="400" height="58" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
-  <text x="765" y="716" text-anchor="middle" font-size="14.5" font-weight="700" fill="#8A6D27">✓ Kvittering: del, kalender</text>
-  <text x="765" y="736" text-anchor="middle" font-size="11.5" fill="#9C8552">hvem fikk invitasjonen · «Gå til spillet» (NY #2458)</text>
-  <line x1="765" y1="750" x2="765" y2="766" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="565" y="711" width="400" height="58" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
+  <text x="765" y="735" text-anchor="middle" font-size="14.5" font-weight="700" fill="#8A6D27">✓ Kvittering: del, kalender</text>
+  <text x="765" y="755" text-anchor="middle" font-size="11.5" fill="#9C8552">hvem fikk invitasjonen · «Gå til spillet» (NY #2458)</text>
+  <line x1="765" y1="769" x2="765" y2="785" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
 
   <!-- terminal -->
-  <rect x="565" y="768" width="400" height="66" rx="16" fill="#E3EDE6" stroke="#2D6A4F" stroke-width="1.6"/>
-  <text x="765" y="796" text-anchor="middle" font-size="16" font-weight="700" fill="#1B4332">✓  Spillet er «Planlagt»</text>
-  <text x="765" y="819" text-anchor="middle" font-size="12" fill="#46604F">spillerne kan bli med — se flyt 2</text>
+  <rect x="565" y="787" width="400" height="66" rx="16" fill="#E3EDE6" stroke="#2D6A4F" stroke-width="1.6"/>
+  <text x="765" y="815" text-anchor="middle" font-size="16" font-weight="700" fill="#1B4332">✓  Spillet er «Planlagt»</text>
+  <text x="765" y="838" text-anchor="middle" font-size="12" fill="#46604F">spillerne kan bli med — se flyt 2</text>
 
   <!-- NEW autosave (#2459): every step writes the setup to this device, and
        Home shows it again under «Fortsett der du slapp». -->
