@@ -91,6 +91,14 @@ export function isEveningNoticeDue(
 }
 
 /**
+ * Is the round tomorrow, on the Oslo calendar, seen from `now`? «Klar for i
+ * morgen?» says «i morgen» only then, and «Klar for runden?» otherwise.
+ */
+export function isTomorrowInOslo(teeOffIso: string, now: number): boolean {
+  return osloDateKey(now) === dayBefore(osloDateKey(Date.parse(teeOffIso)));
+}
+
+/**
  * What the sweep asks the database for at `now`. Closed before
  * EVENING_NOTICE_HOUR Oslo. The tee-off range is a superset (the next 48
  * hours) so a 23- or 25-hour day is never cut short; `isEveningNoticeDue`

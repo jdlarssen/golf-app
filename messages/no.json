@@ -4701,7 +4701,36 @@
         "sendingBusy": "Sender …",
         "remindRowButton": "Påminn",
         "reminderTargetLabel": "Får påminnelsen:",
-        "remindHoleConfirm": "Sende påminnelse til {names} om hull {holes}?"
+        "remindHoleConfirm": "Sende påminnelse til {names} om hull {holes}?",
+        "purreRowButton": "Purr {name}",
+        "purreRowConfirm": "Sende {name} en påminnelse om å bekrefte?"
+      },
+      "tomorrow": {
+        "kickerTomorrow": "{name} · i morgen {teeOffAt, time, ::HHmm}",
+        "kickerLater": "{name} · {teeOffAt, date, ::EEEEdMMM} {teeOffAt, time, ::HHmm}",
+        "kickerNoTeeOff": "{name} · {status}",
+        "headingTomorrow": "Klar for i morgen?",
+        "headingLater": "Klar for runden?",
+        "confirmed": "{confirmed} av {total} har bekreftet",
+        "allConfirmed": "{total, plural, =1 {Alle har bekreftet} =2 {Begge har bekreftet} other {Alle # har bekreftet}}",
+        "unanswered": "{name} har ikke svart",
+        "invited": "Invitert {when}",
+        "purred": "Purret",
+        "course": "{course}, {tee} tee",
+        "noCourse": "Ingen bane valgt",
+        "teeOff": "Tee-off {teeOffAt, time, ::HHmm}",
+        "teeOffDay": "Tee-off {teeOffAt, date, ::EEEEdMMM} kl. {teeOffAt, time, ::HHmm}",
+        "noTeeOff": "Tee-tiden er ikke satt",
+        "flights": "{count, plural, one {Én flight} =2 {To flights} =3 {Tre flights} =4 {Fire flights} other {# flights}}",
+        "flightLine": "Flight {n}: {names}",
+        "unassigned": "{count} uten flight",
+        "noFlights": "Ingen flighter ennå",
+        "noFlightsHint": "Del inn spillerne på startlista",
+        "moveRound": "Flytt runden",
+        "seeStartlist": "Se startlista",
+        "errors": {
+          "notRemindable": "Fant ingen å purre. Spilleren har kanskje svart i mellomtiden."
+        }
       },
       "signups": {
         "heading": "Påmeldinger",
@@ -7140,7 +7169,7 @@
       "bodyTextEvening": "{gameName} spilles i morgen. {status}",
       "buttonEvening": "Se hvem som kommer",
       "buttonTextEvening": "Se hvem som kommer: {url}",
-      "footerEvening": "Du får denne meldingen fordi du arrangerer runden. Logg inn på <link>tornygolf.no</link> for å se den."
+      "footerEvening": "Du får denne meldingen fordi du arrangerer runden. Logg inn på <link>tornygolf.no</link> for å se runden."
     },
     "paymentReminder": {
       "subject": "Startkontingent — {gameName}",

@@ -10,6 +10,7 @@ import {
   eveningCounts,
   eveningSweepWindow,
   isEveningNoticeDue,
+  isTomorrowInOslo,
   summarizeUnanswered,
   type EveningGame,
   type EveningRosterRow,
@@ -151,6 +152,17 @@ describe('eveningSweepWindow', () => {
     // Sat 24 Oct 2026 23:59 CEST; Sunday is 25 hours long and ends at 23:00Z.
     const w = eveningSweepWindow(at('2026-10-24T21:59:00.000Z'));
     expect(Date.parse('2026-10-25T22:59:00.000Z') < Date.parse(w.teeOffBefore)).toBe(true);
+  });
+});
+
+describe('isTomorrowInOslo', () => {
+  it.each([
+    ['Friday 23:59 Oslo, round Saturday 09:00', '2026-11-20T22:59:00.000Z', true],
+    ['Saturday 00:00 Oslo, round the same day', '2026-11-20T23:00:00.000Z', false],
+    ['Thursday evening, round two days later', '2026-11-19T20:00:00.000Z', false],
+    ['Friday 08:00 Oslo', '2026-11-20T07:00:00.000Z', true],
+  ])('%s → %s', (_label, now, expected) => {
+    expect(isTomorrowInOslo('2026-11-21T08:00:00.000Z', at(now))).toBe(expected);
   });
 });
 

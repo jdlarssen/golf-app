@@ -4701,7 +4701,36 @@
         "sendingBusy": "Sending …",
         "remindRowButton": "Remind",
         "reminderTargetLabel": "Gets the reminder:",
-        "remindHoleConfirm": "Send {names} a reminder about {holeCount, plural, one {hole} other {holes}} {holes}?"
+        "remindHoleConfirm": "Send {names} a reminder about {holeCount, plural, one {hole} other {holes}} {holes}?",
+        "purreRowButton": "Remind {name}",
+        "purreRowConfirm": "Send {name} a reminder to confirm?"
+      },
+      "tomorrow": {
+        "kickerTomorrow": "{name} · tomorrow {teeOffAt, time, ::HHmm}",
+        "kickerLater": "{name} · {teeOffAt, date, ::EEEEdMMM} {teeOffAt, time, ::HHmm}",
+        "kickerNoTeeOff": "{name} · {status}",
+        "headingTomorrow": "Ready for tomorrow?",
+        "headingLater": "Ready for the round?",
+        "confirmed": "{confirmed} of {total} have confirmed",
+        "allConfirmed": "{total, plural, =1 {Everyone has confirmed} =2 {Both have confirmed} other {All # have confirmed}}",
+        "unanswered": "{name} hasn't answered",
+        "invited": "Invited {when}",
+        "purred": "Reminded",
+        "course": "{course}, {tee} tee",
+        "noCourse": "No course chosen",
+        "teeOff": "Tee-off {teeOffAt, time, ::HHmm}",
+        "teeOffDay": "Tee-off {teeOffAt, date, ::EEEEdMMM} at {teeOffAt, time, ::HHmm}",
+        "noTeeOff": "No tee-off time set",
+        "flights": "{count, plural, one {One flight} =2 {Two flights} =3 {Three flights} =4 {Four flights} other {# flights}}",
+        "flightLine": "Flight {n}: {names}",
+        "unassigned": "{count} without a flight",
+        "noFlights": "No flights yet",
+        "noFlightsHint": "Split the players on the start list",
+        "moveRound": "Move the round",
+        "seeStartlist": "See the start list",
+        "errors": {
+          "notRemindable": "There was no one to remind. The player may have answered in the meantime."
+        }
       },
       "signups": {
         "heading": "Signups",
@@ -7118,7 +7147,7 @@
       "bodyTextCourseChanged": "{gameName} has a new time: {teeOffAt, date, ::EEEEdMMM} at {teeOffAt, time, ::HHmm}. The course or tees changed too.",
       "button": "See the round",
       "buttonText": "See the round: {url}",
-      "footer": "You are getting this because you are in the game. Log in at <link>tornygolf.no</link> to see it."
+      "footer": "You are getting this because you are in the game. Log in at <link>tornygolf.no</link> to see the round."
     },
     "organizerGameNotice": {
       "salutationNamed": "Hi {name}!",
@@ -7140,7 +7169,7 @@
       "bodyTextEvening": "{gameName} is tomorrow. {status}",
       "buttonEvening": "See who is coming",
       "buttonTextEvening": "See who is coming: {url}",
-      "footerEvening": "You are getting this because you organise the round. Log in at <link>tornygolf.no</link> to see it."
+      "footerEvening": "You are getting this because you organise the round. Log in at <link>tornygolf.no</link> to see the round."
     },
     "paymentReminder": {
       "subject": "Entry fee — {gameName}",
