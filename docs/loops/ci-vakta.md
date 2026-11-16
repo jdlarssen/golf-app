@@ -133,7 +133,10 @@ konflikt da #2367 ble merget, og måtte erstattes av #2370. Presedens: #2368 →
     kjøringen. Grønt der uten endring er en flake-kandidat.
   - Grønt etter en **ny push** (ny `pull_request`-hendelse) bruker en ny
     merge-commit mot dagens main. Det teller bare som flake hvis main ikke fikk
-    nye commits mellom de to kjøringene: `git log --oneline <rød-tid>..<grønn-tid> origin/main`.
+    nye commits mellom de to kjøringene:
+    `git log --oneline --since=<rød-tid> --until=<grønn-tid> origin/main`, der
+    `<rød-tid>` er den røde kjøringens `created_at` (ikke starten på en
+    re-kjøring) og `<grønn-tid>` er den grønne kjøringens `created_at`.
   - Mistenker du versjonsavvik, les lockfila fra kjøringens egen commit
     (`git show <sha>:package-lock.json`), aldri fra lokal main.
   - Fikk main en relevant fiks i mellomtiden, er det ikke flake. Kommenter
