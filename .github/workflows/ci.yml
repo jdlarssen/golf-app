@@ -214,6 +214,27 @@ jobs:
           restore-keys: |
             pw-${{ runner.os }}-
 
+      # Temp diagnostic (CI-vakta, Refs #2909): the e2e job failed twice on this
+      # exact commit with "Cannot install dependencies for ubuntu26.04-x64 with
+      # Playwright 1.60.0!" even though package-lock.json pins @playwright/test
+      # to 1.65.1 (which DOES carry a ubuntu26.04-x64 deps table entry — verified
+      # locally). A same-day run on a different branch/lockfile-hash hit the
+      # exact browser-cache key and passed cleanly on the same ubuntu-26.04
+      # runner image. This step prints what actually resolves so the mismatch
+      # can be root-caused instead of guessed at. Remove once diagnosed.
+      - name: "Diagnose Playwright version resolution (temp, CI-vakta)"
+        run: |
+          echo "node_modules/playwright-core version:"
+          node -e "console.log(require('playwright-core/package.json').version)"
+          echo "which playwright:"
+          which playwright || true
+          echo "node_modules/.bin/playwright target:"
+          readlink -f node_modules/.bin/playwright || true
+          echo "npx playwright --version:"
+          npx playwright --version || true
+          echo "ms-playwright cache dir listing:"
+          ls -la ~/.cache/ms-playwright 2>&1 || true
+
       - name: Install Playwright (chromium)
         # #1709: this exact step hung >1h in #1708 — a step timeout names the
         # culprit in the log. Seconds on cache hit, ~2-3 min cold.
