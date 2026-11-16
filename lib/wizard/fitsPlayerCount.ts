@@ -20,6 +20,7 @@
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { fitsTeamFormat, teamModePlayerCap } from '@/lib/games/teamFormatLimits';
 import { fitsStartCount, startPlayerCountRange } from '@/lib/games/startPlayerCount';
+import { isMatchplayMode } from '@/lib/games/matchplaySides';
 
 export function fitsPlayerCount(gameMode: GameMode, n: number): boolean {
   if (n <= 0) return false;
@@ -136,4 +137,49 @@ export function registrationPlayerCap(
   modeConfig: { team_size?: number } | null | undefined,
 ): number | null {
   return soloPlayerCap(gameMode) ?? teamModePlayerCap(gameMode, modeConfig?.team_size);
+}
+
+/**
+ * #2482: the bounds of the organiser's own cap («Antall plasser» on «Klar?»
+ * and in «Rediger»). The DB CHECK `games_registration_cap_check` (0239) says
+ * the same; `registrationCapDbCheck.test.ts` fails when they drift.
+ */
+export const REGISTRATION_CAP_MIN = 2;
+export const REGISTRATION_CAP_MAX = 200;
+
+/**
+ * #2482: the cap self-registration enforces — the lower of the format's cap
+ * (`registrationPlayerCap`) and the organiser's (`games.registration_cap`).
+ * `null` = no cap. The rule's one home: the seat claim, the team signup, the
+ * signup page, the terminliste and the organiser's inbox all read this.
+ *
+ * The matchplay family fills per side (`isMatchplaySideFull`), so the
+ * organiser's cap does not apply there.
+ */
+export function effectiveRegistrationCap(
+  gameMode: GameMode,
+  modeConfig: { team_size?: number } | null | undefined,
+  organizerCap: number | null | undefined,
+): number | null {
+  if (isMatchplayMode(gameMode)) return null;
+  const formatCap = registrationPlayerCap(gameMode, modeConfig);
+  if (organizerCap == null) return formatCap;
+  return formatCap === null ? organizerCap : Math.min(formatCap, organizerCap);
+}
+
+/**
+ * #2482: how far − and + go on «Antall plasser»: from 2 up to 200 or the
+ * format's cap, whichever is lower. `null` on matchplay, which has no
+ * organiser cap.
+ */
+export function organizerCapBounds(
+  gameMode: GameMode,
+  modeConfig: { team_size?: number } | null | undefined,
+): { min: number; max: number } | null {
+  if (isMatchplayMode(gameMode)) return null;
+  const formatCap = registrationPlayerCap(gameMode, modeConfig);
+  return {
+    min: REGISTRATION_CAP_MIN,
+    max: formatCap === null ? REGISTRATION_CAP_MAX : Math.min(REGISTRATION_CAP_MAX, formatCap),
+  };
 }
