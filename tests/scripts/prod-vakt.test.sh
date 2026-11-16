@@ -7,7 +7,9 @@
 # En falsk `curl` og en falsk `gh` legges først på PATH. Falsk curl logger
 # argumentene sine og svarer med HTTP-kode og body fra miljøet (ADV_* for
 # advisors, PG_* for logg-endepunktet). Falsk gh svarer på `issue list` med
-# GH_EXISTING og fanger tittel og body når skriptet oppretter et issue. Slik
+# GH_EXISTING («nummer<TAB>tittel» per åpent issue), på `issue view` med
+# GH_THREAD (issuet og kommentarene), og fanger tittel og body når skriptet
+# oppretter et issue og body når det kommenterer. Slik
 # bevises forespørselens form og alle fail-closed-grenene uten nett og uten
 # å røre prod.
 #
@@ -54,7 +56,18 @@ cat > "$TMP/bin/gh" <<'EOF'
 #!/usr/bin/env bash
 { echo "@@CALL"; for a in "$@"; do printf '%s\n' "$a"; done; } >> "$FAKE_DIR/gh-calls"
 case "$1 ${2:-}" in
-  "issue list") printf '%s\n' "$GH_EXISTING" ;;
+  "issue list") [ -n "$GH_EXISTING" ] && printf '%s\n' "$GH_EXISTING"; exit 0 ;;
+  "issue view")
+    if [ "$GH_VIEW_FAIL" = 1 ]; then echo "gh: HTTP 502" >&2; exit 1; fi
+    printf '%s\n' "$GH_THREAD" ;;
+  "issue comment")
+    if [ "$GH_COMMENT_FAIL" = 1 ]; then echo "gh: HTTP 502" >&2; exit 1; fi
+    printf '%s' "$3" > "$FAKE_DIR/comment-issue"
+    while [ $# -gt 0 ]; do
+      [ "$1" = "--body" ] && printf '%s' "$2" > "$FAKE_DIR/comment-body"
+      shift
+    done
+    echo "https://github.com/test/repo/issues/$(cat "$FAKE_DIR/comment-issue")#issuecomment-1" ;;
   "api repos/"*)
     if [ "$GH_API_FAIL" = 1 ]; then echo "gh: HTTP 502" >&2; exit 1; fi
     for a in "$@"; do
@@ -101,13 +114,16 @@ reset_env() {
   ADV_BODY='{"lints":[{"cache_key":"kjent_advisory"}]}'
   PG_HTTP=200
   PG_BODY='{"result":[]}'
-  GH_EXISTING=0
+  GH_EXISTING=""
   GH_API_FAIL=0
+  GH_THREAD=""
+  GH_VIEW_FAIL=0
+  GH_COMMENT_FAIL=0
   BASELINE_LINES='# testbaseline
 kjent_advisory'
 }
 
-run_case() { # navn → setter EXIT, OUT, TITLE, ISSUE, GHOUT, CALL (args fra logg-kallet)
+run_case() { # navn → setter EXIT, OUT, TITLE, ISSUE, COMMENT, COMMENTED_ON, GHOUT, CALL (args fra logg-kallet)
   local dir="$TMP/case-$1"
   mkdir -p "$dir"
   : > "$dir/curl-calls"
@@ -119,7 +135,8 @@ run_case() { # navn → setter EXIT, OUT, TITLE, ISSUE, GHOUT, CALL (args fra lo
     export PATH="$TMP/bin:$PATH" FAKE_DIR="$dir" REF=testref SUPABASE_ACCESS_TOKEN=fake-token \
       GITHUB_REPOSITORY=test/repo GITHUB_OUTPUT="$dir/github-output" GITHUB_RUN_ID=42 \
       BASELINE_FILE="$dir/baseline" \
-      ADV_HTTP ADV_BODY PG_HTTP PG_BODY GH_EXISTING GH_API_FAIL
+      ADV_HTTP ADV_BODY PG_HTTP PG_BODY GH_EXISTING GH_API_FAIL \
+      GH_THREAD GH_VIEW_FAIL GH_COMMENT_FAIL
     unset DISCORD_WEBHOOK_URL
     "$BASH" .github/scripts/prod-vakt.sh
   ) > "$dir/stdout" 2> "$dir/stderr"
@@ -127,6 +144,8 @@ run_case() { # navn → setter EXIT, OUT, TITLE, ISSUE, GHOUT, CALL (args fra lo
   OUT=$(cat "$dir/stdout" "$dir/stderr")
   TITLE=$(cat "$dir/issue-title" 2>/dev/null || true)
   ISSUE=$(cat "$dir/issue-body" 2>/dev/null || true)
+  COMMENT=$(cat "$dir/comment-body" 2>/dev/null || true)
+  COMMENTED_ON=$(cat "$dir/comment-issue" 2>/dev/null || true)
   GHOUT=$(cat "$dir/github-output")
   # Argumentene fra kallet mot logg-endepunktet, ett per linje.
   CALL=$(awk '/^@@CALL$/ { if (blk ~ /analytics\/endpoints\/logs/) hit = blk; blk = ""; next }
@@ -222,6 +241,8 @@ check "(e) signal-issue" "$SIGNAL" "$TITLE"
 contains "(e) ny kode med antall" "$ISSUE" "pg:42501: 17"
 contains "(e) kjent kode vises med antall" "$ISSUE" "pg:23505: 2"
 contains "(e) totalen står i issuet" "$ISSUE" "19"
+check "(e) intet åpent issue: ingen kommentar" "" "$COMMENT"
+ISSUE_E="$ISSUE"
 
 # (f) alle koder i baseline: ingen varsel
 reset_env
@@ -266,10 +287,11 @@ contains "(h) tom kode blir pg:- og summeres" "$ISSUE" "pg:-: 7"
 reset_env
 PG_HTTP=500
 PG_BODY='{"message":"internal"}'
-GH_EXISTING=1
+GH_EXISTING="$(printf '7\t%s' "$READ_FAIL")"
 run_case i
 check "(i) exit 1" 1 "$EXIT"
 check "(i) ingen ny opprettelse (dedup)" "" "$TITLE"
+check "(i) ingen kommentar (lesefeil har ingen nøkler)" "" "$COMMENT"
 contains "(i) GITHUB_OUTPUT har handled=true" "$GHOUT" "handled=true"
 
 # (j) lesefeil og gh klarer ikke opprette issuet: backstoppen må fyre
@@ -303,6 +325,103 @@ contains "(l) apptrafikk-andelen varsler som ny" "$ISSUE" "pg:42703: 5"
 contains "(l) mgmt-api-andelen vises separat" "$ISSUE" "pg:42703: 2"
 contains "(l) mgmt-api-seksjonen nevner Management API" "$ISSUE" "Management API"
 contains "(l) totalen summerer begge andelene" "$ISSUE" "7"
+
+# (m) åpent signal-issue og nytt signal (#2785): én kommentar med bare det som
+# ikke står i issuet eller kommentarene fra før, og intet nytt issue
+reset_env
+GH_EXISTING="$(printf '2785\t%s' "$SIGNAL")"
+GH_THREAD='Prod-vakta fant signaler i prod-telemetrien (2026-11-02):
+
+```
+gammel_advisory
+```
+```
+pg:42501: 3
+```'
+ADV_BODY='{"lints":[{"cache_key":"kjent_advisory"},{"cache_key":"gammel_advisory"},{"cache_key":"ny_advisory_p_game_id uuid"}]}'
+PG_BODY='{"result":[{"code":"42501","n":4},{"code":"23503","n":1}]}'
+run_case m
+check "(m) exit 0" 0 "$EXIT"
+check "(m) intet nytt issue" "" "$TITLE"
+check "(m) kommentaren havner på det åpne issuet" 2785 "$COMMENTED_ON"
+contains "(m) ny advisory står i kommentaren" "$COMMENT" "ny_advisory_p_game_id uuid"
+contains "(m) ny kode står med antall" "$COMMENT" "pg:23503: 1"
+lacks "(m) advisory fra issuet gjentas ikke" "$COMMENT" "gammel_advisory"
+lacks "(m) kode fra issuet gjentas ikke" "$COMMENT" "pg:42501"
+lacks "(m) baselinet advisory er ikke med" "$COMMENT" "kjent_advisory"
+contains "(m) kommentaren lenker kjøringen" "$COMMENT" "actions/runs/42"
+lacks "(m) handled settes ikke på signal-stien" "$GHOUT" "handled=true"
+COMMENT_M="$COMMENT"
+THREAD_M="$GH_THREAD"
+
+# (n) samme signal dagen etter: står alt i issuet (fra (e), nå med CRLF og
+# annet antall) → ingen kommentar
+reset_env
+BASELINE_LINES="$BASELINE_LINES
+pg:23505"
+GH_EXISTING="$(printf '2785\t%s' "$SIGNAL")"
+GH_THREAD=$(printf '%s\n' "$ISSUE_E" | awk '{ printf "%s\r\n", $0 }')
+PG_BODY='{"result":[{"code":"42501","n":"20"},{"code":"23505","n":5}]}'
+run_case n
+check "(n) exit 0" 0 "$EXIT"
+check "(n) ingen kommentar" "" "$COMMENT"
+check "(n) intet nytt issue" "" "$TITLE"
+contains "(n) loggen sier at signalet står der fra før" "$OUT" "står der fra før"
+
+# (n2) signalet fra (m) dagen etter, nå med kommentaren fra (m) i tråden →
+# kommentarens eget format holder dedupen
+reset_env
+GH_EXISTING="$(printf '2785\t%s' "$SIGNAL")"
+GH_THREAD="$THREAD_M
+$COMMENT_M"
+ADV_BODY='{"lints":[{"cache_key":"kjent_advisory"},{"cache_key":"gammel_advisory"},{"cache_key":"ny_advisory_p_game_id uuid"}]}'
+PG_BODY='{"result":[{"code":"42501","n":2},{"code":"23503","n":6}]}'
+run_case n2
+check "(n2) exit 0" 0 "$EXIT"
+check "(n2) ingen ny kommentar" "" "$COMMENT"
+
+# (o) åpent issue, nytt signal, men kommentaren feiler: samme utfall som et
+# issue som ikke ble filet — rød kjøring, handled ikke satt
+reset_env
+GH_EXISTING="$(printf '2785\t%s' "$SIGNAL")"
+GH_COMMENT_FAIL=1
+ADV_BODY='{"lints":[{"cache_key":"ny_advisory"}]}'
+run_case o
+check "(o) exit 1" 1 "$EXIT"
+check "(o) intet nytt issue" "" "$TITLE"
+lacks "(o) handled er ikke satt" "$GHOUT" "handled=true"
+
+# (p) åpent issue, men tråden kan ikke leses: vet ikke hva som er nytt → rød
+# kjøring, ingen kommentar, handled ikke satt
+reset_env
+GH_EXISTING="$(printf '2785\t%s' "$SIGNAL")"
+GH_VIEW_FAIL=1
+ADV_BODY='{"lints":[{"cache_key":"ny_advisory"}]}'
+run_case p
+check "(p) exit 1" 1 "$EXIT"
+check "(p) ingen kommentar" "" "$COMMENT"
+check "(p) intet nytt issue" "" "$TITLE"
+lacks "(p) handled er ikke satt" "$GHOUT" "handled=true"
+
+# (q) koden står i issuet bare inne i Management API-linja (prosa, ikke egen
+# linje): apptrafikk med samme kode er nytt og kommenteres
+reset_env
+GH_EXISTING="$(printf '2785\t%s' "$SIGNAL")"
+GH_THREAD='Fra Supabase Management API / interaktive spørringer (ikke apptrafikk, varsler ikke alene): pg:42703: 4'
+PG_BODY='{"result":[{"code":"42703","app":"","n":3}]}'
+run_case q
+check "(q) exit 0" 0 "$EXIT"
+contains "(q) apptrafikk-koden kommenteres" "$COMMENT" "pg:42703: 3"
+
+# (r) søket treffer bare et issue med en annen tittel: det er ikke signal-
+# issuet, så et nytt issue opprettes som før
+reset_env
+GH_EXISTING="$(printf '7\t%s' "$READ_FAIL")"
+ADV_BODY='{"lints":[{"cache_key":"ny_advisory"}]}'
+run_case r
+check "(r) exit 0" 0 "$EXIT"
+check "(r) signal-issue opprettes" "$SIGNAL" "$TITLE"
+check "(r) ingen kommentar på feil issue" "" "$COMMENT"
 
 echo
 printf '%s bestått, %s feilet\n' "$pass" "$fail"
