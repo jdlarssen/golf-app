@@ -12,6 +12,7 @@ import {
   pendingApprovalsFor,
   eligibleForFlightAssignment,
   flightIsFreeGrouping,
+  hasStartlista,
   organizerApprovalRow,
   resolveFlight,
   type FlightPlayer,
@@ -921,5 +922,22 @@ describe('resolveFlight', () => {
     // vises ikke.
     const players = [p('a', 1), p('b', 2), p('c', 2), p('d', 2), withdrawn('e', 2)];
     expect(ids(resolveFlight(SOLO, players, players[0]))).toEqual(['a', 'b', 'c', 'd']);
+  });
+});
+
+// ─── hasStartlista (#2483) ───────────────────────────────────────────────────
+
+describe('hasStartlista', () => {
+  const six = Array.from({ length: 6 }, (_, i) => p(`u${i + 1}`));
+
+  it.each<[string, string, GameMode, FlightPlayer[], boolean]>([
+    ['scheduled solo round of six', 'scheduled', 'stableford', six, true],
+    ['the same round in progress', 'active', 'stableford', six, true],
+    ['the same round as a draft', 'draft', 'stableford', six, false],
+    ['the same round finished', 'finished', 'stableford', six, false],
+    ['four players: one flight, nothing to split', 'scheduled', 'stableford', six.slice(0, 4), false],
+    ['wolf: always one group', 'scheduled', 'wolf', six, false],
+  ])('%s → %s', (_label, status, mode, players, expected) => {
+    expect(hasStartlista(status, mode, 1, players)).toBe(expected);
   });
 });
