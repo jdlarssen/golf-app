@@ -43,6 +43,11 @@ const ALLOWED: Record<string, Allowed> = {
     receivers: ['getAdminClient()'],
     reason: B,
   },
+  'app/[locale]/admin/games/[id]/i-morgen/page.tsx': {
+    receivers: ['admin'],
+    reason:
+      '(b) admin-klient bak requireAdminOrCreator (#2483): navnene på «Klar for i morgen?», maskert adresse når navnet mangler (displayNameForOthers)',
+  },
   'app/[locale]/admin/games/[id]/signups/page.tsx': {
     receivers: ['getAdminClient()'],
     reason:

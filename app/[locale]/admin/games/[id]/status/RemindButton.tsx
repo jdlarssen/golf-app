@@ -7,10 +7,13 @@ type Props = {
   remindAction: () => void | Promise<void>;
   count: number;
   /** i18n key under admin.game.status for the button label (ICU plural). */
-  labelKey: 'remindButton' | 'purreUnconfirmedButton' | 'remindRowButton';
+  labelKey: 'remindButton' | 'purreUnconfirmedButton' | 'remindRowButton' | 'purreRowButton';
   /** i18n key under admin.game.status for the window.confirm text (ICU plural). */
-  confirmKey: 'remindConfirm' | 'purreUnconfirmedConfirm' | 'remindHoleConfirm';
-  /** Extra values for the confirm text (#2268: names and holes on a gap row). */
+  confirmKey: 'remindConfirm' | 'purreUnconfirmedConfirm' | 'remindHoleConfirm' | 'purreRowConfirm';
+  /**
+   * Extra values for the label and the confirm text (#2268: names and holes on
+   * a gap row; #2483: the first name in «Purr Kari»).
+   */
   confirmValues?: Record<string, string | number>;
   /** Stable E2E hook on the button; the page renders two of these, so it is per usage. */
   testId: string;
@@ -20,6 +23,11 @@ type Props = {
    * (#2268), sized to its label.
    */
   variant?: 'block' | 'row';
+  /**
+   * `warning` draws the row button in the amber of a row that waits
+   * (#2483, «Purr Kari» on «Klar for i morgen?»). Only with `row`.
+   */
+  tone?: 'warning';
 };
 
 /**
@@ -36,9 +44,10 @@ export function RemindButton({
   testId,
   variant = 'block',
   confirmValues,
+  tone,
 }: Props) {
   const t = useTranslations('admin.game.status');
-  const buttonLabel = t(labelKey, { count });
+  const buttonLabel = t(labelKey, { count, ...confirmValues });
   const confirmMessage = t(confirmKey, { count, ...confirmValues });
 
   return (
@@ -52,7 +61,14 @@ export function RemindButton({
     >
       <SubmitButton
         {...(variant === 'row'
-          ? { size: 'compact' as const, variant: 'outline' as const, className: 'px-[14px]!' }
+          ? {
+              size: 'compact' as const,
+              variant: 'outline' as const,
+              className:
+                tone === 'warning'
+                  ? 'px-[14px]! border-warning-text! text-warning-text! hover:bg-warning-soft!'
+                  : 'px-[14px]!',
+            }
           : { className: 'w-full' })}
         pendingLabel={t('sendingBusy')}
         data-testid={testId}
