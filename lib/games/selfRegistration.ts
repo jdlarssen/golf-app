@@ -19,6 +19,7 @@ import {
   type SignupView,
 } from '@/lib/games/signupOffer';
 import { isSignupClosed } from '@/lib/games/signupClosed';
+import { promoteWaitlist } from '@/lib/games/promoteWaitlist';
 import { maxTeamsForSize, registrationSeatTeamSize } from '@/lib/games/teamFormatLimits';
 import { sendRegistrationRequestMail } from '@/lib/mail/registrationRequest';
 import { notify } from '@/lib/notifications/notify';
@@ -733,5 +734,7 @@ export async function withdrawRequestCore({
   }
 
   expireGameCache(game.id);
+  // #2482: frees no seat, but the queue moved; harmless when nothing is free.
+  await promoteWaitlist(game.id);
   return { ok: true };
 }

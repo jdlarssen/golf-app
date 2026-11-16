@@ -6,6 +6,7 @@ import { displayNameForOthers } from '@/lib/users/displayName';
 import { softWithdrawOpen } from '@/lib/games/softWithdrawRule';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { expireGameCache } from '@/lib/games/expireGameCache';
+import { promoteWaitlist } from '@/lib/games/promoteWaitlist';
 import { readCaptainTeam, type TeamChild } from '@/lib/games/teamCaptaincy';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { readSimulatorLeagueFlight } from '@/lib/league/leagueFlight';
@@ -352,6 +353,9 @@ export async function withdrawSelf(
   }
 
   expireGameCache(game.id);
+  // #2482: the seat is free; the first on the waiting list gets it. Never
+  // throws, and the withdrawal stands whatever it answers.
+  await promoteWaitlist(game.id);
 
   // Varsle kapteinen hvis bruker var team-medlem.
   if (captainUserId && teamMatesUserId && teamName) {
@@ -509,6 +513,9 @@ async function withdrawCaptainPreStart(
   }
 
   expireGameCache(game.id);
+  // #2482: as on the plain withdrawal. A team has no waiting list (U10), but
+  // the captain's team seats are free now for solo players on the list.
+  await promoteWaitlist(game.id);
 
   // Best-effort: de som mistet invitasjonen får vite det. Samme varsel som når
   // kapteinen fjerner noen fra laget; ingen ny varseltype (eierens valg A).

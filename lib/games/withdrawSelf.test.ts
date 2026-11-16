@@ -62,6 +62,13 @@ vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => adminMock,
 }));
 
+// #2482: the waiting list's promotion has its own suite; here only that a
+// pre-start withdrawal asks for it.
+const promoteWaitlistMock = vi.fn(async (..._args: unknown[]) => [] as string[]);
+vi.mock('@/lib/games/promoteWaitlist', () => ({
+  promoteWaitlist: (...args: unknown[]) => promoteWaitlistMock(...args),
+}));
+
 // #2712: which league a flight belongs to has its own suite; here it is the boundary.
 const readSimulatorLeagueFlightMock = vi.fn(async (..._args: unknown[]) => null as unknown);
 vi.mock('@/lib/league/leagueFlight', () => ({
@@ -218,6 +225,8 @@ describe('withdrawSelf', () => {
     expect(result).toEqual({ ok: true, kept: false });
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
     expect(notifyMock).not.toHaveBeenCalled();
+    // #2482: the freed seat goes to the waiting list.
+    expect(promoteWaitlistMock).toHaveBeenCalledWith(GAME_ID);
   });
 
   it('#2607 fase 2: en spiller som tok med en gjest alene → bare egen plass og egen påmelding slettes; gjesten tar triggeren', async () => {

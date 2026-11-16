@@ -73,6 +73,16 @@ describe('sendRegistrationApprovedMail', () => {
     expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Arrangøren har godkjent påmeldingen din til <strong>Sommercup 2026</strong>. Du står på lista, og scorekortet åpner ved tee-off."`);
   });
 
+  // #2482: plassen kom fra ventelista — samme mail, annen første setning.
+  it('fra ventelista: body-line + tekst sier ventelista, ikke arrangøren', async () => {
+    const payload = await send({ ...baseParams, fromWaitlist: true });
+    expect(payload.subject).toMatchInlineSnapshot(`"Du er med i Sommercup 2026"`);
+    expect(payload.text).toContain(
+      'Du fikk plass fra ventelista til Sommercup 2026. Du står på lista, og scorekortet åpner ved tee-off.',
+    );
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Du fikk plass fra ventelista til <strong>Sommercup 2026</strong>. Du står på lista, og scorekortet åpner ved tee-off."`);
+  });
+
   it('escaper HTML i gameName i body-line og text', async () => {
     const payload = await send({
       ...baseParams,

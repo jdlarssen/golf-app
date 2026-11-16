@@ -127,7 +127,8 @@
       },
       "registrationApproved": {
         "title": "Du er med i {gameName}",
-        "detail": "Påmeldingen er godkjent"
+        "detail": "Påmeldingen er godkjent",
+        "detailFromWaitlist": "Du fikk plass fra ventelista"
       },
       "registrationRejected": {
         "title": "Du kom ikke med i {gameName}",
@@ -7045,6 +7046,8 @@
       "heading": "Du er med",
       "body": "Arrangøren har godkjent påmeldingen din til <strong>{gameName}</strong>. Du står på lista, og scorekortet åpner ved tee-off.",
       "bodyText": "Arrangøren har godkjent påmeldingen din til {gameName}. Du står på lista, og scorekortet åpner ved tee-off.",
+      "bodyFromWaitlist": "Du fikk plass fra ventelista til <strong>{gameName}</strong>. Du står på lista, og scorekortet åpner ved tee-off.",
+      "bodyTextFromWaitlist": "Du fikk plass fra ventelista til {gameName}. Du står på lista, og scorekortet åpner ved tee-off.",
       "viewGame": "Se spillet",
       "viewGameText": "Se spillet: {url}",
       "footer": "Logg inn på <link>tornygolf.no</link> for å se flight, lag og tee-off."

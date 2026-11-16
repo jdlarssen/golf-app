@@ -164,7 +164,10 @@ export function buildNotificationText(
       const p = payload as NotificationPayload<'registration_approved'>;
       return {
         title: t('kinds.registrationApproved.title', { gameName: p.game_name }),
-        detail: t('kinds.registrationApproved.detail'),
+        // #2482: «Du fikk plass fra ventelista», not «Påmeldingen er godkjent».
+        detail: p.fromWaitlist
+          ? t('kinds.registrationApproved.detailFromWaitlist')
+          : t('kinds.registrationApproved.detail'),
       };
     }
     case 'registration_rejected': {

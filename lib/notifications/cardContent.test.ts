@@ -48,6 +48,19 @@ describe('buildNotificationText', () => {
     });
   });
 
+  // #2482: a seat from the waiting list says so; the organiser's «Godta» keeps
+  // its own line.
+  it('#2482: registration_approved fromWaitlist uses the detailFromWaitlist key', () => {
+    const base = { game_id: 'g', game_name: 'Lørdagsrunden' };
+    expect(
+      buildNotificationText('registration_approved', { ...base, fromWaitlist: true } as NotificationPayload, t)
+        .detail,
+    ).toBe('kinds.registrationApproved.detailFromWaitlist');
+    expect(buildNotificationText('registration_approved', base as NotificationPayload, t).detail).toBe(
+      'kinds.registrationApproved.detail',
+    );
+  });
+
   // #2632: the start of the round report rides in the payload and shows in the
   // push text; without it the text is what it always was.
   it('#2632: game_finished with report_start uses the detailWithReport key', () => {

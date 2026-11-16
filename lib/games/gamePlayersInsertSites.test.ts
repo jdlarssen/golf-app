@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest';
 /**
  * #2209: every place in app/, lib/ and native/app/src that puts a row in
  * `game_players` — `.from('game_players').insert(`/`.upsert(` or a call to the
- * `claim_open_registration_seat` RPC — is listed below with how it sets the
+ * `claim_open_registration_seat` or `promote_waitlist_seat` (#2482) RPC — is
+ * listed below with how it sets the
  * tee category. A row without `tee_gender` silently gets the column default
  * 'mens', and a lady or a junior then plays off the men's slope, course rating
  * and par. A new insert site turns this red: decide how it sets the category,
@@ -36,6 +37,11 @@ const INSERT_SITES: Record<string, { count: number; reason: string }> = {
   'lib/games/selfRegistration.ts': {
     count: 2,
     reason: 'direct insert and the seat-claim RPC (p_tee_gender), joinTeeGenders',
+  },
+  // #2482: the waiting list's promotion RPC writes the row in SQL.
+  'lib/games/promoteWaitlist.ts': {
+    count: 1,
+    reason: 'promote_waitlist_seat (p_tee_gender), joinTeeGenders for the head of the queue',
   },
   // #2607: «Ta med en gjest».
   'app/[locale]/games/[id]/ta-med-gjest/actions.ts': {
@@ -92,7 +98,7 @@ const INSERT_SITES: Record<string, { count: number; reason: string }> = {
 const ROOT = join(__dirname, '..', '..');
 const DIRS = ['app', 'lib', 'native/app/src'];
 const INSERT = /from\(\s*['"]game_players['"]\s*\)\s*\.(insert|upsert)\(/g;
-const SEAT_CLAIM = /['"]claim_open_registration_seat['"]/g;
+const SEAT_CLAIM = /['"](claim_open_registration_seat|promote_waitlist_seat)['"]/g;
 /** One of these in a file = the file sets the tee category somewhere. */
 const TEE_TOKENS = ['tee_gender', 'p_tee_gender', 'joinTeeGenders', 'profileTeeGender'];
 
