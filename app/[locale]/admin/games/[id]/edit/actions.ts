@@ -303,6 +303,12 @@ async function updateGameInternal(
       course_id: payload.course_id,
       tee_box_id: payload.tee_box_id,
       scheduled_tee_off_at: scheduledTeeOffAt,
+      // #2483: a moved round gets the organiser's evening status again, the
+      // evening before its new day. The same rule as the move notice below
+      // (`isTeeOffMove`), in the same write as the new time.
+      ...(isTeeOffMove(existing.scheduled_tee_off_at, scheduledTeeOffAt)
+        ? { organizer_evening_notice_sent_at: null }
+        : {}),
       // #2258: same draft/scheduled gating as the tee-off (status filter below).
       start_type: payload.start_type,
       hcp_allowance_pct: payload.hcp_allowance_pct,
