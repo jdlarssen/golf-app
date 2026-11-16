@@ -974,6 +974,7 @@ export type Database = {
           organizer_stale_reminder_sent_at: string | null
           payment_link: string | null
           prizes: Json
+          registration_cap: number | null
           registration_mode: Database["public"]["Enums"]["registration_mode"]
           registration_type: Database["public"]["Enums"]["registration_type"]
           repeat_weekly: boolean
@@ -989,6 +990,7 @@ export type Database = {
           side_ld_count: number
           side_ld_holes: number[] | null
           side_tournament_enabled: boolean
+          signup_deadline: string | null
           signups_closed_at: string | null
           source_game_id: string | null
           spectate_token: string | null
@@ -998,6 +1000,7 @@ export type Database = {
           tee_box_id: string | null
           tournament_id: string | null
           tournament_match_label: string | null
+          waitlist_enabled: boolean
         }
         Insert: {
           auto_start_blocked_notified_at?: string | null
@@ -1026,6 +1029,7 @@ export type Database = {
           organizer_stale_reminder_sent_at?: string | null
           payment_link?: string | null
           prizes?: Json
+          registration_cap?: number | null
           registration_mode?: Database["public"]["Enums"]["registration_mode"]
           registration_type?: Database["public"]["Enums"]["registration_type"]
           repeat_weekly?: boolean
@@ -1041,6 +1045,7 @@ export type Database = {
           side_ld_count?: number
           side_ld_holes?: number[] | null
           side_tournament_enabled?: boolean
+          signup_deadline?: string | null
           signups_closed_at?: string | null
           source_game_id?: string | null
           spectate_token?: string | null
@@ -1050,6 +1055,7 @@ export type Database = {
           tee_box_id?: string | null
           tournament_id?: string | null
           tournament_match_label?: string | null
+          waitlist_enabled?: boolean
         }
         Update: {
           auto_start_blocked_notified_at?: string | null
@@ -1078,6 +1084,7 @@ export type Database = {
           organizer_stale_reminder_sent_at?: string | null
           payment_link?: string | null
           prizes?: Json
+          registration_cap?: number | null
           registration_mode?: Database["public"]["Enums"]["registration_mode"]
           registration_type?: Database["public"]["Enums"]["registration_type"]
           repeat_weekly?: boolean
@@ -1093,6 +1100,7 @@ export type Database = {
           side_ld_count?: number
           side_ld_holes?: number[] | null
           side_tournament_enabled?: boolean
+          signup_deadline?: string | null
           signups_closed_at?: string | null
           source_game_id?: string | null
           spectate_token?: string | null
@@ -1102,6 +1110,7 @@ export type Database = {
           tee_box_id?: string | null
           tournament_id?: string | null
           tournament_match_label?: string | null
+          waitlist_enabled?: boolean
         }
         Relationships: [
           {
@@ -2727,6 +2736,16 @@ export type Database = {
       join_club_league: { Args: { p_league_id: string }; Returns: string }
       league_group_id: { Args: { p_league_id: string }; Returns: string }
       leave_club_league: { Args: { p_league_id: string }; Returns: string }
+      promote_waitlist_seat: {
+        Args: {
+          p_cap: number
+          p_game_id: string
+          p_request_id: string
+          p_seat_team_size: number
+          p_tee_gender?: Database["public"]["Enums"]["player_tee_gender"]
+        }
+        Returns: Json
+      }
       record_gir_claims: {
         Args: {
           p_game_id: string
