@@ -16,6 +16,345 @@ Ett **ukeslipp** per mandag med innhold: nyeste øverst, funksjonene som rader d
 
 ## Ukeslipp
 
+### 1.246.0 · mandag 16. november 2026
+
+<details>
+<summary><strong>Sjeldne slag på Topplista</strong></summary>
+
+[#2259](https://github.com/jdlarssen/golf-app/issues/2259) — Under Topplista står nå «Sjeldne slag»: hver hole-in-one, albatross og eagle i sesongen, med hvem som slo den, hvor og når.
+</details>
+
+<details>
+<summary><strong>Topplista i appen</strong></summary>
+
+[#2259](https://github.com/jdlarssen/golf-app/issues/2259) — Under Profil finner du nå Topplista: sesongens beste i seire, birdies og runder i hele Tørny, med plassen din og hvor langt det er opp til topp 5.
+</details>
+
+<details>
+<summary><strong>Sidekonkurransen på hullet i appen</strong></summary>
+
+[#2283](https://github.com/jdlarssen/golf-app/issues/2283) — På et hull med sidekonkurranse melder flighten inn hvem som lå nærmest pinnen eller slo lengst, og i cup hvem som traff greenen. Arrangøren kårer vinneren til slutt.
+</details>
+
+<details>
+<summary><strong>Innmeldingene fra kampene når du registrerer cupens sidepoeng</strong></summary>
+
+[#2283](https://github.com/jdlarssen/golf-app/issues/2283) — Under hver plass for nærmest pinnen og lengste drive står det kampene har meldt inn, og ved hvert GIR-hull summen per lag med navn. Tallene taster du selv som før.
+</details>
+
+<details>
+<summary><strong>Sideturneringen på hullet, også på nettsiden</strong></summary>
+
+[#2283](https://github.com/jdlarssen/golf-app/issues/2283) — Velg hull for lengste drive og nærmest pinnen når du lager spillet. Flighten melder inn på hullet, og du ser innmeldingene når du kårer vinneren.
+
+↳ /opprett-spill · «Lag et spill»
+</details>
+
+<details>
+<summary><strong>Hull for sideturneringen i appen</strong></summary>
+
+[#2283](https://github.com/jdlarssen/golf-app/issues/2283) — Når du lager et spill i appen, kan du velge hullet for lengste drive og nærmest pinnen. Når du avslutter, ser du hva flightene har meldt inn før du kårer vinneren.
+</details>
+
+<details>
+<summary><strong>Oppdater handicapet rett fra spillet</strong></summary>
+
+[#2297](https://github.com/jdlarssen/golf-app/issues/2297) — Er handicapet ditt fire uker gammelt eller mer før en runde, kan du rette det på spillsiden i appen. Dra linjalen eller skriv inn tallet og lagre. Du slipper å gå via profilen.
+</details>
+
+<details>
+<summary><strong>Velg selv hva som plinger</strong></summary>
+
+[#2315](https://github.com/jdlarssen/golf-app/issues/2315) — Under Profil og Varsler i appen kan du nå slå av pling for scorekort, venner og påmeldinger, og slå på stille tid fra 22 til 07. Rundene dine plinger alltid.
+</details>
+
+<details>
+<summary><strong>Lagtavla på nettet</strong></summary>
+
+[#2316](https://github.com/jdlarssen/golf-app/issues/2316) — Texas scramble, Ambrose, Florida, lag-stableford, shamble og best ball har fått samme lagtavle på nettet som i appen. Du ser plassen, laget ditt, om dere har klatret og hvordan de siste fem hullene gikk, og stripen «Laget ditt» viser veien videre. I best ball står hull 1–9 mens runden pågår.
+</details>
+
+<details>
+<summary><strong>Skinspotten i appen</strong></summary>
+
+[#2317](https://github.com/jdlarssen/golf-app/issues/2317) — Spiller dere Skins, viser tavla i appen nå potten øverst og én mynt per hull, akkurat som på nettet.
+</details>
+
+<details>
+<summary><strong>Skinspotten øverst på tavla</strong></summary>
+
+[#2317](https://github.com/jdlarssen/golf-app/issues/2317) — Spiller dere Skins, ser du øverst hvor mange skins som står på spill og på hvilket hull, og hull for hull er én mynt per hull med vinnerens initialer.
+</details>
+
+<details>
+<summary><strong>Klubbens æresbrett</strong></summary>
+
+[#2326](https://github.com/jdlarssen/golf-app/issues/2326) — Klubbsiden viser hvem som har vunnet flest av klubbens runder i år, og hvilken plass du har.
+
+↳ /klubber · «Se klubbene dine»
+</details>
+
+<details>
+<summary><strong>Klubbsiden viser klubbens neste runder</strong></summary>
+
+[#2326](https://github.com/jdlarssen/golf-app/issues/2326) — Nå kan du melde deg på klubbens runder rett fra klubbsiden. Eier og admin finner forespørsler og invitasjoner bak «Administrer klubben».
+
+↳ /klubber · «Åpne klubbene dine»
+</details>
+
+<details>
+<summary><strong>Nassau-tavla viser tre kamper i én</strong></summary>
+
+[#2327](https://github.com/jdlarssen/golf-app/issues/2327) — Nassau-tavla viser front 9, back 9 og totalen som tre kort side om side. Du ser hvem som leder hver kamp, hvor du ligger, og om noen kan ta alle tre.
+</details>
+
+<details>
+<summary><strong>Tavla får plass på klubbens nettside</strong></summary>
+
+[#2330](https://github.com/jdlarssen/golf-app/issues/2330) — Legger du tavla inn på klubbens nettside, ser besøkerne nå et lite kort med de fem beste i slagspill og stableford i stedet for hele tavla. Kortet oppdaterer seg selv, og «Vis alle» åpner resten i en ny fane.
+</details>
+
+<details>
+<summary><strong>Se hva Tørny lagrer om deg, og hvem som ser det</strong></summary>
+
+[#2332](https://github.com/jdlarssen/golf-app/issues/2332) — I appen åpner «Personvern og konto» nå med «Dine data»: seks rader om hva vi lagrer, hvem av de andre som ser det, og hva administratoren ser.
+</details>
+
+<details>
+<summary><strong>Last ned dataene dine, rett i appen</strong></summary>
+
+[#2332](https://github.com/jdlarssen/golf-app/issues/2332) — Trykk «Last ned dataene dine» i «Personvern og konto», så åpner telefonen delingsarket med fila. Du kan lagre den i Filer eller sende den videre.
+</details>
+
+<details>
+<summary><strong>Se hva Tørny lagrer om deg, også på nettsiden</strong></summary>
+
+[#2332](https://github.com/jdlarssen/golf-app/issues/2332) — «Dine data» under Profil viser hva vi lagrer og hvem som ser det, med nedlastingen, personvernerklæringen og sletting samlet på ett sted.
+
+↳ /profile/konto · «Se dataene dine»
+</details>
+
+<details>
+<summary><strong>Sekretariatet blir en morgenrapport</strong></summary>
+
+[#2345](https://github.com/jdlarssen/golf-app/issues/2345) — Sekretariatet viser nå uka, det som venter på deg og dagens runder. Nøkkeltallene har fått sin egen side.
+
+↳ /admin · «Åpne Sekretariatet»
+</details>
+
+<details>
+<summary><strong>Se at slagene er trygge, også uten dekning</strong></summary>
+
+[#2348](https://github.com/jdlarssen/golf-app/issues/2348) — På hullsiden i appen viser en liten brikke om slagene er sendt, ligger på telefonen eller ikke ble lagret. Trykk på den, så ser du hull for hull hva som er sendt, og kan sende på nytt med en gang.
+</details>
+
+<details>
+<summary><strong>Egen side for hver venn i appen</strong></summary>
+
+[#2381](https://github.com/jdlarssen/golf-app/issues/2381) — Trykk på en venn i Venner eller på et navn i ligatabellen, så får du en egen side: hvordan det har gått mellom dere i rundene mot hverandre, og alle rundene dere har spilt sammen. Er dere ikke venner ennå, kan du legge til eller godta derfra.
+</details>
+
+<details>
+<summary><strong>Huk av hvem som har betalt, rett fra appen</strong></summary>
+
+[#2749](https://github.com/jdlarssen/golf-app/issues/2749) — Under «Arrangør» ser du hvor mange som har betalt startkontingenten. Trykk deg inn på «Hvem har betalt?» for å huke av spillerne og purre dem som mangler.
+</details>
+
+<details>
+<summary><strong>Sett kontingent og premier når du lager runden i appen</strong></summary>
+
+[#2749](https://github.com/jdlarssen/golf-app/issues/2749) — Nederst i «Sett opp runden» skriver du inn startkontingenten, Vipps-nummeret eller betalingslenka, og premiene med sponsor. Spillerne ser det på spillets side.
+</details>
+
+<details>
+<summary><strong>Kontingent og premiebord i appen</strong></summary>
+
+[#2749](https://github.com/jdlarssen/golf-app/issues/2749) — Før runden ser du i appen hva den koster. Betal med lenka arrangøren har lagt inn, eller kopier Vipps-nummeret. Premiebordet ligger rett under, og et trykk åpner det.
+</details>
+
+<details>
+<summary><strong>Lag en klubbturnering i appen</strong></summary>
+
+[#2753](https://github.com/jdlarssen/golf-app/issues/2753) — Er du eier eller admin i en klubb, kan du nå lage en klubbturnering i appen. Velg klubben og hvem som skal spille, eller la lista stå tom, så melder medlemmene seg på selv.
+</details>
+
+<details>
+<summary><strong>Klubbturneringene dine på Hjem i appen</strong></summary>
+
+[#2753](https://github.com/jdlarssen/golf-app/issues/2753) — Er du medlem av en klubb, ser du nå klubbens kommende turneringer på Hjem i appen og melder deg på derfra.
+</details>
+
+<details>
+<summary><strong>Texas scramble, Ambrose, Florida og shamble i appen</strong></summary>
+
+[#2753](https://github.com/jdlarssen/golf-app/issues/2753) — Appen kan nå lage runder i Texas scramble, Ambrose, Florida Scramble og shamble eller Champagne Scramble, med lagstørrelse og lag-handicap som på nettet.
+</details>
+
+<details>
+<summary><strong>Slagspill og Patsome i appen</strong></summary>
+
+[#2753](https://github.com/jdlarssen/golf-app/issues/2753) — Du kan nå lage en runde i slagspill eller Patsome rett i appen, både som kompisrunde og klubbturnering.
+</details>
+
+<details>
+<summary><strong>Velg hva slags arrangement når du lager en runde i appen</strong></summary>
+
+[#2753](https://github.com/jdlarssen/golf-app/issues/2753) — «Opprett spill» i appen spør nå først om det er en kompisrunde eller en cup, og cupen lager du derfra.
+</details>
+
+<details>
+<summary><strong>Nassau hull for hull i appen</strong></summary>
+
+[#2755](https://github.com/jdlarssen/golf-app/issues/2755) — Etter en Nassau-runde ser du hvem som vant hvert hull, og hvor vinneren av hver kamp tok ledelsen for godt.
+</details>
+
+<details>
+<summary><strong>Lag Nassau-runder i appen</strong></summary>
+
+[#2755](https://github.com/jdlarssen/golf-app/issues/2755) — Du kan nå opprette en Nassau-runde i appen. Du velger om handicap eller brutto avgjør hver av de tre kampene, og så spilles runden som på nettet.
+</details>
+
+<details>
+<summary><strong>Nassau-tavla i appen</strong></summary>
+
+[#2755](https://github.com/jdlarssen/golf-app/issues/2755) — Spiller dere Nassau, viser tavla i appen nå tre kamper side om side: front 9, back 9 og totalt. Du ser hvem som leder hver kamp og hvor du selv ligger, og et trykk på en kamp viser hele lista.
+</details>
+
+<details>
+<summary><strong>Vennene får høre om eaglen din</strong></summary>
+
+[#2800](https://github.com/jdlarssen/golf-app/issues/2800) — Slår du eagle, albatross eller hole-in-one, får vennene dine beskjed når runden er avsluttet. I en ligarunde får alle i ligaen vite det også.
+
+↳ /profile/venner · «Se vennene dine»
+</details>
+
+<details>
+<summary><strong>Ekte navn i stedet for kallenavn</strong></summary>
+
+[#2813](https://github.com/jdlarssen/golf-app/issues/2813) — Nå ser du ekte navn i ligatabellen, på scorekortet og ellers i Tørny, også for dem som har kallenavn. Kallenavnet står fortsatt på profilen.
+</details>
+
+<details>
+<summary><strong>Scorekortet bak hvert resultat i sesongtabellen</strong></summary>
+
+[#2815](https://github.com/jdlarssen/golf-app/issues/2815) — Trykk på et runderesultat i sesongtabellen, så ser du kortet til spilleren for den runden, med slag, netto eller poeng per hull og spillehandicapet.
+</details>
+
+<details>
+<summary><strong>Be om plass i en full runde i appen, og trekk forespørselen</strong></summary>
+
+[#2837](https://github.com/jdlarssen/golf-app/issues/2837) — Er runden full, viser påmeldingen i appen plassene og «Be om plass». Har du sendt en forespørsel, kan du trekke den igjen med «Trekk forespørselen».
+</details>
+
+<details>
+<summary><strong>Be om plass når en åpen runde er full</strong></summary>
+
+[#2837](https://github.com/jdlarssen/golf-app/issues/2837) — Er en åpen runde full, sender du arrangøren en forespørsel fra påmeldingssiden i stedet for å bli stoppet av «Spillet er fullt».
+</details>
+
+<details>
+<summary><strong>Terminlista i appen</strong></summary>
+
+[#2838](https://github.com/jdlarssen/golf-app/issues/2838) — Du kan nå finne åpne runder i appen. «Finn turneringer» på Hjem viser dem dag for dag, med «Denne helga» og «Klubben min». Trykk på en runde for å melde deg på.
+
+↳ /finn-turneringer · «Finn en runde»
+</details>
+
+<details>
+<summary><strong>Klubbligaer du kan melde deg på, står på Hjem</strong></summary>
+
+[#2839](https://github.com/jdlarssen/golf-app/issues/2839) — Klubbligaer du kan melde deg på, står nå under Klubbturneringer på Hjem. Trykk på en for å åpne den og bli med.
+</details>
+
+<details>
+<summary><strong>Egen skjerm når du melder deg av klubbligaen</strong></summary>
+
+[#2839](https://github.com/jdlarssen/golf-app/issues/2839) — Melder du deg av en klubbliga i appen, får du først en egen skjerm der du bekrefter. Har du allerede spilt en runde, sier den fra og ber deg kontakte klubb-admin.
+</details>
+
+<details>
+<summary><strong>Meld deg på og av klubbligaen i appen</strong></summary>
+
+[#2839](https://github.com/jdlarssen/golf-app/issues/2839) — Er du medlem i en klubb, kan du melde deg på klubbens liga før den starter, og melde deg av igjen før du har spilt en runde. Det gjør du nå rett fra ligasiden i appen.
+</details>
+
+<details>
+<summary><strong>Bare venner på laget</strong></summary>
+
+[#2840](https://github.com/jdlarssen/golf-app/issues/2840) — Når du melder på et lag, velger du nå medspillerne blant vennene dine.
+
+↳ /profile/venner · «Se vennene dine»
+</details>
+
+<details>
+<summary><strong>Meld på laget ditt i appen</strong></summary>
+
+[#2840](https://github.com/jdlarssen/golf-app/issues/2840) — Du kan nå melde på et lag i appen: velg vennene dine, og de svarer med ett trykk.
+</details>
+
+<details>
+<summary><strong>Lagsiden i appen</strong></summary>
+
+[#2840](https://github.com/jdlarssen/golf-app/issues/2840) — Kapteinen ser laget sitt i appen, sender invitasjonen på nytt, bytter medspillere og gir bort kapteinsrollen.
+</details>
+
+<details>
+<summary><strong>Nytt lagskjema og lagside på nettet</strong></summary>
+
+[#2840](https://github.com/jdlarssen/golf-app/issues/2840) — På nettsiden velger du nå lagkameratene fra vennelista og ser laget som en rad med skiver, og på lagsiden bytter du ut eller legger til en venn med ett klikk.
+</details>
+
+<details>
+<summary><strong>Påmelding når du lager en runde i appen</strong></summary>
+
+[#2840](https://github.com/jdlarssen/golf-app/issues/2840) — Lager du en kompisrunde i appen, kan spillerne nå melde seg på selv, enten rett inn eller etter at du har sagt ja. I lagformatene kan de melde på et helt lag. Da melder du på ditt eget lag fra runden når den er publisert.
+</details>
+
+<details>
+<summary><strong>Lås appen med Face ID</strong></summary>
+
+[#2841](https://github.com/jdlarssen/golf-app/issues/2841) — Du kan nå låse Tørny-appen med Face ID, Touch ID eller fingeravtrykk. Slå på låsen under Profil, Personvern og konto, så spør appen når du åpner den.
+</details>
+
+<details>
+<summary><strong>Legg til venn fra ligatabellen</strong></summary>
+
+[#2878](https://github.com/jdlarssen/golf-app/issues/2878) — Trykk på et navn i ligatabellen i appen, så åpnes et lite ark med handicap og runder dere har spilt sammen. Der kan du sende en venneforespørsel eller godta den du har fått.
+</details>
+
+<details>
+<summary><strong>Æreslista med hver hole-in-one og albatross i Tørny</strong></summary>
+
+[#2894](https://github.com/jdlarssen/golf-app/issues/2894) — I appen finner du nå Æreslista: hver hole-in-one og albatross i Tørny, alle år. Et nytt slag står som banner på Hjem i en uke, og du åpner lista fra banneret eller fra kortet «Sjeldne slag» på Topplista.
+</details>
+
+<details>
+<summary><strong>Du bestemmer om de sjeldne slagene dine vises for alle</strong></summary>
+
+[#2894](https://github.com/jdlarssen/golf-app/issues/2894) — Under Profil, Personvern og konto kan du nå slå av «Del sjeldne slag med alle». Da står ikke slagene dine i «Sjeldne slag» på Topplista, men vennene og ligaen får fortsatt vite det.
+</details>
+
+<details>
+<summary>16 rettinger</summary>
+
+- [#2259](https://github.com/jdlarssen/golf-app/issues/2259) — Toppliste-kortet på Hjem og sida bak det er borte fra nettsiden, fordi Topplista nå ligger i appen under Profil. Den gamle adressen sender deg til Hjem.
+- [#2332](https://github.com/jdlarssen/golf-app/issues/2332) — Fila du laster ned fra profilen har nå også handicaphistorikken, varslene, reaksjonene, AI-svaret, Kavalkaden og ideene dine.
+- [#2332](https://github.com/jdlarssen/golf-app/issues/2332) — Pila øverst på personvernerklæringen, siden om sletting, ligaen, cupen, Kavalkaden og påmeldingen tar deg nå tilbake til siden du kom fra, også når du åpnet Tørny fra hjemskjermen.
+- [#2561](https://github.com/jdlarssen/golf-app/issues/2561) — Premiebordet i appen sier nå at arrangøren deler ut premiene og at Tørny ikke står bak konkurransen.
+- [#2755](https://github.com/jdlarssen/golf-app/issues/2755) — Skins-myntene synes nå om natten. Mynten til den som vant hullet, er lysegrønn med mørke initialer.
+- [#2814](https://github.com/jdlarssen/golf-app/issues/2814) — Sender markøren kortet ditt tilbake i en simulatorliga, går det til samme markør når du har rettet det, og arrangøren kan godkjenne hvis dere er uenige.
+- [#2814](https://github.com/jdlarssen/golf-app/issues/2814) — Åpner arrangøren et kort igjen i en simulatorliga, går det til samme markør når du sender det inn, og det blir ikke godkjent av seg selv.
+- [#2814](https://github.com/jdlarssen/golf-app/issues/2814) — I en simulatorliga blir du markør for kortene du har ført for flighten, og kameratene kan velges som markør for ditt eget kort.
+- [#2829](https://github.com/jdlarssen/golf-app/issues/2829) — Markørkortet og rundestarten blir ikke liggende dobbelt når du åpner dem fra ligaen, så tilbake-knappen tar deg dit du kom fra.
+- [#2829](https://github.com/jdlarssen/golf-app/issues/2829) — Kortet bak et resultat i ligatabellen viser nå netto nederst, også i stableford, akkurat som ditt eget kort.
+- [#2840](https://github.com/jdlarssen/golf-app/issues/2840) — Lager du en runde med lagpåmelding, står du ikke lenger på spillerlista fra start, så du kan melde på ditt eget lag.
+- [#2840](https://github.com/jdlarssen/golf-app/issues/2840) — Når du har meldt på laget ditt på nettet, sier påmeldingssiden at laget er påmeldt, og «Gå til laget» tar deg rett til lagsiden.
+- [#2850](https://github.com/jdlarssen/golf-app/issues/2850) — En ligarunde med flere i flighten viser nå «Godkjent» og poengene dine, ikke «2. plass av 2» eller «Du vant». Plassen din står på ligasiden.
+- [#2880](https://github.com/jdlarssen/golf-app/issues/2880) — Netto eller brutto for handicap-andelen (Stableford m.fl.) og for lag-handicap i scramble står nå som to kort i appen, ikke som små knapper.
+- [#2880](https://github.com/jdlarssen/golf-app/issues/2880) — Når du lager en Wolf- eller Skins-runde i appen, velger du nå mellom «Med handicap (netto)» og «Brutto» på to store kort, som for Nassau. Wolf forklarer også at rotasjonen trekkes når runden starter.
+- [#2894](https://github.com/jdlarssen/golf-app/issues/2894) — En slettet konto står ikke lenger på Topplista, verken i seire, birdies, runder eller «Sjeldne slag».
+</details>
+
 ### 1.245.0 · mandag 9. november 2026
 
 <details>
