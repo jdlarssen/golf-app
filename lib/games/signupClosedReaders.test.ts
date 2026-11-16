@@ -56,6 +56,11 @@ const READERS: Record<string, { kind: 'gate' | 'manual'; reason: string }> = {
     kind: 'gate',
     reason: "the inbox's status line (signupInboxState); the close/reopen button reads the manual close",
   },
+  'lib/games/promoteWaitlist.ts': {
+    kind: 'manual',
+    reason:
+      'the waiting list stops after «Steng påmeldingen» only; after the deadline it moves up until the start (the owner, 16.11)',
+  },
   'app/[locale]/admin/games/[id]/flightActions.ts': {
     kind: 'manual',
     reason: '«Steng påmeldingen» / «Åpne påmeldingen igjen» writes the column',
