@@ -739,6 +739,19 @@ const DETAIL_KINDS: ReadonlySet<NotificationKind> = new Set([
   'organizer_evening_status',
 ]);
 
+/**
+ * Whether the row's subtitle is the catalog detail. #2482: a seat from the
+ * waiting list says «Du fikk plass fra ventelista»; the title alone reads like
+ * the organiser's «Godta», which keeps the game name.
+ */
+function showsDetail(row: InboxRow): boolean {
+  return (
+    DETAIL_KINDS.has(row.kind) ||
+    (row.kind === 'registration_approved' &&
+      (row.payload as { fromWaitlist?: boolean }).fromWaitlist === true)
+  );
+}
+
 /** Kinds whose detail carries a person's own words. */
 const FREE_TEXT_KINDS: ReadonlySet<NotificationKind> = new Set([
   'registration_rejected',
@@ -1092,7 +1105,7 @@ function plainText(
   ctx: InboxTextContext,
   title: string,
 ): Pick<InboxEntryView, 'title' | 'subtitle' | 'subtitleIsFreeText'> {
-  if (DETAIL_KINDS.has(row.kind)) {
+  if (showsDetail(row)) {
     return {
       title,
       subtitle: [catalogText(row, ctx.t).detail, time].join(SEP),
