@@ -203,6 +203,8 @@ const registrationRequestSchema = z.object({
 const registrationApprovedSchema = z.object({
   game_id: uuid,
   game_name: z.string().min(1),
+  // #2482: the seat came from the waiting list, not the organiser's «Godta».
+  fromWaitlist: z.boolean().optional(),
 });
 
 // registration_rejected: admin avslo forespørsel. Til søker.

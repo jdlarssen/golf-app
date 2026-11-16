@@ -3,6 +3,7 @@
 import { getLocale } from 'next-intl/server';
 import { redirect } from '@/i18n/navigation';
 import { expireGameCache } from '@/lib/games/expireGameCache';
+import { promoteWaitlist } from '@/lib/games/promoteWaitlist';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { expectAffected } from '@/lib/supabase/affectedRows';
@@ -112,6 +113,8 @@ export async function removePlayerFromGame(
   }
 
   expireGameCache(gameId);
+  // #2482: the freed seat goes to the first on the waiting list. Never throws.
+  await promoteWaitlist(gameId);
   const teamStatus = await teamStatusAfterRemoval(supabase, gameId, game, removedTeam);
   redirect({ href: `${detailPath}?${teamStatus ?? 'status=player_removed'}`, locale });
 }

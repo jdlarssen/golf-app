@@ -127,7 +127,8 @@
       },
       "registrationApproved": {
         "title": "You''re in {gameName}",
-        "detail": "Your registration has been approved"
+        "detail": "Your registration has been approved",
+        "detailFromWaitlist": "You got a spot from the waiting list"
       },
       "registrationRejected": {
         "title": "You didn''t get a spot in {gameName}",
@@ -7092,6 +7093,8 @@
       "heading": "You're in",
       "body": "The organiser has approved your registration for <strong>{gameName}</strong>. You're on the list — your scorecard will open at tee-off.",
       "bodyText": "The organiser has approved your registration for {gameName}. You're on the list — your scorecard will open at tee-off.",
+      "bodyFromWaitlist": "You got a spot from the waiting list for <strong>{gameName}</strong>. You're on the list — your scorecard will open at tee-off.",
+      "bodyTextFromWaitlist": "You got a spot from the waiting list for {gameName}. You're on the list — your scorecard will open at tee-off.",
       "viewGame": "View game",
       "viewGameText": "View game: {url}",
       "footer": "Log in at <link>tornygolf.no</link> to see your flight, team and tee-off time."
