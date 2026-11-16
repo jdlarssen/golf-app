@@ -138,6 +138,23 @@ authenticated_security_definer_function_executable_public_set_team_tee_shot_if_n
 #     revoked. Internal authz mirrors the roster: an admin, or an active
 #     member of the same team as both the caller and the pick.
 authenticated_security_definer_function_executable_public_set_tee_starter_if_unset_p_game_id uuid, p_team_number integer, p_tee_starter uuid
+#   #2785 (#2283, 0237) - the side contest on the hole: the flight key, the
+#     two write paths and the organiser's finish read. Same pattern as the two
+#     blocks above: search_path locked, anon and public revoked, only
+#     authenticated executes, and each function checks the caller itself.
+#     The internal hole check (is_side_contest_hole) is revoked from
+#     authenticated too, so it gives no advisory.
+#   - The flight key comes from auth.uid(), never from a parameter, and is
+#     null for a non-player or a withdrawn player.
+authenticated_security_definer_function_executable_public_side_claim_flight_key_p_game_id uuid
+#   - The two write paths are the only way in: game_side_claims and
+#     game_gir_claims have no write policy and no write grants. Each checks
+#     player, active game, contest hole and can_score_for before it writes.
+authenticated_security_definer_function_executable_public_record_side_claim_p_game_id uuid, p_category text, p_hole_number integer, p_winner_user_id uuid, p_distance_m numeric
+authenticated_security_definer_function_executable_public_record_gir_claims_p_game_id uuid, p_hole_number integer, p_user_ids uuid[], p_hit boolean
+#   - The finish read raises 42501 unless is_game_creator_or_admin. It exists
+#     because the app's finish screen has no service role to read with.
+authenticated_security_definer_function_executable_public_side_claims_for_finish_p_game_id uuid
 #
 # #2207 (0185) - profil-porten og cup-kontrollen:
 #   - incomplete_profile_ids: svarer bare med id-er, og bare for de uferdige
