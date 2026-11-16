@@ -61,7 +61,7 @@ aksept. Forsvinner objektet eller feilkilden, fjerner du linja.
 | Situasjon | Utfall |
 |---|---|
 | Alt stille | Grønn exit med én logglinje, som også viser antall feil av kjente typer. Ingen issue |
-| Nye advisories og/eller nye typer postgres-feil | Dedupet issue «Prod-vakt: signaler i prod-telemetrien» (label `prod-vakt` + `bug`, milestone 9). Nye koder står med antall, kjente koder på en egen linje. Kjente koder alene gir ikke issue. Står issuet alt åpent, får det én kommentar med bare de nøklene og kodene som ikke står i issuet eller kommentarene fra før; samme signal neste dag gir ingen ny kommentar (#2785). Feiler kommentaren, blir kjøringen rød |
+| Nye advisories og/eller nye typer postgres-feil | Dedupet issue «Prod-vakt: signaler i prod-telemetrien» (label `prod-vakt` + `bug`, milestone 9). Nye koder står med antall, kjente koder på en egen linje. Kjente koder alene gir ikke issue. Står issuet alt åpent, får det én kommentar med bare de nøklene og kodene som ikke står i issuet eller kommentarene fra før; samme signal neste dag gir ingen ny kommentar (#2785). Kan ikke issuet leses, eller feiler kommentaren, blir kjøringen rød |
 | Telemetrien kunne ikke leses, eller svaret har feil form | Dedupet issue «Prod-vakt: fikk ikke lest telemetri» og rød kjøring. Varselet og jobbloggen viser HTTP-koden og et utdrag av API-svaret. Uovervåket prod er et funn, ikke støy |
 | Workflowen selv krasjer | failure-steget filer «CI-vakt: prod-vakt-workflowen rød», men bare når skriptet ikke alt har filet eller funnet sitt eget issue. Én lesefeil gir ett issue |
 
