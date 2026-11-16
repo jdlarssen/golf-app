@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
+import { useRouter } from '@/i18n/navigation';
 import { Button, LinkButton } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import { GetTheApp } from '@/components/app/GetTheApp';
@@ -43,6 +44,7 @@ export function RegistrationForm({
   waitlist?: boolean;
 }) {
   const t = useTranslations('signup');
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<ActionResult | null>(null);
   const [message, setMessage] = useState('');
@@ -99,6 +101,9 @@ export function RegistrationForm({
         mode === 'open' ? registerForOpenGame : requestApproval;
       const res = await action(data);
       setResult(res);
+      // #2482: on the list the page draws you as waiting, without the seats
+      // line that still said «Fullt · 0 på venteliste» above the receipt.
+      if (res.ok && waitlist) router.refresh();
     });
   };
 

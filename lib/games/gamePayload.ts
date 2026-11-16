@@ -12,7 +12,7 @@
 // fase 4. Eksisterende admin-flyt produserer derfor samme payload som før.
 
 import { parseStartType, type StartType } from './startType';
-import { effectiveRegistrationCap, organizerCapBounds } from '@/lib/wizard/fitsPlayerCount';
+import { organizerCapBounds } from '@/lib/wizard/fitsPlayerCount';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { hcpAllowanceInPlay } from './hcpAllowance';
 import {
@@ -2554,7 +2554,10 @@ export function buildGameInsertPayload(
  * `signup_deadline` as an Oslo `datetime-local`, `waitlist_enabled` = '1').
  * Only open signup and manual approval take them; any other mode stores
  * none, so a stale field never leaks. Matchplay fills per side and gets no
- * cap and no list (U11). The list needs an open round with a cap to fill.
+ * cap and no list (U11). The list switch is open signup's only, kept as the
+ * form posts it even without a cap: a cap added later in «Rediger» finds it
+ * as it was, on by default (#2482 F3). Without a cap nothing is full, so the
+ * list has nothing to hold back.
  * The deadline against the tee-off is the caller's check
  * (`signupDeadlineAfterTeeOff`): only the action knows the tee-off it saves.
  */
@@ -2596,10 +2599,9 @@ export function parseSignupSettings(
     registration_cap = cap;
   }
 
+  // `bounds` is null on matchplay, which fills per side: no list there (U11).
   const waitlist_enabled =
-    ctx.registrationMode === 'open' &&
-    formData.get('waitlist_enabled') === '1' &&
-    effectiveRegistrationCap(ctx.gameMode, ctx.modeConfig, registration_cap) !== null;
+    ctx.registrationMode === 'open' && bounds !== null && formData.get('waitlist_enabled') === '1';
 
   return { registration_cap, signup_deadline, waitlist_enabled };
 }

@@ -195,3 +195,18 @@ export function touchesCupRoster(plan: RosterEditPlan): boolean {
     plan.updates.some((u) => 'team_number' in u.patch)
   );
 }
+
+/**
+ * #2482 (U12, F5): the seats a roster plan gives back before a new cap is
+ * checked — one for each active player outside a team it removes. A team
+ * keeps its full size while it has members (`registration_seats_held`), so a
+ * removed teammate frees nothing here.
+ */
+export function seatsFreedByPlan(
+  prior: readonly { user_id: string; team_number: number | null; withdrawn_at: string | null }[],
+  deletes: readonly string[],
+): number {
+  const removing = new Set(deletes);
+  return prior.filter((r) => removing.has(r.user_id) && r.withdrawn_at == null && r.team_number == null)
+    .length;
+}

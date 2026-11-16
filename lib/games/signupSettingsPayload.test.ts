@@ -21,12 +21,15 @@ describe('parseSignupSettings', () => {
     ).toEqual({ registration_cap: 16, signup_deadline: '2026-10-02T16:00:00.000Z', waitlist_enabled: true });
   });
 
-  it('empty fields → no cap, no deadline, and no list without any cap to fill', () => {
+  it('empty fields → no cap and no deadline; the list switch is kept as posted', () => {
+    // #2482 F3: a round saved without a cap keeps the switch, so it is still
+    // on when a cap is added in «Rediger».
     expect(parseSignupSettings(form({ waitlist_enabled: '1' }), OPEN)).toEqual({
       registration_cap: null,
       signup_deadline: null,
-      waitlist_enabled: false,
+      waitlist_enabled: true,
     });
+    expect(parseSignupSettings(form({}), OPEN)).toMatchObject({ waitlist_enabled: false });
   });
 
   it('a format cap alone is enough for the list', () => {
