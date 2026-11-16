@@ -80,7 +80,9 @@ describe('moveGameAction', () => {
 
     expect(url).toBe(`/games/${GAME}?status=moved_told`);
     const iso = updates()[0].args[0] as { scheduled_tee_off_at: string };
-    expect(Object.keys(iso)).toEqual(['scheduled_tee_off_at']);
+    // #2483: the evening varsel's stamp is cleared in the same write, so the
+    // organiser hears the status again the evening before the new day.
+    expect(iso).toEqual({ scheduled_tee_off_at: iso.scheduled_tee_off_at, organizer_evening_notice_sent_at: null });
     expect(supabaseMock.__fromCalls.filter((c) => c.method === 'eq').map((c) => c.args)).toContainEqual([
       'status',
       'scheduled',

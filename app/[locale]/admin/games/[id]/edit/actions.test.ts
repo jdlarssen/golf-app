@@ -1020,6 +1020,26 @@ describe('«Si fra til gjengen» when tee-off moves in «Rediger» (#2480)', () 
     await save({ storedTeeOff: stored === 'same' ? 'same' : dayBefore(), form });
     expect(notifyGameMovedMock).not.toHaveBeenCalled();
   });
+
+  // #2483: the organiser's evening status comes again the evening before the
+  // new day. The stamp is cleared in the same write as the new time, also with
+  // the switch off; a save that keeps the time leaves it.
+  const gameUpdate = () =>
+    supabaseMock.__fromCalls.find((c) => c.method === 'update')?.args[0] as Record<string, unknown>;
+
+  it.each([
+    ['a moved tee-off, switch on', 'moved', { notify_moved: '1' }, true],
+    ['a moved tee-off, switch off', 'moved', { notify_moved: '0' }, true],
+    ['the same tee-off', 'same', { notify_moved: '1' }, false],
+    ['a first tee-off', null, {}, false],
+  ] as const)('%s → clears the evening stamp: %s', async (_label, stored, form, clears) => {
+    await save({ storedTeeOff: stored === 'moved' ? dayBefore() : stored, form });
+    const update = gameUpdate();
+    expect(['organizer_evening_notice_sent_at' in update, update.organizer_evening_notice_sent_at ?? null]).toEqual([
+      clears,
+      null,
+    ]);
+  });
 });
 
 type MockReply = { data: unknown; error: unknown };
