@@ -2767,3 +2767,62 @@ describe('useGameFormState — handicapprosent i shamble (#2570)', () => {
     expect(resumed.current.shambleScoring).toBe('net');
   });
 });
+
+// ─── #2460 — «Gjenta hver uke» ───────────────────────────────────────────────
+
+describe('useGameFormState — «Gjenta hver uke» (#2460)', () => {
+  function setup(
+    opts: {
+      intent?: 'kompis' | 'solo' | 'klubb' | 'cup';
+      tournamentId?: string;
+      repeat?: boolean;
+      linked?: boolean;
+    } = {},
+  ) {
+    return renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialIntent: opts.intent,
+        initialValues: {
+          scheduled_tee_off_at: '2026-11-07T09:00',
+          tournament_id: opts.tournamentId,
+          repeat_weekly: opts.repeat,
+          repeat_weekly_linked: opts.linked,
+        },
+      }),
+    ).result;
+  }
+
+  it.each([
+    ['kompis', { intent: 'kompis' as const }],
+    ['solo', { intent: 'solo' as const }],
+    ['«Rediger spill» (no intent)', {}],
+  ])('%s offers the switch; it starts as stored and follows the organiser', (_label, opts) => {
+    const result = setup({ ...opts, repeat: true });
+    expect(result.current.repeatWeeklyAllowed).toBe(true);
+    expect(result.current.repeatWeekly).toBe(true);
+    act(() => result.current.setRepeatWeekly(false));
+    expect(result.current.repeatWeekly).toBe(false);
+  });
+
+  it.each([
+    ['klubb', { intent: 'klubb' as const }],
+    ['a cup link', { intent: 'cup' as const, tournamentId: 'cup-1' }],
+    ['kompis from a cup link', { intent: 'kompis' as const, tournamentId: 'cup-1' }],
+    ['a stored cup match or league round', { linked: true }],
+  ])('%s does not offer it, and a stored «on» counts as off', (_label, opts) => {
+    const result = setup({ ...opts, repeat: true });
+    expect(result.current.repeatWeeklyAllowed).toBe(false);
+    expect(result.current.repeatWeekly).toBe(false);
+  });
+
+  it('«Nå» turns it off, and back on when a time is chosen again', () => {
+    const result = setup({ intent: 'kompis', repeat: true });
+    act(() => result.current.setTeeOffNow(true));
+    expect(result.current.repeatWeeklyAllowed).toBe(false);
+    expect(result.current.repeatWeekly).toBe(false);
+    act(() => result.current.setTeeOffNow(false));
+    expect(result.current.repeatWeekly).toBe(true);
+  });
+});

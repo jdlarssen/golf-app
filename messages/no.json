@@ -1244,6 +1244,12 @@
         "done": "Ferdig",
         "close": "Lukk"
       },
+      "repeat": {
+        "kicker": "Gjenta",
+        "title": "Gjenta hver uke",
+        "next": "Neste: {when}. Samme gjeng får invitasjon når denne runden er ferdig.",
+        "nextSameDay": "Neste: samme dag og tid uka etter. Samme gjeng får invitasjon når denne runden er ferdig."
+      },
       "publishButton": "Publiser og del invitasjonen",
       "publishPending": "Publiserer …",
       "draftButton": "Lagre som utkast",
@@ -1310,7 +1316,9 @@
         "notSet": "Ikke satt",
         "footnote": "Hver del åpnes for seg og lagres med én gang. Spillerne ser endringene neste gang de åpner appen.",
         "delete": "Avlys runden …",
-        "cancel": "Avbryt"
+        "cancel": "Avbryt",
+        "repeatOn": "Gjentas hver uke",
+        "repeatOff": "Gjentas ikke"
       },
       "formatHeading": "3. Format",
       "modeLockedNote": "Kan ikke endres etter spill-start.",

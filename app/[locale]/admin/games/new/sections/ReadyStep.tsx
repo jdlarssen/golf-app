@@ -10,6 +10,7 @@
  * 4, #2447). Under lista står INNSTILLINGER (#2457): Handicap, Startkontingent,
  * Under runden og Sideturnering og premier som korte rader med verdien som er
  * satt; «Endre» åpner et bunn-ark med bare den radens felt (ReadySettings).
+ * Under dem står «Gjenta hver uke» for Kompis og Solo (#2460).
  * Type påmelding («Hva melder man på?») står på steg 4.
  * Publiser og utkast står i et brett som følger bunnen av skjermen.
  *
@@ -40,6 +41,7 @@ import { invitationWhen } from '@/lib/games/invitationCard';
 import { InvitationPreviewCard } from './InvitationPreviewCard';
 import { ReadyChecklist, type ReadyChecklistItem } from './ReadyChecklist';
 import { ReadySettings } from './ReadySettings';
+import { RepeatWeeklyCard } from './RepeatWeeklyCard';
 import type { ReadySettingsKey } from './readySettingsRules';
 import {
   formatRowParts,
@@ -404,6 +406,15 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
         <div ref={settingsRef}>
           <ReadySettings state={state} openKey={openSheet} onOpenChange={setOpenSheet} />
         </div>
+
+        {/* #2460: Kompis and Solo only (`repeatWeeklyAllowed`). */}
+        {state.repeatWeeklyAllowed && (
+          <RepeatWeeklyCard
+            checked={state.repeatWeekly}
+            onChange={state.setRepeatWeekly}
+            scheduledTeeOffAt={scheduledTeeOffAt}
+          />
+        )}
       </div>
 
       {/* Publiser + utkast i et brett som følger bunnen av skjermen. `sticky`,

@@ -5062,3 +5062,40 @@ describe('buildGameInsertPayload — ujevne lag (#2569)', () => {
     ).toBeUndefined();
   });
 });
+
+// #2460: «Gjenta hver uke» is fail-closed. The form's `repeat_weekly=1` only
+// counts when the caller has decided the round may repeat (canRepeatWeekly).
+describe('buildGameInsertPayload — repeat_weekly (#2460)', () => {
+  const base = { name: 'Lørdagsrunden', game_mode: 'stableford', stableford_team_size: '1' };
+
+  it('is on when the form says so and the caller allows it', () => {
+    const result = buildGameInsertPayload(fd({ ...base, repeat_weekly: '1' }), 'draft', {
+      repeatAllowed: true,
+    });
+    expect(result.repeat_weekly).toBe(true);
+  });
+
+  it('is off when the caller does not allow it, whatever the form says', () => {
+    expect(
+      buildGameInsertPayload(fd({ ...base, repeat_weekly: '1' }), 'draft', { repeatAllowed: false })
+        .repeat_weekly,
+    ).toBe(false);
+    expect(buildGameInsertPayload(fd({ ...base, repeat_weekly: '1' }), 'draft').repeat_weekly).toBe(
+      false,
+    );
+  });
+
+  it('is off when the switch is off', () => {
+    expect(
+      buildGameInsertPayload(fd({ ...base, repeat_weekly: '' }), 'draft', { repeatAllowed: true })
+        .repeat_weekly,
+    ).toBe(false);
+  });
+
+  it('is off on an error payload', () => {
+    expect(
+      buildGameInsertPayload(fd({ repeat_weekly: '1' }), 'draft', { repeatAllowed: true })
+        .repeat_weekly,
+    ).toBe(false);
+  });
+});

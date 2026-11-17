@@ -19,6 +19,7 @@ import { notifyRosterInvites } from '@/lib/games/notifyRosterInvites';
 import { isValidActiveGameMode } from '@/lib/formats/validateGameMode';
 import { resolveGameClubId } from '@/lib/clubs/gameClubId';
 import { isClubTournament } from '@/lib/games/registration';
+import { canRepeatWeekly } from '@/lib/games/weeklyRepeat';
 import { guestOnlyRoster } from '@/lib/games/guestOnlyRoster';
 import { stampNewGameModeConfig } from '@/lib/games/modeConfigEdit';
 import { parseInviteEmailList } from '@/lib/games/inviteEmail';
@@ -109,7 +110,16 @@ async function createGameInternal(
   // themselves). The club signal is the DB-checked groupId, never the raw
   // form value, so a forged group_id never unlocks an empty roster.
   const clubScoped = isClubTournament({ groupId, tournamentId: rawTournamentId });
-  const payload = buildGameInsertPayload(formData, mode, { clubScoped });
+  // #2460: «Gjenta hver uke» only for a standalone round. The raw cup id
+  // counts, like the roster rule above: it can only make the server stricter.
+  const repeatAllowed = canRepeatWeekly({
+    tournamentId: rawTournamentId,
+    leagueRoundId: null,
+    sourceGameId: null,
+    groupId,
+    teeOffNow: formData.get('tee_off_now') === '1',
+  });
+  const payload = buildGameInsertPayload(formData, mode, { clubScoped, repeatAllowed });
 
   if (payload.errorCode) {
     return { error: payload.errorCode };
@@ -255,6 +265,8 @@ async function createGameInternal(
       scheduled_tee_off_at: scheduledTeeOffAt,
       // #2258: «Shotgun-start» by the tee-off time; first_tee otherwise.
       start_type: payload.start_type,
+      // #2460: false unless the round may repeat (repeatAllowed above).
+      repeat_weekly: payload.repeat_weekly,
       created_by: userId,
       started_at: null,
       group_id: groupId,

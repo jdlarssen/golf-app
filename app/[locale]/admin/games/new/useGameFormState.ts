@@ -50,6 +50,7 @@ import {
 } from '@/lib/games/teamFormatLimits';
 import { playerTarget } from '@/lib/wizard/playerTarget';
 import { isDatetimeLocalInPast } from '@/lib/games/gamePayload';
+import { canRepeatWeekly } from '@/lib/games/weeklyRepeat';
 import { START_COUNT_RANGES, fitsStartCount } from '@/lib/games/startPlayerCount';
 import {
   prizeDraftFromList,
@@ -749,6 +750,11 @@ export function useGameFormState({
   const [requirePeerApproval, setRequirePeerApproval] = useState(
     initialValues?.require_peer_approval ?? false,
   );
+  // #2460: «Gjenta hver uke», the organiser's raw choice. Whether the round
+  // may repeat at all is `repeatWeeklyAllowed` below.
+  const [repeatWeeklyChoice, setRepeatWeekly] = useState(
+    initialValues?.repeat_weekly ?? false,
+  );
   const initialScoreVisibility: 'live' | 'reveal' =
     initialValues?.score_visibility === 'reveal' ? 'reveal' : 'live';
   const lockScoreVisibility = initialValues?.lock_score_visibility ?? false;
@@ -953,6 +959,20 @@ export function useGameFormState({
   }
   const allowTeeOffNow = teeOffNowAllowed(intent) && !isClubScoped;
   const teeOffNow = teeOffNowChoice && allowTeeOffNow;
+  // #2460: Kompis and Solo only (no intent = «Rediger spill»), never a club
+  // tournament, a cup match, a league round or «Nå» (`canRepeatWeekly`). The
+  // effective value is what the hidden field posts.
+  const repeatWeeklyAllowed =
+    (intent === undefined || intent === 'kompis' || intent === 'solo') &&
+    !initialValues?.repeat_weekly_linked &&
+    canRepeatWeekly({
+      tournamentId: initialValues?.tournament_id,
+      leagueRoundId: null,
+      sourceGameId: null,
+      groupId,
+      teeOffNow,
+    });
+  const repeatWeekly = repeatWeeklyChoice && repeatWeeklyAllowed;
   /** «Nå» on: no time is kept, the server sets it. Off: the picks work as before. */
   function setTeeOffNow(next: boolean) {
     setTeeOffNowChoice(next);
@@ -2265,6 +2285,10 @@ export function useGameFormState({
     setPatsomeScoring,
     requirePeerApproval,
     setRequirePeerApproval,
+    // #2460
+    repeatWeekly,
+    setRepeatWeekly,
+    repeatWeeklyAllowed,
     sideEnabled,
     setSideEnabled,
     sideLdCount,

@@ -24,6 +24,7 @@ import {
   teamsAssignmentHasContent,
 } from './sections/TeamsAssignmentSection';
 import { AdvancedSettingsSection } from './sections/AdvancedSettingsSection';
+import { RepeatWeeklyCard } from './sections/RepeatWeeklyCard';
 import { RegistrationSection } from './sections/RegistrationSection';
 import { Disclosure } from '@/components/ui/Disclosure';
 import { LIST_CARD_CLASS } from '@/components/ui/FormSection';
@@ -97,6 +98,14 @@ export type InitialValues = {
    * published). Omitted = a time. Only the wizard reads it for Kompis and Solo.
    */
   tee_off_now?: boolean;
+  /** #2460: «Gjenta hver uke» as stored. Omitted = off. */
+  repeat_weekly?: boolean;
+  /**
+   * #2460: the stored game is a cup match or a league round, so it can never
+   * repeat (`canRepeatWeekly`). The form decides club and «Nå» from its own
+   * state; these links it cannot see in an edit.
+   */
+  repeat_weekly_linked?: boolean;
   /** #2258: «Shotgun-start». Omitted = first tee. */
   start_type?: StartType;
   hcp_allowance_pct?: string;
@@ -1242,6 +1251,17 @@ export function GameForm({
         summary={settingsSummary}
       >
         <AdvancedSettingsSection state={state} includeVisibility hideHeading />
+        {/* #2460: turned off here; the checkbox posts itself (no mirror in
+            GameForm). Not drawn for a round that may not repeat, and then
+            nothing is posted and the save writes off. */}
+        {state.repeatWeeklyAllowed && (
+          <RepeatWeeklyCard
+            name="repeat_weekly"
+            checked={state.repeatWeekly}
+            onChange={state.setRepeatWeekly}
+            scheduledTeeOffAt={state.scheduledTeeOffAt}
+          />
+        )}
       </Panel>
 
       {/* Section 6: Submit */}

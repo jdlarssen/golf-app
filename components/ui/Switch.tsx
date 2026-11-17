@@ -75,6 +75,7 @@ export function Switch({
  * from the edge.
  *
  * `compact`: the row is at least 60 px, as «Flytt runden» draws it (#2480).
+ * `tall`: at least 76 px, as «Gjenta hver uke» on step 5 draws it (#2460).
  */
 export function SwitchRow({
   title,
@@ -85,6 +86,7 @@ export function SwitchRow({
   name,
   value,
   compact = false,
+  tall = false,
 }: {
   title: ReactNode;
   description?: ReactNode;
@@ -95,11 +97,12 @@ export function SwitchRow({
   name?: string;
   value?: string;
   compact?: boolean;
+  tall?: boolean;
 }) {
   const titleId = useId();
   const descriptionId = useId();
   return (
-    <label className={`flex ${compact ? 'min-h-[60px]' : 'min-h-[68px]'} cursor-pointer items-center gap-3 px-3.5 py-2.5 has-[:disabled]:cursor-not-allowed`}>
+    <label className={`flex ${compact ? 'min-h-[60px]' : tall ? 'min-h-[76px]' : 'min-h-[68px]'} cursor-pointer items-center gap-3 px-3.5 py-2.5 has-[:disabled]:cursor-not-allowed`}>
       <span className="min-w-0 flex-1">
         <span id={titleId} className="block font-sans text-[15px] font-semibold leading-[normal] text-text">
           {title}

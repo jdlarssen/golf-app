@@ -86,6 +86,8 @@ describe('EditOverview (#2322)', () => {
     expect(screen.getByTestId('edit-row-bane')).toHaveTextContent('Byneset North · Tee: Gul');
     expect(screen.getByTestId('edit-row-format')).toHaveTextContent('85 % handicap');
     expect(screen.getByTestId('edit-row-spillere')).toHaveTextContent('12 spillere · 3 flighter');
+    // #2460: a standalone round says whether it repeats.
+    expect(screen.getByTestId('edit-row-innstillinger')).toHaveTextContent('Sideturnering av · Gjentas ikke');
     expect(screen.getByTestId('edit-row-bane')).toHaveAttribute('data-status', 'ok');
     expect(screen.getByTestId('edit-overview-autostart')).toHaveTextContent(/^Starter av seg selv /);
     expect(screen.getByTestId('edit-overview-delete')).toHaveAttribute(
