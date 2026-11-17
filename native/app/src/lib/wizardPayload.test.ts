@@ -1026,3 +1026,25 @@ describe('#2283: flytteregelen for hull har ett hjem', () => {
     expect(withSlotHole).toBe(sharedSlotHoles.withSlotHole);
   });
 });
+
+describe('«Gjenta hver uke» (#2460)', () => {
+  it('sender bryteren som nettets skjulte felt, og byggeren lagrer den', () => {
+    const input = draft({ gameMode: 'stableford', players: solo('a'), repeatWeekly: true });
+    const { form, payload } = buildDraftPayload(input);
+    expect(form.get('repeat_weekly')).toBe('1');
+    expect(payload.repeat_weekly).toBe(true);
+  });
+
+  it('et utkast fra før feltet fantes, leses som av', () => {
+    const { form, payload } = buildDraftPayload(draft({ gameMode: 'stableford', players: solo('a') }));
+    expect(form.get('repeat_weekly')).toBe('');
+    expect(payload.repeat_weekly).toBe(false);
+  });
+
+  it('en klubbturnering lagres aldri med gjentakelse (canRepeatWeekly)', () => {
+    const { payload } = buildDraftPayload(
+      draft({ gameMode: 'stableford', players: [], groupId: 'club-a', repeatWeekly: true }),
+    );
+    expect(payload.repeat_weekly).toBe(false);
+  });
+});

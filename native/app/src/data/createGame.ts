@@ -530,6 +530,8 @@ export async function publishGame(
     registration_mode: payload.registration_mode,
     registration_type: payload.registration_type,
     let_friends_skip_gate: payload.let_friends_skip_gate,
+    // #2460: «Gjenta hver uke». Den delte byggeren gir av der runden ikke kan gjentas.
+    repeat_weekly: payload.repeat_weekly,
     entry_fee_kr: payload.entry_fee_kr,
     payment_link: payload.payment_link,
     prizes,

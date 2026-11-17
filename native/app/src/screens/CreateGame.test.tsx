@@ -330,6 +330,8 @@ describe('CreateGame: klubbturnering (#2753)', () => {
     await fireEvent.press(screen.getByTestId('create-next'));
     expect(screen.getByText('Ingen spillere ennå.')).toBeTruthy();
     expect(screen.queryByTestId('create-summary-registration')).toBeNull();
+    // #2460: en klubbturnering gjentas aldri (canRepeatWeekly).
+    expect(screen.queryByTestId('create-repeat-weekly')).toBeNull();
     await fireEvent.press(screen.getByTestId('create-publish'));
 
     const [draft] = publishGameMock.mock.calls.at(-1)!;
@@ -636,6 +638,35 @@ describe('CreateGame: påmeldingen i en kompisrunde (#2840 del 4)', () => {
     expect(screen.getByTestId('create-registration-type-solo').props.accessibilityState).toMatchObject({
       selected: true,
     });
+  });
+});
+
+describe('CreateGame: «Gjenta hver uke» (#2460)', () => {
+  afterEach(() => publishGameMock.mockClear());
+
+  it('en kompisrunde har bryteren på «Klar?», med neste dato når den er på', async () => {
+    publishGameMock.mockResolvedValueOnce({ ok: true, gameId: 'g-repeat' });
+    await renderWizard();
+    await formatToPlayers('stableford');
+    await fireEvent.press(screen.getByTestId('create-next'));
+
+    const toggle = screen.getByTestId('create-repeat-weekly');
+    expect(toggle.props.accessibilityRole).toBe('switch');
+    expect(toggle.props.accessibilityLabel).toBe('Gjenta hver uke');
+    expect(toggle.props.accessibilityState).toMatchObject({ checked: false });
+    expect(screen.queryByText(/^Neste: /)).toBeNull();
+
+    await fireEvent.press(toggle);
+    expect(screen.getByTestId('create-repeat-weekly').props.accessibilityState).toMatchObject({
+      checked: true,
+    });
+    expect(
+      screen.getByText(/^Neste: \S+ \d{1,2}\. \S+ kl\. \d{2}:\d{2}\. Samme gjeng får invitasjon når denne runden er ferdig\.$/),
+    ).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('create-publish'));
+    const [draft] = publishGameMock.mock.calls.at(-1)!;
+    expect(draft.repeatWeekly).toBe(true);
   });
 });
 

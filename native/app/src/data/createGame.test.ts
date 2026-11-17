@@ -215,12 +215,27 @@ describe('publishGame', () => {
         side_disabled_categories: [],
         group_id: null,
         tournament_id: null,
+        // #2460: av når utkastet ikke slo den på.
+        repeat_weekly: false,
       });
       expect(typeof row.scheduled_tee_off_at).toBe('string');
       // Uten `.select()` finnes det ikke noe radantall å sjekke (trap 2).
       expect(stepArgs(gameInsert, 'select')).toEqual([['id']]);
       // Profilsperren står ved start (#2441), ikke her.
       expect(mocks().supabase.rpc).not.toHaveBeenCalled();
+    });
+
+    it('#2460: lagrer «Gjenta hver uke» når utkastet har den på', async () => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const gameInsert = queryStub(GAME_ROW);
+      routeFrom({
+        formats: [queryStub(ACTIVE_FORMAT)],
+        games: [gameInsert],
+        game_players: [queryStub(PLAYER_ROWS)],
+      });
+
+      expect(await publish(draft({ repeatWeekly: true }))).toEqual({ ok: true, gameId: GAME_ID });
+      expect(stepArgs(gameInsert, 'insert')[0]![0]).toMatchObject({ repeat_weekly: true });
     });
 
     // #463: din egen rad er bekreftet, de andres er «Ikke bekreftet» til de

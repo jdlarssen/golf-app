@@ -63,6 +63,8 @@ import {
   type AppRegistrationType,
 } from '../lib/registrationCopy';
 import { averagePctToSumPct } from '../../../../lib/games/teamHandicapUnit';
+import { canRepeatWeekly } from '../../../../lib/games/weeklyRepeat';
+import { repeatWeeklyNextText } from '../lib/repeatWeeklyCopy';
 import { openOrReturn } from '../lib/backTo';
 import {
   createFailureBelongsOnWeb,
@@ -232,6 +234,9 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
   const [registrationModeChoice, setRegistrationModeChoice] = useState<RegistrationMode>('invite_only');
   const [registrationTypeChoice, setRegistrationTypeChoice] = useState<AppRegistrationType>('solo');
   const [letFriendsSkipGate, setLetFriendsSkipGate] = useState(false);
+  // #2460: «Gjenta hver uke» på «Klar?», arrangørens valg. Om runden kan
+  // gjentas i det hele tatt, avgjør `repeatWeeklyAllowed` under.
+  const [repeatWeeklyChoice, setRepeatWeekly] = useState(false);
   const [busy, setBusy] = useState(false);
   // #1954 D2: runde-id-en lages én gang per veiviser. Når publiseringen når
   // tidstaket etter at serveren lagret, treffer neste trykk den samme raden i
@@ -473,6 +478,19 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
     [gameMode, setup, setupText],
   );
 
+  // #2460: bare Kompis, aldri en klubbturnering eller en cup (`canRepeatWeekly`,
+  // samme regel som nettet). Appen har ingen «Nå» og ingen liga.
+  const repeatWeeklyAllowed =
+    intent === 'kompis' &&
+    canRepeatWeekly({
+      tournamentId: null,
+      leagueRoundId: null,
+      sourceGameId: null,
+      groupId: null,
+      teeOffNow: false,
+    });
+  const repeatWeekly = repeatWeeklyAllowed && repeatWeeklyChoice;
+
   const draft = useMemo<GameDraft | null>(() => {
     if (!gameMode) return null;
     return {
@@ -503,8 +521,9 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
       registrationMode: registration.mode,
       registrationType: registration.type,
       letFriendsSkipGate: registration.letFriendsSkipGate,
+      repeatWeekly,
     };
-  }, [allowancePct, clubId, common, courseId, fee, gameMode, intent, players, registration, resolvedSetup, teeBoxId, teeOff]);
+  }, [allowancePct, clubId, common, courseId, fee, gameMode, intent, players, registration, repeatWeekly, resolvedSetup, teeBoxId, teeOff]);
 
   const teamLayout = gameMode
     ? teamLayoutFor(
@@ -712,6 +731,15 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
       {step === 'summary' && draft && gameMode ? (
         <SummaryStep
           lines={summaryLines(draft, gameMode, courses.data, rosterSource, teeOff)}
+          repeatWeekly={
+            repeatWeeklyAllowed
+              ? {
+                  value: repeatWeekly,
+                  onChange: setRepeatWeekly,
+                  nextText: repeatWeeklyNextText(draft.teeOffAt),
+                }
+              : null
+          }
           warnings={summaryWarnings(draft, gameMode, {
             // #2753: startsperren gjelder bare spillerne på lista. En arrangør som
             // ikke spiller en klubbturnering, stoppes ikke av egen profil.

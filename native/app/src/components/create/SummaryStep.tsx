@@ -19,9 +19,10 @@ import {
   CREATE_ON_WEB_PATH,
   EDIT_PROFILE_LABEL,
 } from '../../lib/createGameCopy';
+import { REPEAT_WEEKLY_KICKER, REPEAT_WEEKLY_TITLE } from '../../lib/repeatWeeklyCopy';
 import { useTheme } from '../../theme';
 import { WebLinkButton } from '../WebLinkButton';
-import { Note } from './primitives';
+import { Note, ToggleRow } from './primitives';
 
 export interface SummaryLine {
   key: string;
@@ -40,9 +41,21 @@ export interface SummaryWarning {
   action?: 'profile';
 }
 
+/**
+ * #2460 «Gjenta hver uke». Skjermen gir den bare der runden kan gjentas
+ * (`canRepeatWeekly`), ellers står bryteren ikke her.
+ */
+export interface RepeatWeeklyControl {
+  value: boolean;
+  onChange: (value: boolean) => void;
+  /** Linja under bryteren når den er på (`repeatWeeklyNextText`). */
+  nextText: string;
+}
+
 export function SummaryStep({
   lines,
   warnings,
+  repeatWeekly = null,
   error,
   errorAction = null,
   onEditProfile,
@@ -52,6 +65,7 @@ export function SummaryStep({
 }: {
   lines: readonly SummaryLine[];
   warnings: readonly SummaryWarning[];
+  repeatWeekly?: RepeatWeeklyControl | null;
   error: string | null;
   /**
    * Hvor veien videre går, hvis den finnes.
@@ -86,6 +100,19 @@ export function SummaryStep({
           </View>
         ))}
       </View>
+
+      {repeatWeekly ? (
+        <>
+          <Text style={ui.sectionTitle}>{REPEAT_WEEKLY_KICKER}</Text>
+          <ToggleRow
+            testID="create-repeat-weekly"
+            label={REPEAT_WEEKLY_TITLE}
+            hint={repeatWeekly.value ? repeatWeekly.nextText : undefined}
+            value={repeatWeekly.value}
+            onChange={repeatWeekly.onChange}
+          />
+        </>
+      ) : null}
 
       {warnings.map((warning) => (
         <View key={warning.key}>

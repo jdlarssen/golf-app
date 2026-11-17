@@ -27,6 +27,7 @@ import {
   defaultTeamSizeForMode,
 } from '../../../../lib/games/formatSetupDefaults';
 import { defaultFlightForTeam } from '../../../../lib/games/teamFormatLimits';
+import { canRepeatWeekly } from '../../../../lib/games/weeklyRepeat';
 import { isStablefordFamily } from '../../../../lib/scoring/modes/types';
 import {
   APP_MODE_LABELS,
@@ -175,6 +176,11 @@ export interface GameDraft {
   registrationType?: AppRegistrationType;
   /** «Slipp venner direkte inn». Gjelder bare med `manual_approval`. */
   letFriendsSkipGate?: boolean;
+  /**
+   * #2460: «Gjenta hver uke». Utelatt (et utkast fra før feltet) = av. Lagres
+   * bare der `canRepeatWeekly` sier ja; den delte byggeren sjekker det igjen.
+   */
+  repeatWeekly?: boolean;
 }
 
 /** Påmeldingen slik runden lagres. */
@@ -402,6 +408,8 @@ export function draftToFormData(draft: GameDraft): WizardFormData {
   form.set('registration_mode', registration.mode);
   form.set('registration_type', registration.type);
   form.set('let_friends_skip_gate', registration.letFriendsSkipGate ? '1' : '');
+  // #2460: «Gjenta hver uke», som nettets skjulte felt: '1' når den er på.
+  form.set('repeat_weekly', draft.repeatWeekly ? '1' : '');
 
   const sideEnabled = draft.sideTournamentEnabled === true;
   form.set('side_tournament_enabled', sideEnabled ? 'true' : 'false');
@@ -502,6 +510,14 @@ export function buildDraftPayload(draft: GameDraft): {
     form,
     payload: buildGameInsertPayload(asSharedFormData(form), 'publish', {
       clubScoped: isClubTournament({ groupId: draft.groupId, tournamentId: null }),
+      // #2460: appen lager aldri cup, liga eller «Nå»; klubben avgjør.
+      repeatAllowed: canRepeatWeekly({
+        tournamentId: null,
+        leagueRoundId: null,
+        sourceGameId: null,
+        groupId: draft.groupId,
+        teeOffNow: false,
+      }),
     }),
   };
 }
