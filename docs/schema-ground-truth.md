@@ -119,6 +119,14 @@ Do **not** assume one shape across the three. `games.status` is a typed enum; th
 - **Guard trigger `guard_games_league_round_id`** (0186, #2207): a non-null, new or changed
   `league_round_id` only from the service role or a global admin; the flight start inserts
   through the admin client. Clearing it is never checked.
+- **«Gjenta hver uke»** (0240, #2460): `repeat_weekly boolean NOT NULL DEFAULT false` (the
+  organiser's switch; the existing creator/admin UPDATE policies cover it) and
+  `repeated_from_game_id uuid UNIQUE REFERENCES games(id) ON DELETE SET NULL` (the weekly
+  successor's link; the unique constraint keeps it to one successor per round, also after a
+  reopen). CHECK `games_repeat_weekly_standalone`: `NOT repeat_weekly OR (tournament_id,
+  league_round_id, source_game_id all NULL)`; the club rule is TS (`canRepeatWeekly`). Guard
+  trigger `guard_games_repeated_from_game_id`: a non-null, new or changed link only from the
+  service role or a global admin. Clearing it is never checked.
 
 ## `format_intent_mapping` — operational data, drift from the snapshot is expected
 
