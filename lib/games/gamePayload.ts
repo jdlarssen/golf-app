@@ -2527,6 +2527,7 @@ export function buildGameInsertPayload(
 
   const signup = parseSignupSettings(formData, {
     registrationMode,
+    registrationType,
     gameMode,
     modeConfig: modeResult.mode_config as { team_size?: number },
   });
@@ -2565,6 +2566,7 @@ export function parseSignupSettings(
   formData: FormData,
   ctx: {
     registrationMode: RegistrationMode;
+    registrationType: RegistrationType;
     gameMode: GameMode;
     modeConfig: { team_size?: number } | null;
   },
@@ -2600,8 +2602,12 @@ export function parseSignupSettings(
   }
 
   // `bounds` is null on matchplay, which fills per side: no list there (U11).
+  // Teams have none either (U10): their signup is the team form.
   const waitlist_enabled =
-    ctx.registrationMode === 'open' && bounds !== null && formData.get('waitlist_enabled') === '1';
+    ctx.registrationMode === 'open' &&
+    ctx.registrationType !== 'team' &&
+    bounds !== null &&
+    formData.get('waitlist_enabled') === '1';
 
   return { registration_cap, signup_deadline, waitlist_enabled };
 }

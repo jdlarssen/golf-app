@@ -52,6 +52,7 @@ export function SeatsAndDeadlineCard({ state, kicker = true }: { state: GameForm
     gameMode,
     teamSize,
     registrationMode,
+    registrationType,
     registrationCapForSave: cap,
     setRegistrationCap,
     signupDeadline,
@@ -64,9 +65,10 @@ export function SeatsAndDeadlineCard({ state, kicker = true }: { state: GameForm
   const bounds = organizerCapBounds(gameMode, { team_size: teamSize });
   const flights = flightsOfFour(cap);
   // The list needs a round that can fill: open signup with a cap, the
-  // organiser's or the format's.
+  // organiser's or the format's. Teams have no waiting list (U10).
   const showsWaitlist =
     registrationMode === 'open' &&
+    registrationType !== 'team' &&
     effectiveRegistrationCap(gameMode, { team_size: teamSize }, cap) !== null;
 
   const deadlineText = formatTeeOffLongDate(signupDeadline, locale);

@@ -419,6 +419,7 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
               teamSize={teamSize}
               cap={state.registrationCapForSave}
               registrationMode={registrationMode}
+              registrationType={state.registrationType}
               waitlistEnabled={state.waitlistEnabled}
             />
           </>

@@ -10,15 +10,16 @@
  * two can never say different things: `SeatsLine` with every seat taken and,
  * with the waiting list on, nobody on it yet, and the label of the button that
  * page shows on a full round («Sett meg på ventelista», or «Send forespørsel»
- * without the list). Nothing here can be tapped. No preview without a cap:
- * then the round never fills.
+ * without the list). Nothing here can be tapped. No preview without a cap
+ * (the round never fills), and none on a team round: the player gets the
+ * team form there, and teams have no waiting list (U10).
  */
 
 import { useLocale, useTranslations } from 'next-intl';
 import type { AppLocale } from '@/i18n/routing';
 import { Kicker } from '@/components/ui/Kicker';
 import { SeatsLine } from '@/app/[locale]/signup/[shortId]/SeatsLine';
-import type { RegistrationMode } from '@/lib/games/registration';
+import type { RegistrationMode, RegistrationType } from '@/lib/games/registration';
 import { formatDate, formatShortDayMonthLocale, formatTeeOffTimeLocale } from '@/lib/i18n/format';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { effectiveRegistrationCap } from '@/lib/wizard/fitsPlayerCount';
@@ -30,6 +31,7 @@ export function SignupPreviewCard({
   teamSize,
   cap,
   registrationMode,
+  registrationType,
   waitlistEnabled,
 }: {
   name: string;
@@ -39,6 +41,7 @@ export function SignupPreviewCard({
   /** The organiser's cap as the form saves it (`registrationCapForSave`). */
   cap: number | null;
   registrationMode: RegistrationMode;
+  registrationType: RegistrationType;
   waitlistEnabled: boolean;
 }) {
   const t = useTranslations('wizard.ready.signupPreview');
@@ -46,7 +49,7 @@ export function SignupPreviewCard({
   const locale = useLocale() as AppLocale;
 
   const seats = effectiveRegistrationCap(gameMode, { team_size: teamSize }, cap);
-  if (seats === null) return null;
+  if (seats === null || registrationType === 'team') return null;
   const withList = registrationMode === 'open' && waitlistEnabled;
 
   const d = teeOffIso ? new Date(teeOffIso) : null;
@@ -72,9 +75,13 @@ export function SignupPreviewCard({
           {when && <span className="shrink-0 font-sans text-xs text-muted tabular-nums">{when}</span>}
         </div>
         <SeatsLine seats={{ kind: 'capped', cap: seats, held: seats, ...(withList ? { waitlist: 0 } : {}) }} />
+        {/* As the page draws it: outlined for the waiting list, the filled
+            primary for «Send forespørsel». */}
         <span
           data-testid="signup-preview-button"
-          className="flex h-11 items-center justify-center rounded-full border border-primary bg-surface font-sans text-sm font-semibold text-primary"
+          className={`flex h-11 items-center justify-center rounded-full border border-primary font-sans text-sm font-semibold ${
+            withList ? 'bg-surface text-primary' : 'bg-primary text-white dark:text-bg'
+          }`}
         >
           {withList ? tSignup('joinWaitlistButton') : tSignup('sendRequestButton')}
         </span>
