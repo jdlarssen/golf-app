@@ -394,3 +394,32 @@ describe('buildWeeklyRepeatInsert', () => {
     expect(players[0]).toMatchObject({ team_number: null, flight_number: null });
   });
 });
+
+/**
+ * AGENTS.md trap #4: the successor copies every column the wizard's insert
+ * writes (`createGameInternal`). A column added there and not here would start
+ * every weekly round with its default. The insert is read from the action's
+ * source, the same way `editGameInitialValues.test.ts` reads the edit update.
+ */
+describe('buildWeeklyRepeatInsert copies every column the wizard inserts', () => {
+  const actions = readFileSync(
+    join(__dirname, '..', '..', 'app', '[locale]', 'admin', 'games', 'new', 'actions.ts'),
+    'utf8',
+  );
+  const insert = /\.from\('games'\)\s*\.insert\(\{([\s\S]*?)\n\s{4}\}\)/.exec(actions);
+  const written = [...(insert?.[1] ?? '').matchAll(/^\s{6}([a-z_]+)(?::|,)/gm)].map((m) => m[1]);
+
+  it('finds the insert (the guard is not reading an empty list)', () => {
+    expect(written).toEqual(expect.arrayContaining(['name', 'mode_config', 'repeat_weekly', 'created_by']));
+    expect(written.length).toBeGreaterThan(20);
+  });
+
+  it('has every one of them', () => {
+    const { game } = buildWeeklyRepeatInsert(source(), [], NEXT, 'Bogstad', {
+      newGameId: 'g-2',
+      guestIds: new Set(),
+      nowIso: NOW,
+    });
+    expect(written.filter((column) => !(column in game))).toEqual([]);
+  });
+});

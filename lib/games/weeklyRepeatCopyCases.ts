@@ -12,9 +12,9 @@
 // installed. A reworded sentence on either side turns that side's suite red; changing the
 // wording on purpose means editing the text here and in both copies.
 //
-// Data only: inputs and the exact expected output, hard-coded. The input is the tee-off as an
-// Oslo wall clock (`YYYY-MM-DDTHH:mm`, the web's field), or `''` for no tee-off yet. The app
-// turns it into its own ISO instant with `parseOsloDateTimeLocal` before asking its copy.
+// Data only: inputs and the exact expected output, hard-coded. The input is the tee-off as a
+// wall clock (`YYYY-MM-DDTHH:mm`: the web's Oslo field, the app's device clock), or `''` for no
+// tee-off yet. The app turns it into an instant in the device's zone before asking its copy.
 
 export const REPEAT_FIXED = {
   /** The section heading above the switch. */
