@@ -12,6 +12,7 @@ const base = {
   teamSize: 1,
   cap: 16 as number | null,
   registrationMode: 'open' as const,
+  registrationType: 'solo' as const,
   waitlistEnabled: true,
 };
 
@@ -22,6 +23,14 @@ describe('SignupPreviewCard', () => {
     expect(screen.getByTestId('signup-seats')).toHaveTextContent('16 av 16 plasser');
     expect(screen.getByTestId('signup-seats-full')).toHaveTextContent('Fullt · 0 på venteliste');
     expect(screen.getByTestId('signup-preview-button')).toHaveTextContent('Sett meg på ventelista');
+    // Nothing to tap: the button is drawn, not real.
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  // #2482 (U10): a team round gets the team form and has no waiting list.
+  it('a team round: nothing to preview', () => {
+    const { container } = render(<SignupPreviewCard {...base} registrationType="team" />);
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('the list off, or manual approval: «Fullt» and «Send forespørsel»', () => {

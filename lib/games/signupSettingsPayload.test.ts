@@ -9,7 +9,12 @@ function form(fields: Record<string, string>): FormData {
   return fd;
 }
 
-const OPEN = { registrationMode: 'open' as const, gameMode: 'solo_strokeplay' as const, modeConfig: null };
+const OPEN = {
+  registrationMode: 'open' as const,
+  registrationType: 'solo' as const,
+  gameMode: 'solo_strokeplay' as const,
+  modeConfig: null,
+};
 
 describe('parseSignupSettings', () => {
   it('open with cap, deadline and list → all three, the deadline as ISO (Oslo summer time)', () => {
@@ -45,6 +50,17 @@ describe('parseSignupSettings', () => {
         registrationMode: 'manual_approval',
       }),
     ).toEqual({ registration_cap: 8, signup_deadline: null, waitlist_enabled: false });
+  });
+
+  it('a team round keeps cap and deadline but never the list (U10)', () => {
+    expect(
+      parseSignupSettings(form({ registration_cap: '16', waitlist_enabled: '1' }), {
+        ...OPEN,
+        registrationType: 'team',
+        gameMode: 'texas_scramble',
+        modeConfig: { team_size: 4 },
+      }),
+    ).toEqual({ registration_cap: 16, signup_deadline: null, waitlist_enabled: false });
   });
 
   it('invite only stores none of them, whatever the form says', () => {
