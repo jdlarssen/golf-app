@@ -184,3 +184,25 @@ describe('buildEditInitialValues — tee-off «Nå»', () => {
     expect(values.tee_off_now).toBe(expected);
   });
 });
+
+/**
+ * Type A (#2460). A draft and «Rediger spill» open with «Gjenta hver uke» as
+ * stored. A cup match or league round is marked as linked, so the form never
+ * offers the switch there (it cannot see those links itself).
+ */
+describe('buildEditInitialValues — «Gjenta hver uke»', () => {
+  const stableford: GameModeConfig = { kind: 'stableford', team_size: 1, points_table: 'standard' };
+
+  it.each<[string, Partial<EditGameRow>, boolean, boolean]>([
+    ['på, frittstående', { repeat_weekly: true }, true, false],
+    ['av, frittstående', { repeat_weekly: false }, false, false],
+    ['uten kolonnen', {}, false, false],
+    ['cupkamp', { tournament_id: 'cup-1' }, false, true],
+    ['ligarunde', { league_round_id: 'round-1' }, false, true],
+    ['klubbturnering (avgjøres av skjemaet)', { group_id: 'club-1' }, false, false],
+  ])('%s → repeat_weekly %s, linked %s', (_label, overrides, repeat, linked) => {
+    const values = buildEditInitialValues(row(stableford, overrides), []);
+    expect(values.repeat_weekly).toBe(repeat);
+    expect(values.repeat_weekly_linked).toBe(linked);
+  });
+});

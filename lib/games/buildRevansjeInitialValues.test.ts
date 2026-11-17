@@ -61,6 +61,13 @@ describe('buildRevansjeInitialValues', () => {
     expect(result.scheduled_tee_off_at).toBeUndefined();
   });
 
+  it('#2460: utelater «Gjenta hver uke» (en revansje er en enkeltrunde)', () => {
+    const result = buildRevansjeInitialValues(baseGame({ repeat_weekly: true }), [player()]);
+
+    expect(result.repeat_weekly).toBeUndefined();
+    expect(result.repeat_weekly_linked).toBeUndefined();
+  });
+
   it('tvinger lock_game_mode til false selv om kilden er finished', () => {
     const result = buildRevansjeInitialValues(baseGame({ status: 'finished' }), [
       player(),

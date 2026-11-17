@@ -23,6 +23,8 @@ import { NO_ROTATION_MODES } from '@/lib/games/assignRotationSlots';
  *    dreper auto-navngivingen fra bane + dato (GameWizard.tsx:193–196).
  *  - `scheduled_tee_off_at` utelates — datoen er brukerens valg; #902-guarden
  *    mot fortid gjelder uansett når de setter en ny dato.
+ *  - `repeat_weekly` utelates (#2460): en revansje er en enkeltrunde, og
+ *    arrangøren slår på gjentakelsen selv på «Klar?».
  *  - `lock_game_mode` tvinges til `false` — buildEditInitialValues setter
  *    `true` for alt som ikke er draft (kilden er alltid 'finished' her), men
  *    revansje er et FORSLAG, ikke en lås.
@@ -46,8 +48,13 @@ export function buildRevansjeInitialValues(
 
   const base = buildEditInitialValues(game, activePlayers);
 
-  const { name: _name, scheduled_tee_off_at: _teeOff, ...withoutNameAndTeeOff } =
-    base;
+  const {
+    name: _name,
+    scheduled_tee_off_at: _teeOff,
+    repeat_weekly: _repeat,
+    repeat_weekly_linked: _repeatLinked,
+    ...withoutNameAndTeeOff
+  } = base;
 
   const nullRotationSlots = NO_ROTATION_MODES.has(game.game_mode);
 

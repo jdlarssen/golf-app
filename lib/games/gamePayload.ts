@@ -313,6 +313,12 @@ export type ParsedPayload = {
    * registration_mode = 'manual_approval'; force-false ellers.
    */
   let_friends_skip_gate: boolean;
+  /**
+   * #2460: «Gjenta hver uke». True only when the form posted `repeat_weekly=1`
+   * AND the caller said the round may repeat (`opts.repeatAllowed`, from
+   * `canRepeatWeekly`). Fail-closed: a caller that does not decide gets false.
+   */
+  repeat_weekly: boolean;
   errorCode?: GameValidationErrorCode;
 };
 
@@ -325,6 +331,7 @@ type ParsedBase = Omit<
   | 'registration_mode'
   | 'registration_type'
   | 'let_friends_skip_gate'
+  | 'repeat_weekly'
   | 'errorCode'
 >;
 
@@ -456,6 +463,11 @@ export function parsePrizesFromFormData(
  * påmelding). Ugyldig verdi returnerer null så top-level kan flagge
  * `bad_registration_mode`.
  */
+/** #2460: the switch counts only where the caller allows it (fail-closed). */
+function parseRepeatWeekly(formData: FormData, allowed: boolean | undefined): boolean {
+  return allowed === true && formData.get('repeat_weekly') === '1';
+}
+
 function parseRegistrationMode(formData: FormData): RegistrationMode | null {
   const raw = String(formData.get('registration_mode') ?? '').trim();
   if (raw === '') return 'invite_only';
@@ -2347,6 +2359,10 @@ function validatorMode(
  *  - best_ball: partall 2–40 spillere, lag à 2, opptil 20 par (publish)
  *  - stableford: ≥1 solo spiller, team/flight null (publish)
  *
+ * `opts.repeatAllowed` (#2460): the caller's verdict from `canRepeatWeekly`
+ * (lib/games/weeklyRepeat.ts, the rule's one home) that this round may repeat.
+ * Without it `repeat_weekly` is always false, whatever the form posted.
+ *
  * `opts.clubScoped` (#2433): the caller's verdict that the game is a club
  * tournament (`isClubTournament`), from DB-checked data, never raw form input.
  * With individual signup the roster is then optional at publish, like open
@@ -2360,7 +2376,7 @@ function validatorMode(
 export function buildGameInsertPayload(
   formData: FormData,
   mode: PayloadMode,
-  opts: { clubScoped?: boolean } = {},
+  opts: { clubScoped?: boolean; repeatAllowed?: boolean } = {},
 ): ParsedPayload {
   const base = parseBase(formData);
 
@@ -2377,6 +2393,7 @@ export function buildGameInsertPayload(
     registration_mode: 'invite_only',
     registration_type: 'solo',
     let_friends_skip_gate: false,
+    repeat_weekly: false,
     errorCode,
   });
 
@@ -2495,5 +2512,6 @@ export function buildGameInsertPayload(
     registration_mode: registrationMode,
     registration_type: registrationType,
     let_friends_skip_gate: letFriendsSkipGate,
+    repeat_weekly: parseRepeatWeekly(formData, opts.repeatAllowed),
   };
 }

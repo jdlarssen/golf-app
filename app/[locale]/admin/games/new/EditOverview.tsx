@@ -183,7 +183,12 @@ export function EditOverview({
       .filter(Boolean)
       .join(' · '),
     pamelding: registrationSummary,
-    innstillinger: [settingsSummary, prizeCount > 0 ? t('prizes', { count: prizeCount }) : null]
+    innstillinger: [
+      settingsSummary,
+      prizeCount > 0 ? t('prizes', { count: prizeCount }) : null,
+      // #2460: said only where the switch is offered.
+      state.repeatWeeklyAllowed ? t(state.repeatWeekly ? 'repeatOn' : 'repeatOff') : null,
+    ]
       .filter(Boolean)
       .join(' · '),
   };

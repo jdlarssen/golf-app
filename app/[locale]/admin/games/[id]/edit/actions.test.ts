@@ -538,6 +538,38 @@ describe('updateScheduledAction — start_type (#2258)', () => {
   });
 });
 
+describe('updateScheduledAction — «Gjenta hver uke» (#2460)', () => {
+  // GameForm's switch posts `repeat_weekly=1` when on and nothing when off;
+  // the update writes it, and a cup match or league round always writes off.
+  it.each([
+    ['on, standalone', '1', {}, true],
+    ['off (not posted), standalone', undefined, {}, false],
+    ['on, cup match', '1', { tournament_id: 'cup-1' }, false],
+    ['on, league round', '1', { league_round_id: 'lr-1' }, false],
+  ] as const)('%s → games.update repeat_weekly %s', async (_label, raw, links, expected) => {
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: true }, error: null }, // loadRole
+        { data: { status: 'scheduled', game_mode: 'best_ball', ...links }, error: null }, // games.select
+        { data: [], error: null }, // game_players.select (prior roster)
+        { data: { id: 'game-1' }, error: null }, // games.update
+        { data: Array.from({ length: 8 }, (_, i) => ({ user_id: `u${i}` })), error: null }, // game_players.insert
+      ],
+    );
+    signIn('admin-1');
+    const form = fullBestBallFormData();
+    if (raw !== undefined) form.set('repeat_weekly', raw);
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(updateScheduledAction('game-1', form)).rejects.toBeInstanceOf(RedirectError);
+
+    const gameUpdate = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'update',
+    );
+    expect((gameUpdate?.args[0] as { repeat_weekly: unknown }).repeat_weekly).toBe(expected);
+  });
+});
+
 describe('updateScheduledAction — hull for sideturneringen (#2283)', () => {
   // The edit form posts side_ld_hole_N/side_ctp_hole_N; the update writes them
   // as the columns hold them (one element per slot, null = no hole) and the

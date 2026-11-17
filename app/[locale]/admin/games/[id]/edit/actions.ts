@@ -32,6 +32,7 @@ import { notifyRosterInvites } from '@/lib/games/notifyRosterInvites';
 import { notifyGameMoved } from '@/lib/notifications/notifyGameMoved';
 import { isTeeOffMove } from '@/lib/games/moveGameChoices';
 import { isClubTournament } from '@/lib/games/registration';
+import { canRepeatWeekly } from '@/lib/games/weeklyRepeat';
 import { guestOnlyRoster } from '@/lib/games/guestOnlyRoster';
 import { resolveGameClubId } from '@/lib/clubs/gameClubId';
 import { parseInviteEmailList } from '@/lib/games/inviteEmail';
@@ -121,7 +122,7 @@ async function updateGameInternal(
   const { data: existing, error: existingError } = await supabase
     .from('games')
     .select(
-      'status, game_mode, mode_config, tournament_id, group_id, scheduled_tee_off_at, course_id, tee_box_id',
+      'status, game_mode, mode_config, tournament_id, league_round_id, source_game_id, group_id, scheduled_tee_off_at, course_id, tee_box_id',
     )
     .eq('id', gameId)
     .maybeSingle();
@@ -165,7 +166,17 @@ async function updateGameInternal(
     groupId: savedGroupId,
     tournamentId: existing.tournament_id,
   });
-  const payload = buildGameInsertPayload(formData, payloadMode, { clubScoped });
+  // #2460: «Gjenta hver uke» only for a standalone round, judged from the
+  // stored links (canRepeatWeekly). The DB CHECK backs the cup, league and
+  // derived parts; the club part lives only here.
+  const repeatAllowed = canRepeatWeekly({
+    tournamentId: existing.tournament_id,
+    leagueRoundId: existing.league_round_id,
+    sourceGameId: existing.source_game_id,
+    groupId: savedGroupId,
+    teeOffNow: formData.get('tee_off_now') === '1',
+  });
+  const payload = buildGameInsertPayload(formData, payloadMode, { clubScoped, repeatAllowed });
 
   if (payload.errorCode) {
     redirect({ href: editHref({ error: payload.errorCode }), locale });
@@ -359,6 +370,9 @@ async function updateGameInternal(
       // #2433: set by the action itself (above), from the DB row or the
       // wizard's checked field, never from GameForm state.
       group_id: savedGroupId,
+      // #2460: posted by the wizard's mirror or GameForm's switch; false when
+      // the round may not repeat (repeatAllowed above) or the switch is off.
+      repeat_weekly: payload.repeat_weekly,
       status: nextStatus,
       // started_at is intentionally not touched — only D5's "Start runden nå"
       // flow transitions out of 'scheduled'.

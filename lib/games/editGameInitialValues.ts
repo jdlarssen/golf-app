@@ -9,6 +9,7 @@ import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { safeParsePrizes } from '@/lib/games/prizes';
 import { readMinTeeShots } from '@/lib/games/teeShots';
 import { isClubTournament } from './registration';
+import { canRepeatWeekly } from './weeklyRepeat';
 import type { StartType } from './startType';
 
 /**
@@ -28,7 +29,7 @@ import type { StartType } from './startType';
  * `editGameInitialValues.test.ts` checks it against the update's columns.
  */
 export const EDIT_FORM_COLUMNS =
-  'id, name, status, course_id, courses(name), tee_box_id, scheduled_tee_off_at, start_type, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_ld_holes, side_ctp_holes, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type, let_friends_skip_gate, entry_fee_kr, payment_link, prizes';
+  'id, name, status, course_id, courses(name), tee_box_id, scheduled_tee_off_at, start_type, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_ld_holes, side_ctp_holes, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type, let_friends_skip_gate, entry_fee_kr, payment_link, prizes, repeat_weekly';
 
 /**
  * What both edit pages select: the form's columns plus the club, cup and league
@@ -89,6 +90,9 @@ export type EditGameRow = {
   // den (pre-fyller), revansje-flyten utelater den (samme prinsipp som
   // entry_fee — en rematch skal ikke dra premiebordet med automatisk).
   prizes?: unknown;
+  // #2460 — «Gjenta hver uke». Optional: the edit pages select it; the rematch
+  // row may carry it, and buildRevansjeInitialValues drops it.
+  repeat_weekly?: boolean;
   // #1385 — koblings-kolonnene. Begge redigeringsrutene selekterer
   // `group_id` og `tournament_id` (admin-edit-ruta også `league_round_id`,
   // for veiviser-intent og fail-closed på cup/liga, se
@@ -164,6 +168,26 @@ function teeOffNowDraft(game: EditGameRow): true | undefined {
   return could ? true : undefined;
 }
 
+/**
+ * #2460: «Gjenta hver uke» as stored, so a draft and «Rediger spill» open with
+ * it as it was. A cup match or league round can never repeat; the form cannot
+ * see those links, so it is told here (`repeat_weekly_linked`).
+ */
+function repeatWeeklyValues(
+  game: EditGameRow,
+): Pick<InitialValues, 'repeat_weekly' | 'repeat_weekly_linked'> {
+  return {
+    repeat_weekly: game.repeat_weekly ?? false,
+    repeat_weekly_linked: !canRepeatWeekly({
+      tournamentId: game.tournament_id,
+      leagueRoundId: game.league_round_id,
+      sourceGameId: null,
+      groupId: null,
+      teeOffNow: false,
+    }),
+  };
+}
+
 export function buildEditInitialValues(
   game: EditGameRow,
   playerRows: EditGamePlayerRow[],
@@ -196,6 +220,7 @@ export function buildEditInitialValues(
     // chosen again. Not for a club, cup or league game: those never offer it
     // (the wizard checks the intent too). A rematch row is never a draft.
     tee_off_now: teeOffNowDraft(game),
+    ...repeatWeeklyValues(game),
     hcp_allowance_pct: String(game.hcp_allowance_pct),
     require_peer_approval: game.require_peer_approval,
     score_visibility: game.score_visibility,

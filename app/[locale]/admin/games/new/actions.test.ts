@@ -336,6 +336,68 @@ describe('createGameDraft — start_type (#2258)', () => {
   });
 });
 
+describe('createGameDraft — «Gjenta hver uke» (#2460)', () => {
+  function repeatInsert() {
+    const insert = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'insert',
+    );
+    return (insert!.args[0] as { repeat_weekly: boolean }).repeat_weekly;
+  }
+
+  it('writes the switch for a standalone round', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false }, error: null }, // gate
+      { data: { id: 'rw-game-1' }, error: null }, // games.insert
+      { data: null, error: null }, // game_players.insert
+    ]);
+    signIn('reg-1', 'random@example.com');
+
+    const { createGameDraft } = await import('./actions');
+    await expect(
+      createGameDraft(fd({ name: 'Lørdagsrunden', side_tournament_enabled: 'false', repeat_weekly: '1' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(repeatInsert()).toBe(true);
+  });
+
+  it('writes off for a round with tee-off «Nå», whatever the form says', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false }, error: null }, // gate
+      { data: { id: 'rw-game-2' }, error: null }, // games.insert
+      { data: null, error: null }, // game_players.insert
+    ]);
+    signIn('reg-1', 'random@example.com');
+
+    const { createGameDraft } = await import('./actions');
+    await expect(
+      createGameDraft(
+        fd({ name: 'Rett ut', side_tournament_enabled: 'false', tee_off_now: '1', repeat_weekly: '1' }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(repeatInsert()).toBe(false);
+  });
+
+  it('writes off for a club tournament, whatever the form says', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false }, error: null }, // gate
+      { data: { group_id: 'club-1', groups: { valid_until: null } }, error: null }, // group_members
+      { data: { id: 'rw-game-3' }, error: null }, // games.insert
+      { data: null, error: null }, // game_players.insert
+    ]);
+    signIn('reg-1', 'random@example.com');
+
+    const { createGameDraft } = await import('./actions');
+    await expect(
+      createGameDraft(
+        fd({ name: 'Klubbmesterskap', side_tournament_enabled: 'false', group_id: 'club-1', repeat_weekly: '1' }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(repeatInsert()).toBe(false);
+  });
+});
+
 describe('createGameDraft — hull for sideturneringen (#2283)', () => {
   const SIDE_ON = { name: 'Sidekonk', side_tournament_enabled: 'true' };
 

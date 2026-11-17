@@ -1244,6 +1244,12 @@
         "done": "Done",
         "close": "Close"
       },
+      "repeat": {
+        "kicker": "Repeat",
+        "title": "Repeat every week",
+        "next": "Next: {when}. The same group gets an invitation when this round is finished.",
+        "nextSameDay": "Next: same day and time the week after. The same group gets an invitation when this round is finished."
+      },
       "publishButton": "Publish and share the invitation",
       "publishPending": "Publishing …",
       "draftButton": "Save as draft",
@@ -1310,7 +1316,9 @@
         "notSet": "Not set",
         "footnote": "Each part opens on its own and saves right away. Players see the changes the next time they open the app.",
         "delete": "Cancel the round …",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "repeatOn": "Repeats every week",
+        "repeatOff": "Does not repeat"
       },
       "formatHeading": "3. Format",
       "modeLockedNote": "Cannot be changed after the game has started.",

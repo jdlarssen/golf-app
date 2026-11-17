@@ -1845,6 +1845,10 @@ function FormDataInputs({
       {/* #2463: «Nå» on step 3. The server sets the tee-off when it publishes
           (resolveTeeOffForSave); the field above is empty then. */}
       <input type="hidden" name="tee_off_now" value={teeOffNow ? '1' : ''} />
+      {/* #2460: «Gjenta hver uke» on step 5 has no name; this carries it to a
+          publish and to «Lagre som utkast». Off when the round may not repeat
+          (`repeatWeeklyAllowed`), and the server checks again. */}
+      <input type="hidden" name="repeat_weekly" value={state.repeatWeekly ? '1' : ''} />
       {/* #2258: «Shotgun-start» lives in BasicsSection (step 3, no name); the
           mirror here carries it to a publish from any step. */}
       <input type="hidden" name="start_type" value={startType} />

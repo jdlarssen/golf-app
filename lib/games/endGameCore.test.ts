@@ -129,6 +129,12 @@ vi.mock('@/lib/mail/gameFinishedNotification', () => ({
     sendGameFinishedNotificationMock(...args),
 }));
 
+// #2460: the tail's last step (the next weekly round) is owned by
+// `spawnWeeklyRepeat.test.ts`; mocked so it adds no service-role reads here.
+vi.mock('@/lib/games/spawnWeeklyRepeat', () => ({
+  spawnWeeklyRepeat: async () => ({ spawned: false, reason: 'off' }),
+}));
+
 // `runFinishPipeline` claims `games.finish_pipeline_at` through the SERVICE-ROLE
 // client before it runs a single tail step (#1856) — the guard trigger in 0169
 // rejects that write from anyone else. Mocked here so the tail assertions below
