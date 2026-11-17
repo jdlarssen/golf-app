@@ -68,16 +68,28 @@
   <text x="190" y="778" font-size="15" font-weight="600" fill="#7A5E13">NY: Premieutdelingen på TV-en, styrt fra mobilen</text>
   <text x="190" y="798" font-size="12.5" fill="#6B5526">valgfritt · sidepremiene → 3. plass → 2. plass → «Avslør vinneren»</text>
   <text x="190" y="816" font-size="12.5" fill="#6B5526">slagspill, stableford og lagformatene · spillerne har resultatet alt</text>
-  <line x1="400" y1="832" x2="400" y2="856" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+  <!-- after the finish: two ways to the next round, side by side -->
+  <path d="M400,832 V844 H257 V856" fill="none" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+  <path d="M400,844 H542 V856" fill="none" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
 
   <!-- 5 revansje (NY #1007) -->
-  <rect x="120" y="858" width="560" height="80" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
-  <rect x="610" y="866" width="60" height="20" rx="10" fill="#C9A961"/><text x="640" y="880" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#1007</text>
-  <text x="156" y="894" font-size="19">🔁</text>
-  <text x="190" y="884" font-size="15" font-weight="600" fill="#7A5E13">NY: «Revansje?» — alle deltakere, ikke bare arrangøren</text>
-  <text x="190" y="904" font-size="12.5" fill="#6B5526">samme bane/format/sideturnering/spillerliste ferdig utfylt —</text>
-  <text x="190" y="922" font-size="12.5" fill="#6B5526">skjult for cup-matches og liga-runder</text>
-  <line x1="400" y1="938" x2="400" y2="962" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+  <rect x="120" y="858" width="275" height="84" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
+  <rect x="325" y="866" width="60" height="20" rx="10" fill="#C9A961"/><text x="355" y="880" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#1007</text>
+  <text x="132" y="894" font-size="19">🔁</text>
+  <text x="162" y="884" font-size="15" font-weight="600" fill="#7A5E13">NY: «Revansje?»</text>
+  <text x="162" y="903" font-size="12" fill="#6B5526">alle deltakere kan trykke</text>
+  <text x="162" y="919" font-size="12" fill="#6B5526">bane, format, spillere fylt ut</text>
+  <text x="162" y="935" font-size="12" fill="#6B5526">ikke cup eller liga</text>
+  <line x1="257" y1="942" x2="257" y2="962" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- 5b gjenta hver uke (NY #2460): made by the finish itself -->
+  <rect x="405" y="858" width="275" height="84" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
+  <rect x="610" y="866" width="60" height="20" rx="10" fill="#C9A961"/><text x="640" y="880" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#2460</text>
+  <text x="417" y="894" font-size="19">📅</text>
+  <text x="447" y="884" font-size="15" font-weight="600" fill="#7A5E13">NY: Gjenta hver uke</text>
+  <text x="447" y="903" font-size="12" fill="#6B5526">neste runde lages av seg selv</text>
+  <text x="447" y="919" font-size="12" fill="#6B5526">om en uke, med invitasjon</text>
+  <text x="447" y="935" font-size="12" fill="#6B5526">slås av i «Rediger spill»</text>
 
   <!-- 6 back to flow 04 -->
   <rect x="120" y="964" width="560" height="52" rx="16" fill="#1B4332"/>

@@ -107,6 +107,18 @@
   <text x="362" y="603" font-size="12" fill="#8A7333">Spillere-raden viser valget fra steg 4 · «Endre» går dit</text>
   <line x1="610" y1="614" x2="610" y2="622" stroke="#8A6D27" stroke-width="1.6" marker-end="url(#a)"/>
 
+  <!-- NEW (#2460): «Gjenta hver uke» on «Klar?», Kompis and Solo only. Left
+       column: the right one holds #2446/#2459. -->
+  <line x1="290" y1="600" x2="232" y2="632" stroke="#C9A961" stroke-width="1.4" stroke-dasharray="4 3"/>
+  <g>
+    <rect x="70" y="634" width="200" height="96" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
+    <text x="84" y="658" font-size="13" font-weight="700" fill="#7A5E13">NY: Gjenta</text>
+    <rect x="208" y="644" width="52" height="20" rx="10" fill="#C9A961"/><text x="234" y="658" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#2460</text>
+    <text x="84" y="678" font-size="11.5" fill="#6B5526">bryter «Gjenta hver uke»</text>
+    <text x="84" y="695" font-size="11.5" fill="#6B5526">Kompis og Solo</text>
+    <text x="84" y="716" font-size="11" fill="#8A7333">«Neste: lørdag 10. okt …»</text>
+  </g>
+
   <!-- fork -->
   <rect x="320" y="624" width="270" height="50" rx="14" fill="#ECEAE3" stroke="#B9B3A7" stroke-width="1.4"/>
   <text x="455" y="647" text-anchor="middle" font-size="14" font-weight="600" fill="#6B6258">Lagre som utkast</text>
