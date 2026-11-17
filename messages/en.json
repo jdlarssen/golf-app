@@ -1220,6 +1220,10 @@
           "open": "Open registration"
         }
       },
+      "signupPreview": {
+        "kicker": "How it looks to someone signing up",
+        "nameFallback": "Your round"
+      },
       "seatsAndDeadline": {
         "kicker": "Spots and deadline",
         "seatsTitle": "Number of spots",
