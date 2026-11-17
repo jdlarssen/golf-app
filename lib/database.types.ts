@@ -975,6 +975,8 @@ export type Database = {
           prizes: Json
           registration_mode: Database["public"]["Enums"]["registration_mode"]
           registration_type: Database["public"]["Enums"]["registration_type"]
+          repeat_weekly: boolean
+          repeated_from_game_id: string | null
           require_peer_approval: boolean
           round_report: string | null
           scheduled_tee_off_at: string | null
@@ -1024,6 +1026,8 @@ export type Database = {
           prizes?: Json
           registration_mode?: Database["public"]["Enums"]["registration_mode"]
           registration_type?: Database["public"]["Enums"]["registration_type"]
+          repeat_weekly?: boolean
+          repeated_from_game_id?: string | null
           require_peer_approval?: boolean
           round_report?: string | null
           scheduled_tee_off_at?: string | null
@@ -1073,6 +1077,8 @@ export type Database = {
           prizes?: Json
           registration_mode?: Database["public"]["Enums"]["registration_mode"]
           registration_type?: Database["public"]["Enums"]["registration_type"]
+          repeat_weekly?: boolean
+          repeated_from_game_id?: string | null
           require_peer_approval?: boolean
           round_report?: string | null
           scheduled_tee_off_at?: string | null
@@ -1135,6 +1141,13 @@ export type Database = {
             columns: ["league_round_id"]
             isOneToOne: false
             referencedRelation: "league_rounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "games_repeated_from_game_id_fkey"
+            columns: ["repeated_from_game_id"]
+            isOneToOne: true
+            referencedRelation: "games"
             referencedColumns: ["id"]
           },
           {
