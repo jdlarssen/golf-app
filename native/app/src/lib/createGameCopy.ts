@@ -48,6 +48,21 @@ export function describeCreateGameFailure(error: CreateGameFailure): string {
       return 'Typen påmelding er ugyldig. Velg «Individuelt» eller «Lag».';
     case 'team_registration_unsupported_mode':
       return 'Lagpåmelding funker ikke med dette formatet. Velg «Individuelt», eller bytt til et format som spilles i lag.';
+
+    // #2482: «Plasser og frist» — appens veiviser setter ikke disse feltene
+    // ennå (neste appbygg), men unionen er delt med webben, så switchen må
+    // ha en setning likevel.
+    case 'bad_registration_cap':
+      return 'Antall plasser passer ikke med formatet. Sett et nytt tall under «Plasser og frist».';
+    case 'bad_signup_deadline':
+      return 'Påmeldingsfristen er ugyldig. Velg dato og klokkeslett på nytt.';
+    case 'signup_deadline_after_tee_off':
+      return 'Påmeldingsfristen må være før tee-off.';
+    // Rediger-eneste (U12): appen har ingen rediger-flyt, så denne nås aldri
+    // herfra. Webbens tekst har et spillertall-plural appen ikke kan fylle ut
+    // uten parameteren, så den speiles ikke ordrett.
+    case 'registration_cap_below_held':
+      return 'Antall plasser kan ikke settes lavere enn antallet som alt er med.';
     case 'tee_off_required':
       return 'Tee-off-tidspunkt er påkrevd.';
     case 'tee_off_in_past':

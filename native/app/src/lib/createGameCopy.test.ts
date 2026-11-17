@@ -50,6 +50,15 @@ const FAILURE_MAP = {
   bad_registration_mode: 'bad_registration_mode',
   bad_registration_type: 'bad_registration_type',
   team_registration_unsupported_mode: 'team_registration_unsupported_mode',
+  // #2482: appens veiviser setter ikke cap/frist ennå, men unionen er delt
+  // med webben (bad_registration_cap, bad_signup_deadline,
+  // signup_deadline_after_tee_off er plain strenger og speiles likt;
+  // registration_cap_below_held er rediger-eneste og har et plural-parameter
+  // webben fyller ut, derfor null + WEB_ONLY under).
+  bad_registration_cap: 'bad_registration_cap',
+  bad_signup_deadline: 'bad_signup_deadline',
+  signup_deadline_after_tee_off: 'signup_deadline_after_tee_off',
+  registration_cap_below_held: null,
   tee_off_required: 'tee_off_required',
   tee_off_in_past: 'tee_off_in_past',
   bad_side_ld_count: 'bad_side_ld_count',
@@ -92,6 +101,7 @@ const WEB_ONLY: Partial<Record<WizardErrorKey, string>> = {
   cup_roster_locked: 'cup-låsen i redigerings-flyten på web (#2210); appen oppretter bare',
   unexpected: 'webbens fallback med rå kode for ukjente koder; appen har en setning per kode',
   only_guests: 'gjestesperren (#2570) bor i webbens publiser-actions (CreateGameErrorCode), ikke i gamePayload.ts — appen bygger sin egen payload og går ikke via den sperren',
+  registration_cap_below_held: '#2482: rediger-eneste (U12, `edit/actions.ts`); appen har ingen rediger-flyt og når aldri dette steget, og webbens tekst har et spillertall-plural appen ikke kan fylle ut',
 };
 
 describe('paritet med wizard.errors i messages/no.json', () => {
