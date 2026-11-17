@@ -5,6 +5,7 @@ import {
   type EditGameRow,
   type EditGamePlayerRow,
 } from '@/lib/games/editGameInitialValues';
+import { NO_ROTATION_MODES } from '@/lib/games/assignRotationSlots';
 
 /**
  * #1007 — «Revansje»-knappen. Bygger prefill-`InitialValues` for opprett-
@@ -36,8 +37,6 @@ export type RevansjePlayerRow = EditGamePlayerRow & {
   /** WD/«trekk spiller» (#386). Non-null rader filtreres bort før mapping. */
   withdrawn_at: string | null;
 };
-
-const NO_ROTATION_MODES = new Set(['wolf', 'round_robin']);
 
 export function buildRevansjeInitialValues(
   game: RevansjeGameRow,

@@ -18,6 +18,12 @@
  */
 import { startPlayerCountRange } from './startPlayerCount';
 
+/**
+ * The formats whose slots are drawn at start, so a copied roster («Revansje?»
+ * #1007, «Gjenta hver uke» #2460) carries no team or flight.
+ */
+export const NO_ROTATION_MODES: ReadonlySet<string> = new Set(['wolf', 'round_robin']);
+
 export type RotationSlotRow = {
   user_id: string;
   team_number: number;

@@ -101,6 +101,12 @@ vi.mock('@/lib/mail/gameFinishedNotification', () => ({
     sendGameFinishedNotificationMock(...args),
 }));
 
+// #2460: «Gjenta hver uke», the tail's last step.
+const spawnWeeklyRepeatMock = vi.fn<(...a: unknown[]) => Promise<unknown>>();
+vi.mock('@/lib/games/spawnWeeklyRepeat', () => ({
+  spawnWeeklyRepeat: (...args: unknown[]) => spawnWeeklyRepeatMock(...args),
+}));
+
 /** The service-role client the marker claim runs on. `null` = getAdminClient throws. */
 let adminClientMock: ReturnType<typeof buildSupabaseMock> | null;
 vi.mock('@/lib/supabase/admin', () => ({
@@ -172,6 +178,7 @@ function expectNothingRan() {
   expect(notifyPlayersGameFinishedMock).not.toHaveBeenCalled();
   expect(buildGameFinishedRecipientsMock).not.toHaveBeenCalled();
   expect(sendGameFinishedNotificationMock).not.toHaveBeenCalled();
+  expect(spawnWeeklyRepeatMock).not.toHaveBeenCalled();
 }
 
 beforeEach(() => {
@@ -198,6 +205,7 @@ beforeEach(() => {
     { userId: 'user-b', email: 'b@example.com', name: 'Bjørn', locale: 'no' },
   ]);
   sendGameFinishedNotificationMock.mockReset().mockResolvedValue({ ok: true });
+  spawnWeeklyRepeatMock.mockReset().mockResolvedValue({ spawned: false, reason: 'off' });
 });
 
 // ─── The marker claim ───────────────────────────────────────────────────────
@@ -318,7 +326,7 @@ describe('runFinishPipeline — the finish-pipeline claim', () => {
 // ─── The tail itself ────────────────────────────────────────────────────────
 
 describe('runFinishPipeline — the tail', () => {
-  it('runs the ten steps in their documented order', async () => {
+  it('runs the eleven steps in their documented order', async () => {
     const client = buildSupabaseMock([]);
 
     await runFinishPipeline(client as never, input());
@@ -334,6 +342,7 @@ describe('runFinishPipeline — the tail', () => {
       notifyPlayersGameFinishedMock,
       buildGameFinishedRecipientsMock,
       sendGameFinishedNotificationMock,
+      spawnWeeklyRepeatMock,
     ].map(firstCallOrder);
 
     expect(order).toEqual([...order].sort((a, b) => a - b));
@@ -425,6 +434,30 @@ describe('runFinishPipeline — the tail', () => {
     expect(result).toEqual({ ran: true });
     expect(consoleErr).toHaveBeenCalledWith(
       '[finishPipeline] game-finished mail failed',
+      expect.any(Error),
+    );
+    consoleErr.mockRestore();
+  });
+
+  it('#2460: asks for the next weekly round with the game id', async () => {
+    const client = buildSupabaseMock([]);
+
+    await runFinishPipeline(client as never, input());
+
+    expect(spawnWeeklyRepeatMock).toHaveBeenCalledWith(GAME_ID);
+  });
+
+  it('#2460: a failing next round never stops the mail and still reports ran: true', async () => {
+    const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    spawnWeeklyRepeatMock.mockRejectedValue(new Error('insert blew up'));
+    const client = buildSupabaseMock([]);
+
+    const result = await runFinishPipeline(client as never, input());
+
+    expect(result).toEqual({ ran: true });
+    expect(sendGameFinishedNotificationMock).toHaveBeenCalledTimes(2);
+    expect(consoleErr).toHaveBeenCalledWith(
+      '[finishPipeline] weekly repeat threw',
       expect.any(Error),
     );
     consoleErr.mockRestore();
