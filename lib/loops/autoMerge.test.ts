@@ -15,6 +15,8 @@ import {
   ownerWaitReasons,
   shouldDispatchMainVerify,
   touchesNeverList,
+  withAdvisoryChecks,
+  SCHEMA_CHECK_WAIT_REASON,
   type AutoMergeInput,
 } from './autoMerge';
 import { type GitHubClient } from './discordActions';
@@ -526,6 +528,36 @@ describe('ownerWaitReasons', () => {
   });
 });
 
+describe('withAdvisoryChecks', () => {
+  const reasons = ['rører innlogging/konto'];
+
+  it('ingen røde rådgivende sjekker → uendret', () => {
+    expect(
+      withAdvisoryChecks({ outcome: 'auto-merge', demotedReason: null }, [], [])
+    ).toEqual({ outcome: 'auto-merge', demotedReason: null, waitReasons: [] });
+  });
+
+  it('rød drift degraderer auto-merge til knapp-kort med skjema-linja', () => {
+    expect(
+      withAdvisoryChecks({ outcome: 'auto-merge', demotedReason: null }, [], ['drift'])
+    ).toEqual({
+      outcome: 'card',
+      demotedReason: 'rådgivende sjekk rød: drift',
+      waitReasons: [SCHEMA_CHECK_WAIT_REASON],
+    });
+  });
+
+  it('rød drift på en PR som allerede er knapp-kort beholder grunnen og legger til skjema-linja', () => {
+    expect(
+      withAdvisoryChecks({ outcome: 'card', demotedReason: 'endrer fil på aldri-lista' }, reasons, ['drift'])
+    ).toEqual({
+      outcome: 'card',
+      demotedReason: 'endrer fil på aldri-lista',
+      waitReasons: [...reasons, SCHEMA_CHECK_WAIT_REASON],
+    });
+  });
+});
+
 // ── mergePullRequest (injisert klient) ───────────────────────────────────────
 
 type Call = { method: string; path: string; body?: unknown };
@@ -610,6 +642,44 @@ describe('mergePullRequest', () => {
     ]);
     const res = await mergePullRequest({ gh, repo: REPO, prNumber: 1406, headSha: 'abc123' });
     expect(res).toEqual({ ok: false, reason: 'CI red ved re-sjekk' });
+  });
+
+  // #2917: knappens re-sjekk arver regelen gjennom classifyChecks.
+  it('bare drift rød ved re-sjekk → merge-kallet går videre', async () => {
+    const { gh, calls } = mockGh([
+      { status: 200, json: openPr },
+      {
+        status: 200,
+        json: {
+          check_runs: [
+            { name: 'verify', status: 'completed', conclusion: 'success' },
+            { name: 'drift', status: 'completed', conclusion: 'failure' },
+          ],
+        },
+      },
+      { status: 200, json: { merged: true } },
+    ]);
+    const res = await mergePullRequest({ gh, repo: REPO, prNumber: 1406, headSha: 'abc123' });
+    expect(res).toEqual({ ok: true });
+    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'PUT']);
+  });
+
+  it('verify rød ved siden av rød drift → fortsatt CI red ved re-sjekk', async () => {
+    const { gh, calls } = mockGh([
+      { status: 200, json: openPr },
+      {
+        status: 200,
+        json: {
+          check_runs: [
+            { name: 'verify', status: 'completed', conclusion: 'failure' },
+            { name: 'drift', status: 'completed', conclusion: 'failure' },
+          ],
+        },
+      },
+    ]);
+    const res = await mergePullRequest({ gh, repo: REPO, prNumber: 1406, headSha: 'abc123' });
+    expect(res).toEqual({ ok: false, reason: 'CI red ved re-sjekk' });
+    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET']);
   });
 
   // #1520: re-sjekken deler classifyChecks med kortet, så en kansellert

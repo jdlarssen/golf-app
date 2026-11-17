@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  ADVISORY_CHECK_NAMES,
   buildCardPayload,
   buildReceiptPayload,
   CARD_CHECK_NAME,
@@ -12,6 +13,7 @@ import {
   expectsRealCi,
   extractFunctionalSection,
   extractPrSummary,
+  redAdvisoryChecks,
   shouldHandOffToRelay,
   waitForChecksToSettle,
   type CheckRun,
@@ -121,6 +123,55 @@ describe('classifyChecks', () => {
       expect(classifyChecks([card('completed', 'success')])).toBe('pending');
     });
   });
+
+  // #2917: `drift` sammenligner mot den delte staging-databasen og er ikke påkrevd.
+  // En rød `drift` alene skal ikke stoppe kortet, men en pågående skal fortsatt vente.
+  describe('rådgivende sjekker (drift)', () => {
+    const drift = (status: string, conclusion: string | null): CheckRun => ({
+      name: 'drift',
+      status,
+      conclusion,
+    });
+    const verify = (conclusion: string): CheckRun => ({ name: 'verify', status: 'completed', conclusion });
+
+    it('rød drift alene gjør ikke PR-en rød', () => {
+      expect(classifyChecks([verify('success'), drift('completed', 'failure')])).toBe('green');
+    });
+
+    it('pågående drift er fortsatt pending (kortet venter til drift har landet)', () => {
+      expect(classifyChecks([verify('success'), drift('in_progress', null)])).toBe('pending');
+    });
+
+    it('en annen rød sjekk gir red, også når drift er rød samtidig', () => {
+      expect(classifyChecks([verify('failure'), drift('completed', 'failure')])).toBe('red');
+    });
+
+    it('post-card filtreres fortsatt bort ved siden av en rød drift', () => {
+      const card: CheckRun = { name: CARD_CHECK_NAME, status: 'in_progress', conclusion: null };
+      expect(classifyChecks([verify('success'), drift('completed', 'failure'), card])).toBe('green');
+    });
+  });
+});
+
+describe('redAdvisoryChecks', () => {
+  const run = (name: string, status: string, conclusion: string | null): CheckRun => ({
+    name,
+    status,
+    conclusion,
+  });
+
+  it('gir drift når den er fullført rød', () => {
+    expect(redAdvisoryChecks([run('verify', 'completed', 'success'), run('drift', 'completed', 'failure')])).toEqual([
+      'drift',
+    ]);
+  });
+
+  it('gir tom liste når drift er grønn, pågående eller fraværende', () => {
+    expect(redAdvisoryChecks([run('drift', 'completed', 'success')])).toEqual([]);
+    expect(redAdvisoryChecks([run('drift', 'in_progress', null)])).toEqual([]);
+    expect(redAdvisoryChecks([run('verify', 'completed', 'failure')])).toEqual([]);
+    expect(redAdvisoryChecks([])).toEqual([]);
+  });
 });
 
 describe('expectsRealCi', () => {
@@ -184,6 +235,12 @@ describe('lockstep mot .github/workflows', () => {
 
   it('CARD_CHECK_NAME er jobnavnet i discord-pr-card.yml', () => {
     expect(workflow('discord-pr-card.yml')).toContain(`\n  ${CARD_CHECK_NAME}:\n`);
+  });
+
+  it('hvert navn i ADVISORY_CHECK_NAMES er en jobb i schema-drift.yml', () => {
+    for (const name of ADVISORY_CHECK_NAMES) {
+      expect(workflow('schema-drift.yml')).toContain(`\n  ${name}:\n`);
+    }
   });
 });
 
