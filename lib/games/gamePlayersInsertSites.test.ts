@@ -70,6 +70,11 @@ const INSERT_SITES: Record<string, { count: number; reason: string }> = {
     reason:
       "the guest's M/D/J pick, clamped to the game's tee by addGuestToGame (#2437)",
   },
+  // #2460: «Gjenta hver uke».
+  'lib/games/spawnWeeklyRepeat.ts': {
+    count: 1,
+    reason: "the next weekly round's roster copies each active player's tee_gender from the finished round",
+  },
   'lib/league/startLeagueRoundFlightCore.ts': {
     count: 1,
     reason: 'league round, teeGenderOf (out of scope for #2209, see the PR; moved from lib/league/actions.ts in #2638)',

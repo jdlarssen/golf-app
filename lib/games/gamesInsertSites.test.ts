@@ -31,6 +31,12 @@ const INSERT_SITES: Record<string, { count: number; stamps: boolean; reason: str
     reason:
       'league rounds keep the original rule; the league is frozen (contract #2253). Moved from lib/league/actions.ts in #2638',
   },
+  'lib/games/spawnWeeklyRepeat.ts': {
+    count: 1,
+    stamps: false,
+    reason:
+      '«Gjenta hver uke» (#2460) copies the finished round\'s mode_config as it is: the series keeps the rules it was created under, and the first round was stamped by the wizard',
+  },
   'native/app/src/data/createGame.ts': {
     count: 1,
     stamps: true,

@@ -9,6 +9,7 @@ import { notifyFriendsOfAchievements } from '@/lib/games/notifyFriendsOfAchievem
 import { generateAndPersistRoundReport } from '@/lib/games/generateRoundReport';
 import { reportStart } from '@/lib/games/roundReportExcerpt';
 import { finishDerivedGames } from '@/lib/games/syncDerivedGamesStatus';
+import { spawnWeeklyRepeat } from '@/lib/games/spawnWeeklyRepeat';
 import { sendGameFinishedNotification } from '@/lib/mail/gameFinishedNotification';
 import { buildGameFinishedRecipients } from '@/lib/mail/gameFinishedRecipients';
 import { notifyPlayersGameFinished } from '@/lib/notifications/events';
@@ -70,6 +71,15 @@ import type { HoleSegment } from '@/lib/scoring';
  * duplicate mail and double billing on every retry. The claim MUST go through
  * the service role: `guard_games_finish_pipeline_at` (0169) raises 42501 for any
  * non-admin authenticated writer, and the web path admits a non-admin creator.
+ *
+ * NEXT ROUND (#2460). «Gjenta hver uke» creates the next round here, as the
+ * last step, and not in a cron of its own: this tail is the one place both
+ * finish paths reach (the web synchronously, the app through the sweep), and it
+ * already runs once per finish. The claim is NOT what keeps it to one round,
+ * though: `reopenGame` clears `finish_pipeline_at`, so a reopened round that is
+ * finished again runs the tail a second time. The unique
+ * `games.repeated_from_game_id` (0240) is what holds, and `spawnWeeklyRepeat`
+ * reads its 23505 as «already there». Best-effort like the rest of the tail.
  */
 
 /** The `games` fields the tail reads. Same shape `endGameCore` already selects. */
@@ -303,6 +313,17 @@ export async function runFinishPipeline(
         }
       }
     }
+  }
+
+  // #2460: «Gjenta hver uke» — the next round, last, after the results are
+  // out. See NEXT ROUND in the file header. Never stops the finish.
+  try {
+    const repeat = await spawnWeeklyRepeat(game.id);
+    if (repeat.spawned) {
+      console.log(`[${logContext}] weekly repeat ${game.id} → ${repeat.gameId}`);
+    }
+  } catch (e) {
+    console.error(`[${logContext}] weekly repeat threw`, e);
   }
 
   return { ran: true };

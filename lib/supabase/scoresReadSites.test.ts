@@ -34,6 +34,10 @@ const BOUNDED: Record<string, { count: number; reason: string }> = {
     count: 1,
     reason: 'head: true count, no rows',
   },
+  'lib/games/spawnWeeklyRepeat.ts': {
+    count: 1,
+    reason: '#2460: head: true count, no rows (did anyone enter a stroke?)',
+  },
   'app/[locale]/games/[id]/slett/page.tsx': {
     count: 1,
     reason: 'head: true count, no rows',
