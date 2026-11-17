@@ -17,6 +17,8 @@
 // turns it into its own ISO instant with `parseOsloDateTimeLocal` before asking its copy.
 
 export const REPEAT_FIXED = {
+  /** The section heading above the switch. */
+  kicker: 'Gjenta',
   title: 'Gjenta hver uke',
 } as const;
 

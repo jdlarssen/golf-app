@@ -23,6 +23,7 @@ describe('RepeatWeeklyCard', () => {
         <RepeatWeeklyCard checked={false} onChange={onChange} scheduledTeeOffAt="2026-10-03T09:00" name="repeat_weekly" />
       </form>,
     );
+    expect(screen.getByText(REPEAT_FIXED.kicker)).toBeInTheDocument();
     const toggle = screen.getByRole('switch', { name: REPEAT_FIXED.title });
     expect(toggle).not.toBeChecked();
     expect(screen.queryByText(REPEAT_NEXT_CASES[0].text)).toBeNull();
