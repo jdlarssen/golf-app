@@ -44,6 +44,7 @@ import { ReadyChecklist, type ReadyChecklistItem } from './ReadyChecklist';
 import { ReadySettings } from './ReadySettings';
 import { RepeatWeeklyCard } from './RepeatWeeklyCard';
 import { SeatsAndDeadlineCard } from './SeatsAndDeadlineCard';
+import { SignupPreviewCard } from './SignupPreviewCard';
 import { showsSeatsAndDeadline } from './seatsAndDeadlineRules';
 import type { ReadySettingsKey } from './readySettingsRules';
 import {
@@ -408,7 +409,19 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
 
         {/* #2482: «Plasser og frist» for open signup and manual approval. */}
         {showsSeatsAndDeadline(registrationMode, isClubScoped) && (
-          <SeatsAndDeadlineCard state={state} />
+          <>
+            <SeatsAndDeadlineCard state={state} />
+            {/* The owner's answer 17.11: the player's view, as drawn. */}
+            <SignupPreviewCard
+              name={name}
+              teeOffIso={teeOffNow ? null : teeOffIso(scheduledTeeOffAt)}
+              gameMode={gameMode}
+              teamSize={teamSize}
+              cap={state.registrationCapForSave}
+              registrationMode={registrationMode}
+              waitlistEnabled={state.waitlistEnabled}
+            />
+          </>
         )}
 
         <div ref={settingsRef}>
