@@ -1230,6 +1230,10 @@
           "open": "Åpen påmelding"
         }
       },
+      "signupPreview": {
+        "kicker": "Slik ser det ut for den som melder seg på",
+        "nameFallback": "Runden din"
+      },
       "seatsAndDeadline": {
         "kicker": "Plasser og frist",
         "seatsTitle": "Antall plasser",
