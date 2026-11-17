@@ -156,7 +156,7 @@ vinner:
    **Rådgivende sjekker (#2917):** `drift` (`ADVISORY_CHECK_NAMES` i `prCard.ts`,
    jobben i `schema-drift.yml`) er ikke påkrevd og blir rød hver gang staging har en
    annen åpen migrasjons-PR sine kolonner. En rød `drift` alene teller derfor ikke
-   som `red`, verken i decide eller i knappens re-sjekk, men en pågående `drift`
+   som `red`, verken i decide eller i merge-endepunktets re-sjekk, men en pågående `drift`
    er fortsatt `pending`. Den gir aldri auto-merge: `withAdvisoryChecks`
    (`autoMerge.ts`) degraderer utfallet til knapp-kort, og kortet får linja
    «skjemasjekken er rød …» under «Venter på deg». Alle andre røde sjekker stopper

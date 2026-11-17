@@ -644,7 +644,7 @@ describe('mergePullRequest', () => {
     expect(res).toEqual({ ok: false, reason: 'CI red ved re-sjekk' });
   });
 
-  // #2917: knappens re-sjekk arver regelen gjennom classifyChecks.
+  // #2917: merge-endepunktets re-sjekk arver regelen gjennom classifyChecks.
   it('bare drift rød ved re-sjekk → merge-kallet går videre', async () => {
     const { gh, calls } = mockGh([
       { status: 200, json: openPr },
