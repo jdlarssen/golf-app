@@ -63,7 +63,7 @@ import {
   type AppRegistrationType,
 } from '../lib/registrationCopy';
 import { averagePctToSumPct } from '../../../../lib/games/teamHandicapUnit';
-import { canRepeatWeekly } from '../../../../lib/games/weeklyRepeat';
+import { canRepeatWeekly } from '../../../../lib/games/weeklyRepeatRule';
 import { repeatWeeklyNextText } from '../lib/repeatWeeklyCopy';
 import { openOrReturn } from '../lib/backTo';
 import {

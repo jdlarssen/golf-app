@@ -27,7 +27,7 @@ import {
   defaultTeamSizeForMode,
 } from '../../../../lib/games/formatSetupDefaults';
 import { defaultFlightForTeam } from '../../../../lib/games/teamFormatLimits';
-import { canRepeatWeekly } from '../../../../lib/games/weeklyRepeat';
+import { canRepeatWeekly } from '../../../../lib/games/weeklyRepeatRule';
 import { isStablefordFamily } from '../../../../lib/scoring/modes/types';
 import {
   APP_MODE_LABELS,

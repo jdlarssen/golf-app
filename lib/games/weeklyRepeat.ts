@@ -1,74 +1,28 @@
 import type { Database } from '@/lib/database.types';
-import { isClubTournament } from '@/lib/games/registration';
 import { formatOsloDateTimeLocal, parseOsloDateTimeLocal } from '@/lib/games/gamePayload';
 import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { NO_ROTATION_MODES } from '@/lib/games/assignRotationSlots';
 import { isAutoGameName, suggestGameName } from '@/lib/games/autoGameName';
+import { addDaysLocal } from '@/lib/games/weeklyRepeatRule';
+
+export {
+  canRepeatWeekly,
+  nextWeeklyLocal,
+  type CanRepeatWeeklyInput,
+} from '@/lib/games/weeklyRepeatRule';
 
 /**
- * #2460 «Gjenta hver uke»: the pure half of the feature. The rule for which
- * rounds may repeat, the date of the next round, and the rows the finish tail
- * inserts (`spawnWeeklyRepeat`). No I/O and no `server-only`, so the web
- * wizard, the server actions and the app's «Klar?» all read the same rule.
+ * #2460 «Gjenta hver uke»: the server half of the pure code. The date of the
+ * next round in Oslo time and the rows the finish tail inserts
+ * (`spawnWeeklyRepeat`). The rule itself and the wall-clock arithmetic live in
+ * `weeklyRepeatRule.ts` (re-exported here), which is all the app imports: this
+ * file reaches the Oslo `Intl` helpers and the game-name code, which Hermes
+ * cannot run.
  */
 
 type GamesRow = Database['public']['Tables']['games']['Row'];
 type GamesInsert = Database['public']['Tables']['games']['Insert'];
 type GamePlayersInsert = Database['public']['Tables']['game_players']['Insert'];
-
-export type CanRepeatWeeklyInput = {
-  tournamentId: string | null | undefined;
-  leagueRoundId: string | null | undefined;
-  sourceGameId: string | null | undefined;
-  groupId: string | null | undefined;
-  /** The organiser chose tee-off «Nå» (#2463): a one-off round. */
-  teeOffNow: boolean;
-};
-
-/**
- * May this round repeat weekly? Only a standalone round: no cup match, no
- * league round, no derived game, no club tournament (`isClubTournament`) and
- * no tee-off «Nå». The one home of the rule (AGENTS.md trap #4): the wizard
- * shows the switch by it, the server forces `false` by it, and the finish tail
- * checks it again. The DB's `games_repeat_weekly_standalone` CHECK (0240)
- * covers the first three; `weeklyRepeat.test.ts` holds the two together.
- */
-export function canRepeatWeekly({
-  tournamentId,
-  leagueRoundId,
-  sourceGameId,
-  groupId,
-  teeOffNow,
-}: CanRepeatWeeklyInput): boolean {
-  if (tournamentId || leagueRoundId || sourceGameId) return false;
-  if (isClubTournament({ groupId, tournamentId })) return false;
-  return !teeOffNow;
-}
-
-const LOCAL_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
-const pad = (n: number) => String(n).padStart(2, '0');
-
-/** A `datetime-local` value (Oslo wall clock) `days` calendar days later. */
-function addDaysLocal(value: string, days: number): string | null {
-  const m = LOCAL_RE.exec(value);
-  if (!m) return null;
-  const [year, month, day, hour, minute] = m.slice(1).map(Number);
-  if (month < 1 || month > 12 || hour > 23 || minute > 59) return null;
-  const date = new Date(Date.UTC(year, month - 1, day));
-  if (date.getUTCDate() !== day) return null;
-  date.setUTCDate(date.getUTCDate() + days);
-  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}T${pad(hour)}:${pad(minute)}`;
-}
-
-/**
- * The wizard's «Neste: …» line: the tee-off on step 3 plus seven calendar
- * days, still as a `datetime-local` value. Calendar arithmetic on the wall
- * clock, so a change to or from summer time in between never moves the time.
- * Null for an empty or malformed value.
- */
-export function nextWeeklyLocal(value: string): string | null {
-  return addDaysLocal(value, 7);
-}
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
