@@ -102,21 +102,42 @@ const BAD_CONCLUSIONS = new Set(['failure', 'cancelled', 'timed_out', 'action_re
 // (`jobs.post-card`) — endres jobben der, MÅ konstanten endres her.
 export const CARD_CHECK_NAME = 'post-card';
 
+// Rådgivende sjekker (#2917): ikke påkrevd av branch protection, så en rød en skal
+// verken stoppe kortet eller eierens knapp. `drift` sammenligner grenens
+// `lib/database.types.ts` med den DELTE staging-databasen, så den blir rød hver
+// gang en annen åpen migrasjons-PR har påført staging først. En rød rådgivende
+// sjekk gir aldri automatisk merge (se `withAdvisoryChecks` i autoMerge.ts).
+// LOCKSTEP: navnene er jobnavn i `.github/workflows/schema-drift.yml`
+// (`jobs.drift`) — låst av en test i prCard.test.ts.
+export const ADVISORY_CHECK_NAMES = ['drift'] as const;
+
+const isAdvisory = (r: CheckRun): boolean =>
+  r.name !== undefined && (ADVISORY_CHECK_NAMES as readonly string[]).includes(r.name);
+
+const isBad = (r: CheckRun): boolean => r.conclusion !== null && BAD_CONCLUSIONS.has(r.conclusion);
+
 /**
  * Klassifiserer CI-status for en PR-head ut fra check-runs. Kortets egen
  * `post-card`-check filtreres bort først (ett hjem — også merge-endepunktets
  * re-sjekk leser gjennom denne funksjonen).
- * - `pending`: minst én check ikke `completed`, ELLER ingen checks registrert
- *   enda (tom liste → carder aldri en PR uten CI).
- * - `red`: minst én fullført check har en dårlig konklusjon.
- * - `green`: alle checks fullført uten dårlig konklusjon.
+ * - `pending`: minst én check ikke `completed` (også en rådgivende), ELLER ingen
+ *   checks registrert enda (tom liste → carder aldri en PR uten CI).
+ * - `red`: minst én fullført, ikke-rådgivende check har en dårlig konklusjon.
+ * - `green`: alle checks fullført uten dårlig konklusjon, bortsett fra rådgivende.
  */
 export function classifyChecks(allRuns: CheckRun[]): ChecksState {
   const runs = allRuns.filter((r) => r.name !== CARD_CHECK_NAME);
   if (runs.length === 0) return 'pending';
   if (runs.some((r) => r.status !== 'completed')) return 'pending';
-  if (runs.some((r) => r.conclusion !== null && BAD_CONCLUSIONS.has(r.conclusion))) return 'red';
+  if (runs.some((r) => !isAdvisory(r) && isBad(r))) return 'red';
   return 'green';
+}
+
+/** Navnene på rådgivende sjekker som er fullført med dårlig konklusjon (#2917). */
+export function redAdvisoryChecks(runs: CheckRun[]): string[] {
+  return runs
+    .filter((r) => isAdvisory(r) && r.status === 'completed' && isBad(r))
+    .map((r) => r.name as string);
 }
 
 // `paths-ignore` i `.github/workflows/ci.yml` (og tvillingen ci-docs-noop.yml).

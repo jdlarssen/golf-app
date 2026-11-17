@@ -17,6 +17,7 @@ import {
   expectsRealCi,
   extractFunctionalSection,
   extractPrSummary,
+  redAdvisoryChecks,
   shouldHandOffToRelay,
   waitForChecksToSettle,
   type CheckRun,
@@ -29,6 +30,7 @@ import {
   linkedIssueNumbers,
   NEEDS_DECISION_LABEL,
   ownerWaitReasons,
+  withAdvisoryChecks,
   type AutoMergeInput,
 } from '../../lib/loops/autoMerge';
 import { isVisualChange } from '../../lib/loops/prScreenshots';
@@ -213,13 +215,19 @@ async function main(): Promise<void> {
     }
   }
 
+  // Siste check-runs vi leste — decide trenger dem også etter at tilstanden er grønn,
+  // for å se om en rådgivende sjekk (drift, #2917) er rød.
+  let latestRuns: CheckRun[] = [];
   let state: ChecksState;
   if (WAIT_FOR_CHECKS) {
     // Dispatch-trigget (docs-only-PR-er, #1301): i dispatch-øyeblikket er checkene
     // typisk uregistrerte eller uferdige — vent til de lander (30 s × 21 ≈ 10 min).
     // HTTP-feil underveis behandles som pending og prøves igjen.
     state = await waitForChecksToSettle({
-      fetchRuns: async () => (await fetchCheckRuns()) ?? [],
+      fetchRuns: async () => {
+        latestRuns = (await fetchCheckRuns()) ?? [];
+        return latestRuns;
+      },
       classify,
       maxAttempts: 21,
       sleep: () => new Promise((resolve) => setTimeout(resolve, 30_000)),
@@ -228,6 +236,7 @@ async function main(): Promise<void> {
   } else {
     const runs = await fetchCheckRuns();
     if (runs === null) return noCard(`PR #${n}: check-runs-oppslag feilet`);
+    latestRuns = runs;
     state = await classify(runs);
   }
   if (state !== 'green') return noCard(`PR #${n}: CI ${state}`);
@@ -252,9 +261,13 @@ async function main(): Promise<void> {
     prLabels: (pr.labels ?? []).map((l) => l.name),
     needsDecisionIssue,
   };
-  const { outcome, demotedReason } = classifyAutoMerge(gateInput);
   // Kortets «⏳ Venter på deg»-linje (#2147) — alle portene som traff, ikke bare den første.
-  const waitReasons = ownerWaitReasons(gateInput);
+  // En rød rådgivende sjekk (drift, #2917) stopper ikke kortet, men gir aldri auto-merge.
+  const { outcome, demotedReason, waitReasons } = withAdvisoryChecks(
+    classifyAutoMerge(gateInput),
+    ownerWaitReasons(gateInput),
+    redAdvisoryChecks(latestRuns),
+  );
 
   const plan: CardPlan = {
     outcome,

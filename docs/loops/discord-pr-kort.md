@@ -152,6 +152,15 @@ vinner:
    ci.yml er registrert ellers grønt ut. Fail-closed: HTTP-feil, «ingen kjøring
    enda», eller at endrede filer ikke lot seg lese (`expectsRealCi(null)` → gate PÅ)
    → `pending`, aldri `green`. Docs-only-PR-er er uendret (gaten er av).
+
+   **Rådgivende sjekker (#2917):** `drift` (`ADVISORY_CHECK_NAMES` i `prCard.ts`,
+   jobben i `schema-drift.yml`) er ikke påkrevd og blir rød hver gang staging har en
+   annen åpen migrasjons-PR sine kolonner. En rød `drift` alene teller derfor ikke
+   som `red`, verken i decide eller i knappens re-sjekk, men en pågående `drift`
+   er fortsatt `pending`. Den gir aldri auto-merge: `withAdvisoryChecks`
+   (`autoMerge.ts`) degraderer utfallet til knapp-kort, og kortet får linja
+   «skjemasjekken er rød …» under «Venter på deg». Alle andre røde sjekker stopper
+   kortet som før.
 2. **`card`** (knapp-kort) når NOEN treffer:
    - base-branch ≠ `main`, eller tittelen inneholder ordet `WIP` (case-insensitivt).
    - **Aldri-lista** (`NEVER_AUTO_MERGE_RULES`, globene avledet som

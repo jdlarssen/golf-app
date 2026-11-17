@@ -262,6 +262,33 @@ export function ownerWaitReasons(input: AutoMergeInput): string[] {
   return [...reasons];
 }
 
+// Kortlinja når en rådgivende sjekk (`drift`, #2917) er rød. Står i «Venter på deg»-
+// listen, så den er kort og i produktspråk.
+export const SCHEMA_CHECK_WAIT_REASON =
+  'skjemasjekken er rød (skjer når staging har andre PR-ers databaseendringer, og stopper ikke merge)';
+
+/**
+ * En rød rådgivende sjekk stopper aldri kortet, men gir heller aldri automatisk
+ * merge (#2917): `auto-merge` degraderes til knapp-kort, og kortet får en ekstra
+ * «Venter på deg»-linje. Et utfall som allerede er `card` beholder sin grunn.
+ * Ren funksjon — decide-pr-card.ts kaller den med `redAdvisoryChecks(runs)`.
+ */
+export function withAdvisoryChecks(
+  classification: AutoMergeClassification,
+  waitReasons: string[],
+  redAdvisory: string[],
+): AutoMergeClassification & { waitReasons: string[] } {
+  if (redAdvisory.length === 0) return { ...classification, waitReasons };
+  return {
+    outcome: 'card',
+    demotedReason:
+      classification.outcome === 'card'
+        ? classification.demotedReason
+        : `rådgivende sjekk rød: ${redAdvisory.join(', ')}`,
+    waitReasons: [...waitReasons, SCHEMA_CHECK_WAIT_REASON],
+  };
+}
+
 // ── Merge-mekanikk (post-steget) ─────────────────────────────────────────────
 
 export type MergeOutcome = { ok: true } | { ok: false; reason: string };
