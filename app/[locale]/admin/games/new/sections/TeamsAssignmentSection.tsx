@@ -56,7 +56,7 @@ import {
   teamGridShape,
   teamNumberRange,
 } from '@/lib/games/teamFormatLimits';
-import { playerName } from '@/lib/names/playerName';
+import { playerName, playerShortName } from '@/lib/names/playerName';
 import { PlayerTile } from './PlayerTile';
 import { playerOptionShortName } from './playerLabels';
 
@@ -277,6 +277,14 @@ export function TeamsAssignmentSection({
   const playerById = (pid: string) => players.find((p) => p.id === pid);
   const fullName = (p: PlayerOption) =>
     p.pending ? (p.email ?? pendingLabel) : (playerName(p) ?? p.email ?? pendingLabel);
+  // The tiles and the strip name a player by first name, the full name only
+  // where two picked players share one (#2286), as the artboard draws «Marte».
+  const pickedNames = selectedPlayerIds.map((pid) => {
+    const p = playerById(pid);
+    return p ? fullName(p) : null;
+  });
+  const tileName = (p: PlayerOption) =>
+    p.pending ? shortName(p) : (playerShortName(p, pickedNames.filter((n) => n !== fullName(p))) ?? shortName(p));
   const selectedPlayer = selectedId ? playerById(selectedId) : undefined;
   const selectedTeam = selectedId ? teamByPlayer[selectedId] : undefined;
   // Singles matchplay fills one player per side through `assignPlayerToSide`;
@@ -319,7 +327,7 @@ export function TeamsAssignmentSection({
 
   const stripText = selectedPlayer
     ? t.rich(cardsAreSides ? 'selectedStripSide' : 'selectedStrip', {
-        name: shortName(selectedPlayer),
+        name: tileName(selectedPlayer),
         b: (chunks) => <span className="font-semibold">{chunks}</span>,
       })
     : null;
@@ -379,7 +387,7 @@ export function TeamsAssignmentSection({
         {members.map((p) => (
           <PlayerTile
             key={p.id}
-            name={shortName(p)}
+            name={tileName(p)}
             fullName={fullName(p)}
             pressed={p.id === selectedId}
             swapLabel={
@@ -428,7 +436,7 @@ export function TeamsAssignmentSection({
             <PlayerTile
               key={p.id}
               inline
-              name={shortName(p)}
+              name={tileName(p)}
               fullName={fullName(p)}
               pressed={p.id === selectedId}
               onPress={() => setPickedId((cur) => (cur === p.id ? null : p.id))}

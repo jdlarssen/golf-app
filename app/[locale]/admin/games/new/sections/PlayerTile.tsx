@@ -25,9 +25,9 @@ export function PlayerTile({
   /** In «Uten lag» the tiles wrap side by side instead of filling the card's width. */
   inline?: boolean;
 }) {
-  // The picked disc keeps forest initials at night too (--on-strong under
-  // --surface-strong), as the Startlista's chip does.
-  const disc = pressed ? 'bg-on-strong text-surface-strong' : 'bg-surface text-muted';
+  // The picked disc is white with forest initials, and the page's dark with
+  // sage initials at night, as `Nyttspill-forslag-lag-tapp` draws it.
+  const disc = pressed ? 'bg-white text-primary dark:bg-bg' : 'bg-surface text-muted';
   return (
     <button
       type="button"
