@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { GOALS, LEVELS, type Goal, type Level } from '@/lib/formats/recommendFormat';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
 import { Kicker } from '@/components/ui/Kicker';
-import { choiceCardClass, ChoiceCardText } from '@/components/ui/ChoiceCard';
+import { choiceCardClass } from '@/components/ui/ChoiceCard';
 
 type Props = {
   level: Level | undefined;
@@ -99,7 +99,10 @@ function Question<T extends string>({
             onClick={() => onChange(option)}
             className={choiceCardClass(value === option, { height: 48, layout: 'centered' })}
           >
-            <ChoiceCardText title={labels[option]} layout="centered" titleSize={15} />
+            {/* Inter 15/600 as the artboard draws it, not the card title's Fraunces. */}
+            <span className="font-sans text-[15px] font-semibold leading-[normal]">
+              {labels[option]}
+            </span>
           </button>
         ))}
       </div>
