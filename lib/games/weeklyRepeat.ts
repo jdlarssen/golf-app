@@ -85,6 +85,9 @@ export type WeeklyRepeatSource = Pick<
   | 'tournament_match_label'
   | 'hole_segment'
   | 'scheduled_tee_off_at'
+  | 'registration_cap'
+  | 'signup_deadline'
+  | 'waitlist_enabled'
 > & {
   /** The organiser. A round without one is never repeated (no one to invite from). */
   created_by: string;
@@ -115,6 +118,23 @@ function nextGameName(name: string, courseName: string | null, nextTeeOff: strin
       locale,
     }) || name
   );
+}
+
+/**
+ * #2482: the next round's signup deadline. It moves as far as the tee-off
+ * moves (new tee-off minus old), so it stays the same time before the round;
+ * over a switch to or from summer time the step carries the hour, and the
+ * deadline keeps its Oslo clock time. No deadline, or no old tee-off to
+ * measure from, gives none.
+ */
+export function shiftedDeadline(
+  deadline: string | null,
+  oldTeeOff: string | null,
+  nextTeeOff: string,
+): string | null {
+  if (deadline == null || oldTeeOff == null) return null;
+  const step = new Date(nextTeeOff).getTime() - new Date(oldTeeOff).getTime();
+  return new Date(new Date(deadline).getTime() + step).toISOString();
 }
 
 /**
@@ -176,6 +196,11 @@ export function buildWeeklyRepeatInsert(
     tournament_id: source.tournament_id,
     tournament_match_label: source.tournament_match_label,
     hole_segment: source.hole_segment,
+    // #2482: «Plasser og frist» goes with the series; the deadline keeps its
+    // distance to the tee-off.
+    registration_cap: source.registration_cap,
+    waitlist_enabled: source.waitlist_enabled,
+    signup_deadline: shiftedDeadline(source.signup_deadline, source.scheduled_tee_off_at, nextTeeOff),
     repeat_weekly: true,
     repeated_from_game_id: source.id,
   };
