@@ -80,8 +80,8 @@ function Question<T extends string>({
   const legendId = useId();
   const roving = useRovingFocus(options, value, onChange);
   return (
-    <div>
-      <p id={legendId} className="pb-2 font-sans text-sm font-semibold leading-[normal] text-text">
+    <div className="flex flex-col gap-2.5">
+      <p id={legendId} className="font-sans text-sm font-semibold leading-[normal] text-text">
         {legend}
       </p>
       <div
