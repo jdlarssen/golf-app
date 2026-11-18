@@ -111,8 +111,9 @@ const ROUND_BUTTON =
 
 // PillRadio's look as a toggle button: the share pills are pressed, not
 // checked, so a value off the list (93 from a draft) has none of them on.
+// Proportional figures, as the artboard draws the pills.
 const PILL_BUTTON =
-  'inline-flex h-11 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-3.5 font-sans text-sm font-semibold tabular-nums transition-colors duration-150';
+  'inline-flex h-11 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-3.5 font-sans text-sm font-semibold transition-colors duration-150';
 
 /**
  * #2455: the next value for − / +. A value off the grid moves to the nearest
@@ -276,7 +277,9 @@ export function AllowanceField({
                       setNettoPct(v);
                     }
                   }}
-                  style={{ width: `calc(${String(shownPct).length}ch + 2px)` }}
+                  // Fraunces' tabular digits are 0.6 em; `ch` (0.67 em) left
+                  // a gap before «%» the artboard does not have.
+                  style={{ width: `${String(shownPct).length * 0.62}em` }}
                   className="min-w-0 rounded-sm border-0 bg-transparent p-0 text-center font-serif text-[22px]! leading-[normal] font-semibold tabular-nums text-text [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
                 <span aria-hidden="true">&nbsp;%</span>
