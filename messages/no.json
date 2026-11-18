@@ -1531,6 +1531,12 @@
       "addFriendsLink": "Legg til venner",
       "noFriendsSuffix": "så dukker de opp her."
     },
+    "allowanceExample": {
+      "heading": "Slik blir det på {tee} tee",
+      "player": "{name} (HCP {hcp})",
+      "strokes": "{count} slag",
+      "insteadOf": "i stedet for {count}"
+    },
     "allowanceProps": {
       "fourball": {
         "legend": "Scoring for fourball-matcher",
@@ -2256,6 +2262,10 @@
     "nettoLabel": "Netto",
     "bruttoLabel": "Brutto",
     "inputLabelDefault": "Handicap-andel (%)",
+    "stepperLabel": "Handicap-andel",
+    "stepLess": "{step} prosent mindre",
+    "stepMore": "{step} prosent mer",
+    "pctValue": "{pct} %",
     "bruttoHelper": {
       "best_ball": "Ingen handicap — laveste bruttoscore per hull per lag vinner.",
       "stableford": "Stableford-poeng beregnes på bruttoscore mot par. Scratch-format.",

@@ -1531,6 +1531,12 @@
       "addFriendsLink": "Add friends",
       "noFriendsSuffix": "and they will appear here."
     },
+    "allowanceExample": {
+      "heading": "How it plays from the {tee} tee",
+      "player": "{name} (HCP {hcp})",
+      "strokes": "{count, plural, one {# stroke} other {# strokes}}",
+      "insteadOf": "instead of {count}"
+    },
     "allowanceProps": {
       "fourball": {
         "legend": "Scoring for four-ball matches",
@@ -2256,6 +2262,10 @@
     "nettoLabel": "Net",
     "bruttoLabel": "Gross",
     "inputLabelDefault": "Allowance (%)",
+    "stepperLabel": "Allowance",
+    "stepLess": "{step} percent less",
+    "stepMore": "{step} percent more",
+    "pctValue": "{pct}%",
     "bruttoHelper": {
       "best_ball": "No handicap — lowest gross score per hole per team wins.",
       "stableford": "Stableford points are calculated on gross score against par. Scratch format.",
