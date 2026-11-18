@@ -99,12 +99,17 @@ function Question<T extends string>({
             onClick={() => onChange(option)}
             // Three to a row at 390 px leaves ~92 px of text: «Litt på spill» wraps
             // once the chosen tile's 2 px frame takes its share, and the row grows.
+            // Under 380 px the label drops to 14 px so «Konkurranse» keeps air.
             className={`${choiceCardClass(value === option, { height: 48, layout: 'centered' })} ${
               columns === 3 ? 'whitespace-nowrap px-1!' : ''
             }`}
           >
             {/* Inter 15/600 as the artboard draws it, not the card title's Fraunces. */}
-            <span className="font-sans text-[15px] font-semibold leading-[normal]">
+            <span
+              className={`font-sans font-semibold leading-[normal] ${
+                columns === 3 ? 'text-sm min-[380px]:text-[15px]' : 'text-[15px]'
+              }`}
+            >
               {labels[option]}
             </span>
           </button>
