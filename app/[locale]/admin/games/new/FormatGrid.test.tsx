@@ -491,13 +491,13 @@ describe('FormatGrid — formatspørsmålene (#2462)', () => {
     expect(container.querySelector('.text-accent-text')).toBeNull();
   });
 
-  it('the three answers wrap to two rows under 380 px, one row from 380 px (#2462)', () => {
+  it('the three answers wrap to two rows under 360 px, one row from 360 px (#2462)', () => {
     render(<Wrapper count={4} />);
     const goal = screen.getByRole('radiogroup', { name: 'Hva vil dere ha ut av dagen?' });
     expect(goal.className).toContain('grid-cols-2');
-    expect(goal.className).toContain('min-[380px]:grid-cols-3');
+    expect(goal.className).toContain('min-[360px]:grid-cols-3');
     const [, , third] = within(goal).getAllByRole('radio');
-    expect(third.className).toContain('max-[379px]:col-span-2');
+    expect(third.className).toContain('max-[359px]:col-span-2');
     expect(third).toHaveClass('whitespace-nowrap');
   });
 
