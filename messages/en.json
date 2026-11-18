@@ -1157,6 +1157,7 @@
         "clearTeamsButton": "Clear teams",
         "selectedStrip": "<b>{name} is selected.</b> Tap the team {name} should join.",
         "selectedStripSide": "<b>{name} is selected.</b> Tap the side {name} should join.",
+        "selectedStripSwap": "<b>{name} is selected.</b> Tap the player {name} should swap with.",
         "cancel": "Cancel",
         "moveHere": "Move here",
         "moveHereLabel": "Move {name} to team {team}",

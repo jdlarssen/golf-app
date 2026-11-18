@@ -325,35 +325,58 @@ export function TeamsAssignmentSection({
     }
   }
 
-  const stripText = selectedPlayer
-    ? t.rich(cardsAreSides ? 'selectedStripSide' : 'selectedStrip', {
+  // The strip is mounted at all times so a screen reader hears it appear. With
+  // no team that can take the picked player, but a player on another team to
+  // trade with, it says so: «Flytt hit» does not exist then, and the default
+  // text would ask for a tap that does nothing.
+  const renderPickStrip = () => {
+    let stripText: ReactNode = null;
+    if (selectedPlayer) {
+      const cardTeams = showSides ? [1, 2] : teamNumberRange(gridTeamCount);
+      const cardSlots = showSides ? 1 : slotCount;
+      const hasMoveTarget = cardTeams.some(
+        (team) => team !== selectedTeam && playersByTeam[team].length < cardSlots,
+      );
+      const canSwap = selectedPlayerIds.some(
+        (pid) =>
+          pid !== selectedId &&
+          teamByPlayer[pid] !== undefined &&
+          teamByPlayer[pid] !== selectedTeam,
+      );
+      const key =
+        !hasMoveTarget && canSwap
+          ? 'selectedStripSwap'
+          : cardsAreSides
+            ? 'selectedStripSide'
+            : 'selectedStrip';
+      stripText = t.rich(key, {
         name: tileName(selectedPlayer),
         b: (chunks) => <span className="font-semibold">{chunks}</span>,
-      })
-    : null;
-  // The strip is mounted at all times so a screen reader hears it appear.
-  const pickStrip = (
-    <>
-      <p role="status" className="sr-only">
-        {stripText}
-      </p>
-      {stripText && (
-        <div
-          data-focus-surface="strong"
-          className="mb-2.5 flex items-center justify-between gap-2.5 rounded-xl bg-select-strip px-3 py-2.5 text-[13px] text-bg dark:text-bg-tint"
-        >
-          <span aria-hidden>{stripText}</span>
-          <button
-            type="button"
-            onClick={() => setPickedId(null)}
-            className="tap-extend h-9 shrink-0 rounded-full border border-[rgba(248,246,240,0.4)] px-2.5 text-[12px] font-semibold [--tap-extend:-5px_0]"
+      });
+    }
+    return (
+      <>
+        <p role="status" className="sr-only">
+          {stripText}
+        </p>
+        {stripText && (
+          <div
+            data-focus-surface="strong"
+            className="mb-2.5 flex items-center justify-between gap-2.5 rounded-xl bg-select-strip px-3 py-2.5 text-[13px] text-bg dark:text-bg-tint"
           >
-            {t('cancel')}
-          </button>
-        </div>
-      )}
-    </>
-  );
+            <span aria-hidden>{stripText}</span>
+            <button
+              type="button"
+              onClick={() => setPickedId(null)}
+              className="tap-extend h-9 shrink-0 rounded-full border border-[rgba(248,246,240,0.4)] px-2.5 text-[12px] font-semibold [--tap-extend:-5px_0]"
+            >
+              {t('cancel')}
+            </button>
+          </div>
+        )}
+      </>
+    );
+  };
 
   /**
    * One team or side card (#2456): its players as tiles, the first free slot as
@@ -547,7 +570,7 @@ export function TeamsAssignmentSection({
             asideFlush
             description={t('sidesDescription')}
           >
-            {pickStrip}
+            {renderPickStrip()}
             <div className="grid grid-cols-2 gap-2">
               {([1, 2] as const).map((side) => renderCard(side, 1))}
             </div>
@@ -601,7 +624,7 @@ export function TeamsAssignmentSection({
               </div>
             )}
 
-            {pickStrip}
+            {renderPickStrip()}
             <div className="grid grid-cols-2 gap-2">
               {teamNumberRange(gridTeamCount).map((team) => renderCard(team, slotCount))}
             </div>

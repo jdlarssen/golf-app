@@ -1157,6 +1157,7 @@
         "clearTeamsButton": "Tøm lag",
         "selectedStrip": "<b>{name} er valgt.</b> Trykk på laget {name} skal til.",
         "selectedStripSide": "<b>{name} er valgt.</b> Trykk på siden {name} skal til.",
+        "selectedStripSwap": "<b>{name} er valgt.</b> Trykk på spilleren {name} skal bytte med.",
         "cancel": "Avbryt",
         "moveHere": "Flytt hit",
         "moveHereLabel": "Flytt {name} til lag {team}",

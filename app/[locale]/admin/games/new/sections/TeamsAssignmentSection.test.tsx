@@ -318,6 +318,43 @@ describe('TeamsAssignmentSection — lagene fordeles med trykk (#2456)', () => {
     expect(latest.teamByPlayer).toEqual({ p1: 2, p2: 1 });
   });
 
+  it('stripa ber om en spiller å bytte med når ingen lag kan ta imot, ellers om laget', () => {
+    fullBestBall();
+    tap('Spiller 1');
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Spiller 1 er valgt. Trykk på spilleren Spiller 1 skal bytte med.',
+    );
+    expect(screen.getByRole('status')).not.toHaveTextContent('Trykk på laget');
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    // Én plass blir ledig: lag 1 kan ta imot en spiller fra et annet lag.
+    act(() => latest.assignPlayerToSlot(1, 1, ''));
+    tap('Spiller 3');
+    expect(screen.getByRole('status')).toHaveTextContent('Trykk på laget Spiller 3 skal til.');
+  });
+
+  it('stripa ber om bytte også for en spiller uten side når begge sidene er fylt', () => {
+    setup('singles_matchplay', 2, 3);
+    tap('Spiller 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Flytt Spiller 1 til side 1' }));
+    tap('Spiller 2');
+    fireEvent.click(screen.getByRole('button', { name: 'Flytt Spiller 2 til side 2' }));
+    tap('Spiller 3');
+    expect(screen.getByRole('status')).toHaveTextContent('Trykk på spilleren Spiller 3 skal bytte med.');
+    fireEvent.click(screen.getByRole('button', { name: 'Bytt Spiller 3 med Spiller 1' }));
+    expect(latest.teamByPlayer).toEqual({ p2: 2, p3: 1 });
+  });
+
+  it('singles matchplay med begge sider fylt: stripa ber om å bytte', () => {
+    setup('singles_matchplay', 2, 2);
+    tap('Spiller 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Flytt Spiller 1 til side 1' }));
+    tap('Spiller 2');
+    fireEvent.click(screen.getByRole('button', { name: 'Flytt Spiller 2 til side 2' }));
+    tap('Spiller 1');
+    expect(screen.getByRole('status')).toHaveTextContent('Trykk på spilleren Spiller 1 skal bytte med.');
+  });
+
   it('lag-matchplay: sidekortene virker som lagkortene', () => {
     setup('fourball_matchplay', 2, 4);
     expect(screen.getByText('Uten side')).toBeInTheDocument();
