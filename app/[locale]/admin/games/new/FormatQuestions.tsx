@@ -97,7 +97,11 @@ function Question<T extends string>({
             role="radio"
             aria-checked={value === option}
             onClick={() => onChange(option)}
-            className={choiceCardClass(value === option, { height: 48, layout: 'centered' })}
+            // Three to a row at 390 px leaves ~92 px of text: «Litt på spill» wraps
+            // once the chosen tile's 2 px frame takes its share, and the row grows.
+            className={`${choiceCardClass(value === option, { height: 48, layout: 'centered' })} ${
+              columns === 3 ? 'whitespace-nowrap px-1!' : ''
+            }`}
           >
             {/* Inter 15/600 as the artboard draws it, not the card title's Fraunces. */}
             <span className="font-sans text-[15px] font-semibold leading-[normal]">
