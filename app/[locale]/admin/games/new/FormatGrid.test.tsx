@@ -491,6 +491,16 @@ describe('FormatGrid — formatspørsmålene (#2462)', () => {
     expect(container.querySelector('.text-accent-text')).toBeNull();
   });
 
+  it('the three answers wrap to two rows under 380 px, one row from 380 px (#2462)', () => {
+    render(<Wrapper count={4} />);
+    const goal = screen.getByRole('radiogroup', { name: 'Hva vil dere ha ut av dagen?' });
+    expect(goal.className).toContain('grid-cols-2');
+    expect(goal.className).toContain('min-[380px]:grid-cols-3');
+    const [, , third] = within(goal).getAllByRole('radio');
+    expect(third.className).toContain('max-[379px]:col-span-2');
+    expect(third).toHaveClass('whitespace-nowrap');
+  });
+
   it('the arrow keys move the choice inside one question', () => {
     render(<Wrapper count={4} />);
     const level = screen.getByRole('radiogroup', { name: 'Hvor jevne er dere?' });

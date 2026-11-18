@@ -150,7 +150,7 @@ describe('recommendFormatForCount (#2462)', () => {
     expect(forCount(5, 'even', 'stakes')).toMatchObject({ mode: 'nassau', displaced: null });
   });
 
-  it('the exact count picks the first candidate that fits, before any reserve', () => {
+  it('17 · stakes: no candidate fits the count, so Stableford with the bucket answer displaced', () => {
     // The bucket's 13+ answer for stakes · even is Nassau (fits 16 at most): 17 has no candidate.
     expect(forCount(17, 'even', 'stakes')).toMatchObject({
       mode: 'stableford',

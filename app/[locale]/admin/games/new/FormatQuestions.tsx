@@ -87,7 +87,9 @@ function Question<T extends string>({
       <div
         role="radiogroup"
         aria-labelledby={legendId}
-        className={`grid gap-2 ${columns === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}
+        // Three answers fit one row from 380 px; narrower, they wrap to two rows
+        // (two, then one across) so «Konkurranse» keeps its tile and 48 px height.
+        className={`grid gap-2 ${columns === 2 ? 'grid-cols-2' : 'grid-cols-2 min-[380px]:grid-cols-3'}`}
       >
         {options.map((option, index) => (
           <button
@@ -99,17 +101,16 @@ function Question<T extends string>({
             onClick={() => onChange(option)}
             // Three to a row at 390 px leaves ~92 px of text: «Litt på spill» wraps
             // once the chosen tile's 2 px frame takes its share, and the row grows.
-            // Under 380 px the label drops to 14 px so «Konkurranse» keeps air.
+            // So from 380 px the three-wide tiles lose side padding and never wrap;
+            // narrower, the third tile takes a row of its own.
             className={`${choiceCardClass(value === option, { height: 48, layout: 'centered' })} ${
-              columns === 3 ? 'whitespace-nowrap px-1!' : ''
+              columns === 3
+                ? `whitespace-nowrap min-[380px]:px-1! ${index === 2 ? 'max-[379px]:col-span-2' : ''}`
+                : ''
             }`}
           >
             {/* Inter 15/600 as the artboard draws it, not the card title's Fraunces. */}
-            <span
-              className={`font-sans font-semibold leading-[normal] ${
-                columns === 3 ? 'text-sm min-[380px]:text-[15px]' : 'text-[15px]'
-              }`}
-            >
+            <span className="font-sans text-[15px] font-semibold leading-[normal]">
               {labels[option]}
             </span>
           </button>
