@@ -5,6 +5,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
 import { isTeeColor } from '@/lib/courses/teeColors';
+import { teeBoxRatingsOf } from '@/lib/games/teeRating';
 import type { Database } from '@/lib/database.types';
 import type { CourseOption, PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
 
@@ -173,6 +174,8 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
           t.slope_juniors !== null &&
           t.course_rating_juniors !== null &&
           t.par_total_juniors !== null,
+        // #2455: the handicap-share example on step 5 counts strokes from these.
+        ratings: teeBoxRatingsOf(t),
       }))
       .sort((a, b) => a.name.localeCompare(b.name, 'no')),
   }));

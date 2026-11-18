@@ -8,6 +8,7 @@ import { isScrambleFamily, isStablefordFamily, type GameMode } from '@/lib/scori
 import { MIN_TEE_SHOTS_FIELD, formatTracksTeeShots, type MinTeeShots } from '@/lib/games/teeShots';
 import { hcpAllowanceInPlay, showsGeneralAllowanceField } from '@/lib/games/hcpAllowance';
 import { PRIZE_SLOTS, prizeFieldName, type GamePrize } from '@/lib/games/prizes';
+import type { TeeBoxRatings } from '@/lib/games/teeRating';
 import type {
   RegistrationMode,
   RegistrationType,
@@ -68,6 +69,11 @@ export type CourseOption = {
     has_mens: boolean;
     has_ladies: boolean;
     has_juniors: boolean;
+    /**
+     * #2455: slope, course rating and par per category, for the handicap-share
+     * example on step 5. Missing (test fixtures) → the example does not show.
+     */
+    ratings?: TeeBoxRatings;
   }[];
 };
 
