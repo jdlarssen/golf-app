@@ -29,11 +29,18 @@
  * TEE PER SPILLER block on `-4-tee-gjest`), in the wizard's second screen and
  * in GameForm alike. Each part is a kicker (`FormSection`, its `<h2>` inside
  * the legend) over team cards (`SlotCard`) or a row list. Every part keeps a
- * `<section>` around it: GameForm's tests find the team slots with
- * `section select`. The logic is unchanged.
+ * `<section>` around it. The logic is unchanged.
+ *
+ * #2456: the team and side cards are filled by tapping — the player first, then
+ * the team (`Nyttspill-forslag-lag-tapp`), as the Startlista does for flights
+ * (#2289). A picked player turns forest green and a strip says who is picked;
+ * a team with room gets a dashed «Flytt hit» row, a tap on a player on another
+ * team swaps the two, and players without a team stand under «Uten lag». The
+ * state is the same: `assignPlayerToSlot`, `assignPlayerToSide` and the new
+ * `swapPlayerTeams` write `teamByPlayer`/`flightByPlayer` as the lists did.
  */
 
-import { useId, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import type { PlayerOption } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
@@ -49,6 +56,8 @@ import {
   teamGridShape,
   teamNumberRange,
 } from '@/lib/games/teamFormatLimits';
+import { playerName } from '@/lib/names/playerName';
+import { PlayerTile } from './PlayerTile';
 import { playerOptionShortName } from './playerLabels';
 
 type Props = {
@@ -245,11 +254,189 @@ export function TeamsAssignmentSection({
     clearTeams,
     assignPlayerToSlot,
     assignPlayerToSide,
+    swapPlayerTeams,
     setFlightForPlayer,
-    slotOptions,
     teamDefaultFlight,
   } = state;
   const n = selectedPlayerIds.length;
+
+  // #2456: tap a player, then a team. `selectedId` is dropped when the player
+  // leaves the roster, so a stale pick never shows a strip.
+  const [pickedId, setPickedId] = useState<string | null>(null);
+  const selectedId =
+    pickedId !== null && selectedPlayerIds.includes(pickedId) ? pickedId : null;
+  useEffect(() => {
+    if (!selectedId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPickedId(null);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [selectedId]);
+
+  const playerById = (pid: string) => players.find((p) => p.id === pid);
+  const fullName = (p: PlayerOption) =>
+    p.pending ? (p.email ?? pendingLabel) : (playerName(p) ?? p.email ?? pendingLabel);
+  const selectedPlayer = selectedId ? playerById(selectedId) : undefined;
+  const selectedTeam = selectedId ? teamByPlayer[selectedId] : undefined;
+  // Singles matchplay fills one player per side through `assignPlayerToSide`;
+  // every other card fills a slot through `assignPlayerToSlot`.
+  const usesSideAssign = isMatchplay;
+  const cardsAreSides = isMatchplay || isTeamMatchplay;
+  const unassignedPlayers = selectedPlayerIds
+    .filter((pid) => teamByPlayer[pid] === undefined)
+    .map(playerById)
+    .filter((p): p is PlayerOption => p !== undefined);
+
+  function moveSelectedTo(team: number) {
+    if (!selectedId) return;
+    setPickedId(null);
+    if (usesSideAssign) assignPlayerToSide(team as 1 | 2, selectedId);
+    else assignPlayerToSlot(team, playersByTeam[team].length, selectedId);
+  }
+
+  /** A tap on a player standing on `team`: swap with the picked one, or pick this one. */
+  function pressTeamPlayer(pid: string, team: number) {
+    if (!selectedId || selectedId === pid) {
+      setPickedId((cur) => (cur === pid ? null : pid));
+      return;
+    }
+    if (selectedTeam === team) {
+      setPickedId(pid);
+      return;
+    }
+    setPickedId(null);
+    if (usesSideAssign) {
+      // Matchplay: the side takes the picked player, and the one standing there
+      // goes to the picked player's side, or out when the picked one had none.
+      assignPlayerToSide(team as 1 | 2, selectedId);
+    } else if (selectedTeam === undefined) {
+      assignPlayerToSlot(team, playersByTeam[team].indexOf(pid), selectedId);
+    } else {
+      swapPlayerTeams(selectedId, pid);
+    }
+  }
+
+  const stripText = selectedPlayer
+    ? t.rich(cardsAreSides ? 'selectedStripSide' : 'selectedStrip', {
+        name: shortName(selectedPlayer),
+        b: (chunks) => <span className="font-semibold">{chunks}</span>,
+      })
+    : null;
+  // The strip is mounted at all times so a screen reader hears it appear.
+  const pickStrip = (
+    <>
+      <p role="status" className="sr-only">
+        {stripText}
+      </p>
+      {stripText && (
+        <div
+          data-focus-surface="strong"
+          className="mb-2.5 flex items-center justify-between gap-2.5 rounded-xl bg-select-strip px-3 py-2.5 text-[13px] text-bg dark:text-bg-tint"
+        >
+          <span aria-hidden>{stripText}</span>
+          <button
+            type="button"
+            onClick={() => setPickedId(null)}
+            className="tap-extend h-9 shrink-0 rounded-full border border-[rgba(248,246,240,0.4)] px-2.5 text-[12px] font-semibold [--tap-extend:-5px_0]"
+          >
+            {t('cancel')}
+          </button>
+        </div>
+      )}
+    </>
+  );
+
+  /**
+   * One team or side card (#2456): its players as tiles, the first free slot as
+   * the dashed «Flytt hit» row while a player from elsewhere is picked, and
+   * quiet empty rows for the rest. A card with no room, or the picked player's
+   * own, has the ordinary frame and no «Flytt hit».
+   */
+  const renderCard = (team: number, slots: number) => {
+    const members = playersByTeam[team]
+      .map(playerById)
+      .filter((p): p is PlayerOption => p !== undefined);
+    const hasRoom = members.length < slots;
+    const isTarget = selectedPlayer !== undefined && selectedTeam !== team && hasRoom;
+    const label = cardsAreSides ? t('sideTeamLabel', { team }) : t('teamLabel', { team });
+    return (
+      <SlotCard
+        key={team}
+        data-testid={`team-card-${team}`}
+        target={isTarget}
+        title={
+          <span className="flex items-baseline justify-between gap-2">
+            <span>{label}</span>
+            {isBestBall && (
+              <span className="font-sans text-[11px] font-normal text-muted">
+                {t('flightLabel', { flight: teamDefaultFlight(team) })}
+              </span>
+            )}
+          </span>
+        }
+      >
+        {members.map((p) => (
+          <PlayerTile
+            key={p.id}
+            name={shortName(p)}
+            fullName={fullName(p)}
+            pressed={p.id === selectedId}
+            swapLabel={
+              selectedPlayer && selectedTeam !== team
+                ? t('swapLabel', { name: fullName(selectedPlayer), other: fullName(p) })
+                : undefined
+            }
+            onPress={() => pressTeamPlayer(p.id, team)}
+          />
+        ))}
+        {Array.from({ length: slots - members.length }, (_, i) =>
+          isTarget && selectedPlayer && i === 0 ? (
+            <button
+              key={`free-${i}`}
+              type="button"
+              aria-label={t(cardsAreSides ? 'moveHereSideLabel' : 'moveHereLabel', {
+                name: fullName(selectedPlayer),
+                team,
+              })}
+              onClick={() => moveSelectedTo(team)}
+              className="flex min-h-[44px] items-center justify-center rounded-xl border border-dashed border-border font-sans text-xs font-semibold leading-[normal] text-primary"
+            >
+              {t('moveHere')}
+            </button>
+          ) : (
+            <div
+              key={`free-${i}`}
+              aria-hidden
+              className="min-h-[44px] rounded-xl border border-dashed border-border"
+            />
+          ),
+        )}
+      </SlotCard>
+    );
+  };
+
+  /** «Uten lag»/«Uten side»: everyone picked without a team; gone when all have one. */
+  const renderUnassigned = () =>
+    unassignedPlayers.length > 0 && (
+      <div>
+        <p className="px-1 pb-2 pt-[18px] font-sans text-xs font-semibold leading-[normal] text-muted">
+          {t(cardsAreSides ? 'unassignedSidesHeading' : 'unassignedHeading')}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {unassignedPlayers.map((p) => (
+            <PlayerTile
+              key={p.id}
+              inline
+              name={shortName(p)}
+              fullName={fullName(p)}
+              pressed={p.id === selectedId}
+              onPress={() => setPickedId((cur) => (cur === p.id ? null : p.id))}
+            />
+          ))}
+        </div>
+      </div>
+    );
 
   const numberPrefix = (num: string) => (hideNumbering ? '' : `${num}. `);
   // Tee-per-spiller-seksjonen får 5. når matchplay/par/texas (siden 4. Lag er over),
@@ -352,41 +539,12 @@ export function TeamsAssignmentSection({
             asideFlush
             description={t('sidesDescription')}
           >
+            {pickStrip}
             <div className="grid grid-cols-2 gap-2">
-              {([1, 2] as const).map((side) => {
-                const occupant = selectedPlayerIds.find(
-                  (pid) => teamByPlayer[pid] === side,
-                );
-                // Dropdownen viser nåværende okkupant + alle ufordelte
-                // spillere + spilleren på den ANDRE siden (så admin kan
-                // bytte uten å først nullstille). assignPlayerToSide gjør
-                // bytte/swap basert på hvor spilleren stod fra før.
-                const options = selectedPlayerIds
-                  .filter((pid) => pid === occupant || teamByPlayer[pid] !== side)
-                  .map((pid) => players.find((p) => p.id === pid))
-                  .filter((p): p is PlayerOption => p !== undefined);
-                return (
-                  <SlotCard key={side} title={t('sideLabel', { side })}>
-                    <CardSelect
-                      size="slot"
-                      labelHidden
-                      id={`matchplay_side_${side}`}
-                      label={t('sideSrLabel', { side })}
-                      value={occupant ?? ''}
-                      onChange={(e) => assignPlayerToSide(side, e.target.value)}
-                    >
-                      <option value="">{t('emptySlotOption')}</option>
-                      {options.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {shortName(p)}
-                        </option>
-                      ))}
-                    </CardSelect>
-                  </SlotCard>
-                );
-              })}
+              {([1, 2] as const).map((side) => renderCard(side, 1))}
             </div>
           </FormSection>
+          {renderUnassigned()}
         </section>
       )}
 
@@ -435,49 +593,12 @@ export function TeamsAssignmentSection({
               </div>
             )}
 
+            {pickStrip}
             <div className="grid grid-cols-2 gap-2">
-              {teamNumberRange(gridTeamCount).map((team) => (
-                <SlotCard
-                  key={team}
-                  data-testid={`team-card-${team}`}
-                  title={
-                    isTeamMatchplay
-                      ? t('sideTeamLabel', { team })
-                      : t('teamLabel', { team })
-                  }
-                >
-                  {Array.from({ length: slotCount }, (_, slotIndex) => {
-                    const occupant = playersByTeam[team][slotIndex];
-                    const options = slotOptions(team, slotIndex);
-                    return (
-                      <CardSelect
-                        key={slotIndex}
-                        size="slot"
-                        labelHidden
-                        id={`${idPrefix}-team-${team}-slot-${slotIndex}`}
-                        label={
-                          isTeamMatchplay
-                            ? t('sideTeamSlotAria', { team, slot: slotIndex + 1 })
-                            : t('teamSlotAria', { team, slot: slotIndex + 1 })
-                        }
-                        value={occupant ?? ''}
-                        onChange={(e) =>
-                          assignPlayerToSlot(team, slotIndex, e.target.value)
-                        }
-                      >
-                        <option value="">{t('emptySlotOption')}</option>
-                        {options.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {shortName(p)}
-                          </option>
-                        ))}
-                      </CardSelect>
-                    );
-                  })}
-                </SlotCard>
-              ))}
+              {teamNumberRange(gridTeamCount).map((team) => renderCard(team, slotCount))}
             </div>
           </FormSection>
+          {renderUnassigned()}
         </section>
       )}
 

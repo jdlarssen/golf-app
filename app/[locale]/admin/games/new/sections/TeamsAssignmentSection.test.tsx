@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { useEffect } from 'react';
-import { act, render, renderHook, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, within } from '@testing-library/react';
 import { TeamsAssignmentSection, teamsAssignmentParts } from './TeamsAssignmentSection';
 import { useGameFormState, type GameFormState } from '../useGameFormState';
 import type { CourseOption, PlayerOption } from '../GameForm';
@@ -154,5 +154,186 @@ describe('teamsAssignmentParts — tee per spiller (#2437)', () => {
 
   it('ingen valgte spillere gir ingen tee-liste', () => {
     expect(partsFor('skins', 0).tee).toBe(false);
+  });
+});
+
+// Type B (#2456): teams and sides are filled by tapping — the player first, then
+// the team. A tile is a button named after the player (`aria-pressed`); a team
+// with room gets one «Flytt <navn> til lag N» button.
+describe('TeamsAssignmentSection — lagene fordeles med trykk (#2456)', () => {
+  const tap = (name: string) => fireEvent.click(screen.getByRole('button', { name }));
+  const pressedState = (name: string) =>
+    screen.getByRole('button', { name }).getAttribute('aria-pressed');
+  const cardOf = (team: number) => within(screen.getByTestId(`team-card-${team}`));
+
+  /** Eight players on four full pairs: p1+p2 lag 1, p3+p4 lag 2, … */
+  function fullBestBall() {
+    setup('best_ball', 2, 8);
+    act(() => {
+      for (let i = 0; i < 8; i++) {
+        latest.assignPlayerToSlot(Math.floor(i / 2) + 1, i % 2, `p${i + 1}`);
+      }
+    });
+  }
+
+  it('lag- og side-delen har ingen nedtrekkslister', () => {
+    setup('best_ball', 2, 4);
+    expect(screen.queryByTestId('team-card-1')?.querySelector('select')).toBeNull();
+    expect(screen.getByTestId('team-card-1')).toBeInTheDocument();
+  });
+
+  it('«Uten lag» viser alle valgte uten lag og forsvinner når alle har lag', () => {
+    setup('best_ball', 2, 4);
+    expect(screen.getByText('Uten lag')).toBeInTheDocument();
+    for (const n of [1, 2, 3, 4]) {
+      expect(screen.getByRole('button', { name: `Spiller ${n}` })).toBeInTheDocument();
+    }
+    act(() => latest.drawRandomTeams());
+    expect(screen.queryByText('Uten lag')).toBeNull();
+  });
+
+  it('trykk på en spiller, så på laget, flytter spilleren dit', () => {
+    setup('best_ball', 2, 4);
+    tap('Spiller 1');
+    expect(pressedState('Spiller 1')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Flytt Spiller 1 til lag 2' }));
+    expect(latest.teamByPlayer.p1).toBe(2);
+    expect(latest.flightByPlayer.p1).toBe(latest.teamDefaultFlight(2));
+    // Ingen er valgt etterpå, og spilleren står på laget.
+    expect(pressedState('Spiller 1')).toBe('false');
+    expect(cardOf(2).getByRole('button', { name: 'Spiller 1' })).toBeInTheDocument();
+  });
+
+  it('flight vises på lagkortet for best ball', () => {
+    setup('best_ball', 2, 8);
+    expect(cardOf(1).getByText('Flight 1')).toBeInTheDocument();
+    expect(cardOf(3).getByText('Flight 2')).toBeInTheDocument();
+  });
+
+  it('fullt lag og spillerens eget lag får ingen «Flytt hit»', () => {
+    setup('best_ball', 2, 8);
+    act(() => {
+      latest.assignPlayerToSlot(1, 0, 'p1');
+      latest.assignPlayerToSlot(2, 0, 'p2');
+      latest.assignPlayerToSlot(2, 1, 'p3');
+    });
+    tap('Spiller 1');
+    // Eget lag (1) og fullt lag (2): ingen. Lag 3 og 4 er tomme: «Flytt hit».
+    expect(screen.queryByRole('button', { name: 'Flytt Spiller 1 til lag 1' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Flytt Spiller 1 til lag 2' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Flytt Spiller 1 til lag 3' })).toBeInTheDocument();
+    expect(screen.getByTestId('team-card-2').className).not.toContain('border-dashed');
+    expect(screen.getByTestId('team-card-3').className).toContain('border-dashed');
+  });
+
+  it('åtte spillere på fire fulle lag: trykk på to spillere bytter dem, og flighten følger laget', () => {
+    fullBestBall();
+    expect(screen.queryByText('Uten lag')).toBeNull();
+    tap('Spiller 1');
+    // Ingen «Flytt hit»: alle lag er fulle. Spillerne på andre lag er byttemål.
+    expect(screen.queryByText('Flytt hit')).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Bytt Spiller 1 med Spiller 2' }),
+    ).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Bytt Spiller 1 med Spiller 6' }));
+    expect(latest.teamByPlayer.p1).toBe(3);
+    expect(latest.teamByPlayer.p6).toBe(1);
+    expect(latest.flightByPlayer.p1).toBe(2);
+    expect(latest.flightByPlayer.p6).toBe(1);
+    expect(cardOf(3).getByRole('button', { name: 'Spiller 1' })).toBeInTheDocument();
+    expect(cardOf(1).getByRole('button', { name: 'Spiller 6' })).toBeInTheDocument();
+  });
+
+  it('et trykk på en spiller på et annet lag bytter alltid, også når det er plass', () => {
+    setup('best_ball', 2, 4);
+    act(() => {
+      latest.assignPlayerToSlot(1, 0, 'p1');
+      latest.assignPlayerToSlot(2, 0, 'p2');
+    });
+    tap('Spiller 1');
+    expect(screen.getByRole('button', { name: 'Flytt Spiller 1 til lag 2' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Bytt Spiller 1 med Spiller 2' }));
+    expect(latest.teamByPlayer.p1).toBe(2);
+    expect(latest.teamByPlayer.p2).toBe(1);
+  });
+
+  it('trykk på valgt spiller, «Avbryt» og Esc slipper valget', () => {
+    setup('best_ball', 2, 4);
+    tap('Spiller 1');
+    expect(screen.getByRole('status')).toHaveTextContent('Spiller 1 er valgt.');
+    tap('Spiller 1');
+    expect(pressedState('Spiller 1')).toBe('false');
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
+
+    tap('Spiller 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Avbryt' }));
+    expect(pressedState('Spiller 1')).toBe('false');
+
+    tap('Spiller 1');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(pressedState('Spiller 1')).toBe('false');
+    expect(screen.queryByRole('button', { name: 'Avbryt' })).toBeNull();
+  });
+
+  it('trykk på en annen spiller uten lag eller på samme lag velger den i stedet', () => {
+    setup('best_ball', 2, 4);
+    act(() => {
+      latest.assignPlayerToSlot(1, 0, 'p1');
+      latest.assignPlayerToSlot(1, 1, 'p2');
+    });
+    tap('Spiller 1');
+    tap('Spiller 2');
+    expect(pressedState('Spiller 2')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Spiller 1' })).toHaveAttribute('aria-pressed', 'false');
+    tap('Spiller 3');
+    expect(pressedState('Spiller 3')).toBe('true');
+    expect(latest.teamByPlayer.p2).toBe(1);
+  });
+
+  it('«Trekk tilfeldig» og «Tøm lag» virker som før', () => {
+    setup('best_ball', 2, 4);
+    const draw = screen.getByTestId('draw-random-teams');
+    expect(draw).not.toHaveAttribute('aria-pressed');
+    fireEvent.click(draw);
+    expect(Object.keys(latest.teamByPlayer)).toHaveLength(4);
+    fireEvent.click(screen.getByRole('button', { name: 'Tøm lag' }));
+    expect(latest.teamByPlayer).toEqual({});
+    expect(screen.getByText('Uten lag')).toBeInTheDocument();
+  });
+
+  it('singles matchplay: «Uten side», flytt og bytte med to trykk', () => {
+    setup('singles_matchplay', 2, 2);
+    expect(screen.getByText('Uten side')).toBeInTheDocument();
+    expect(screen.queryByText('Uten lag')).toBeNull();
+    tap('Spiller 1');
+    expect(screen.getByRole('status')).toHaveTextContent('Trykk på siden Spiller 1 skal til.');
+    fireEvent.click(screen.getByRole('button', { name: 'Flytt Spiller 1 til side 1' }));
+    tap('Spiller 2');
+    fireEvent.click(screen.getByRole('button', { name: 'Flytt Spiller 2 til side 2' }));
+    expect(screen.queryByText('Uten side')).toBeNull();
+    expect(latest.teamByPlayer).toEqual({ p1: 1, p2: 2 });
+
+    tap('Spiller 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Bytt Spiller 1 med Spiller 2' }));
+    expect(latest.teamByPlayer).toEqual({ p1: 2, p2: 1 });
+  });
+
+  it('lag-matchplay: sidekortene virker som lagkortene', () => {
+    setup('fourball_matchplay', 2, 4);
+    expect(screen.getByText('Uten side')).toBeInTheDocument();
+    tap('Spiller 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Flytt Spiller 1 til side 2' }));
+    expect(latest.teamByPlayer.p1).toBe(2);
+    expect(screen.queryByText(/Flight/)).toBeNull();
+  });
+
+  it('scramble à 3: ett «Flytt hit» per kort med plass, og spilleren havner på laget', () => {
+    setup('texas_scramble', 3, 6);
+    tap('Spiller 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Flytt Spiller 1 til lag 1' }));
+    tap('Spiller 2');
+    expect(screen.getAllByText('Flytt hit')).toHaveLength(1 + 1);
+    fireEvent.click(screen.getByRole('button', { name: 'Flytt Spiller 2 til lag 1' }));
+    expect(latest.playersByTeam[1]).toEqual(['p1', 'p2']);
   });
 });

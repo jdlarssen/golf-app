@@ -12,12 +12,20 @@ export function SlotCard({
   title,
   children,
   className = '',
+  target = false,
   ...rest
-}: Omit<HTMLAttributes<HTMLDivElement>, 'title'> & { title: ReactNode; children: ReactNode }) {
+}: Omit<HTMLAttributes<HTMLDivElement>, 'title'> & {
+  title: ReactNode;
+  children: ReactNode;
+  /** #2456: the card a picked player can move to — a 2 px dashed forest frame. */
+  target?: boolean;
+}) {
   return (
     <div
       {...rest}
-      className={`flex min-w-0 flex-col gap-2 rounded-2xl border border-border bg-surface p-2.5 ${className}`}
+      className={`flex min-w-0 flex-col gap-2 rounded-2xl bg-surface p-2.5 ${
+        target ? 'border-2 border-dashed border-primary' : 'border border-border'
+      } ${className}`}
     >
       <p className="font-serif text-base font-semibold leading-[normal] text-text">{title}</p>
       {children}
