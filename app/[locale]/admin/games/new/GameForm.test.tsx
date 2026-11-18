@@ -47,6 +47,20 @@ const EIGHT_PLAYERS: PlayerOption[] = Array.from({ length: 8 }, (_, i) =>
 // ved feil. `{ error: '' }` er «alt gikk bra»-formen.
 const NO_OP = async () => ({ error: '' }) as const;
 
+// #2456: team and side cards are filled by tapping. A player's tile is a
+// button named after the player; «Flytt <navn> til lag N» is the dashed target.
+function tapPlayer(name: string) {
+  fireEvent.click(screen.getByRole('button', { name }));
+}
+function placeOnTeam(name: string, team: number) {
+  tapPlayer(name);
+  fireEvent.click(screen.getByRole('button', { name: `Flytt ${name} til lag ${team}` }));
+}
+function placeOnSide(name: string, side: number) {
+  tapPlayer(name);
+  fireEvent.click(screen.getByRole('button', { name: `Flytt ${name} til side ${side}` }));
+}
+
 describe('GameForm — baseline (pre-fase-4)', () => {
   it('rendrer spillere-seksjonen med spiller-checkbox-liste når availablePlayers har spillere', () => {
     render(
@@ -461,24 +475,17 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
       );
     }
 
-    // Lag-grid skal nå være synlig. Selects er ikke labellet, så vi finner
-    // dem direkte. Rutenettet viser lag nok til de valgte spillerne (#2148):
-    // 4 spillere à 2 → lag 1 og 2.
-    const teamSelects = Array.from(
-      container.querySelectorAll<HTMLSelectElement>(
-        'section select',
-      ),
-    ).filter((sel) =>
-      Array.from(sel.options).some((o) => /tom plass/i.test(o.text)),
-    );
-    // Forventer 2 lag × 2 slots = 4 dropdowns.
-    expect(teamSelects.length).toBe(4);
+    // Lag-grid skal nå være synlig. Rutenettet viser lag nok til de valgte
+    // spillerne (#2148): 4 spillere à 2 → lag 1 og 2.
+    expect(screen.getByTestId('team-card-1')).toBeInTheDocument();
+    expect(screen.getByTestId('team-card-2')).toBeInTheDocument();
+    expect(screen.queryByTestId('team-card-3')).not.toBeInTheDocument();
 
-    // Tildel spiller 1 og 2 til lag 1 (slot 0 og 1), spiller 3 og 4 til lag 2.
-    fireEvent.change(teamSelects[0], { target: { value: 'u0' } });
-    fireEvent.change(teamSelects[1], { target: { value: 'u1' } });
-    fireEvent.change(teamSelects[2], { target: { value: 'u2' } });
-    fireEvent.change(teamSelects[3], { target: { value: 'u3' } });
+    // Tildel spiller 1 og 2 til lag 1, spiller 3 og 4 til lag 2.
+    placeOnTeam('Spiller 1', 1);
+    placeOnTeam('Spiller 2', 1);
+    placeOnTeam('Spiller 3', 2);
+    placeOnTeam('Spiller 4', 2);
 
     // Publiser-knappen skal være enabled.
     const publishBtn = screen.getByRole('button', { name: /^publiser$/i });
@@ -558,17 +565,10 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
     //
     // Vi tester i stedet ulikevektsscenarioet: 2 spillere på lag 1 + 1
     // spiller på lag 2 + 1 ufordelt → ujevn fordeling skal blokkere publish.
-    const teamSelects = Array.from(
-      container.querySelectorAll<HTMLSelectElement>(
-        'section select',
-      ),
-    ).filter((sel) =>
-      Array.from(sel.options).some((o) => /tom plass/i.test(o.text)),
-    );
-    fireEvent.change(teamSelects[0], { target: { value: 'u0' } });
-    fireEvent.change(teamSelects[1], { target: { value: 'u1' } });
-    fireEvent.change(teamSelects[2], { target: { value: 'u2' } });
-    // u3 er valgt men ikke tildelt — ujevn fordeling.
+    placeOnTeam('Spiller 1', 1);
+    placeOnTeam('Spiller 2', 1);
+    placeOnTeam('Spiller 3', 2);
+    // Spiller 4 er valgt men ikke tildelt — ujevn fordeling.
 
     const publishBtn = screen.getByRole('button', { name: /^publiser$/i });
     expect(publishBtn).toBeDisabled();
@@ -597,17 +597,10 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
         screen.getByRole('checkbox', { name: new RegExp(`spiller ${i + 1}`, 'i') }),
       );
     }
-    const teamSelects = Array.from(
-      container.querySelectorAll<HTMLSelectElement>(
-        'section select',
-      ),
-    ).filter((sel) =>
-      Array.from(sel.options).some((o) => /tom plass/i.test(o.text)),
-    );
-    fireEvent.change(teamSelects[0], { target: { value: 'u0' } });
-    fireEvent.change(teamSelects[1], { target: { value: 'u1' } });
-    fireEvent.change(teamSelects[2], { target: { value: 'u2' } });
-    fireEvent.change(teamSelects[3], { target: { value: 'u3' } });
+    placeOnTeam('Spiller 1', 1);
+    placeOnTeam('Spiller 2', 1);
+    placeOnTeam('Spiller 3', 2);
+    placeOnTeam('Spiller 4', 2);
 
     // Ingen flight-heading skal være tilstede (par-stableford auto-mapper
     // flight = team).
@@ -685,13 +678,16 @@ describe('GameForm — lag-matchplay (#634)', () => {
     expect(screen.getByText('Side 2')).toBeInTheDocument();
     expect(screen.queryByText('Side 3')).not.toBeInTheDocument();
 
-    // Fire slot-dropdowns totalt (2 sider × 2 slots). Slot-selectene har
-    // «— Tom plass —» som første opsjon; bane-/tee-selectene har det ikke,
-    // så vi filtrerer på det for å telle kun grid-slottene.
-    const slotSelects = Array.from(
-      container.querySelectorAll('select'),
-    ).filter((sel) => sel.querySelector('option')?.textContent === '— Tom plass —');
-    expect(slotSelects).toHaveLength(4);
+    // Ingen nedtrekkslister i side-delen (#2456): spillerne uten side står
+    // samlet, og trykk på en spiller gir «Flytt hit» på hver side.
+    expect(screen.getByText('Uten side')).toBeInTheDocument();
+    tapPlayer('Spiller 1');
+    expect(
+      screen.getByRole('button', { name: 'Flytt Spiller 1 til side 1' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Flytt Spiller 1 til side 2' }),
+    ).toBeInTheDocument();
   });
 
   it('chapman-matchplay: allowance-toggle (chapman_allowance_pct) rendres', () => {
@@ -938,18 +934,12 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
 
-    // To side-selects skal være tilgjengelige.
-    const side1 = container.querySelector(
-      '#matchplay_side_1',
-    ) as HTMLSelectElement | null;
-    const side2 = container.querySelector(
-      '#matchplay_side_2',
-    ) as HTMLSelectElement | null;
-    expect(side1).not.toBeNull();
-    expect(side2).not.toBeNull();
+    // To side-kort skal være tilgjengelige.
+    expect(screen.getByTestId('team-card-1')).toBeInTheDocument();
+    expect(screen.getByTestId('team-card-2')).toBeInTheDocument();
 
-    fireEvent.change(side1!, { target: { value: 'u0' } });
-    fireEvent.change(side2!, { target: { value: 'u1' } });
+    placeOnSide('Spiller 1', 1);
+    placeOnSide('Spiller 2', 2);
 
     const publishBtn = screen.getByRole('button', { name: /^publiser$/i });
     expect(publishBtn).not.toBeDisabled();
@@ -1011,13 +1001,11 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
 
     // Sett begge på Side 1 — assignPlayerToSide vil fjerne den første
     // når den andre velges siden hver side bare kan ha én okkupant.
-    // Vi simulerer dette via dropdown-bytte: først u0 på side 1, så
-    // bytter vi til u1 på side 1 → u0 mister side-tilordning.
-    const side1 = container.querySelector(
-      '#matchplay_side_1',
-    ) as HTMLSelectElement;
-    fireEvent.change(side1, { target: { value: 'u0' } });
-    fireEvent.change(side1, { target: { value: 'u1' } });
+    // Vi simulerer dette med trykk: først Spiller 1 på side 1, så velges
+    // Spiller 2 og trykkes på Spiller 1 → Spiller 1 mister side-tilordning.
+    placeOnSide('Spiller 1', 1);
+    tapPlayer('Spiller 2');
+    fireEvent.click(screen.getByRole('button', { name: 'Bytt Spiller 2 med Spiller 1' }));
 
     // Nå: u1 på side 1, u0 ufordelt, side 2 tom. Begge spillerne mangler
     // én-spiller-per-side-tilstand.
@@ -1029,8 +1017,8 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
     expect(helperText?.textContent).toMatch(/én spiller på hver side/i);
   });
 
-  it('matchplay: bytte til side via dropdown swapper okkupanter (idiomatic UX)', () => {
-    const { container } = render(
+  it('matchplay: trykk på en spiller og så på spilleren på den andre siden bytter dem', () => {
+    render(
       <GameForm
         courses={COURSES}
         players={EIGHT_PLAYERS.slice(0, 2)}
@@ -1046,23 +1034,19 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
 
-    const side1 = container.querySelector(
-      '#matchplay_side_1',
-    ) as HTMLSelectElement;
-    const side2 = container.querySelector(
-      '#matchplay_side_2',
-    ) as HTMLSelectElement;
+    // Initial: Spiller 1 til side 1, Spiller 2 til side 2.
+    placeOnSide('Spiller 1', 1);
+    placeOnSide('Spiller 2', 2);
+    const side1 = () => within(screen.getByTestId('team-card-1'));
+    const side2 = () => within(screen.getByTestId('team-card-2'));
+    expect(side1().getByRole('button', { name: 'Spiller 1' })).toBeInTheDocument();
+    expect(side2().getByRole('button', { name: 'Spiller 2' })).toBeInTheDocument();
 
-    // Initial: u0 til side 1, u1 til side 2.
-    fireEvent.change(side1, { target: { value: 'u0' } });
-    fireEvent.change(side2, { target: { value: 'u1' } });
-    expect(side1.value).toBe('u0');
-    expect(side2.value).toBe('u1');
-
-    // Velg u1 på side 1 → swap: u0 flytter til side 2, u1 til side 1.
-    fireEvent.change(side1, { target: { value: 'u1' } });
-    expect(side1.value).toBe('u1');
-    expect(side2.value).toBe('u0');
+    // Velg Spiller 2, trykk på Spiller 1 → swap: Spiller 2 på side 1.
+    tapPlayer('Spiller 2');
+    fireEvent.click(screen.getByRole('button', { name: 'Bytt Spiller 2 med Spiller 1' }));
+    expect(side1().getByRole('button', { name: 'Spiller 2' })).toBeInTheDocument();
+    expect(side2().getByRole('button', { name: 'Spiller 1' })).toBeInTheDocument();
   });
 
   it('matchplay: hidden inputs har player_0_team=1 og player_1_team=2 etter side-tilordning', () => {
@@ -1082,13 +1066,7 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
 
-    const side1 = container.querySelector(
-      '#matchplay_side_1',
-    ) as HTMLSelectElement;
-    const side2 = container.querySelector(
-      '#matchplay_side_2',
-    ) as HTMLSelectElement;
-    fireEvent.change(side1, { target: { value: 'u0' } });
+    placeOnSide('Spiller 1', 1);
     // #2210: with only side 1 set, u1 rides along as a player without a side
     // instead of being dropped from the payload.
     const unassigned = () =>
@@ -1098,7 +1076,7 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
         ),
       ].map((el) => el.value);
     expect(unassigned()).toEqual(['u1']);
-    fireEvent.change(side2, { target: { value: 'u1' } });
+    placeOnSide('Spiller 2', 2);
     expect(unassigned()).toEqual([]);
 
     // Payloaden skal ha player_0 (side 1) + player_1 (side 2) i den

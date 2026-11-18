@@ -1541,6 +1541,25 @@ export function useGameFormState({
     });
   }
 
+  /**
+   * #2456: two players trade teams (a tap on a player, then on a player on
+   * another team). One `setTeamByPlayer` update: two `assignPlayerToSlot` calls
+   * in the same handler would read the same stale `playersByTeam`, and the
+   * second would delete the player the first moved. The flights reset to the
+   * new team's default, as `assignPlayerToSlot` does.
+   */
+  function swapPlayerTeams(a: string, b: string) {
+    const teamA = teamByPlayer[a];
+    const teamB = teamByPlayer[b];
+    if (teamA === undefined || teamB === undefined) return;
+    setTeamByPlayer((prev) => ({ ...prev, [a]: teamB, [b]: teamA }));
+    setFlightByPlayer((prev) => ({
+      ...prev,
+      [a]: teamDefaultFlight(teamB),
+      [b]: teamDefaultFlight(teamA),
+    }));
+  }
+
   function setFlightForPlayer(playerId: string, flight: number) {
     setFlightByPlayer((prev) => ({ ...prev, [playerId]: flight }));
   }
@@ -2433,22 +2452,8 @@ export function useGameFormState({
     clearTeams,
     assignPlayerToSlot,
     assignPlayerToSide,
+    swapPlayerTeams,
     setFlightForPlayer,
-    // Helper for slot dropdowns — knytter playersByTeam/selectedPlayerIds-state
-    // sammen med players-prop-lookup for å gi en stabil opsjons-liste per slot.
-    slotOptions(team: number, slotIndex: number) {
-      const current = playersByTeam[team][slotIndex];
-      const unassigned = selectedPlayerIds.filter(
-        (pid) => teamByPlayer[pid] === undefined,
-      );
-      const ids = new Set<string>([
-        ...(current ? [current] : []),
-        ...unassigned,
-      ]);
-      return Array.from(ids)
-        .map((pid) => allPlayers.find((p) => p.id === pid))
-        .filter((p): p is PlayerOption => p !== undefined);
-    },
     // Default-flight per lag (to par per flight). Eksponeres
     // slik at FlightsSection (inne i TeamsAssignmentSection) kan vise samme
     // fallback som payload-bygging bruker.

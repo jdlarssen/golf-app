@@ -2853,3 +2853,64 @@ describe('useGameFormState — Plasser og frist', () => {
     expect(result.current.waitlistEnabled).toBe(false);
   });
 });
+
+describe('useGameFormState — swapPlayerTeams (#2456)', () => {
+  const SWAP_PLAYERS: PlayerOption[] = Array.from({ length: 8 }, (_, i) =>
+    makePlayer(`s${i + 1}`),
+  );
+
+  function setupFullBestBall() {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: SWAP_PLAYERS, courses: COURSES }),
+    );
+    act(() => {
+      result.current.handleModeChange('best_ball');
+    });
+    act(() => {
+      for (let i = 0; i < 8; i++) result.current.togglePlayer(`s${i + 1}`);
+    });
+    // Two players per team, in order: s1+s2 → lag 1, s3+s4 → lag 2, …
+    act(() => {
+      for (let i = 0; i < 8; i++) {
+        result.current.assignPlayerToSlot(Math.floor(i / 2) + 1, i % 2, `s${i + 1}`);
+      }
+    });
+    return result;
+  }
+
+  it('the two players trade team numbers, and each flight follows the new team', () => {
+    const result = setupFullBestBall();
+    // s1 is on lag 1 (flight 1), s6 on lag 3 (flight 2).
+    act(() => {
+      result.current.swapPlayerTeams('s1', 's6');
+    });
+    expect(result.current.teamByPlayer.s1).toBe(3);
+    expect(result.current.teamByPlayer.s6).toBe(1);
+    expect(result.current.flightByPlayer.s1).toBe(result.current.teamDefaultFlight(3));
+    expect(result.current.flightByPlayer.s6).toBe(result.current.teamDefaultFlight(1));
+  });
+
+  it('no one else moves', () => {
+    const result = setupFullBestBall();
+    const before = { ...result.current.teamByPlayer };
+    act(() => {
+      result.current.swapPlayerTeams('s1', 's6');
+    });
+    for (const pid of ['s2', 's3', 's4', 's5', 's7', 's8']) {
+      expect(result.current.teamByPlayer[pid]).toBe(before[pid]);
+    }
+    expect(Object.keys(result.current.teamByPlayer)).toHaveLength(8);
+  });
+
+  it('does nothing when one of the two has no team', () => {
+    const result = setupFullBestBall();
+    act(() => {
+      result.current.assignPlayerToSlot(1, 1, '');
+    });
+    const before = { ...result.current.teamByPlayer };
+    act(() => {
+      result.current.swapPlayerTeams('s1', 's2');
+    });
+    expect(result.current.teamByPlayer).toEqual(before);
+  });
+});
