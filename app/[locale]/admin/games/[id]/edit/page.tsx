@@ -24,6 +24,7 @@ import {
 import { GameWizard } from '@/app/[locale]/admin/games/new/GameWizard';
 import { getCourseAndTimeData, getWizardMountData } from '@/lib/wizard/getWizardMountData';
 import { isTeeColor } from '@/lib/courses/teeColors';
+import { teeBoxRatingsOf } from '@/lib/games/teeRating';
 import { resumeExpectedPlayerCount } from '@/lib/wizard/draftResumePlan';
 import { loadDraftResume } from '@/lib/wizard/loadDraftResume';
 import {
@@ -357,6 +358,8 @@ const getOptions = cache(async () => {
           t.slope_juniors !== null &&
           t.course_rating_juniors !== null &&
           t.par_total_juniors !== null,
+        // #2455: the handicap-share example on step 5 counts strokes from these.
+        ratings: teeBoxRatingsOf(t),
       }))
       .sort((a, b) => a.name.localeCompare(b.name, 'no')),
   }));

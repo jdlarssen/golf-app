@@ -15,6 +15,24 @@ export type TeeBoxRatings = {
 export type Rating = { slope: number; courseRating: number; par: number };
 
 /**
+ * #2455: just the nine rating columns of a wider tee-box row, so a loader can
+ * hand them to the client without the row's other fields.
+ */
+export function teeBoxRatingsOf(row: TeeBoxRatings): TeeBoxRatings {
+  return {
+    slope_mens: row.slope_mens,
+    course_rating_mens: row.course_rating_mens,
+    par_total_mens: row.par_total_mens,
+    slope_ladies: row.slope_ladies,
+    course_rating_ladies: row.course_rating_ladies,
+    par_total_ladies: row.par_total_ladies,
+    slope_juniors: row.slope_juniors,
+    course_rating_juniors: row.course_rating_juniors,
+    par_total_juniors: row.par_total_juniors,
+  };
+}
+
+/**
  * Resolve the (slope, course-rating, par) triple for a player's chosen
  * gender against a tee-box that may carry up to three independent rating
  * sets (mens/ladies/juniors). Returns `null` when the requested set is
