@@ -728,6 +728,11 @@
       "chosen": "Valgt",
       "change": "Bytt",
       "changeAriaLabel": "Bytt spillform. Valgt: {name}",
+      "questions": {
+        "kicker": "Usikker? To spørsmål",
+        "noTeamFormat": "Ingen lagformat går opp med {count, plural, one {# spiller} other {# spillere}}.",
+        "noStakesFormat": "Ingen av spillene med litt på spill går opp med {count, plural, one {# spiller} other {# spillere}}."
+      },
       "lineup": {
         "sides": "{count} mot {count}",
         "teams": "{teams, plural, one {ett lag à {size}} other {# lag à {size}}}",

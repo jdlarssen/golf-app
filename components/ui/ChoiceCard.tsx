@@ -30,6 +30,7 @@ export type ChoiceCardLayout = 'start' | 'centered' | 'dense';
  * Classes are spelled out so Tailwind sees them.
  */
 const MIN_HEIGHT = {
+  48: 'min-h-[48px]',
   52: 'min-h-[52px]',
   60: 'min-h-[60px]',
   64: 'min-h-[64px]',

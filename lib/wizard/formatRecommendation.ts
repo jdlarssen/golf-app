@@ -8,6 +8,11 @@
  * after it are «Andre som passer»; everything else that fits sits behind the
  * «Se alle N som passer» link. Pure logic, no UI dependencies — the native
  * app can read it later.
+ *
+ * #2462: `preferred` (the answer to the two format questions) takes the
+ * recommendation's place when it is in the catalogue and fits the count. The
+ * format it pushes down stays first in «Andre»; the count of formats that fit
+ * does not change. Otherwise the result is the catalogue's own.
  */
 
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
@@ -32,6 +37,7 @@ export function splitFormatsForCount(
   formats: readonly FormatForIntent[],
   count: number | undefined,
   selected: string | undefined,
+  preferred?: string,
 ): FormatSplit {
   if (count === undefined) {
     return {
@@ -42,7 +48,11 @@ export function splitFormatsForCount(
     };
   }
 
-  const fitting = formats.filter((f) => fitsPlayerCount(f.slug as GameMode, count));
+  const catalogueOrder = formats.filter((f) => fitsPlayerCount(f.slug as GameMode, count));
+  const preferredFormat = catalogueOrder.find((f) => f.slug === preferred);
+  const fitting = preferredFormat
+    ? [preferredFormat, ...catalogueOrder.filter((f) => f !== preferredFormat)]
+    : catalogueOrder;
   const [recommended, ...after] = fitting;
   const others = after.slice(0, OTHER_FORMATS_SHOWN);
   let rest = after.slice(OTHER_FORMATS_SHOWN);

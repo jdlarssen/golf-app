@@ -159,3 +159,43 @@ describe('splitFormatsForCount — anbefalt, tre andre og resten (#2260)', () =>
     expect(slugs(split.rest)).not.toContain('nines');
   });
 });
+
+describe('splitFormatsForCount — preferred (#2462)', () => {
+  it('makes the preferred format the recommendation and takes it out of the groups', () => {
+    const plain = splitFormatsForCount(CATALOG, 4, undefined);
+    const split = splitFormatsForCount(CATALOG, 4, undefined, 'texas_scramble');
+    expect(split.recommended?.slug).toBe('texas_scramble');
+    const all = [split.recommended!, ...split.others, ...split.rest].map((f) => f.slug);
+    expect(all.filter((s) => s === 'texas_scramble')).toHaveLength(1);
+    expect(split.fittingCount).toBe(plain.fittingCount);
+  });
+
+  it('keeps the old recommendation in «Andre» when it is pushed down', () => {
+    const split = splitFormatsForCount(CATALOG, 4, undefined, 'texas_scramble');
+    expect(slugs(split.others)).toEqual(['best_ball', 'stableford', 'wolf']);
+  });
+
+  it('is the same as no preference when the preferred format already leads', () => {
+    expect(splitFormatsForCount(CATALOG, 4, undefined, 'best_ball')).toEqual(
+      splitFormatsForCount(CATALOG, 4, undefined),
+    );
+  });
+
+  it('is ignored when the format is not in the catalogue or does not fit the count', () => {
+    const plain = splitFormatsForCount(CATALOG, 3, undefined);
+    expect(splitFormatsForCount(CATALOG, 3, undefined, 'texas_scramble')).toEqual(plain);
+    expect(splitFormatsForCount(CATALOG, 3, undefined, 'nope')).toEqual(plain);
+  });
+
+  it('is ignored without a count', () => {
+    expect(splitFormatsForCount(CATALOG, undefined, undefined, 'texas_scramble')).toEqual(
+      splitFormatsForCount(CATALOG, undefined, undefined),
+    );
+  });
+
+  it('still lifts the selected format out of the rest', () => {
+    const split = splitFormatsForCount(CATALOG, 4, 'solo_strokeplay', 'texas_scramble');
+    expect(slugs(split.others)).toContain('solo_strokeplay');
+    expect(slugs(split.rest)).not.toContain('solo_strokeplay');
+  });
+});

@@ -728,6 +728,11 @@
       "chosen": "Selected",
       "change": "Change",
       "changeAriaLabel": "Change format. Chosen: {name}",
+      "questions": {
+        "kicker": "Not sure? Two questions",
+        "noTeamFormat": "No team format works with {count, plural, one {# player} other {# players}}.",
+        "noStakesFormat": "None of the games with a little at stake work with {count, plural, one {# player} other {# players}}."
+      },
       "lineup": {
         "sides": "{count} vs {count}",
         "teams": "{teams, plural, one {one team of {size}} other {# teams of {size}}}",
