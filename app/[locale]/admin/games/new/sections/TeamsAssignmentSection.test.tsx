@@ -337,3 +337,50 @@ describe('TeamsAssignmentSection — lagene fordeles med trykk (#2456)', () => {
     expect(latest.playersByTeam[1]).toEqual(['p1', 'p2']);
   });
 });
+
+// Type B (#2456): a tile and the strip name a player by first name, and by full
+// name only where two picked players share one (#2286).
+describe('TeamsAssignmentSection — fornavn på brikkene (#2456)', () => {
+  const NAMED: PlayerOption[] = [
+    ['n1', 'Marte Lien'],
+    ['n2', 'Jonas Berg'],
+    ['n3', 'Jonas Rud'],
+    ['n4', 'Eirik Dal'],
+  ].map(([id, name]) => ({
+    id,
+    name,
+    nickname: null,
+    hcp_index: 18,
+    email: `${id}@example.test`,
+    pending: false,
+    gender: null,
+    level: 'normal' as const,
+  }));
+
+  function NamedHarness() {
+    const state = useGameFormState({ players: NAMED, courses: COURSES });
+    useEffect(() => {
+      latest = state;
+    });
+    return <TeamsAssignmentSection state={state} players={NAMED} hideNumbering />;
+  }
+
+  it('fornavn der det er entydig, fullt navn der to deler fornavn; aria-navnet er alltid fullt', () => {
+    render(<NamedHarness />);
+    act(() => latest.handleModeChange('best_ball'));
+    act(() => {
+      for (const p of NAMED) latest.togglePlayer(p.id);
+    });
+    const marte = screen.getByRole('button', { name: 'Marte Lien' });
+    expect(marte).toHaveTextContent('Marte');
+    expect(marte).not.toHaveTextContent('Lien');
+    expect(screen.getByRole('button', { name: 'Jonas Berg' })).toHaveTextContent('Jonas Berg');
+    expect(screen.getByRole('button', { name: 'Jonas Rud' })).toHaveTextContent('Jonas Rud');
+
+    fireEvent.click(marte);
+    expect(screen.getByRole('status')).toHaveTextContent('Marte er valgt.');
+    expect(
+      screen.getByRole('button', { name: 'Flytt Marte Lien til lag 1' }),
+    ).toBeInTheDocument();
+  });
+});
