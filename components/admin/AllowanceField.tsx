@@ -259,31 +259,38 @@ export function AllowanceField({
               </button>
               {/* The number is a field too, so any share can be typed, and the
                   «Endre» on a red Format row still finds `…__input` to focus
-                  (ReadyStep). It is drawn as the artboard's plain number. */}
-              <span className="flex items-baseline font-serif text-[22px] font-semibold tabular-nums text-text">
-                <input
-                  id={inputId}
-                  type="number"
-                  inputMode="numeric"
-                  aria-label={resolvedInputLabel}
-                  aria-describedby={!footer && nettoHelperText ? `${inputId}-desc` : undefined}
-                  min={0}
-                  max={maxPct}
-                  step={1}
-                  value={shownPct}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    if (Number.isInteger(v) && v >= 0 && v <= maxPct) {
-                      setNettoPct(v);
-                    }
-                  }}
-                  // Fraunces' tabular digits are 0.6 em; `ch` (0.67 em) left
-                  // a gap before «%» the artboard does not have.
-                  style={{ width: `${String(shownPct).length * 0.62}em` }}
-                  className="min-w-0 rounded-sm border-0 bg-transparent p-0 text-center font-serif text-[22px]! leading-[normal] font-semibold tabular-nums text-text [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                />
-                <span aria-hidden="true">&nbsp;%</span>
-              </span>
+                  (ReadyStep). It is drawn as the artboard's plain number. The
+                  label around it is the 44 px tap target, so a tap on «%» or
+                  beside the digits also lands in the field. */}
+              <label
+                htmlFor={inputId}
+                className="flex h-11 cursor-text items-center font-serif text-[22px] font-semibold tabular-nums text-text"
+              >
+                <span className="flex items-baseline">
+                  <input
+                    id={inputId}
+                    type="number"
+                    inputMode="numeric"
+                    aria-label={resolvedInputLabel}
+                    aria-describedby={!footer && nettoHelperText ? `${inputId}-desc` : undefined}
+                    min={0}
+                    max={maxPct}
+                    step={1}
+                    value={shownPct}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      if (Number.isInteger(v) && v >= 0 && v <= maxPct) {
+                        setNettoPct(v);
+                      }
+                    }}
+                    // Fraunces' tabular digits are 0.6 em; `ch` (0.67 em) left
+                    // a gap before «%» the artboard does not have.
+                    style={{ width: `${String(shownPct).length * 0.62}em` }}
+                    className="min-w-0 rounded-sm border-0 bg-transparent p-0 text-center font-serif text-[22px]! leading-[normal] font-semibold tabular-nums text-text [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                  <span aria-hidden="true">&nbsp;%</span>
+                </span>
+              </label>
               <button
                 type="button"
                 aria-label={t('stepMore', { step: stepPct })}
