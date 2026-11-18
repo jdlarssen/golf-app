@@ -192,6 +192,9 @@ function source(overrides: Partial<WeeklyRepeatSource> = {}): WeeklyRepeatSource
     tournament_match_label: null,
     hole_segment: 'full',
     scheduled_tee_off_at: '2026-11-21T08:00:00.000Z',
+    registration_cap: null,
+    signup_deadline: null,
+    waitlist_enabled: false,
     ...overrides,
   };
 }
@@ -250,6 +253,10 @@ describe('buildWeeklyRepeatInsert', () => {
       tournament_id: null,
       tournament_match_label: null,
       hole_segment: 'full',
+      // #2482: «Plasser og frist» goes with the series.
+      registration_cap: null,
+      waitlist_enabled: false,
+      signup_deadline: null,
       repeat_weekly: true,
       repeated_from_game_id: 'g-1',
     });
@@ -421,5 +428,60 @@ describe('buildWeeklyRepeatInsert copies every column the wizard inserts', () =>
       nowIso: NOW,
     });
     expect(written.filter((column) => !(column in game))).toEqual([]);
+  });
+});
+
+/**
+ * #2482: «Plasser og frist» goes with the series. The cap and the waiting
+ * list are copied as they are; the deadline moves as far as the tee-off does
+ * (the orchestrator's choice, the owner has the veto), so it stays the same
+ * time before the round and never lands in the past.
+ */
+describe('buildWeeklyRepeatInsert — «Plasser og frist» (#2482)', () => {
+  const opts = { newGameId: 'g-2', guestIds: new Set<string>(), nowIso: NOW };
+
+  it('copies the cap and the waiting list', () => {
+    const { game } = buildWeeklyRepeatInsert(
+      source({ registration_cap: 16, waitlist_enabled: true }),
+      [],
+      NEXT,
+      'Bogstad',
+      opts,
+    );
+    expect(game.registration_cap).toBe(16);
+    expect(game.waitlist_enabled).toBe(true);
+  });
+
+  it('no deadline stays no deadline', () => {
+    const { game } = buildWeeklyRepeatInsert(source(), [], NEXT, 'Bogstad', opts);
+    expect(game.signup_deadline).toBeNull();
+  });
+
+  it('the deadline moves by the tee-off\'s step: the day before at 18:00, a week later', () => {
+    const { game } = buildWeeklyRepeatInsert(
+      source({ signup_deadline: '2026-11-20T17:00:00.000Z' }),
+      [],
+      NEXT,
+      'Bogstad',
+      opts,
+    );
+    expect(game.signup_deadline).toBe('2026-11-27T17:00:00.000Z');
+  });
+
+  it('over the switch to winter time it keeps 18:00 Oslo time', () => {
+    // Saturday 24.10 09:00 CEST (07:00Z) → Saturday 31.10 09:00 CET (08:00Z):
+    // the step is 7 days and 1 hour, so Friday 18:00 CEST (16:00Z) becomes
+    // Friday 30.10 18:00 CET (17:00Z).
+    const { game } = buildWeeklyRepeatInsert(
+      source({
+        scheduled_tee_off_at: '2026-10-24T07:00:00.000Z',
+        signup_deadline: '2026-10-23T16:00:00.000Z',
+      }),
+      [],
+      '2026-10-31T08:00:00.000Z',
+      'Bogstad',
+      opts,
+    );
+    expect(game.signup_deadline).toBe('2026-10-30T17:00:00.000Z');
   });
 });

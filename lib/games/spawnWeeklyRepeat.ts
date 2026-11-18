@@ -59,7 +59,7 @@ type SourceRow = Omit<WeeklyRepeatSource, 'created_by'> & {
 };
 
 const SOURCE_COLUMNS =
-  'id, name, status, repeat_weekly, created_by, course_id, tee_box_id, hcp_allowance_pct, require_peer_approval, score_visibility, game_mode, mode_config, registration_mode, registration_type, let_friends_skip_gate, entry_fee_kr, payment_link, prizes, side_tournament_enabled, side_ld_count, side_ctp_count, side_ld_holes, side_ctp_holes, side_disabled_categories, start_type, group_id, tournament_id, tournament_match_label, league_round_id, source_game_id, hole_segment, scheduled_tee_off_at, courses(name)';
+  'id, name, status, repeat_weekly, created_by, course_id, tee_box_id, hcp_allowance_pct, require_peer_approval, score_visibility, game_mode, mode_config, registration_mode, registration_type, let_friends_skip_gate, entry_fee_kr, payment_link, prizes, side_tournament_enabled, side_ld_count, side_ctp_count, side_ld_holes, side_ctp_holes, side_disabled_categories, start_type, group_id, tournament_id, tournament_match_label, league_round_id, source_game_id, hole_segment, scheduled_tee_off_at, registration_cap, signup_deadline, waitlist_enabled, courses(name)';
 
 export async function spawnWeeklyRepeat(
   gameId: string,
