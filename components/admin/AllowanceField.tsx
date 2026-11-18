@@ -277,7 +277,7 @@ export function AllowanceField({
                     }
                   }}
                   style={{ width: `calc(${String(shownPct).length}ch + 2px)` }}
-                  className="min-w-0 rounded-sm border-0 bg-transparent p-0 text-center font-serif text-[22px] leading-[normal] font-semibold tabular-nums text-text [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  className="min-w-0 rounded-sm border-0 bg-transparent p-0 text-center font-serif text-[22px]! leading-[normal] font-semibold tabular-nums text-text [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
                 <span aria-hidden="true">&nbsp;%</span>
               </span>
