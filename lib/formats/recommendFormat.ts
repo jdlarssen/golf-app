@@ -48,7 +48,7 @@ const BUCKET_RANGES: Record<CountBucket, { min: number; max: number }> = {
 
 const CANDIDATES: Record<Goal, Record<Level, readonly GameMode[]>> = {
   compete: { even: ['singles_matchplay', 'solo_strokeplay'], uneven: ['stableford'] },
-  team: { even: ['fourball_matchplay', 'best_ball'], uneven: ['texas_scramble', 'best_ball'] },
+  team: { even: ['fourball_matchplay', 'best_ball', 'texas_scramble'], uneven: ['texas_scramble', 'best_ball'] },
   stakes: { even: ['wolf', 'nassau'], uneven: ['bingo_bango_bongo'] },
 };
 
@@ -61,7 +61,44 @@ export function bucketCounts(bucket: CountBucket): number[] {
 }
 
 export function recommendFormat({ bucket, level, goal }: FormatAnswers): FormatRecommendation {
-  const counts = bucketCounts(bucket);
+  return pick(bucketCounts(bucket), level, goal);
+}
+
+/** The bucket a count sits in, or `undefined` below 2 (no bucket asks for it). */
+function bucketOf(count: number): CountBucket | undefined {
+  return PLAYER_COUNT_BUCKETS.find((bucket) => {
+    const { min, max } = BUCKET_RANGES[bucket];
+    return count >= min && count <= max;
+  });
+}
+
+/**
+ * The same rule for the wizard, which knows the exact count (#2462). The
+ * bucket's answer wins whenever the count can play it, so /spillformater and
+ * the wizard never disagree about what both can answer. A bucket's answer can
+ * fit only part of the bucket (`fitsEveryCount: false`), and the wizard's list
+ * hides formats that do not fit; only then does the exact count decide.
+ */
+export function recommendFormatForCount({
+  count,
+  level,
+  goal,
+}: {
+  count: number;
+  level: Level;
+  goal: Goal;
+}): FormatRecommendation {
+  const bucket = bucketOf(count);
+  if (bucket) {
+    const answer = recommendFormat({ bucket, level, goal });
+    if (fitsPlayerCount(answer.mode, count)) {
+      return { ...answer, exactCount: count, fitsEveryCount: true };
+    }
+  }
+  return pick([count], level, goal);
+}
+
+function pick(counts: number[], level: Level, goal: Goal): FormatRecommendation {
   const exactCount = counts.length === 1 ? counts[0] : null;
   const candidates = CANDIDATES[goal][level];
 
