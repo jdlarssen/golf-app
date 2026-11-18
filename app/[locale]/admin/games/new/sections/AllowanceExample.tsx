@@ -17,26 +17,29 @@ import type { GameFormState } from '../useGameFormState';
 import { allowanceExample, type AllowanceExample as Example } from '@/lib/games/allowanceExample';
 import { teeChoiceToDb } from '@/lib/games/teeChoice';
 import { formatHcpDisplay } from '@/lib/handicap/signFormat';
-import { playerOptionShortName } from './playerLabels';
+import { playerShortName } from '@/lib/names/playerName';
 
 /** The example for the wizard's current tee, players and share; null = none to show. */
 export function useAllowanceExample(state: GameFormState): Example | null {
   const tPlayers = useTranslations('wizard.sections.players');
-  const pendingLabel = tPlayers('pendingLabel');
+  const pendingName = tPlayers('grid.pendingName');
   const tee = state.availableTees.find((t) => t.id === state.teeBoxId) ?? null;
+  const selected = state.selectedPlayerIds.flatMap((pid) => {
+    const p = state.allPlayers.find((x) => x.id === pid);
+    return p ? [p] : [];
+  });
   return allowanceExample({
-    players: state.selectedPlayerIds.flatMap((pid) => {
-      const p = state.allPlayers.find((x) => x.id === pid);
-      if (!p) return [];
-      return [
-        {
-          id: p.id,
-          name: playerOptionShortName(p, pendingLabel),
-          hcpIndex: p.hcp_index,
-          // What the hidden field sends, so the set is the one the start uses.
-          gender: teeChoiceToDb(state.teeChoiceFor(p.id)),
-        },
-      ];
+    players: selected.map((p) => {
+      const others = selected.filter((o) => o !== p).map((o) => o.name);
+      return {
+        id: p.id,
+        // The first name, as the picker's tiles and the artboard («Marte»);
+        // the full name when another in the group shares it (#2286).
+        name: (p.pending ? null : playerShortName(p, others)) ?? pendingName,
+        hcpIndex: p.hcp_index,
+        // What the hidden field sends, so the set is the one the start uses.
+        gender: teeChoiceToDb(state.teeChoiceFor(p.id)),
+      };
     }),
     tee,
     pct: state.hcpAllowance,
