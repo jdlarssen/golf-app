@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { FormSection, FormSectionText } from '@/components/ui/FormSection';
 import { ChoiceCardGrid, RadioChoiceCard } from '@/components/ui/ChoiceCard';
 import { Input } from '@/components/ui/Input';
+import { CARD_FIELD_HINT } from '@/components/ui/CardField';
 
 /**
  * Netto/brutto-toggle for handicap-allowance.
@@ -90,7 +91,39 @@ type Props = {
    * bare et UI-kontroll og verdien lever i parent-state.
    */
   hideHiddenInput?: boolean;
+  /**
+   * #2455: vanlige prosenter som knapper, og − / + rundt tallet
+   * (Nyttspill-forslag-hcp-eksempel). Uten `presets` tegnes tallfeltet som før.
+   */
+  presets?: readonly number[];
+  /** #2455: hvor langt − og + flytter, og laveste verdi telleren går til. */
+  stepPct?: number;
+  /**
+   * #2455: under knappene i stedet for `nettoHelperText` (eksempelet i slag).
+   * Bare med `presets`, bare i netto.
+   */
+  footer?: ReactNode;
 };
+
+// The round − / + of the seats counter (SeatsAndDeadlineCard), as drawn.
+const ROUND_BUTTON =
+  'flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface font-sans text-xl text-text disabled:opacity-40';
+
+// PillRadio's look as a toggle button: the share pills are pressed, not
+// checked, so a value off the list (93 from a draft) has none of them on.
+const PILL_BUTTON =
+  'inline-flex h-11 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-3.5 font-sans text-sm font-semibold tabular-nums transition-colors duration-150';
+
+/**
+ * #2455: the next value for − / +. A value off the grid moves to the nearest
+ * step in that direction (93 → 95 or 90), and the result stays in
+ * `min`..`max`, so − also brings a stored value over `max` back in range.
+ */
+function stepPctValue(pct: number, dir: 1 | -1, step: number, min: number, max: number): number {
+  const next =
+    dir === 1 ? Math.floor(pct / step) * step + step : Math.ceil(pct / step) * step - step;
+  return Math.min(max, Math.max(min, next));
+}
 
 export function AllowanceField({
   fieldName,
@@ -105,6 +138,9 @@ export function AllowanceField({
   onChange,
   maxPct = 100,
   hideHiddenInput = false,
+  presets,
+  stepPct = 5,
+  footer,
 }: Props) {
   const t = useTranslations('allowance');
   const resolvedInputLabel = inputLabel ?? t('inputLabelDefault');
@@ -144,8 +180,14 @@ export function AllowanceField({
     }
   }
 
+  function setNettoPct(next: number) {
+    setLastNettoPct(next);
+    commitPct(next);
+  }
+
   const radioGroupName = `${fieldName}__scoring_mode`;
   const inputId = `${fieldName}__input`;
+  const shownPct = pct === 0 ? lastNettoPct : pct;
 
   return (
     <FormSection legend={legend}>
@@ -170,7 +212,7 @@ export function AllowanceField({
         />
       </ChoiceCardGrid>
 
-      {mode === 'netto' && (
+      {mode === 'netto' && !presets && (
         <Input
           variant="card"
           id={inputId}
@@ -180,16 +222,105 @@ export function AllowanceField({
           min={0}
           max={maxPct}
           step={1}
-          value={pct === 0 ? lastNettoPct : pct}
+          value={shownPct}
           onChange={(e) => {
             const v = Number(e.target.value);
             if (Number.isInteger(v) && v >= 0 && v <= maxPct) {
-              setLastNettoPct(v);
-              commitPct(v);
+              setNettoPct(v);
             }
           }}
           inputClassName="tabular-nums"
         />
+      )}
+
+      {mode === 'netto' && presets && (
+        <>
+          <div className="flex items-center justify-between gap-3">
+            <span
+              id={`${inputId}-label`}
+              className="font-sans text-[13px] leading-[normal] font-semibold text-text"
+            >
+              {t('stepperLabel')}
+            </span>
+            <span
+              role="group"
+              aria-labelledby={`${inputId}-label`}
+              className="flex items-center gap-2.5"
+            >
+              <button
+                type="button"
+                aria-label={t('stepLess', { step: stepPct })}
+                disabled={shownPct <= stepPct}
+                onClick={() => setNettoPct(stepPctValue(shownPct, -1, stepPct, stepPct, maxPct))}
+                className={ROUND_BUTTON}
+              >
+                −
+              </button>
+              {/* The number is a field too, so any share can be typed, and the
+                  «Endre» on a red Format row still finds `…__input` to focus
+                  (ReadyStep). It is drawn as the artboard's plain number. */}
+              <span className="flex items-baseline font-serif text-[22px] font-semibold tabular-nums text-text">
+                <input
+                  id={inputId}
+                  type="number"
+                  inputMode="numeric"
+                  aria-label={resolvedInputLabel}
+                  aria-describedby={!footer && nettoHelperText ? `${inputId}-desc` : undefined}
+                  min={0}
+                  max={maxPct}
+                  step={1}
+                  value={shownPct}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    if (Number.isInteger(v) && v >= 0 && v <= maxPct) {
+                      setNettoPct(v);
+                    }
+                  }}
+                  style={{ width: `calc(${String(shownPct).length}ch + 2px)` }}
+                  className="min-w-0 rounded-sm border-0 bg-transparent p-0 text-center font-serif text-[22px] leading-[normal] font-semibold tabular-nums text-text [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                <span aria-hidden="true">&nbsp;%</span>
+              </span>
+              <button
+                type="button"
+                aria-label={t('stepMore', { step: stepPct })}
+                disabled={shownPct >= maxPct}
+                onClick={() => setNettoPct(stepPctValue(shownPct, 1, stepPct, stepPct, maxPct))}
+                className={ROUND_BUTTON}
+              >
+                +
+              </button>
+            </span>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {presets.map((p) => {
+              const pressed = shownPct === p;
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  aria-pressed={pressed}
+                  onClick={() => setNettoPct(p)}
+                  className={`${PILL_BUTTON} ${
+                    pressed
+                      ? 'bg-primary text-white dark:text-bg'
+                      : 'border border-border bg-surface text-text hover:bg-primary-soft'
+                  }`}
+                >
+                  {t('pctValue', { pct: p })}
+                </button>
+              );
+            })}
+          </div>
+
+          {footer ??
+            (nettoHelperText && (
+              <p id={`${inputId}-desc`} className={CARD_FIELD_HINT}>
+                {nettoHelperText}
+              </p>
+            ))}
+        </>
       )}
 
       {mode === 'brutto' && (

@@ -14,6 +14,12 @@ import { showsGeneralAllowanceField } from '@/lib/games/hcpAllowance';
 import { AllowanceField } from '@/components/admin/AllowanceField';
 import { TeamHandicapField } from './TeamHandicapField';
 import { bruttoHelperKeyFor } from '@/lib/games/allowanceCopy';
+import { AllowanceExample, useAllowanceExample } from './AllowanceExample';
+
+// #2455: the share pills on the general field. The drawing has 75 where this
+// has 95: WHS recommends 95 % for stroke play (orchestrator's choice 18.11),
+// and 75 is two taps on − away.
+const SCORING_PRESETS = [100, 95, 90, 85] as const;
 
 export function HandicapSettings({ state }: { state: GameFormState }) {
   const tWizard = useTranslations('wizard');
@@ -46,6 +52,7 @@ export function HandicapSettings({ state }: { state: GameFormState }) {
     roundRobinAllowancePct,
     setRoundRobinAllowancePct,
   } = state;
+  const example = useAllowanceExample(state);
 
   return (
     <>
@@ -138,6 +145,9 @@ export function HandicapSettings({ state }: { state: GameFormState }) {
           value={hcpAllowance}
           onChange={setHcpAllowance}
           hideHiddenInput
+          presets={SCORING_PRESETS}
+          stepPct={5}
+          footer={example ? <AllowanceExample example={example} /> : undefined}
         />
       )}
       {/* Scramble-familien (#2009): arrangøren setter lag-handicapet som
