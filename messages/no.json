@@ -731,7 +731,8 @@
       "questions": {
         "kicker": "Usikker? To spørsmål",
         "noTeamFormat": "Ingen lagformat går opp med {count, plural, one {# spiller} other {# spillere}}.",
-        "noStakesFormat": "Ingen av spillene med litt på spill går opp med {count, plural, one {# spiller} other {# spillere}}."
+        "noStakesFormat": "Ingen av spillene med litt på spill går opp med {count, plural, one {# spiller} other {# spillere}}.",
+        "notWithCount": "{name} går ikke opp med {count, plural, one {# spiller} other {# spillere}}."
       },
       "lineup": {
         "sides": "{count} mot {count}",

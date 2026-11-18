@@ -402,11 +402,29 @@ describe('FormatGrid — formatspørsmålene (#2462)', () => {
     },
   );
 
-  it('7 · Ganske like · Lagfølelse: never best ball, a format that fits 7', () => {
+  it('6 · Ganske like · Lagfølelse: best ball as on /spillformater, no note', () => {
+    render(<Wrapper count={6} />);
+    answer('even', 'team');
+    expect(cardName()).toBe('Best ball');
+    expect(screen.getByTestId('format-recommended')).not.toHaveTextContent('går ikke opp');
+  });
+
+  it('7 · Ganske like · Lagfølelse: Texas scramble, with a note on the format the count ruled out', () => {
     render(<Wrapper count={7} />);
     answer('even', 'team');
     expect(cardName()).toBe('Texas scramble');
+    expect(screen.getByTestId('format-recommended')).toHaveTextContent(
+      'Best ball går ikke opp med 7 spillere.',
+    );
+    // Best ball does not fit 7, so it is not on the list either.
     expect(screen.queryByRole('radio', { name: /best ball/i })).toBeNull();
+  });
+
+  it('5 · Ganske like · Litt på spill: Nassau, no note', () => {
+    render(<Wrapper count={5} />);
+    answer('even', 'stakes');
+    expect(cardName()).toBe('Nassau');
+    expect(screen.getByTestId('format-recommended')).not.toHaveTextContent('går ikke opp');
   });
 
   it('3 · Lagfølelse: Stableford with the message; 17 · Litt på spill: Stableford with its own', () => {

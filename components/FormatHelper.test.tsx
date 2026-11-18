@@ -100,10 +100,7 @@ describe('FormatHelper', () => {
 
     fireEvent.click(screen.getByRole('radio', { name: '13+' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Ganske like' }));
-    fireEvent.click(screen.getByRole('radio', { name: 'Litt på spill' }));
-    // Nassau stops at 16, so 13+ is only partly covered (best ball moved to
-    // Texas for 13+ · even · team in #2462, and Texas covers every count).
-    expect(screen.getByTestId('format-helper-result')).toHaveTextContent('Nassau');
+    expect(screen.getByTestId('format-helper-result')).toHaveTextContent('Best ball');
     expect(screen.getByTestId('format-helper-note')).toHaveTextContent(
       'Går ikke opp med alle antall.',
     );

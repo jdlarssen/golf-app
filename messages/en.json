@@ -731,7 +731,8 @@
       "questions": {
         "kicker": "Not sure? Two questions",
         "noTeamFormat": "No team format works with {count, plural, one {# player} other {# players}}.",
-        "noStakesFormat": "None of the games with a little at stake work with {count, plural, one {# player} other {# players}}."
+        "noStakesFormat": "None of the games with a little at stake work with {count, plural, one {# player} other {# players}}.",
+        "notWithCount": "{name} doesn't work with {count, plural, one {# player} other {# players}}."
       },
       "lineup": {
         "sides": "{count} vs {count}",
