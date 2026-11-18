@@ -6,13 +6,29 @@ import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
 import { formatPlayStyle, type GameMode } from '@/lib/scoring/modes/types';
 import { useRovingFocus, type RovingProps } from '@/hooks/useRovingFocus';
 import { splitFormatsForCount } from '@/lib/wizard/formatRecommendation';
+import { recommendFormatForCount, type Goal, type Level } from '@/lib/formats/recommendFormat';
 import { formatLineup, type FormatLineup as Lineup } from '@/lib/wizard/formatLineup';
 import { Kicker } from '@/components/ui/Kicker';
 import { FormatLineup, useLineupText } from '@/components/FormatLineup';
 import { ChevronRightIcon } from '@/components/icons';
+import { FormatQuestions } from './FormatQuestions';
 
 const PILL =
   'shrink-0 rounded-full border border-border bg-surface font-sans font-semibold leading-[normal] text-primary';
+
+/** The helper's suggestion once the count and both answers are known (#2462). */
+function suggestFormat(count: number | undefined, level: Level | undefined, goal: Goal | undefined) {
+  if (count === undefined || level === undefined || goal === undefined) return undefined;
+  return recommendFormatForCount({ count, level, goal });
+}
+
+/** The suggestion, when the card shows it (the catalogue may hide the format). */
+function suggestionShown(
+  recommended: FormatForIntent | undefined,
+  suggestion: ReturnType<typeof suggestFormat>,
+) {
+  return suggestion !== undefined && recommended?.slug === suggestion.mode ? suggestion : undefined;
+}
 
 type Props = {
   formats: FormatForIntent[];
@@ -49,6 +65,12 @@ type Props = {
  * a sentence, «Bytt») so the setup under it is in view. A press or Enter/Space
  * on an option folds it; the arrow keys only select, so the list stays open
  * for them. «Bytt» opens it again on the selected format.
+ *
+ * #2462: with a count, «Usikker? To spørsmål» stands over the list. Once both
+ * are answered the card is «Dere bør prøve» with the format
+ * `recommendFormatForCount` picks (the rule /spillformater uses), and the
+ * rest of the list works as before. The answers are display state here, like
+ * `folded`, and are not saved with the draft.
  */
 export function FormatGrid({
   formats,
@@ -60,6 +82,8 @@ export function FormatGrid({
 }: Props) {
   const t = useTranslations('wizard.formatGrid');
   const tCards = useTranslations('wizard.formatCards');
+  const tHelper = useTranslations('formatGuide.helper');
+  const tQuestions = useTranslations('wizard.formatGrid.questions');
   const tModes = useTranslations('modes');
   const lineupText = useLineupText();
   const legendId = useId();
@@ -83,10 +107,23 @@ export function FormatGrid({
   // «Se alle» opens the rest for the count it was pressed at; a new count is a
   // new recommendation and starts folded again.
   const [expandedFor, setExpandedFor] = useState<number | undefined>(undefined);
+  // #2462: nothing is chosen before the organiser answers (display state only).
+  const [level, setLevel] = useState<Level | undefined>(undefined);
+  const [goal, setGoal] = useState<Goal | undefined>(undefined);
+  const suggestion = suggestFormat(playerCount, level, goal);
   const expanded = playerCount !== undefined && expandedFor === playerCount;
   // Once the rest is open, everything that fits is on screen, so the
   // selection never has to move up as an extra row.
-  const split = splitFormatsForCount(formats, playerCount, expanded ? undefined : value);
+  const split = splitFormatsForCount(
+    formats,
+    playerCount,
+    expanded ? undefined : value,
+    suggestion?.mode,
+  );
+  // The suggested format may be hidden from this catalogue (Sekretariatet);
+  // then the card stays the plain recommendation.
+  const shown = suggestionShown(split.recommended, suggestion);
+  const answered = shown !== undefined;
   const withCount = playerCount !== undefined;
 
   const groups: FormatForIntent[][] = withCount
@@ -166,25 +203,39 @@ export function FormatGrid({
     const lineup = formatLineup(f.slug as GameMode, playerCount!);
     const metaId = `${idPrefix}-${f.slug}-meta`;
     const pitchId = `${idPrefix}-${f.slug}-pitch`;
+    const noteId = `${idPrefix}-note`;
+    const note =
+      shown?.isFallback
+        ? tQuestions(goal === 'team' ? 'noTeamFormat' : 'noStakesFormat', { count: playerCount! })
+        : null;
     return (
       <div
-        key={f.slug}
+        // One card whatever it shows, so the live region below is not
+        // re-mounted when the suggestion changes and the new name is read out.
+        key="recommended"
         data-testid="format-recommended"
         className="-mx-1 flex flex-col gap-3 rounded-[18px] border-2 border-primary bg-surface p-4"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-serif text-[26px] font-semibold leading-[normal] text-text">
-              {name(f.slug)}
-            </p>
+            <div aria-live="polite">
+              <p className="font-serif text-[26px] font-semibold leading-[normal] text-text">
+                {name(f.slug)}
+              </p>
+            </div>
             <p id={metaId} className="mt-0.5 font-sans text-[13px] leading-[normal] text-muted">
               {metaLine(f.slug, lineup)}
             </p>
+            {note && (
+              <p id={noteId} className="mt-1 font-sans text-[13px] leading-[1.4] text-muted">
+                {note}
+              </p>
+            )}
           </div>
           <FormatLineup lineup={lineup} variant="card" />
         </div>
         <p id={pitchId} className="font-sans text-[15px] leading-[1.45] text-text">
-          {card(f.slug, 'pitch')}
+          {answered ? tHelper(`why.${f.slug}` as Parameters<typeof tHelper>[0]) : card(f.slug, 'pitch')}
         </p>
         <div className="flex gap-2">
           <button
@@ -192,7 +243,7 @@ export function FormatGrid({
             type="button"
             role="radio"
             aria-checked={selected}
-            aria-describedby={`${metaId} ${pitchId}`}
+            aria-describedby={note ? `${metaId} ${noteId} ${pitchId}` : `${metaId} ${pitchId}`}
             disabled={disabled}
             onClick={() => choose(f.slug)}
             className="h-12 flex-1 rounded-full bg-primary font-sans text-[15px] font-semibold leading-[normal] text-white disabled:cursor-not-allowed disabled:opacity-50 dark:text-bg"
@@ -347,8 +398,8 @@ export function FormatGrid({
     const firstRevealed = expanded ? split.others.length : -1;
     body = (
       <>
-        <Kicker tone="accent" className="pb-2 pt-[18px] leading-[normal]">
-          {t('recommendedFor', { count: playerCount })}
+        <Kicker className="pb-2 pt-[18px] leading-[normal]">
+          {answered ? tHelper('resultKicker') : t('recommendedFor', { count: playerCount })}
         </Kicker>
         {renderRecommended(recommended, next())}
         {split.others.length > 0 && (
@@ -407,11 +458,28 @@ export function FormatGrid({
   // legend named the group a second time («Velg spillform, gruppe» before
   // «Velg spillform, radiogruppe»). Every radio carries `disabled` itself.
   return (
-    <div ref={groupRef} role="radiogroup" aria-labelledby={legendId} aria-disabled={disabled || undefined}>
-      <p id={legendId} className="sr-only">
-        {t('legend')}
-      </p>
-      {body}
-    </div>
+    <>
+      {/* Outside the format radiogroup: two levels of radiogroups confuse a
+          screen reader. */}
+      {withCount && !disabled && (
+        <FormatQuestions
+          level={level}
+          goal={goal}
+          onLevelChange={setLevel}
+          onGoalChange={setGoal}
+        />
+      )}
+      <div
+        ref={groupRef}
+        role="radiogroup"
+        aria-labelledby={legendId}
+        aria-disabled={disabled || undefined}
+      >
+        <p id={legendId} className="sr-only">
+          {t('legend')}
+        </p>
+        {body}
+      </div>
+    </>
   );
 }

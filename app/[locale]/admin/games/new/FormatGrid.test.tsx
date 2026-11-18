@@ -3,6 +3,15 @@ import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import { useState } from 'react';
 import { FormatGrid } from './FormatGrid';
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
+import {
+  GOALS,
+  LEVELS,
+  recommendFormat,
+  type CountBucket,
+  type Goal,
+  type Level,
+} from '@/lib/formats/recommendFormat';
+import no from '@/messages/no.json';
 
 // Type C render-test per docs/test-discipline.md. Navn og tekst rendres fra
 // modes.* / wizard.formatCards.* — vitest-stubben resolver dem mot no.json,
@@ -236,7 +245,7 @@ describe('FormatGrid — valgt format som én linje (#2454)', () => {
     fireEvent.keyDown(card, { key: 'ArrowDown' });
 
     expect(onChange).toHaveBeenCalledWith('stableford');
-    expect(screen.getByRole('radiogroup')).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: /velg spillform/i })).toBeInTheDocument();
     expect(screen.queryByTestId('format-chosen')).toBeNull();
   });
 
@@ -258,7 +267,7 @@ describe('FormatGrid — valgt format som én linje (#2454)', () => {
 
   it('uten valgt format er lista åpen, og den åpner seg igjen når valget forsvinner', () => {
     render(<Wrapper initial={undefined} />);
-    expect(screen.getByRole('radiogroup')).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: /velg spillform/i })).toBeInTheDocument();
     expect(screen.queryByTestId('format-chosen')).toBeNull();
 
     fireEvent.click(screen.getByRole('radio', { name: 'Velg best ball' }));
@@ -266,7 +275,7 @@ describe('FormatGrid — valgt format som én linje (#2454)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'nullstill' }));
     expect(screen.queryByTestId('format-chosen')).toBeNull();
-    expect(screen.getByRole('radiogroup')).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: /velg spillform/i })).toBeInTheDocument();
   });
 
   it('disabled: «Bytt» er av', () => {
@@ -274,5 +283,207 @@ describe('FormatGrid — valgt format som én linje (#2454)', () => {
       <FormatGrid formats={KOMPIS_FORMATS} value="wolf" onChange={vi.fn()} playerCount={4} disabled />,
     );
     expect(screen.getByRole('button', { name: /^bytt spillform/i })).toBeDisabled();
+  });
+});
+
+// #2462: «Usikker? To spørsmål» over the list, with the answer in the card.
+describe('FormatGrid — formatspørsmålene (#2462)', () => {
+  // Every format the helper can suggest, in the catalogue's order.
+  const SUGGESTABLE: FormatForIntent[] = [
+    row('best_ball', true, 1),
+    row('stableford', true, 2),
+    row('wolf', true, 3),
+    row('bingo_bango_bongo', true, 90),
+    row('texas_scramble', false, 30),
+    row('singles_matchplay', false, 40),
+    row('nassau', false, 60),
+    row('fourball_matchplay', false, 100),
+    row('solo_strokeplay', false, 100),
+  ];
+  const LEVEL_LABEL: Record<Level, string> = { even: 'Ganske like', uneven: 'Veldig ulike' };
+  const GOAL_LABEL: Record<Goal, string> = {
+    compete: 'Konkurranse',
+    team: 'Lagfølelse',
+    stakes: 'Litt på spill',
+  };
+  const modeName = (slug: string) => (no.modes as unknown as Record<string, string>)[slug];
+
+  function Wrapper({ count, formats = SUGGESTABLE }: { count: number; formats?: FormatForIntent[] }) {
+    const [value, setValue] = useState<string | undefined>(undefined);
+    return (
+      <FormatGrid formats={formats} value={value} onChange={setValue} playerCount={count} />
+    );
+  }
+  const answer = (level: Level, goal: Goal) => {
+    fireEvent.click(screen.getByRole('radio', { name: LEVEL_LABEL[level] }));
+    fireEvent.click(screen.getByRole('radio', { name: GOAL_LABEL[goal] }));
+  };
+  const cardName = () =>
+    within(screen.getByTestId('format-recommended')).getByText(
+      (_, el) => el?.parentElement?.getAttribute('aria-live') === 'polite',
+    ).textContent;
+
+  it('two radiogroups over the card, outside the format radiogroup; none without a count', () => {
+    const { rerender } = render(<Wrapper count={4} />);
+    expect(screen.getByText('Usikker? To spørsmål')).toBeInTheDocument();
+    const level = screen.getByRole('radiogroup', { name: 'Hvor jevne er dere?' });
+    const goal = screen.getByRole('radiogroup', { name: 'Hva vil dere ha ut av dagen?' });
+    expect(within(level).getAllByRole('radio')).toHaveLength(2);
+    expect(within(goal).getAllByRole('radio')).toHaveLength(3);
+    const formatGroup = screen.getByRole('radiogroup', { name: /velg spillform/i });
+    expect(formatGroup.contains(level)).toBe(false);
+    expect(formatGroup.contains(goal)).toBe(false);
+    // Nothing chosen and nothing suggested until both are answered.
+    expect(within(level).getAllByRole('radio').map((r) => r.getAttribute('aria-checked'))).toEqual([
+      'false',
+      'false',
+    ]);
+    expect(screen.getByText('Anbefalt for 4 spillere')).toBeInTheDocument();
+    expect(screen.queryByText('Dere bør prøve')).toBeNull();
+
+    rerender(<FormatGrid formats={SUGGESTABLE} value={undefined} onChange={vi.fn()} />);
+    expect(screen.queryByTestId('format-questions')).toBeNull();
+    rerender(
+      <FormatGrid formats={SUGGESTABLE} value={undefined} onChange={vi.fn()} playerCount={4} disabled />,
+    );
+    expect(screen.queryByTestId('format-questions')).toBeNull();
+  });
+
+  it('one answer is not enough', () => {
+    render(<Wrapper count={4} />);
+    fireEvent.click(screen.getByRole('radio', { name: 'Lagfølelse' }));
+    expect(screen.getByText('Anbefalt for 4 spillere')).toBeInTheDocument();
+    expect(screen.queryByText('Dere bør prøve')).toBeNull();
+  });
+
+  it('4 · Veldig ulike · Lagfølelse: «Dere bør prøve» Texas scramble, and «Velg» folds the list', () => {
+    const onChange = vi.fn();
+    function Spy() {
+      const [value, setValue] = useState<string | undefined>(undefined);
+      return (
+        <FormatGrid
+          formats={SUGGESTABLE}
+          value={value}
+          onChange={(slug) => {
+            onChange(slug);
+            setValue(slug);
+          }}
+          playerCount={4}
+        />
+      );
+    }
+    render(<Spy />);
+    answer('uneven', 'team');
+
+    expect(screen.getByText('Dere bør prøve')).toBeInTheDocument();
+    expect(cardName()).toBe('Texas scramble');
+    expect(screen.getByTestId('format-recommended')).toHaveTextContent(
+      no.formatGuide.helper.why.texas_scramble,
+    );
+    fireEvent.click(screen.getByRole('radio', { name: 'Velg Texas scramble' }));
+    expect(onChange).toHaveBeenCalledWith('texas_scramble');
+    expect(screen.getByTestId('format-chosen')).toHaveTextContent('Texas scramble');
+    expect(screen.queryByTestId('format-questions')).toBeNull();
+  });
+
+  it.each([2, 3, 4])(
+    '%i players: the same format as /spillformater for all six answers',
+    (count) => {
+      for (const level of LEVELS) {
+        for (const goal of GOALS) {
+          const { unmount } = render(<Wrapper count={count} />);
+          answer(level, goal);
+          expect(cardName()).toBe(
+            modeName(recommendFormat({ bucket: String(count) as CountBucket, level, goal }).mode),
+          );
+          unmount();
+        }
+      }
+    },
+  );
+
+  it('7 · Ganske like · Lagfølelse: never best ball, a format that fits 7', () => {
+    render(<Wrapper count={7} />);
+    answer('even', 'team');
+    expect(cardName()).toBe('Texas scramble');
+    expect(screen.queryByRole('radio', { name: /best ball/i })).toBeNull();
+  });
+
+  it('3 · Lagfølelse: Stableford with the message; 17 · Litt på spill: Stableford with its own', () => {
+    const three = render(<Wrapper count={3} />);
+    answer('even', 'team');
+    expect(cardName()).toBe('Stableford');
+    expect(screen.getByTestId('format-recommended')).toHaveTextContent(
+      'Ingen lagformat går opp med 3 spillere.',
+    );
+    three.unmount();
+
+    render(<Wrapper count={17} />);
+    answer('even', 'stakes');
+    expect(cardName()).toBe('Stableford');
+    expect(screen.getByTestId('format-recommended')).toHaveTextContent(
+      'Ingen av spillene med litt på spill går opp med 17 spillere.',
+    );
+  });
+
+  it('a new count recomputes the card from the same answers, and the new name is in the live region', () => {
+    const { rerender } = render(<Wrapper count={4} />);
+    answer('even', 'team');
+    expect(cardName()).toBe('Fourball');
+    const live = within(screen.getByTestId('format-recommended')).getByText('Fourball')
+      .parentElement!;
+
+    rerender(<Wrapper count={3} />);
+    expect(cardName()).toBe('Stableford');
+    // The same element, so the screen reader reads the new text out.
+    expect(live.isConnected).toBe(true);
+    expect(live).toHaveAttribute('aria-live', 'polite');
+    expect(live).toHaveTextContent('Stableford');
+  });
+
+  it('the suggestion is not in the list twice, and «Se alle» counts the same', () => {
+    render(<Wrapper count={4} />);
+    const seeAll = () => screen.getByRole('button', { name: /^se alle \d+ som passer$/i }).textContent;
+    const before = seeAll();
+    answer('uneven', 'team');
+    expect(cardName()).toBe('Texas scramble');
+    expect(seeAll()).toBe(before);
+    const names = [
+      screen.getByTestId('format-recommended'),
+      ...screen.getAllByTestId('format-row'),
+    ].map((el) => el.textContent);
+    expect(names.filter((n) => n?.includes('Texas scramble'))).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: /^se alle/i }));
+    expect(
+      screen.getAllByRole('radio').filter((r) => /texas scramble/i.test(r.getAttribute('aria-label') ?? r.textContent ?? '')),
+    ).toHaveLength(1);
+  });
+
+  it('a suggestion the catalogue hides leaves the plain recommendation', () => {
+    render(<Wrapper count={4} formats={SUGGESTABLE.filter((f) => f.slug !== 'texas_scramble')} />);
+    answer('uneven', 'team');
+    expect(screen.queryByText('Dere bør prøve')).toBeNull();
+    expect(screen.getByText('Anbefalt for 4 spillere')).toBeInTheDocument();
+  });
+
+  it('no gold kicker on step 2', () => {
+    const { container } = render(<Wrapper count={4} />);
+    expect(container.querySelector('.text-accent-text')).toBeNull();
+    answer('uneven', 'team');
+    expect(container.querySelector('.text-accent-text')).toBeNull();
+  });
+
+  it('the arrow keys move the choice inside one question', () => {
+    render(<Wrapper count={4} />);
+    const level = screen.getByRole('radiogroup', { name: 'Hvor jevne er dere?' });
+    const [even, uneven] = within(level).getAllByRole('radio');
+    act(() => even.focus());
+    fireEvent.keyDown(even, { key: 'ArrowRight' });
+    expect(uneven).toHaveAttribute('aria-checked', 'true');
+    expect(document.activeElement).toBe(uneven);
+    const goal = screen.getByRole('radiogroup', { name: 'Hva vil dere ha ut av dagen?' });
+    for (const radio of within(goal).getAllByRole('radio')) {
+      expect(radio).toHaveAttribute('aria-checked', 'false');
+    }
   });
 });
