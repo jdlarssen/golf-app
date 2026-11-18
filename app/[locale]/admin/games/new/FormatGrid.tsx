@@ -204,10 +204,14 @@ export function FormatGrid({
     const metaId = `${idPrefix}-${f.slug}-meta`;
     const pitchId = `${idPrefix}-${f.slug}-pitch`;
     const noteId = `${idPrefix}-note`;
-    const note =
-      shown?.isFallback
-        ? tQuestions(goal === 'team' ? 'noTeamFormat' : 'noStakesFormat', { count: playerCount! })
-        : null;
+    // Stableford as the reserve says so; a count that rules out the bucket's
+    // answer names it (best ball with 7).
+    let note: string | null = null;
+    if (shown?.isFallback) {
+      note = tQuestions(goal === 'team' ? 'noTeamFormat' : 'noStakesFormat', { count: playerCount! });
+    } else if (shown?.displaced) {
+      note = tQuestions('notWithCount', { name: name(shown.displaced), count: playerCount! });
+    }
     return (
       <div
         // One card whatever it shows, so the live region below is not

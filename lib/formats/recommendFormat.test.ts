@@ -3,8 +3,7 @@
  * /spillformater suggests for every one of its 30 answers.
  *
  * The table is read off today's `fitsPlayerCount` (Texas fits every count in
- * 5–12 and 13–40 since teams one short, #2569; #2462 put it last among the
- * even team candidates, so 5–12 and 13+ · even · team say Texas, not best ball). A change to a format's player
+ * 5–12 and 13–40 since teams one short, #2569). A change to a format's player
  * limits that moves a suggestion shows up here first.
  */
 
@@ -33,8 +32,8 @@ const TABLE: Record<CountBucket, [Expected, Expected, Expected, Expected, Expect
   '2': ['singles_matchplay', 'stableford', 'best_ball', 'best_ball', 'nassau', 'bingo_bango_bongo'],
   '3': ['solo_strokeplay', 'stableford', 'stableford†', 'stableford†', 'wolf', 'bingo_bango_bongo'],
   '4': ['solo_strokeplay', 'stableford', 'fourball_matchplay', 'texas_scramble', 'wolf', 'bingo_bango_bongo'],
-  '5-12': ['solo_strokeplay', 'stableford', 'texas_scramble', 'texas_scramble', 'nassau', 'bingo_bango_bongo'],
-  '13+': ['solo_strokeplay', 'stableford', 'texas_scramble', 'texas_scramble', 'nassau*', 'bingo_bango_bongo*'],
+  '5-12': ['solo_strokeplay', 'stableford', 'best_ball*', 'texas_scramble', 'nassau', 'bingo_bango_bongo'],
+  '13+': ['solo_strokeplay', 'stableford', 'best_ball*', 'texas_scramble', 'nassau*', 'bingo_bango_bongo*'],
 };
 
 const COLUMNS: Array<[Goal, Level]> = [
@@ -97,55 +96,84 @@ describe('bucketCounts', () => {
 
 describe('recommendFormatForCount (#2462)', () => {
   const ANSWERS = COLUMNS.map(([goal, level]) => ({ goal, level }));
+  const forCount = (count: number, level: Level, goal: Goal) =>
+    recommendFormatForCount({ count, level, goal });
 
   it.each(COUNTS.flatMap((count) => ANSWERS.map((a) => ({ count, ...a }))))(
     '$count · $level · $goal gives a format that fits the count',
     ({ count, goal, level }) => {
-      const r = recommendFormatForCount({ count, level, goal });
+      const r = forCount(count, level, goal);
       expect(fitsPlayerCount(r.mode, count)).toBe(true);
       expect(r.exactCount).toBe(count);
       expect(r.fitsEveryCount).toBe(true);
     },
   );
 
-  it.each([2, 3, 4])('%i players: the same answer as recommendFormat', (count) => {
+  it.each([2, 3, 4])('%i players: the same answer as recommendFormat, nothing displaced', (count) => {
     for (const { goal, level } of ANSWERS) {
-      expect(recommendFormatForCount({ count, level, goal })).toEqual(
-        recommendFormat({ bucket: bucketOf(count), level, goal }),
-      );
+      expect(forCount(count, level, goal)).toEqual({
+        ...recommendFormat({ bucket: bucketOf(count), level, goal }),
+        displaced: null,
+      });
     }
   });
 
-  it('5–40: the bucket answer whenever it fits the count', () => {
+  it('5–40: the bucket answer whenever it fits the count, nothing displaced', () => {
     for (const count of COUNTS.filter((n) => n >= 5)) {
       for (const { goal, level } of ANSWERS) {
         const bucket = recommendFormat({ bucket: bucketOf(count), level, goal });
         if (!fitsPlayerCount(bucket.mode, count)) continue;
-        expect(recommendFormatForCount({ count, level, goal }).mode).toBe(bucket.mode);
+        const r = forCount(count, level, goal);
+        expect(r.mode).toBe(bucket.mode);
+        expect(r.displaced).toBeNull();
       }
     }
   });
 
-  it('the exact count only takes over when the bucket answer does not fit', () => {
-    // best ball fits no odd count, so 5-12 · even · team is no longer best ball
-    expect(recommendFormatForCount({ count: 7, level: 'even', goal: 'team' }).mode).toBe('texas_scramble');
-    expect(recommendFormatForCount({ count: 6, level: 'even', goal: 'team' }).mode).toBe('texas_scramble');
-    expect(recommendFormatForCount({ count: 5, level: 'even', goal: 'stakes' }).mode).toBe('nassau');
+  it('6 and 8 · even · team stay on best ball, as /spillformater says', () => {
+    for (const count of [6, 8, 12, 20]) {
+      expect(forCount(count, 'even', 'team')).toMatchObject({ mode: 'best_ball', displaced: null });
+    }
   });
 
-  it('locks the three answers the bucket cannot give', () => {
-    // Nassau and bingo bango bongo stop at 16 players.
-    expect(recommendFormatForCount({ count: 17, level: 'even', goal: 'stakes' })).toMatchObject({
+  it('odd counts · even · team: best ball does not fit, Texas scramble is the reserve', () => {
+    for (const count of [5, 7, 9, 11, 13, 17]) {
+      expect(forCount(count, 'even', 'team')).toMatchObject({
+        mode: 'texas_scramble',
+        displaced: 'best_ball',
+        isFallback: false,
+      });
+    }
+  });
+
+  it('5 · even · stakes stays on Nassau', () => {
+    expect(forCount(5, 'even', 'stakes')).toMatchObject({ mode: 'nassau', displaced: null });
+  });
+
+  it('the exact count picks the first candidate that fits, before any reserve', () => {
+    // The bucket's 13+ answer for stakes · even is Nassau (fits 16 at most): 17 has no candidate.
+    expect(forCount(17, 'even', 'stakes')).toMatchObject({
       mode: 'stableford',
       isFallback: true,
+      displaced: 'nassau',
     });
-    expect(recommendFormatForCount({ count: 17, level: 'uneven', goal: 'stakes' })).toMatchObject({
+    expect(forCount(17, 'uneven', 'stakes')).toMatchObject({
       mode: 'stableford',
       isFallback: true,
+      displaced: 'bingo_bango_bongo',
     });
-    expect(recommendFormatForCount({ count: 3, level: 'even', goal: 'team' })).toMatchObject({
+  });
+
+  it('3 · team: Stableford with the fallback flag, nothing displaced', () => {
+    expect(forCount(3, 'even', 'team')).toMatchObject({
       mode: 'stableford',
       isFallback: true,
+      displaced: null,
     });
+  });
+
+  it('never adds Texas scramble to the bucket table', () => {
+    expect(recommendFormat({ bucket: '5-12', level: 'even', goal: 'team' }).mode).toBe('best_ball');
+    expect(recommendFormat({ bucket: '13+', level: 'even', goal: 'team' }).mode).toBe('best_ball');
   });
 });
