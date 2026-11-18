@@ -226,14 +226,14 @@ export function FormatGrid({
             <p id={metaId} className="mt-0.5 font-sans text-[13px] leading-[normal] text-muted">
               {metaLine(f.slug, lineup)}
             </p>
-            {note && (
-              <p id={noteId} className="mt-1 font-sans text-[13px] leading-[1.4] text-muted">
-                {note}
-              </p>
-            )}
           </div>
           <FormatLineup lineup={lineup} variant="card" />
         </div>
+        {note && (
+          <p id={noteId} className="-mt-1 font-sans text-[13px] leading-[1.4] text-muted">
+            {note}
+          </p>
+        )}
         <p id={pitchId} className="font-sans text-[15px] leading-[1.45] text-text">
           {answered ? tHelper(`why.${f.slug}` as Parameters<typeof tHelper>[0]) : card(f.slug, 'pitch')}
         </p>
