@@ -14,9 +14,9 @@
  * blir heller ingen deleknapp synlig, for knappen gater seg selv på nettopp den
  * 404-en (`lib/share/useSharePng.ts`).
  *
- * Navnene i fakta er spillernes `users.name` slik K1 lastet dem
- * (`loadKavalkadeInput.ts`) — uten kallenavn, og derfor uten `formatRevealName`
- * å hente noe fra. Tomt navn blir til `playerFallback`.
+ * Navnene i fakta er allerede korte: kallenavn, ellers fornavn (`cardName` i
+ * `buildKavalkadeFacts.ts`, audit 20.11). Et fullt navn når aldri et delekort.
+ * Tomt navn blir til `playerFallback`.
  */
 
 import type {
@@ -206,6 +206,8 @@ function buildNemesisCard(
       caption: t('nemesisHole.overPar', { n: hole.averageToPar }),
     },
     [
+      // The hole is one hole on one course (audit 20.11); say which course.
+      hole.courseName ? { label: t('bestRound.courseLabel'), value: hole.courseName } : null,
       { label: t('nemesisHole.playedLabel'), value: t('nemesisHole.times', { n: hole.played }) },
       {
         label: t('nemesisHole.worstLabel'),

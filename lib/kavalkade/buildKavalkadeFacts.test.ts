@@ -59,6 +59,7 @@ function game(opts: Partial<KavalkadeGame> = {}): KavalkadeGame {
   return {
     gameId: `game-${String(gameCounter).padStart(3, '0')}`,
     gameName: 'Torsdagsrunden',
+    courseId: 'course-losby',
     courseName: 'Losby',
     gameMode: 'solo_strokeplay',
     year: KAVALKADE_YEAR,
@@ -327,6 +328,7 @@ describe('nemesis-hullet', () => {
     ]);
     expect(facts.personal?.nemesisHole).toEqual({
       holeNumber: 7,
+      courseName: 'Losby',
       played: 3,
       averageToPar: 4,
       worstStrokes: 8,
@@ -354,6 +356,65 @@ describe('nemesis-hullet', () => {
       game({ players: [player(ME, { holes: both })] }),
     ]);
     expect(facts.personal?.nemesisHole?.holeNumber).toBe(4);
+  });
+
+  it('counts a hole per course, never across two courses with the same number', () => {
+    // Hull 7 på Losby går +4 to ganger; hull 7 på Bærum går +4 én gang. Slått
+    // sammen ville «hull 7» fått tre besøk. Per bane har ingen av dem det, så
+    // versting er hull 3 på Losby (+1, tre besøk).
+    const losby = (h: HoleScore[]) =>
+      game({ players: [player(ME, { holes: h })] });
+    const baerum = (h: HoleScore[]) =>
+      game({
+        courseId: 'course-baerum',
+        courseName: 'Bærum',
+        players: [player(ME, { holes: h })],
+      });
+    const facts = build([
+      losby(holes({ 7: 8, 3: 5 })),
+      losby(holes({ 7: 8, 3: 5 })),
+      losby(holes({ 7: null, 3: 5 })),
+      baerum(holes({ 7: 8 })),
+    ]);
+    expect(facts.personal?.nemesisHole).toEqual({
+      holeNumber: 3,
+      courseName: 'Losby',
+      played: 3,
+      averageToPar: 1,
+      worstStrokes: 5,
+    });
+  });
+
+  it('names the course of the worst hole when two courses both qualify', () => {
+    const losby = () => game({ players: [player(ME, { holes: holes({ 7: 5 }) })] });
+    const baerum = () =>
+      game({
+        courseId: 'course-baerum',
+        courseName: 'Bærum',
+        players: [player(ME, { holes: holes({ 7: 7 }) })],
+      });
+    const facts = build([losby(), losby(), losby(), baerum(), baerum(), baerum()]);
+    expect(facts.personal?.nemesisHole).toMatchObject({
+      holeNumber: 7,
+      courseName: 'Bærum',
+      played: 3,
+      averageToPar: 3,
+    });
+  });
+
+  it('has no worst hole when every hole averages at or under par', () => {
+    // A strong player: every hole is a birdie, except hole 5, which is par in
+    // two of three rounds. Its average is -0.33, so the card would have said
+    // «-0,33 over par». No hole is over par, so there is no worst hole.
+    const birdiesWithParOnFive = () =>
+      flatRound(3).map((h) => (h.holeNumber === 5 ? { ...h, strokes: PAR } : h));
+    const facts = build([
+      game({ players: [player(ME, { holes: birdiesWithParOnFive() })] }),
+      game({ players: [player(ME, { holes: birdiesWithParOnFive() })] }),
+      game({ players: [player(ME, { holes: flatRound(3) })] }),
+    ]);
+    expect(facts.personal).not.toBeNull();
+    expect(facts.personal?.nemesisHole).toBeNull();
   });
 
   it('is null when no hole has been played three times', () => {
@@ -1122,5 +1183,63 @@ describe('gjengen', () => {
     ]);
     expect(facts.rounds).toBe(0);
     expect(facts.gang).toBeNull();
+  });
+});
+
+describe('navn på kortene — kallenavn, ellers fornavn', () => {
+  // Audit 20.11: the share cards printed other players' full names. Every
+  // name a card can show is set here, once, so the web image, the in-app deck
+  // and the app's share card all get the short form from the stored facts.
+  const KARI = player('user-kari', {
+    name: 'Kari Nordmann',
+    nickname: 'Kikki',
+    resultSummary: placement(1),
+    holes: holes({ 1: 3, 2: 3 }),
+  });
+  const OLA = player('user-ola', {
+    name: '  Ola Normann  ',
+    nickname: '   ',
+    resultSummary: placement(2),
+    holes: holes({ 1: 8, 2: 8, 3: 8 }),
+  });
+  const rounds = () => [
+    game({ players: [player(ME, { resultSummary: placement(3), holes: holes({ 1: 6 }) }), KARI, OLA] }),
+    game({ players: [player(ME, { resultSummary: placement(3), holes: holes({ 1: 6 }) }), KARI, OLA] }),
+    game({ players: [player(ME, { resultSummary: placement(3), holes: holes({ 1: 6 }) }), KARI, OLA] }),
+  ];
+
+  it('never stores a full name anywhere in the facts', () => {
+    const json = JSON.stringify(build(rounds()));
+    expect(json).not.toContain('Nordmann');
+    expect(json).not.toContain('Normann');
+  });
+
+  it('uses the nickname when there is one', () => {
+    const facts = build(rounds());
+    expect(facts.gang?.topWinner).toMatchObject({ userId: 'user-kari', name: 'Kikki' });
+    expect(facts.gang?.mostBirdies).toMatchObject({ userId: 'user-kari', name: 'Kikki' });
+    expect(facts.gang?.tightestFinish?.leader).toMatchObject({ name: 'Kikki' });
+  });
+
+  it('falls back to the first name when the nickname is empty', () => {
+    const facts = build(rounds());
+    expect(facts.gang?.mostSnowmen).toMatchObject({ userId: 'user-ola', name: 'Ola' });
+  });
+
+  it('shortens the rival and the teammates too', () => {
+    const facts = build(rounds());
+    expect(facts.personal?.rival?.name).toMatch(/^(Kikki|Ola)$/);
+
+    const teamRound = () =>
+      game({
+        gameMode: 'texas_scramble',
+        players: [
+          player(ME, { teamNumber: 1 }),
+          player('user-kari', { teamNumber: 1, name: 'Kari Nordmann', nickname: null, holes: [] }),
+        ],
+      });
+    const team = build([teamRound(), teamRound()]).team;
+    expect(team?.teammates.map((m) => m.name)).toEqual(['Kari']);
+    expect(team?.bestRound?.teammates.map((m) => m.name)).toEqual(['Kari']);
   });
 });

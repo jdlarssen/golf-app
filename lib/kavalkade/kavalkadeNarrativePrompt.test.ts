@@ -33,7 +33,7 @@ function makeFacts(overrides: Partial<KavalkadeFacts> = {}): KavalkadeFacts {
         brutto: 82,
         playedAt: '2026-06-14T08:00:00.000Z',
       },
-      nemesisHole: { holeNumber: 7, played: 9, averageToPar: 1.44, worstStrokes: 8 },
+      nemesisHole: { holeNumber: 7, courseName: 'Losby', played: 9, averageToPar: 1.44, worstStrokes: 8 },
       rival: {
         userId: 'u2',
         name: 'Ola',
@@ -243,6 +243,7 @@ function game(
   return {
     gameId,
     gameName,
+    courseId: null,
     courseName: null,
     gameMode: 'stableford',
     year: 2026,
