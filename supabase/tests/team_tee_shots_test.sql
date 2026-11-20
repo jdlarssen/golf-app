@@ -330,26 +330,29 @@ select is((select count(*)::int from public.team_tee_shots where game_id = torny
 -- ═════════════════════════════════════════════════════════════════════════════
 -- The delivery guard on game_players
 -- ═════════════════════════════════════════════════════════════════════════════
+-- The INSERT branch is tried with the service role: since 0251 a signed-in
+-- client cannot insert a delivered row at all (round_and_own_row_rules_test),
+-- and this guard holds the service role too.
 savepoint creator_short_team;
-select torny_rls.as_user(torny_rls.tt_creator());
+select torny_rls.as_service();
 select throws_ok(
   $$ insert into public.game_players (game_id, user_id, team_number, flight_number, submitted_at)
      values (torny_rls.tt_game(3), torny_rls.tt_creator(), 1, 1, now()) $$,
   'P0001', 'tee_shots_short',
-  'the organiser cannot INSERT a delivered row on a team that is short');
+  'a delivered row cannot be INSERTed on a team that is short');
 rollback to savepoint creator_short_team;
 
 savepoint creator_new_player;
-select torny_rls.as_user(torny_rls.tt_creator());
+select torny_rls.as_service();
 select throws_ok(
   $$ insert into public.game_players (game_id, user_id, team_number, flight_number, submitted_at)
      values (torny_rls.tt_game(3), torny_rls.tt_creator(), 2, 2, now()) $$,
   'P0001', 'tee_shots_short',
-  'the organiser cannot INSERT a delivered row for a new player with 0 tee shots (counted via p_extra_member)');
+  'a delivered row cannot be INSERTed for a new player with 0 tee shots (counted via p_extra_member)');
 rollback to savepoint creator_new_player;
 
 savepoint creator_withdrawn;
-select torny_rls.as_user(torny_rls.tt_creator());
+select torny_rls.as_service();
 select lives_ok(
   $$ insert into public.game_players (game_id, user_id, team_number, flight_number, submitted_at, withdrawn_at)
      values (torny_rls.tt_game(3), torny_rls.tt_creator(), 2, 2, now(), now()) $$,
