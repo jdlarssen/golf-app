@@ -1838,8 +1838,8 @@ describe('GameWizard — #1999 utkastet flushes før siden kan forsvinne', () =>
     expect(readDraft()?.values.name).toBe('Fredagsrunden');
   });
 
-  it('B7d: utkastet ryddes når veiviseren forlates etter en innsending som ikke svarte', async () => {
-    // A redirect from the server action unmounts the wizard without a result.
+  it('B7d: utkastet blir liggende når veiviseren forlates midt i en lagring', async () => {
+    // No positive success signal yet (no result, no redirect): the draft stays.
     // The promise is settled at the end: React 19 ties later transitions to a
     // pending async action, so one left hanging would stall every later test.
     let settle: (r: CreateGameResult) => void = () => {};
@@ -1849,12 +1849,14 @@ describe('GameWizard — #1999 utkastet flushes før siden kan forsvinne', () =>
       createDraftAction: () => new Promise<CreateGameResult>((resolve) => (settle = resolve)),
     });
     walkToReadyStep();
+    fireEvent.change(screen.getByLabelText(/^navn på runden$/i), {
+      target: { value: 'Søndagsrunden' },
+    });
     fireEvent.click(screen.getByRole('button', { name: /lagre som utkast/i }));
-    expect(readDraft()).not.toBeNull();
 
     first.unmount();
-    expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
-    await act(async () => settle({ error: '' }));
+    expect(readDraft()?.values.name).toBe('Søndagsrunden');
+    await act(async () => settle({ error: 'db_game' }));
   });
 
   // Audit 20.11 (p11): «Gjenta hver uke» was not in the draft, so «Fortsett»
