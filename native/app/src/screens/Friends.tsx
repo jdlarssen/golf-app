@@ -45,11 +45,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import type { FriendStatus } from '../../../../lib/friends/friendStatus';
 import {
   addFriendByEmail,
   fetchFriends,
-  inviteFriend,
   removeFriend,
   respondToFriendRequest,
   sendFriendRequest,
@@ -60,6 +58,7 @@ import {
 import type { WebApiFailure } from '../data/webApi';
 import {
   FRIENDS_TEXT,
+  addByEmailLine,
   friendRowA11yLabel,
   friendStatusLine,
   friendSubline,
@@ -67,10 +66,6 @@ import {
   friendsSectionTitle,
   friendsSubtitle,
   incomingSubline,
-  inviteButton,
-  inviteFailureLine,
-  invitePrompt,
-  invitedLine,
   openPersonA11yLabel,
   personActionA11yLabel,
   roundsSubline,
@@ -104,7 +99,6 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
   useMarkVisitRead('friends');
   const [load, setLoad] = useState<LoadState>({ state: 'loading' });
   const [line, setLine] = useState<StatusLine | null>(null);
-  const [inviteEmail, setInviteEmail] = useState<string | null>(null);
   // Nøkkelen til handlingen som er i gang. Alle knappene står stille til den
   // er ferdig, så et dobbelt trykk aldri sender to forespørsler.
   const [busy, setBusy] = useState<string | null>(null);
@@ -164,10 +158,11 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
 
   /** Kjør én handling, vis svarlinja og hent lista på nytt. */
   const run = useCallback(
-    async (
+    async <S extends string>(
       key: string,
-      action: () => Promise<FriendActionResult<FriendStatus>>,
-      onStatus?: (status: FriendStatus) => boolean,
+      action: () => Promise<FriendActionResult<S>>,
+      lineFor: (status: S) => StatusLine | null,
+      onStatus?: (status: S) => void,
     ) => {
       setBusy(key);
       setLine(null);
@@ -178,9 +173,8 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
         setLine({ text: friendsFailureLine(result.reason), tone: 'error' });
         return;
       }
-      // `onStatus` kan ta over svaret (e-post som ikke er på Tørny gir et
-      // tilbud om invitasjon i stedet for en linje).
-      if (!onStatus?.(result.status)) setLine(friendStatusLine(result.status));
+      onStatus?.(result.status);
+      setLine(lineFor(result.status));
       await reload();
     },
     [reload],
@@ -190,33 +184,10 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
     // Retur-tasten på tastaturet er ikke en knapp og låses ikke av `disabled`.
     if (busy !== null) return;
     const address = email.trim().toLowerCase();
-    setInviteEmail(null);
-    void run('email', () => addFriendByEmail(address), (status) => {
-      if (status === 'not_found') {
-        setInviteEmail(address);
-        return true;
-      }
-      if (status === 'requested' || status === 'accepted') setEmail('');
-      return false;
+    void run('email', () => addFriendByEmail(address), addByEmailLine, (status) => {
+      if (status === 'requested') setEmail('');
     });
   }, [busy, email, run]);
-
-  const onInvite = useCallback(async () => {
-    if (!inviteEmail) return;
-    setBusy('invite');
-    setLine(null);
-    const result = await inviteFriend(inviteEmail);
-    setBusy(null);
-    if (!result.ok) {
-      setLine({ text: friendsFailureLine(result.reason), tone: 'error' });
-    } else if (result.status === 'invited') {
-      setLine({ text: invitedLine(inviteEmail), tone: 'ok' });
-      setInviteEmail(null);
-      setEmail('');
-    } else {
-      setLine({ text: inviteFailureLine(result.status), tone: 'error' });
-    }
-  }, [inviteEmail]);
 
   const onShare = useCallback(async (code: string) => {
     setShareNote(null);
@@ -409,20 +380,6 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
           </View>
         ) : null}
 
-        {inviteEmail ? (
-          <View style={[ui.card, styles.cardRound]} testID="friends-invite-offer">
-            <Text style={ui.body}>{invitePrompt(inviteEmail)}</Text>
-            <Pill
-              label={inviteButton(inviteEmail)}
-              pendingLabel={FRIENDS_TEXT.invitePending}
-              pending={busy === 'invite'}
-              disabled={locked}
-              onPress={() => void onInvite()}
-              testID="friends-invite"
-            />
-          </View>
-        ) : null}
-
         {incoming.length > 0 ? (
           <View style={styles.section} testID="friends-incoming">
             <Text style={[ui.kicker, styles.label, { color: colors.accentText }]}>
@@ -447,7 +404,7 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
                   pending={busy === `accept:${r.requestId}`}
                   disabled={locked}
                   onPress={() =>
-                    void run(`accept:${r.requestId}`, () => respondToFriendRequest(r.requestId, true))
+                    void run(`accept:${r.requestId}`, () => respondToFriendRequest(r.requestId, true), friendStatusLine)
                   }
                   accessibilityLabel={personActionA11yLabel(FRIENDS_TEXT.acceptLabel, r.name)}
                   testID={`friends-accept-${r.id}`}
@@ -458,7 +415,7 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
                   accessibilityState={{ disabled: locked, busy: busy === `decline:${r.requestId}` }}
                   disabled={locked}
                   onPress={() =>
-                    void run(`decline:${r.requestId}`, () => respondToFriendRequest(r.requestId, false))
+                    void run(`decline:${r.requestId}`, () => respondToFriendRequest(r.requestId, false), friendStatusLine)
                   }
                   // Designet: 39 × 44, en stående pille; trykkflaten er 44 × 44.
                   hitSlop={DECLINE_HIT_SLOP}
@@ -529,7 +486,7 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
                         pendingLabel={FRIENDS_TEXT.addEmailPending}
                         pending={busy === `add:${s.id}`}
                         disabled={locked}
-                        onPress={() => void run(`add:${s.id}`, () => sendFriendRequest(s.id))}
+                        onPress={() => void run(`add:${s.id}`, () => sendFriendRequest(s.id), friendStatusLine)}
                         accessibilityLabel={personActionA11yLabel(FRIENDS_TEXT.addEmailButton, s.name)}
                         testID={`friends-add-${s.id}`}
                       />
@@ -598,7 +555,7 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
                     pendingLabel={FRIENDS_TEXT.withdrawPending}
                     pending={busy === `withdraw:${r.id}`}
                     disabled={locked}
-                    onPress={() => void run(`withdraw:${r.id}`, () => removeFriend(r.id))}
+                    onPress={() => void run(`withdraw:${r.id}`, () => removeFriend(r.id), friendStatusLine)}
                     accessibilityLabel={personActionA11yLabel(FRIENDS_TEXT.withdrawLabel, r.name)}
                     testID={`friends-withdraw-${r.id}`}
                   />
