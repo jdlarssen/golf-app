@@ -50,7 +50,12 @@ import {
   teamRosterBalance,
 } from '@/lib/games/teamFormatLimits';
 import { playerTarget } from '@/lib/wizard/playerTarget';
-import { isDatetimeLocalInPast } from '@/lib/games/gamePayload';
+import { isDatetimeLocalInPast, parseOsloDateTimeLocal } from '@/lib/games/gamePayload';
+import {
+  DEFAULT_TEE_INTERVAL_MINUTES,
+  hasStartGroups,
+  startGroupsOf,
+} from '@/lib/games/flightTeeTimes';
 import { canRepeatWeekly } from '@/lib/games/weeklyRepeat';
 import { START_COUNT_RANGES, fitsStartCount } from '@/lib/games/startPlayerCount';
 import {
@@ -768,6 +773,15 @@ export function useGameFormState({
   // may repeat at all is `repeatWeeklyAllowed` below.
   const [repeatWeeklyChoice, setRepeatWeekly] = useState(
     initialValues?.repeat_weekly ?? false,
+  );
+  // #2451: «Tid mellom flightene». A new round starts on 10 minutes; «Rediger
+  // spill» opens with what is stored, null for a round from before #2451 (no
+  // choice made, everyone out together). Whether the round has start times at
+  // all is `startTimesAllowed` below.
+  const [teeIntervalMinutes, setTeeIntervalMinutes] = useState<number | null>(
+    initialValues?.tee_interval_minutes === undefined
+      ? DEFAULT_TEE_INTERVAL_MINUTES
+      : initialValues.tee_interval_minutes,
   );
   const initialScoreVisibility: 'live' | 'reveal' =
     initialValues?.score_visibility === 'reveal' ? 'reveal' : 'live';
@@ -1729,6 +1743,34 @@ export function useGameFormState({
     return selectedPlayerIds.filter((pid) => !inPayload.has(pid));
   }, [orderedPayload, selectedPlayerIds]);
 
+  // #2451: start times per flight for a standalone round in a format that can
+  // go out in more than one group, never a cup match or league round (the
+  // server checks the stored links again). The groups are read from the rows
+  // the form sends (`orderedPayload`), through the shared rule, so step 4 shows
+  // what the players will see. Without a tee-off yet («Nå» or none) the groups
+  // keep their offsets and have no clock time.
+  const startTimesAllowed =
+    !initialValues?.tournament_id && !initialValues?.tee_interval_linked && hasStartGroups(gameMode);
+  const teeIntervalForSave = startTimesAllowed ? teeIntervalMinutes : null;
+  const startGroups = useMemo(() => {
+    if (!startTimesAllowed) return [];
+    let teeOffIso: string | null = null;
+    if (!teeOffNow && scheduledTeeOffAt !== '') {
+      try {
+        teeOffIso = parseOsloDateTimeLocal(scheduledTeeOffAt);
+      } catch {
+        teeOffIso = null;
+      }
+    }
+    return startGroupsOf({
+      game_mode: gameMode,
+      team_size: teamSize,
+      scheduled_tee_off_at: teeOffIso,
+      tee_interval_minutes: teeIntervalMinutes,
+      players: orderedPayload.map((row) => ({ ...row, withdrawn_at: null })),
+    });
+  }, [startTimesAllowed, teeOffNow, scheduledTeeOffAt, gameMode, teamSize, teeIntervalMinutes, orderedPayload]);
+
   const flightsComplete =
     teamsComplete &&
     selectedPlayerIds.every(
@@ -2249,6 +2291,11 @@ export function useGameFormState({
     teeOffNow,
     setTeeOffNow,
     allowTeeOffNow,
+    // #2451
+    teeIntervalMinutes,
+    setTeeIntervalMinutes,
+    teeIntervalForSave,
+    startGroups,
     startType,
     setStartType,
     playerSearch,

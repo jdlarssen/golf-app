@@ -38,10 +38,19 @@
  * team swaps the two, and players without a team stand under «Uten lag». The
  * state is the same: `assignPlayerToSlot`, `assignPlayerToSide` and the new
  * `swapPlayerTeams` write `teamByPlayer`/`flightByPlayer` as the lists did.
+ *
+ * #2451: with more than one start group a fifth part shows each group's start
+ * time and the minutes between them (`Nyttspill-forslag-starttider`): best
+ * ball under the flights, the other team formats under the teams. The groups
+ * come from `state.startGroups` (the shared rule in `flightTeeTimes.ts`); the
+ * choice is posted by the always-mounted `tee_interval_minutes` mirror.
  */
 
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import type { AppLocale } from '@/i18n/routing';
+import { formatListLocale, formatTeeOffTimeLocale } from '@/lib/i18n/format';
+import { TEE_INTERVAL_CHOICES } from '@/lib/games/flightTeeTimes';
 import type { PlayerOption } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
 import { Button } from '@/components/ui/Button';
@@ -216,6 +225,107 @@ export function teamsAssignmentHasContent(state: GameFormState): boolean {
 /** A part's kicker: the `<h2>` sits inside the legend so it stays a heading. */
 function PartLegend({ children }: { children: ReactNode }) {
   return <h2>{children}</h2>;
+}
+
+/**
+ * #2451: «Starttider» and «Tid mellom flightene» (`Nyttspill-forslag-starttider`).
+ * One row per start group: the clock time in Fraunces (or «+10 min» while the
+ * round has no tee-off), the group under it («Flight 2», «Lag 3», «Lag 1 og
+ * 2»), the names to the right. Under it the three choices, 44 px high. The
+ * artboard's tracked capitals are the wizard's sentence-case kickers here, as
+ * the unslop guard wants (#2728).
+ */
+function StartTimesPart({
+  state,
+  nameOf,
+}: {
+  state: GameFormState;
+  nameOf: (pid: string) => string | null;
+}) {
+  const t = useTranslations('wizard.sections.teams');
+  const locale = useLocale() as AppLocale;
+  const { startGroups, teeIntervalMinutes, setTeeIntervalMinutes, isBestBall, teamByPlayer } = state;
+  const clock = (iso: string) => formatTeeOffTimeLocale(new Date(iso), locale);
+  const first = startGroups[0]?.teeOffAt ?? null;
+  const aside =
+    first == null
+      ? undefined
+      : teeIntervalMinutes == null
+        ? t('startTimesAllOut', { time: clock(first) })
+        : t('startTimesFirstOut', { time: clock(first) });
+  /** The teams in a group, in order: «Lag 3», or «Lag 1 og 2» for two pairs. */
+  const teamsOf = (players: readonly { user_id: string }[]) =>
+    [...new Set(players.map((p) => teamByPlayer[p.user_id]).filter((n) => n !== undefined))].sort(
+      (a, b) => a - b,
+    );
+  const groupLabel = (group: number, players: readonly { user_id: string }[]) => {
+    if (isBestBall) return t('flightLabel', { flight: group });
+    const teams = teamsOf(players);
+    return t('startGroupTeams', {
+      count: teams.length,
+      teams: formatListLocale(teams.map(String), locale),
+    });
+  };
+  const second = startGroups[1];
+  const note =
+    second?.teeOffAt == null || teeIntervalMinutes == null
+      ? t('startTimesNote')
+      : isBestBall
+        ? t('startTimesNoteFlight', { time: clock(second.teeOffAt), flight: second.group })
+        : t('startTimesNoteTeam', { time: clock(second.teeOffAt), team: teamsOf(second.players)[0] ?? second.group });
+
+  return (
+    <section data-testid="start-times">
+      <FormSection variant="list" legend={<PartLegend>{t('startTimesHeading')}</PartLegend>} aside={aside}>
+        {startGroups.map((g) => (
+          <div key={g.group} className="flex min-h-[64px] items-center gap-3 px-3.5 py-2.5">
+            <span className="w-16 shrink-0">
+              <span className="block font-serif text-xl font-semibold tabular-nums leading-[normal]">
+                {g.teeOffAt != null
+                  ? clock(g.teeOffAt)
+                  : g.offsetMinutes === 0
+                    ? t('startTimesFirst')
+                    : t('startTimesOffset', { minutes: g.offsetMinutes })}
+              </span>
+              <span className="block font-sans text-[11px] leading-[normal] text-muted">
+                {groupLabel(g.group, g.players)}
+              </span>
+            </span>
+            <span className="min-w-0 flex-1 font-sans text-sm leading-[1.4] text-text">
+              {formatListLocale(
+                g.players.map((p) => nameOf(p.user_id)).filter((n): n is string => n !== null),
+                locale,
+              )}
+            </span>
+          </div>
+        ))}
+      </FormSection>
+      <FormSection variant="bare" legend={<PartLegend>{t('teeIntervalHeading')}</PartLegend>}>
+        <div className="flex flex-wrap gap-2">
+          {TEE_INTERVAL_CHOICES.map((minutes) => {
+            const selected = teeIntervalMinutes === minutes;
+            return (
+              <button
+                key={minutes}
+                type="button"
+                aria-pressed={selected}
+                data-testid={`tee-interval-${minutes}`}
+                onClick={() => setTeeIntervalMinutes(minutes)}
+                className={`h-11 whitespace-nowrap rounded-full px-3.5 font-sans text-sm font-semibold leading-[normal] transition-colors ${
+                  selected
+                    ? 'bg-primary text-white dark:text-bg'
+                    : 'border border-border bg-surface text-text hover:bg-primary-soft'
+                }`}
+              >
+                {t('teeIntervalChoice', { minutes })}
+              </button>
+            );
+          })}
+        </div>
+        <p className="px-1 pt-2.5 font-sans text-xs leading-[1.45] text-muted">{note}</p>
+      </FormSection>
+    </section>
+  );
 }
 
 export function TeamsAssignmentSection({
@@ -694,6 +804,18 @@ export function TeamsAssignmentSection({
             )}
           </FormSection>
         </section>
+      )}
+
+      {/* #2451: start times per flight once the round has more than one start
+          group; under the flights (best ball) or the teams. */}
+      {state.startGroups.length > 1 && (
+        <StartTimesPart
+          state={state}
+          nameOf={(pid) => {
+            const p = playerById(pid);
+            return p ? tileName(p) : null;
+          }}
+        />
       )}
 
       {/* Tee per player in every format without flights (#2437) — solo, the

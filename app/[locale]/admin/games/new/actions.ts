@@ -120,7 +120,14 @@ async function createGameInternal(
     groupId,
     teeOffNow: formData.get('tee_off_now') === '1',
   });
-  const payload = buildGameInsertPayload(formData, mode, { clubScoped, repeatAllowed });
+  // #2451: start times per flight for a standalone round, never a cup match.
+  // The raw cup id again: it can only make the server stricter.
+  const teeIntervalAllowed = rawTournamentId === '';
+  const payload = buildGameInsertPayload(formData, mode, {
+    clubScoped,
+    repeatAllowed,
+    teeIntervalAllowed,
+  });
 
   if (payload.errorCode) {
     return { error: payload.errorCode };
@@ -276,6 +283,9 @@ async function createGameInternal(
       start_type: payload.start_type,
       // #2460: false unless the round may repeat (repeatAllowed above).
       repeat_weekly: payload.repeat_weekly,
+      // #2451: the minutes between the flights; null for a cup match or a
+      // format that goes out as one group (teeIntervalAllowed above).
+      tee_interval_minutes: payload.tee_interval_minutes,
       created_by: userId,
       started_at: null,
       group_id: groupId,
