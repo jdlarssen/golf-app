@@ -3,16 +3,20 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { verifyUnsubToken } from '@/lib/productUpdates/unsubscribeToken';
 import { expectOne, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
 import { mailWordmarkHtml } from '@/lib/mail/wordmark';
+import { escapeHtml } from '@/lib/mail/escapeHtml';
 
 // Unauthenticated unsubscribe-endpoint (issue #202).
 //
-// GET  → browser visning. Verifiser token, marker bruker som unsubscribed,
-//        render enkel HTML-side. Hvis token er ugyldig/utløpt: 400 med
-//        norsk feilmelding. Gyldig token uten brukerrad (slettet konto): 404.
+// GET  → browser visning. Verifiser token og vis en side med én knapp. GET
+//        skriver ALDRI: e-postfiltre og lenkeskannere åpner lenker i mailen,
+//        og da ble folk meldt av uten å ha trykket (gjennomgangen 20.11).
+//        Ugyldig/utløpt token: 400 med norsk feilmelding, ingen knapp.
 //
-// POST → RFC 8058 one-click unsubscribe fra mail-klient. Samme verifisering
-//        + DB-skriv, men returner 200 med tom body (mail-klient venter ikke
-//        HTML).
+// POST → selve avmeldingen. To avsendere:
+//        - knappen på siden (skjemafeltet `page=1`): svar med HTML-side.
+//          Gyldig token uten brukerrad (slettet konto): 404.
+//        - RFC 8058 one-click fra mail-klienten: samme verifisering + DB-skriv,
+//          men 200 med tom body (mail-klienten venter ikke HTML).
 //
 // Bruker getAdminClient() siden endepunktet er offentlig — RLS gjelder ikke.
 // Token-en er HMAC-signert med PRODUCT_UPDATE_UNSUB_SECRET så uautentisert
@@ -52,50 +56,64 @@ async function unsubscribe(token: string | null): Promise<UnsubscribeResult> {
 
 const STATUS: Record<UnsubscribeResult, number> = { ok: 200, invalid: 400, not_found: 404 };
 
+const HTML_HEADERS = { 'content-type': 'text/html; charset=utf-8' };
+
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get('token');
-  const result = await unsubscribe(token);
-
-  return new NextResponse(buildHtml(result), {
-    status: STATUS[result],
-    headers: { 'content-type': 'text/html; charset=utf-8' },
-  });
+  if (!token || !verifyUnsubToken(token)) {
+    return new NextResponse(buildHtml('invalid'), { status: 400, headers: HTML_HEADERS });
+  }
+  return new NextResponse(buildHtml('confirm', token), { status: 200, headers: HTML_HEADERS });
 }
 
 export async function POST(request: NextRequest) {
   // RFC 8058: mail-klient sender POST med List-Unsubscribe-headeren.
   // Token kan ligge enten i query-param eller form-body — vi sjekker begge.
-  const tokenFromQuery = request.nextUrl.searchParams.get('token');
-  let token = tokenFromQuery;
-  if (!token) {
-    try {
-      const form = await request.formData();
-      const formToken = form.get('token');
-      if (typeof formToken === 'string') token = formToken;
-    } catch {
-      // ignore — vil falle gjennom som invalid
-    }
+  // Knappen på siden sender `page=1` i skjemaet og vil ha en side tilbake.
+  let token = request.nextUrl.searchParams.get('token');
+  let fromPage = false;
+  try {
+    const form = await request.formData();
+    const formToken = form.get('token');
+    if (!token && typeof formToken === 'string') token = formToken;
+    fromPage = form.get('page') === '1';
+  } catch {
+    // Ingen skjemakropp (en bar POST) — tokenet i URL-en avgjør.
   }
 
   const result = await unsubscribe(token);
+  if (fromPage) {
+    return new NextResponse(buildHtml(result), { status: STATUS[result], headers: HTML_HEADERS });
+  }
   return new NextResponse('', { status: STATUS[result] });
 }
 
-function buildHtml(result: UnsubscribeResult): string {
+type Page = UnsubscribeResult | 'confirm';
+
+function buildHtml(page: Page, token?: string): string {
   const title =
-    result === 'ok'
-      ? 'Du er meldt av månedsbrevet'
-      : result === 'not_found'
-        ? 'Vi finner ikke kontoen din'
-        : 'Lenken er ugyldig';
+    page === 'confirm'
+      ? 'Vil du melde deg av månedsbrevet?'
+      : page === 'ok'
+        ? 'Du er meldt av månedsbrevet'
+        : page === 'not_found'
+          ? 'Vi finner ikke kontoen din'
+          : 'Lenken er ugyldig';
+  const action = `/api/unsubscribe/product-update?token=${encodeURIComponent(token ?? '')}`;
   const body =
-    result === 'ok'
-      ? `<p>Du får ikke flere månedsbrev fra Tørny.</p>
+    page === 'confirm'
+      ? `<p>Trykk på knappen, så får du ikke flere månedsbrev fra Tørny.</p>
+       <form method="post" action="${escapeHtml(action)}">
+         <input type="hidden" name="page" value="1">
+         <button type="submit" style="margin-top:8px;min-height:44px;padding:12px 24px;border:0;border-radius:999px;background:#1B4332;color:#ffffff;font-size:16px;font-weight:600;cursor:pointer;">Meld meg av</button>
+       </form>`
+      : page === 'ok'
+        ? `<p>Du får ikke flere månedsbrev fra Tørny.</p>
        <p>Vil du melde deg på igjen senere? Du kan styre det fra
        <a href="https://tornygolf.no/profile">profilen din</a>.</p>`
-      : result === 'not_found'
-        ? `<p>Du får ingen månedsbrev fra oss.</p>`
-        : `<p>Lenken er ugyldig eller har gått ut på dato.</p>
+        : page === 'not_found'
+          ? `<p>Du får ingen månedsbrev fra oss.</p>`
+          : `<p>Lenken er ugyldig eller har gått ut på dato.</p>
        <p>Logg inn og meld deg av fra
        <a href="https://tornygolf.no/profile">profilen din</a> istedenfor.</p>`;
 
