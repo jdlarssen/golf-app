@@ -14,7 +14,7 @@
  * blir heller ingen deleknapp synlig, for knappen gater seg selv på nettopp den
  * 404-en (`lib/share/useSharePng.ts`).
  *
- * Navnene i fakta er allerede korte: fornavn, ellers kallenavn (`withCardNames` i
+ * Navnene i fakta er allerede korte: «Marte H.», ellers kallenavn (`kavalkadeCardName` i
  * `buildKavalkadeFacts.ts`, audit 20.11). Et fullt navn når aldri et delekort.
  * Tomt navn blir til `playerFallback`.
  */

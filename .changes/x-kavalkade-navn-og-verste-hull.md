@@ -1,4 +1,4 @@
 ---
 type: fix
 ---
-Årskavalkaden viser bare fornavnet til medspillerne. Verste hull regnes per bane, så hull 7 på to baner ikke blandes.
+Årskavalkaden viser medspillerne med fornavn og forbokstav i etternavnet, som «Marte H.». Verste hull regnes per bane, så hull 7 på to baner ikke blandes.

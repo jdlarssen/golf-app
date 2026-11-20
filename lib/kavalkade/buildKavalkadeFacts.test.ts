@@ -1186,11 +1186,13 @@ describe('gjengen', () => {
   });
 });
 
-describe('navn på kortene — fornavn, ellers kallenavn', () => {
+describe('navn på kortene — fornavn og forbokstav i etternavnet', () => {
   // Audit 20.11: the share cards printed other players' full names. Every
   // name a card can show is set here, once, so the web image, the in-app deck
   // and the app's share card all get the short form from the stored facts.
-  // The order (name before nickname) is the house rule, lib/names (#2813).
+  // Owner 20.11: always «Fornavn E.» when there is a last name, so two Martes
+  // differ; the first name alone for a one-word name; the nickname only when
+  // there is no name (the house rule, lib/names, #2813).
   const KARI = player('user-kari', {
     name: 'Kari Nordmann',
     nickname: 'Kikki',
@@ -1198,7 +1200,7 @@ describe('navn på kortene — fornavn, ellers kallenavn', () => {
     holes: holes({ 1: 3, 2: 3 }),
   });
   const OLA = player('user-ola', {
-    name: '  Ola Normann  ',
+    name: '  Ola   Normann  ',
     nickname: null,
     resultSummary: placement(2),
     holes: holes({ 1: 8, 2: 8, 3: 8 }),
@@ -1209,31 +1211,50 @@ describe('navn på kortene — fornavn, ellers kallenavn', () => {
     game({ players: [player(ME, { resultSummary: placement(3), holes: holes({ 1: 6 }) }), KARI, OLA] }),
   ];
 
+  /** The name the gang winner card stores for one player who wins one round. */
+  function storedName(opts: Partial<KavalkadePlayerRound>): string | null | undefined {
+    const winner = player('user-x', { resultSummary: placement(1), ...opts });
+    const facts = build([game({ players: [player(ME, { resultSummary: placement(2) }), winner] })]);
+    return facts.gang?.topWinner?.name;
+  }
+
   it('never stores a full name anywhere in the facts', () => {
     const json = JSON.stringify(build(rounds()));
     expect(json).not.toContain('Nordmann');
     expect(json).not.toContain('Normann');
   });
 
-  it('shows the first name on the gang cards, also when there is a nickname', () => {
+  it('shows the first name and the last-name initial on the gang cards, also with a nickname', () => {
     const facts = build(rounds());
-    expect(facts.gang?.topWinner).toMatchObject({ userId: 'user-kari', name: 'Kari' });
-    expect(facts.gang?.mostBirdies).toMatchObject({ userId: 'user-kari', name: 'Kari' });
-    expect(facts.gang?.tightestFinish?.leader).toMatchObject({ name: 'Kari' });
-    expect(facts.gang?.mostSnowmen).toMatchObject({ userId: 'user-ola', name: 'Ola' });
+    expect(facts.gang?.topWinner).toMatchObject({ userId: 'user-kari', name: 'Kari N.' });
+    expect(facts.gang?.mostBirdies).toMatchObject({ userId: 'user-kari', name: 'Kari N.' });
+    expect(facts.gang?.tightestFinish?.leader).toMatchObject({ name: 'Kari N.' });
+    expect(facts.gang?.mostSnowmen).toMatchObject({ userId: 'user-ola', name: 'Ola N.' });
   });
 
-  it('falls back to the nickname for a player without a name', () => {
-    const noName = player('user-x', { name: null, nickname: 'Kikki', resultSummary: placement(1) });
-    const facts = build([
-      game({ players: [player(ME, { resultSummary: placement(2) }), noName] }),
-    ]);
-    expect(facts.gang?.topWinner).toMatchObject({ userId: 'user-x', name: 'Kikki' });
+  it('tells two players with the same first name apart', () => {
+    expect(storedName({ name: 'Marte Hansen' })).toBe('Marte H.');
+    expect(storedName({ name: 'Marte Lie' })).toBe('Marte L.');
+  });
+
+  it('takes the initial of the last part of a multi-part name (as nameInitials does)', () => {
+    expect(storedName({ name: 'Kari Anne Nordmann' })).toBe('Kari N.');
+    expect(storedName({ name: 'Per von Ødegård' })).toBe('Per Ø.');
+    expect(storedName({ name: 'ola hansen-berg' })).toBe('ola H.');
+  });
+
+  it('shows the first name alone for a one-word name', () => {
+    expect(storedName({ name: 'Cher', nickname: 'C' })).toBe('Cher');
+  });
+
+  it('falls back to the nickname for a player without a name, else null', () => {
+    expect(storedName({ name: null, nickname: 'Kikki' })).toBe('Kikki');
+    expect(storedName({ name: '   ', nickname: null })).toBeNull();
   });
 
   it('shortens the rival and the teammates too', () => {
     const facts = build(rounds());
-    expect(facts.personal?.rival?.name).toMatch(/^(Kari|Ola)$/);
+    expect(facts.personal?.rival?.name).toMatch(/^(Kari N\.|Ola N\.)$/);
 
     const teamRound = () =>
       game({
@@ -1244,7 +1265,7 @@ describe('navn på kortene — fornavn, ellers kallenavn', () => {
         ],
       });
     const team = build([teamRound(), teamRound()]).team;
-    expect(team?.teammates.map((m) => m.name)).toEqual(['Kari']);
-    expect(team?.bestRound?.teammates.map((m) => m.name)).toEqual(['Kari']);
+    expect(team?.teammates.map((m) => m.name)).toEqual(['Kari N.']);
+    expect(team?.bestRound?.teammates.map((m) => m.name)).toEqual(['Kari N.']);
   });
 });

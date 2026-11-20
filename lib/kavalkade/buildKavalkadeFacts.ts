@@ -32,6 +32,7 @@
  * (`loadKavalkadeInput.ts`) eier all databasekontakt.
  */
 import { computeRoundScore } from '@/lib/games/roundScore';
+import { nameInitials } from '@/lib/names/initials';
 import { playerFirstName } from '@/lib/names/playerName';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
 import { modeCollapsesToTeamCard, type GameMode } from '@/lib/scoring/modes/types';
@@ -73,7 +74,7 @@ const TEAMMATE_MIN_ROUNDS = 2;
 /** Én spillers deltakelse i én ferdig runde, slik lasteren leverer den. */
 export type KavalkadePlayerRound = {
   userId: string;
-  /** Full `users.name`. Never stored as is: `withCardNames` shortens it. */
+  /** Full `users.name`. Never stored as is: `kavalkadeCardName` shortens it. */
   name: string | null;
   /** #2561 game-name guard, and the card name for a player without a name. */
   nickname?: string | null;
@@ -336,16 +337,30 @@ export function buildKavalkadeFacts(input: KavalkadeInput): KavalkadeFacts {
 }
 
 /**
- * The round with every player's name cut to the first name, else the nickname
- * (audit 20.11, owner cards 2 and 3; the order is the house rule in
- * `lib/names/playerName.ts`, #2813). The facts are stored once and shared as
- * images, so a full name never enters them. Done here, once, so every card,
- * the in-app deck, the app's share card and the narrative get the same name.
+ * The name a Kavalkade card shows: «Marte H.» — the first name and the
+ * last-name initial — when the name has a last name, the first name alone for
+ * a one-word name, and the nickname only when there is no name (owner 20.11,
+ * audit cards 2 and 3). The order is the house rule in `lib/names/playerName.ts`
+ * (#2813); the last name and its initial are as `nameInitials` defines them
+ * (the last word, first letter, upper case).
+ *
+ * The facts are stored once and shared as images, so a full name never enters
+ * them. Done here, once, so every card, the in-app deck, the app's share card
+ * and the narrative get the same name.
  */
+function kavalkadeCardName(player: KavalkadePlayerRound): string | null {
+  const first = playerFirstName(player);
+  const words = player.name?.trim().split(/\s+/) ?? [];
+  if (first == null || words.length < 2) return first;
+  const lastInitial = Array.from(nameInitials(player.name))[1];
+  return lastInitial ? `${first} ${lastInitial}.` : first;
+}
+
+/** The round with every player's name cut by `kavalkadeCardName`. */
 function withCardNames(game: KavalkadeGame): KavalkadeGame {
   return {
     ...game,
-    players: game.players.map((p) => ({ ...p, name: playerFirstName(p) })),
+    players: game.players.map((p) => ({ ...p, name: kavalkadeCardName(p) })),
   };
 }
 
