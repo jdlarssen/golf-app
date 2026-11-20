@@ -53,7 +53,7 @@ import {
 import { getRatingForGender } from '@/lib/games/teeRating';
 import { holeCountForSegment } from '@/lib/games/holeScope';
 import { formerTeamRowOwnerIds, teamScoreOwnerId } from '@/lib/games/teamCaptain';
-import { displayCourseHandicap } from '@/lib/scoring/courseHandicap';
+import { playingHandicap } from '@/lib/scoring/courseHandicap';
 import { markReadOnVisit, settleOnVisit } from '@/lib/notifications/markRead';
 import { maybeAutoConfirmParticipation } from '@/lib/games/confirmParticipation';
 import { isHandicapStale } from '@/lib/handicap/staleness';
@@ -578,8 +578,8 @@ export default async function GameHomePage({
   // the pre-start NULL. CH is a pure HCP+tee+allowance function, so compute it
   // on the fly for display when the frozen value isn't visible yet. Once the
   // cache refreshes, `me.course_handicap` is non-null and we show the frozen
-  // value verbatim (no extra fetch). displayCourseHandicap reuses the exact
-  // calculate+allowance pipeline from start, so display and frozen never drift.
+  // value verbatim (no extra fetch). playingHandicap reuses the exact
+  // raw → allowance pipeline from start, so display and frozen never drift.
   let displayedCourseHandicap: number | null = me.course_handicap;
   // #2712: the share and cap also decide the label (frozenIsPlayingHandicap),
   // so they are read for every render, not only before the freeze. Wrapped in
@@ -602,7 +602,7 @@ export default async function GameHomePage({
       allowancePromise,
     ]);
     if (meHcpRes.data && allowanceRes.data) {
-      displayedCourseHandicap = displayCourseHandicap({
+      displayedCourseHandicap = playingHandicap({
         hcpIndex: Number(meHcpRes.data.hcp_index),
         slope: playerRating.slope,
         courseRating: playerRating.courseRating,

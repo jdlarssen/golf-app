@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { allowanceExample, type AllowanceExamplePlayer } from './allowanceExample';
-import { displayCourseHandicap } from '@/lib/scoring/courseHandicap';
+import { applyAllowance, calculateCourseHandicap, playingHandicap } from '@/lib/scoring/courseHandicap';
 import type { TeeBoxRatings } from './teeRating';
 
 // Type A (#2455): the numbers in «Slik blir det på … tee». They must be the
 // ones the game freezes at start, so every expected value is checked against
-// `displayCourseHandicap` as well as written out.
+// `playingHandicap` as well as written out.
 
 const GUL: TeeBoxRatings = {
   slope_mens: 130,
@@ -43,7 +43,7 @@ function strokes(rows: { playerId: string; strokes: number; strokesAtFull: numbe
 }
 
 describe('allowanceExample', () => {
-  it('(a) matches displayCourseHandicap at the chosen share and at 100 %', () => {
+  it('(a) matches playingHandicap at the chosen share and at 100 %', () => {
     const result = allowanceExample({ players: [jonas, marte], tee, pct: 85 });
     expect(result?.teeName).toBe('Gul');
     expect(strokes(result!.rows)).toEqual([
@@ -56,12 +56,22 @@ describe('allowanceExample', () => {
     ] as const) {
       const row = result!.rows.find((r) => r.playerId === player.id)!;
       expect(row.strokes).toBe(
-        displayCourseHandicap({ hcpIndex: player.hcpIndex, ...set, allowancePct: 85 }),
+        playingHandicap({ hcpIndex: player.hcpIndex, ...set, allowancePct: 85 }),
       );
       expect(row.strokesAtFull).toBe(
-        displayCourseHandicap({ hcpIndex: player.hcpIndex, ...set, allowancePct: 100 }),
+        playingHandicap({ hcpIndex: player.hcpIndex, ...set, allowancePct: 100 }),
       );
     }
+  });
+
+  it('#2924: the share is taken of the unrounded course handicap, rounded once', () => {
+    // Gul, men: 4.4 × 130 / 113 + (71.2 − 72) = 4.262. At 85 % that is 3.62 → 4.
+    // Rounding the course handicap first (4 × 85 % = 3.4) would show 3.
+    const lowHcp: AllowanceExamplePlayer = { id: 'low', name: 'Low', hcpIndex: 4.4, gender: 'mens' };
+    const result = allowanceExample({ players: [lowHcp], tee, pct: 85 });
+    expect(strokes(result!.rows)).toEqual([['low', 4, 4]]);
+    const set = { hcpIndex: 4.4, slope: 130, courseRating: 71.2, par: 72 };
+    expect(applyAllowance(calculateCourseHandicap(set), 85)).toBe(3);
   });
 
   it('at 100 % the strokes and the full strokes are the same', () => {
@@ -126,10 +136,12 @@ describe('allowanceExample', () => {
   });
 
   it('(f) a plus handicap gives the negative course handicap the freeze stores', () => {
+    // -2.0 × 130 / 113 + (71.2 − 72) = -3.101; 50 % = -1.55 → -2 (#2924:
+    // one rounding; rounding the course handicap first gave -3 → -1.5 → -1).
     const result = allowanceExample({ players: [plus, jonas], tee, pct: 50 });
     expect(strokes(result!.rows)).toEqual([
       ['jonas', 5, 10],
-      ['plus', -1, -3],
+      ['plus', -2, -3],
     ]);
   });
 

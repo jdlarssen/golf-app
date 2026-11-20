@@ -2214,7 +2214,7 @@ med samme oppførsel, bare uten eget banner.
 - DINE SLAG er tallet hodet på scorekortet viser (`scorecardHandicapPart`, #2262), også
   lagshandicap i scramble. Før start er banehandicapen ikke frosset: den regnes fra
   `hcp_index` i profilen (`fetchOwnProfile`), ratingen og spillets andel med
-  `displayCourseHandicap`, og går så gjennom samme regel. Uten nett står «—».
+  `playingHandicap`, og går så gjennom samme regel. Uten nett står «—».
 - Plassen i en avsluttet runde er `result_summary` via `finishedResultBadge` og
   `finishedResultText` (samme tekst som «Forrige runde» på Hjem). Gull bare på egen seier.
 - Avatarraden og navnelista bruker `lib/flightRoster.ts` (`companionsOf`), som Hjem.
