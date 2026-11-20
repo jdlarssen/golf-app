@@ -4,11 +4,13 @@ import { describe, it, expect } from 'vitest';
 import {
   DEFAULT_TEE_INTERVAL_MINUTES,
   TEE_INTERVAL_CHOICES,
+  isStandaloneRound,
   isTeeInterval,
   playerTeeOff,
   startGroupFor,
   startGroupTeeOffAt,
   startGroupsOf,
+  startTimesAllowed,
   teeTimeChanges,
   type TeeTimePlayer,
   type TeeTimeRound,
@@ -346,5 +348,24 @@ describe('teeTimeChanges', () => {
     expect(teeTimeChanges(round('solo_strokeplay', five), round('solo_strokeplay', after))).toEqual([
       { userId: 'e', teeOffAt: NINE },
     ]);
+  });
+});
+
+describe('startTimesAllowed', () => {
+  it('a standalone round in a format with start groups', () => {
+    expect(startTimesAllowed('solo_strokeplay', {})).toBe(true);
+    expect(startTimesAllowed('best_ball', { tournamentId: null, leagueRoundId: null, sourceGameId: null })).toBe(true);
+  });
+
+  it('never a cup match, a league round or a derived game', () => {
+    expect(startTimesAllowed('best_ball', { tournamentId: 'cup-1' })).toBe(false);
+    expect(startTimesAllowed('solo_strokeplay', { leagueRoundId: 'round-1' })).toBe(false);
+    expect(startTimesAllowed('best_ball', { sourceGameId: 'g-1' })).toBe(false);
+    expect(isStandaloneRound({ tournamentId: '' })).toBe(true);
+  });
+
+  it('never a format that goes out as one group', () => {
+    expect(startTimesAllowed('wolf', {})).toBe(false);
+    expect(startTimesAllowed('singles_matchplay', {})).toBe(false);
   });
 });

@@ -32,7 +32,7 @@ import {
   FLIGHT_PLAYER_ORDER,
 } from './flightPlayerColumns';
 import type { GameMode } from '@/lib/scoring/modes/types';
-import { hasStartGroups, isTeeInterval } from '@/lib/games/flightTeeTimes';
+import { isTeeInterval, startTimesAllowed } from '@/lib/games/flightTeeTimes';
 import {
   notifyTeeTimeChanged,
   readTeeTimeSnapshot,
@@ -601,7 +601,8 @@ export async function setPlayerTeam(
  * moves hear it (`notifyTeeTimeChanged`). Same gate as the flight actions
  * (`loadFlightContext`). Only a standalone round in a format that can go out
  * in more than one group (`hasStartGroups`): a cup match, league round or
- * derived game keeps null, as the wizard and «Rediger spill» do.
+ * derived game keeps null, as the wizard and «Rediger spill» do
+ * (`startTimesAllowed`, the rule's one home).
  */
 export async function setTeeInterval(gameId: string, minutes: number): Promise<void> {
   const locale = await getLocale();
@@ -629,10 +630,11 @@ export async function setTeeInterval(gameId: string, minutes: number): Promise<v
     redirect({ href: `${detailPath}?error=not_active`, locale });
   }
   if (
-    game.tournament_id ||
-    game.league_round_id ||
-    game.source_game_id ||
-    !hasStartGroups(game.game_mode)
+    !startTimesAllowed(game.game_mode, {
+      tournamentId: game.tournament_id,
+      leagueRoundId: game.league_round_id,
+      sourceGameId: game.source_game_id,
+    })
   ) {
     redirect({ href: detailPath, locale });
   }
