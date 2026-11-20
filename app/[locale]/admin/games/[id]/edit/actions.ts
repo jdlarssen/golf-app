@@ -465,7 +465,6 @@ async function updateGameInternal(
   // Audit 20.11 (p11): the sponsor logos this save replaced go now, after the
   // new prizes are stored, never while the form is open. Best-effort.
   await removeReplacedSponsorLogos({
-    client: supabase,
     gameId,
     before: existing.prizes,
     after: prizes,

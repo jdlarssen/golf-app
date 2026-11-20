@@ -59,6 +59,12 @@ vi.mock('@/lib/supabase/admin', () => ({
     storage: { from: () => ({ remove: storageRemoveMock }) },
   }),
 }));
+// Audit 20.11 (p11): the logo files go through the one checked delete, which
+// keeps a file another game still shows (its own suite).
+const removeUnusedSponsorLogosMock = vi.fn(async (..._args: unknown[]) => undefined);
+vi.mock('@/lib/games/sponsorLogoCleanup', () => ({
+  removeUnusedSponsorLogos: (...args: unknown[]) => removeUnusedSponsorLogosMock(...args),
+}));
 
 // #2481: one log for the order of the steps that matter (read → delete → tell).
 const steps: string[] = [];
@@ -149,6 +155,7 @@ describe('deleteGame — admin', () => {
     expect(deleteCalls()).toHaveLength(1);
     // Ingen logo-paths i prizes → ingen storage-opprydding.
     expect(storageRemoveMock).not.toHaveBeenCalled();
+    expect(removeUnusedSponsorLogosMock).not.toHaveBeenCalled();
   });
 
   it('rydder sponsorlogo-objects best-effort etter vellykket delete (#1052)', async () => {
@@ -195,10 +202,13 @@ describe('deleteGame — admin', () => {
       RedirectError,
     );
 
-    expect(storageRemoveMock).toHaveBeenCalledExactlyOnceWith([
-      'uid/a.webp',
-      'uid/b.webp',
-    ]);
+    // Audit 20.11 (p11): never a raw storage delete; a weekly repeat may
+    // still show the same file.
+    expect(storageRemoveMock).not.toHaveBeenCalled();
+    expect(removeUnusedSponsorLogosMock).toHaveBeenCalledExactlyOnceWith({
+      gameId: 'game-1',
+      paths: ['uid/a.webp', 'uid/b.webp'],
+    });
     expect(lastRedirect()).toBe('/admin/games?status=deleted&name=Vinter-cup');
   });
 });

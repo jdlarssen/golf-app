@@ -1,39 +1,51 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { PostgrestClient } from '@supabase/postgrest-js';
 import type { GamePrize } from './prizes';
 
-// The reference check reads other games through the service client.
-const containsMock = vi.fn();
+// The service client is faked with the REAL postgrest-js query builder and a
+// mocked fetch, so the test sees the URL the library actually builds (an array
+// passed to `.contains()` becomes a Postgres array literal, `cs.{…}`, which is
+// invalid for a jsonb column; review of the first version of this file).
+const fetchMock = vi.fn();
+const removeMock = vi.fn(async (..._args: unknown[]) => ({ data: [], error: null }));
 vi.mock('@/lib/supabase/admin', () => ({
-  getAdminClient: () => ({
-    from: () => ({
-      select: () => ({
-        neq: () => ({
-          contains: (...args: unknown[]) => ({
-            limit: () => containsMock(...args),
-          }),
-        }),
-      }),
-    }),
-  }),
+  getAdminClient: () => {
+    const rest = new PostgrestClient('http://db.test/rest/v1', {
+      fetch: (...args: Parameters<typeof fetch>) => fetchMock(...args),
+    });
+    return {
+      from: (table: string) => rest.from(table),
+      storage: { from: (bucket: string) => ({ bucket, remove: removeMock }) },
+    };
+  },
 }));
 
-import { removeReplacedSponsorLogos, replacedSponsorLogoPaths } from './sponsorLogoCleanup';
+import {
+  removeReplacedSponsorLogos,
+  removeUnusedSponsorLogos,
+  replacedSponsorLogoPaths,
+} from './sponsorLogoCleanup';
 
 function prize(position: number, sponsorLogoPath: string | null): GamePrize {
   return { category: 'placement', position, description: 'Premie', sponsor: null, sponsorLogoPath };
 }
 
-function requestClient() {
-  const remove = vi.fn(async (..._args: unknown[]) => ({ data: [], error: null }));
-  return {
-    remove,
-    client: { storage: { from: vi.fn(() => ({ remove })) } },
-  };
+function rows(data: unknown[], status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+/** The decoded query string of the n-th reference check. */
+function checkQuery(n = 0): string {
+  const url = new URL(String(fetchMock.mock.calls[n]![0]));
+  return decodeURIComponent(url.search);
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  containsMock.mockResolvedValue({ data: [], error: null });
+  fetchMock.mockImplementation(async () => rows([]));
 });
 
 describe('replacedSponsorLogoPaths (audit 20.11, p11)', () => {
@@ -49,57 +61,61 @@ describe('replacedSponsorLogoPaths (audit 20.11, p11)', () => {
   });
 });
 
-describe('removeReplacedSponsorLogos (audit 20.11, p11)', () => {
-  it('removes a replaced logo no other game uses, through the request client', async () => {
-    const { client, remove } = requestClient();
-    await removeReplacedSponsorLogos({
-      client: client as never,
-      gameId: 'game-1',
-      before: [prize(1, 'u/old.webp')],
-      after: [prize(1, 'u/new.webp')],
-    });
-    expect(containsMock).toHaveBeenCalledWith('prizes', [{ sponsorLogoPath: 'u/old.webp' }]);
-    expect(client.storage.from).toHaveBeenCalledWith('sponsor-logos');
-    expect(remove).toHaveBeenCalledWith(['u/old.webp']);
+describe('removeUnusedSponsorLogos (audit 20.11, p11)', () => {
+  it('asks for other games with a jsonb containment filter, not an array literal', async () => {
+    await removeUnusedSponsorLogos({ gameId: 'game-1', paths: ['u/old.webp'] });
+
+    const q = checkQuery();
+    expect(q).toContain('prizes=cs.[{"sponsorLogoPath":"u/old.webp"}]');
+    expect(q).toContain('id=neq.game-1');
+    expect(q).not.toContain('object Object');
+    expect(removeMock).toHaveBeenCalledWith(['u/old.webp']);
   });
 
   it('keeps a logo another game still shows (a weekly repeat copies the prizes)', async () => {
-    containsMock.mockResolvedValue({ data: [{ id: 'game-0' }], error: null });
-    const { client, remove } = requestClient();
-    await removeReplacedSponsorLogos({
-      client: client as never,
-      gameId: 'game-1',
-      before: [prize(1, 'u/old.webp')],
-      after: [],
-    });
-    expect(remove).not.toHaveBeenCalled();
+    fetchMock.mockImplementation(async () => rows([{ id: 'game-0' }]));
+    await removeUnusedSponsorLogos({ gameId: 'game-1', paths: ['u/old.webp'] });
+    expect(removeMock).not.toHaveBeenCalled();
   });
 
   it('keeps the logo when the check fails, and never throws', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    containsMock.mockResolvedValue({ data: null, error: { message: 'boom' } });
-    const { client, remove } = requestClient();
+    fetchMock.mockImplementation(async () =>
+      rows({ message: 'boom' } as unknown as unknown[], 400),
+    );
     await expect(
-      removeReplacedSponsorLogos({
-        client: client as never,
-        gameId: 'game-1',
-        before: [prize(1, 'u/old.webp')],
-        after: [],
-      }),
+      removeUnusedSponsorLogos({ gameId: 'game-1', paths: ['u/old.webp'] }),
     ).resolves.toBeUndefined();
-    expect(remove).not.toHaveBeenCalled();
+    expect(removeMock).not.toHaveBeenCalled();
     consoleError.mockRestore();
   });
 
-  it('does nothing when no logo was replaced', async () => {
-    const { client, remove } = requestClient();
+  it('checks each path and removes only the unused ones', async () => {
+    fetchMock.mockImplementation(async (input: unknown) =>
+      String(input).includes('shared') ? rows([{ id: 'game-0' }]) : rows([]),
+    );
+    await removeUnusedSponsorLogos({ gameId: 'game-1', paths: ['u/shared.webp', 'u/own.webp'] });
+    expect(removeMock).toHaveBeenCalledWith(['u/own.webp']);
+  });
+});
+
+describe('removeReplacedSponsorLogos (audit 20.11, p11)', () => {
+  it('removes a replaced logo no other game uses', async () => {
     await removeReplacedSponsorLogos({
-      client: client as never,
+      gameId: 'game-1',
+      before: [prize(1, 'u/old.webp')],
+      after: [prize(1, 'u/new.webp')],
+    });
+    expect(removeMock).toHaveBeenCalledWith(['u/old.webp']);
+  });
+
+  it('does nothing when no logo was replaced', async () => {
+    await removeReplacedSponsorLogos({
       gameId: 'game-1',
       before: [prize(1, 'u/a.webp')],
       after: [prize(1, 'u/a.webp')],
     });
-    expect(containsMock).not.toHaveBeenCalled();
-    expect(remove).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(removeMock).not.toHaveBeenCalled();
   });
 });

@@ -4,10 +4,9 @@ import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getServerClient } from '@/lib/supabase/server';
-import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { safeParsePrizes } from '@/lib/games/prizes';
-import { SPONSOR_LOGO_BUCKET } from '@/lib/storage/sponsorLogoUrl';
+import { removeUnusedSponsorLogos } from '@/lib/games/sponsorLogoCleanup';
 import type { GameStatus } from '@/lib/games/status';
 import { canCancelWithNotice } from '@/lib/games/gameCancellation';
 import { normalizeCancelMessage } from '@/lib/games/cancelMessage';
@@ -115,29 +114,14 @@ export async function deleteGame(formData: FormData) {
   }
 
   // #1052: rydd sponsorlogo-objects best-effort ETTER vellykket slett (feil
-  // her skal aldri blokkere flyten — Resend-mønsteret). Service-role-klienten
-  // er nødvendig: en admin som sletter andres spill eier ikke objektene, så
-  // eier-scopet DELETE-RLS ville matchet 0 rader.
+  // her skal aldri blokkere flyten — Resend-mønsteret). Audit 20.11 (p11):
+  // through the one checked delete (service client), which keeps a file
+  // another game still shows — «Gjenta hver uke» copies the prizes.
   const logoPaths = safeParsePrizes(game.prizes)
     .map((p) => p.sponsorLogoPath)
     .filter((p): p is string => p != null);
   if (logoPaths.length > 0) {
-    try {
-      const { error: removeError } = await getAdminClient()
-        .storage.from(SPONSOR_LOGO_BUCKET)
-        .remove(logoPaths);
-      if (removeError) {
-        console.error('[games] deleteGame logo cleanup failed', {
-          gameId,
-          removeError,
-        });
-      }
-    } catch (cleanupErr) {
-      console.error('[games] deleteGame logo cleanup failed', {
-        gameId,
-        cleanupErr,
-      });
-    }
+    await removeUnusedSponsorLogos({ gameId, paths: logoPaths });
   }
 
   expireGameCache(gameId);
