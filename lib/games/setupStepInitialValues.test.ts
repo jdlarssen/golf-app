@@ -142,7 +142,7 @@ describe('buildSetupStepInitialValues', () => {
     expect(buildSetupStepInitialValues(config)).toEqual({ kr_per_unit: 100 });
   });
 
-  it('acey_deucey: restaurerer kr_per_unit (scoring bevisst ikke, jf. #322)', () => {
+  it('acey_deucey: restaurerer scoring og kr_per_unit (audit 20.11, p11)', () => {
     const config = {
       kind: 'acey_deucey',
       team_size: 1,
@@ -150,7 +150,10 @@ describe('buildSetupStepInitialValues', () => {
       kr_per_unit: 50,
     } satisfies GameModeConfig;
 
-    expect(buildSetupStepInitialValues(config)).toEqual({ kr_per_unit: 50 });
+    expect(buildSetupStepInitialValues(config)).toEqual({
+      acey_deucey_scoring: 'gross',
+      kr_per_unit: 50,
+    });
   });
 
   it('best_ball: returnerer tomt objekt (ingen setup-seksjon)', () => {
@@ -184,13 +187,24 @@ describe('buildSetupStepInitialValues', () => {
     expect(buildSetupStepInitialValues(config)).toEqual({});
   });
 
-  it('acey_deucey: returnerer tomt objekt (eget setup men ikke i scope for #322)', () => {
+  it('acey_deucey: net-variant uten innsats', () => {
     const config = {
       kind: 'acey_deucey',
       team_size: 1,
       acey_deucey_scoring: 'net',
     } satisfies GameModeConfig;
 
-    expect(buildSetupStepInitialValues(config)).toEqual({});
+    expect(buildSetupStepInitialValues(config)).toEqual({ acey_deucey_scoring: 'net' });
+  });
+
+  it('patsome: returnerer patsome_scoring fra config (audit 20.11, p11)', () => {
+    const config = {
+      kind: 'patsome',
+      team_size: 2,
+      teams_count: 2,
+      patsome_scoring: 'gross',
+    } satisfies GameModeConfig;
+
+    expect(buildSetupStepInitialValues(config)).toEqual({ patsome_scoring: 'gross' });
   });
 });

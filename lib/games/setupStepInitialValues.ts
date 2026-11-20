@@ -29,6 +29,9 @@ export type SetupStepInitialValues = {
   team_size?: 3 | 4;
   /** #937: kr per enhet for veddemålsformatene — må restaureres ved edit. */
   kr_per_unit?: number;
+  /** Audit 20.11 (p11): without these, an edit saved gross as net. */
+  acey_deucey_scoring?: 'gross' | 'net';
+  patsome_scoring?: 'gross' | 'net';
 };
 
 /**
@@ -70,7 +73,13 @@ export function buildSetupStepInitialValues(
     // #937: Acey-Deucey kr-felt må restaureres. (acey_deucey_scoring restaureres
     // bevisst IKKE — #322-avgjørelse, egen test låser {} uten kr.)
     case 'acey_deucey':
-      return { kr_per_unit: modeConfig.kr_per_unit };
+      return {
+        acey_deucey_scoring: modeConfig.acey_deucey_scoring,
+        kr_per_unit: modeConfig.kr_per_unit,
+      };
+
+    case 'patsome':
+      return { patsome_scoring: modeConfig.patsome_scoring };
 
     case 'nines':
       return {

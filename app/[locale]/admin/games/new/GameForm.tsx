@@ -711,6 +711,34 @@ export function GameForm({
           value={state.minTeeShots === null ? '' : String(state.minTeeShots)}
         />
       )}
+      {/* The format's own choices, always mounted for the same reason: in a
+          scheduled game the setup sections are disabled, and the save rebuilt
+          mode_config from the defaults (net, Nines, no stake, no shamble team
+          size). Acey Deucey, Patsome and the stake have no control in this
+          form at all. Same fields as the wizard's FormDataInputs; where an
+          enabled radio also posts, both carry the same state value. */}
+      {state.isWolf && <input type="hidden" name="wolf_scoring" value={state.wolfScoring} />}
+      {state.isNassau && <input type="hidden" name="nassau_scoring" value={state.nassauScoring} />}
+      {state.isSkins && <input type="hidden" name="skins_scoring" value={state.skinsScoring} />}
+      {state.isWagerFormat && <input type="hidden" name="kr_per_unit" value={state.krPerUnit} />}
+      {state.isNines && (
+        <>
+          <input type="hidden" name="nines_variant" value={state.ninesVariant} />
+          <input type="hidden" name="nines_scoring" value={state.ninesScoring} />
+        </>
+      )}
+      {state.isAceyDeucey && (
+        <input type="hidden" name="acey_deucey_scoring" value={state.aceyDeuceyScoring} />
+      )}
+      {state.isShamble && (
+        <>
+          <input type="hidden" name="shamble_variant" value={state.shambleVariant} />
+          <input type="hidden" name="shamble_count" value={String(state.shambleCount)} />
+          <input type="hidden" name="shamble_scoring" value={state.shambleScoring} />
+          <input type="hidden" name="shamble_team_size" value={String(teamSize)} />
+        </>
+      )}
+      {state.isPatsome && <input type="hidden" name="patsome_scoring" value={state.patsomeScoring} />}
       <input
         type="hidden"
         name="registration_mode"
