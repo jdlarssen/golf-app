@@ -31,6 +31,7 @@
  * Ren og I/O-fri (Type A, jf. `lib/scoring/AGENTS.md`). Lasteren
  * (`loadKavalkadeInput.ts`) eier all databasekontakt.
  */
+import { firstName } from '@/lib/firstName';
 import { computeRoundScore } from '@/lib/games/roundScore';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
 import { modeCollapsesToTeamCard, type GameMode } from '@/lib/scoring/modes/types';
@@ -72,8 +73,9 @@ const TEAMMATE_MIN_ROUNDS = 2;
 /** Én spillers deltakelse i én ferdig runde, slik lasteren leverer den. */
 export type KavalkadePlayerRound = {
   userId: string;
+  /** Full `users.name`. Never stored as is: `cardName` shortens it. */
   name: string | null;
-  /** #2561: only for the game-name guard; no card shows it. */
+  /** #2561 game-name guard, and the first choice for the card name. */
   nickname?: string | null;
   /** `withdrawn_at` — satt ⇒ spilleren trakk seg og utelates helt. */
   withdrawnAt: string | null;
@@ -91,6 +93,8 @@ export type KavalkadePlayerRound = {
 export type KavalkadeGame = {
   gameId: string;
   gameName: string;
+  /** `games.course_id`. The worst hole is counted per course + hole number. */
+  courseId: string | null;
   courseName: string | null;
   /** Spillemodus — avgjør om laget delte én ball (`modeCollapsesToTeamCard`). */
   gameMode: GameMode;
@@ -132,9 +136,17 @@ export type BestRoundFact = {
   playedAt: string | null;
 };
 
-/** Hullet som tok flest slag fra deg i år. */
+/**
+ * Hullet som tok flest slag fra deg i år — ett hull på én bane. Bare hull med
+ * snitt OVER par kan bli dette kortet; ellers ville det stått «-0,3 over par».
+ */
 export type NemesisHoleFact = {
   holeNumber: number;
+  /**
+   * Banen hullet ligger på. `null` når runden mangler bane-navn. Valgfri fordi
+   * fakta lagret før audit 20.11 ikke har feltet (og appens fixtures deler typen).
+   */
+  courseName?: string | null;
   /** Antall ganger hullet ble spilt i året. Alltid ≥ `NEMESIS_MIN_PLAYED`. */
   played: number;
   /** Snitt mot par, positivt = over par. Avrundet til to desimaler. */
@@ -292,7 +304,8 @@ export function buildKavalkadeFacts(input: KavalkadeInput): KavalkadeFacts {
 
   const games = input.games
     .filter((game) => isWithinCavalcade(game, year, cutoff))
-    .sort(byPlayedAtAscending);
+    .sort(byPlayedAtAscending)
+    .map(withCardNames);
 
   // Runder der spilleren selv faktisk deltok (og ikke trakk seg).
   const mine = games
@@ -319,6 +332,28 @@ export function buildKavalkadeFacts(input: KavalkadeInput): KavalkadeFacts {
         : null,
     team: asTeam.length > 0 ? buildTeamFacts(asTeam, viewerUserId) : null,
     gang: mine.length > 0 ? buildGangFacts(mine.map((row) => row.game)) : null,
+  };
+}
+
+/**
+ * The name a card may show for a player: the nickname, else the first name
+ * (audit 20.11, owner cards 2 and 3). The facts are stored once and shared as
+ * images, so a full name never enters them. Done here, once, so every card,
+ * the in-app deck, the app's share card and the narrative get the same name.
+ */
+export function cardName(player: {
+  name: string | null;
+  nickname?: string | null;
+}): string | null {
+  const nickname = player.nickname?.trim() ?? '';
+  return nickname.length > 0 ? nickname : firstName(player.name);
+}
+
+/** The round with every player's name already shortened by `cardName`. */
+function withCardNames(game: KavalkadeGame): KavalkadeGame {
+  return {
+    ...game,
+    players: game.players.map((p) => ({ ...p, name: cardName(p) })),
   };
 }
 
@@ -450,21 +485,39 @@ function findBestRound(mine: MyRound[]): BestRoundFact | null {
 }
 
 /**
- * Hullet med dårligst snitt mot par over året, minst tre spilte ganger. Ved likt
- * snitt vinner hullet du har spilt flest ganger, så det laveste hullnummeret —
- * deterministisk, så to kjøringer aldri gir ulikt kort.
+ * Hullet med dårligst snitt mot par over året, minst tre spilte ganger. Et hull
+ * er bane + hullnummer: hull 7 på to baner er to ulike hull (audit 20.11). Bare
+ * snitt over par teller — en sterk spiller uten noe hull over par får ikke kortet.
+ * Ved likt snitt vinner hullet du har spilt flest ganger, så det laveste
+ * hullnummeret, så banenavnet — deterministisk, så to kjøringer aldri gir ulikt kort.
  */
 function findNemesisHole(mine: MyRound[]): NemesisHoleFact | null {
-  type Bucket = { played: number; toParSum: number; worstStrokes: number };
-  const buckets = new Map<number, Bucket>();
+  type Bucket = {
+    holeNumber: number;
+    courseName: string | null;
+    played: number;
+    toParSum: number;
+    worstStrokes: number;
+  };
+  const buckets = new Map<string, Bucket>();
 
-  for (const { me } of mine) {
+  for (const { game, me } of mine) {
+    // A game without a course id falls back to its course name, so two such
+    // games on different courses still never share a bucket.
+    const course = game.courseId ?? `name:${game.courseName ?? ''}`;
     for (const hole of playedHoles(me)) {
       if (hole.par <= 0 || hole.strokes == null) continue;
-      let bucket = buckets.get(hole.holeNumber);
+      const key = `${course}#${hole.holeNumber}`;
+      let bucket = buckets.get(key);
       if (!bucket) {
-        bucket = { played: 0, toParSum: 0, worstStrokes: 0 };
-        buckets.set(hole.holeNumber, bucket);
+        bucket = {
+          holeNumber: hole.holeNumber,
+          courseName: game.courseName,
+          played: 0,
+          toParSum: 0,
+          worstStrokes: 0,
+        };
+        buckets.set(key, bucket);
       }
       bucket.played += 1;
       bucket.toParSum += hole.strokes - hole.par;
@@ -473,11 +526,13 @@ function findNemesisHole(mine: MyRound[]): NemesisHoleFact | null {
   }
 
   let best: NemesisHoleFact | null = null;
-  for (const [holeNumber, bucket] of buckets) {
+  for (const bucket of buckets.values()) {
     if (bucket.played < NEMESIS_MIN_PLAYED) continue;
     const averageToPar = round2(bucket.toParSum / bucket.played);
+    if (averageToPar <= 0) continue;
     const candidate: NemesisHoleFact = {
-      holeNumber,
+      holeNumber: bucket.holeNumber,
+      courseName: bucket.courseName,
       played: bucket.played,
       averageToPar,
       worstStrokes: bucket.worstStrokes,
@@ -490,7 +545,8 @@ function findNemesisHole(mine: MyRound[]): NemesisHoleFact | null {
 function beatsNemesis(a: NemesisHoleFact, b: NemesisHoleFact): boolean {
   if (a.averageToPar !== b.averageToPar) return a.averageToPar > b.averageToPar;
   if (a.played !== b.played) return a.played > b.played;
-  return a.holeNumber < b.holeNumber;
+  if (a.holeNumber !== b.holeNumber) return a.holeNumber < b.holeNumber;
+  return (a.courseName ?? '') < (b.courseName ?? '');
 }
 
 /**

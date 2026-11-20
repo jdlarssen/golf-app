@@ -237,6 +237,7 @@ export async function loadKavalkadeInput(
     return {
       gameId: game.id,
       gameName: game.name,
+      courseId: game.course_id,
       courseName: game.courses?.name ?? null,
       gameMode: game.game_mode,
       year: effectiveYear(game),

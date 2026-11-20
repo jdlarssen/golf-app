@@ -113,6 +113,7 @@ function PersonalCardBody({
         kicker={t('nemesisKicker')}
         headline={t('nemesisHeading', { hole: card.fact.holeNumber })}
         lines={[
+          ...(card.fact.courseName ? [card.fact.courseName] : []),
           t('nemesisAverage', {
             value: formatNumber(card.fact.averageToPar, locale, {
               maximumFractionDigits: 2,

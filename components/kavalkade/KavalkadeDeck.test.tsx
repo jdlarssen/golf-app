@@ -36,7 +36,7 @@ const personal: KavalkadeCard[] = [
   },
   {
     id: 'nemesis-hole',
-    fact: { holeNumber: 7, played: 9, averageToPar: 1.44, worstStrokes: 8 },
+    fact: { holeNumber: 7, courseName: 'Losby', played: 9, averageToPar: 1.44, worstStrokes: 8 },
   },
   {
     id: 'rival',

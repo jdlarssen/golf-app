@@ -52,6 +52,7 @@ function fullFacts(overrides: Partial<KavalkadeFacts> = {}): KavalkadeFacts {
       },
       nemesisHole: {
         holeNumber: 7,
+        courseName: 'Losby',
         played: 9,
         averageToPar: 1.44,
         worstStrokes: 8,
@@ -162,11 +163,13 @@ describe('tallene på kortene kommer fra fakta', () => {
     ]);
   });
 
-  it('nemesis-hullet viser hullet, snittet, antall ganger og verste besøk', () => {
+  it('nemesis-hullet viser hullet, banen, snittet, antall ganger og verste besøk', () => {
     const card = model('nemesis-hole');
     expect(card?.hero.value).toBe('Hull 7');
     expect(card?.hero.caption).toContain('44'); // 1,44 i norsk tallformat
     expect(card?.lines).toEqual([
+      // Audit 20.11: the hole is one hole on one course, so the course is named.
+      { label: 'Bane', value: 'Losby' },
       { label: 'Spilt', value: '9 ganger' },
       { label: 'Verste besøk', value: '8 slag' },
     ]);
