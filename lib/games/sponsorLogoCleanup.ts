@@ -1,9 +1,6 @@
 import { getAdminClient } from '@/lib/supabase/admin';
-import type { getServerClient } from '@/lib/supabase/server';
 import { SPONSOR_LOGO_BUCKET } from '@/lib/storage/sponsorLogoUrl';
 import { safeParsePrizes, type GamePrize } from './prizes';
-
-type RequestClient = Awaited<ReturnType<typeof getServerClient>>;
 
 /**
  * Audit 20.11 (p11): the stored sponsor logos a save no longer uses. The form
@@ -24,38 +21,43 @@ export function replacedSponsorLogoPaths(
 }
 
 /**
- * Removes the logos this save replaced, after `games.update` has stored the
- * new prizes. Best-effort: logs and never throws, so a storage hiccup never
- * stops a save (an orphan file is the accepted cost, as before).
+ * The one place a stored sponsor logo file is deleted on the server (the edit
+ * save and `deleteGame`). Each path is deleted only when no other game's
+ * `prizes` still names it: «Gjenta hver uke» copies the prizes, path and all,
+ * to the next round, so one file can sit on many games (5 on staging, 20.11).
  *
- * - A logo another game still shows stays. «Gjenta hver uke» copies the
- *   prizes, path and all, to the next round. The check reads every game
- *   through the service client (a read only); a failed check keeps the file.
- * - The delete itself goes through the request client, so the bucket's owner
- *   policy (0143) still decides who may delete: the organiser who uploaded.
+ * The service client does both the check and the delete. The paths come from
+ * the stored row of `gameId`, never from the form, and the bucket's owner-only
+ * DELETE policy (0143) would otherwise match nothing when an admin edits or
+ * deletes another organiser's game.
+ *
+ * The filter is a JSON string: postgrest-js turns an array argument into a
+ * Postgres array literal (`cs.{…}`), which a jsonb column rejects.
+ *
+ * Best-effort: logs and never throws. A failed check keeps the file (an
+ * orphan file is the accepted cost; a broken logo is not).
+ *
+ * Known gap: a weekly repeat made between the check and the delete would copy
+ * a path that is about to go. The window is one request long, and the repeat
+ * is made when a round finishes, not while it is edited.
  */
-export async function removeReplacedSponsorLogos({
-  client,
+export async function removeUnusedSponsorLogos({
   gameId,
-  before,
-  after,
+  paths,
 }: {
-  client: RequestClient;
   gameId: string;
-  before: unknown;
-  after: readonly GamePrize[];
+  paths: readonly string[];
 }): Promise<void> {
-  const candidates = replacedSponsorLogoPaths(before, after);
-  if (candidates.length === 0) return;
+  if (paths.length === 0) return;
   try {
     const admin = getAdminClient();
     const unused: string[] = [];
-    for (const path of candidates) {
+    for (const path of paths) {
       const { data, error } = await admin
         .from('games')
         .select('id')
         .neq('id', gameId)
-        .contains('prizes', [{ sponsorLogoPath: path }])
+        .contains('prizes', JSON.stringify([{ sponsorLogoPath: path }]))
         .limit(1);
       if (error) {
         console.error('[sponsorLogoCleanup] reference check failed', { gameId, path, error });
@@ -64,9 +66,22 @@ export async function removeReplacedSponsorLogos({
       if ((data ?? []).length === 0) unused.push(path);
     }
     if (unused.length === 0) return;
-    const { error } = await client.storage.from(SPONSOR_LOGO_BUCKET).remove(unused);
+    const { error } = await admin.storage.from(SPONSOR_LOGO_BUCKET).remove(unused);
     if (error) console.error('[sponsorLogoCleanup] remove failed', { gameId, error });
   } catch (error) {
     console.error('[sponsorLogoCleanup] failed', { gameId, error });
   }
+}
+
+/** The edit save: removes the logos this save replaced, after `games.update`. */
+export async function removeReplacedSponsorLogos({
+  gameId,
+  before,
+  after,
+}: {
+  gameId: string;
+  before: unknown;
+  after: readonly GamePrize[];
+}): Promise<void> {
+  await removeUnusedSponsorLogos({ gameId, paths: replacedSponsorLogoPaths(before, after) });
 }
