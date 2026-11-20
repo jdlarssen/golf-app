@@ -258,17 +258,17 @@ describe('fitsPlayerCount — acey_deucey', () => {
   });
 });
 
-// ── bingo_bango_bongo: 2–16 (#460) ───────────────────────────────────────────
+// ── bingo_bango_bongo: 2–4, one flight ───────────────────────────────────────────
 
 describe('fitsPlayerCount — bingo_bango_bongo', () => {
   it.each([
     [1, false],
     [2, true],
+    [3, true],
     [4, true],
-    [5, true],
-    [8, true],
-    [16, true],
-    [17, false],
+    [5, false],
+    [8, false],
+    [16, false],
   ])('bingo_bango_bongo n=%i → %s', (n, expected) => {
     expect(fitsPlayerCount('bingo_bango_bongo', n)).toBe(expected);
   });
@@ -373,7 +373,7 @@ describe('soloPlayerCap (#661)', () => {
     ['acey_deucey', 4],
     ['nassau', 16],
     ['skins', 16],
-    ['bingo_bango_bongo', 16],
+    ['bingo_bango_bongo', 4],
   ] as [GameMode, number][])('%s → %i', (mode, expected) => {
     expect(soloPlayerCap(mode)).toBe(expected);
   });

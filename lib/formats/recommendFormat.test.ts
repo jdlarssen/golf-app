@@ -32,8 +32,8 @@ const TABLE: Record<CountBucket, [Expected, Expected, Expected, Expected, Expect
   '2': ['singles_matchplay', 'stableford', 'best_ball', 'best_ball', 'nassau', 'bingo_bango_bongo'],
   '3': ['solo_strokeplay', 'stableford', 'stableford†', 'stableford†', 'wolf', 'bingo_bango_bongo'],
   '4': ['solo_strokeplay', 'stableford', 'fourball_matchplay', 'texas_scramble', 'wolf', 'bingo_bango_bongo'],
-  '5-12': ['solo_strokeplay', 'stableford', 'best_ball*', 'texas_scramble', 'nassau', 'bingo_bango_bongo'],
-  '13+': ['solo_strokeplay', 'stableford', 'best_ball*', 'texas_scramble', 'nassau*', 'bingo_bango_bongo*'],
+  '5-12': ['solo_strokeplay', 'stableford', 'best_ball*', 'texas_scramble', 'nassau', 'stableford†'],
+  '13+': ['solo_strokeplay', 'stableford', 'best_ball*', 'texas_scramble', 'nassau*', 'stableford†'],
 };
 
 const COLUMNS: Array<[Goal, Level]> = [
@@ -157,10 +157,12 @@ describe('recommendFormatForCount (#2462)', () => {
       isFallback: true,
       displaced: 'nassau',
     });
+    // stakes · uneven has Bingo Bango Bongo alone, and it is one flight (2–4):
+    // the bucket answer is already the Stableford fallback, so nothing is displaced.
     expect(forCount(17, 'uneven', 'stakes')).toMatchObject({
       mode: 'stableford',
       isFallback: true,
-      displaced: 'bingo_bango_bongo',
+      displaced: null,
     });
   });
 

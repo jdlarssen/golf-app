@@ -21,7 +21,7 @@ describe('startPlayerCountRange (#2071)', () => {
     ['nines', 3, 3],
     ['nassau', 2, 16],
     ['skins', 2, 16],
-    ['bingo_bango_bongo', 2, 16],
+    ['bingo_bango_bongo', 2, 4],
   ] as const)('%s → %i–%i', (mode, min, max) => {
     expect(startPlayerCountRange(mode)).toEqual({ min, max });
   });

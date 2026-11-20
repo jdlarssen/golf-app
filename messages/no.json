@@ -790,7 +790,7 @@
       },
       "bingo_bango_bongo": {
         "line": "Tre poeng å hente på hvert hull",
-        "pitch": "Først på green, nærmest hullet og først i hull gir ett poeng hver. Her vinner ikke bare den som slår lengst. For 2–16 spillere.",
+        "pitch": "Først på green, nærmest hullet og først i hull gir ett poeng hver. Her vinner ikke bare den som slår lengst. For 2–4 spillere.",
         "choose": "Velg Bingo Bango Bongo"
       },
       "nines": {
@@ -1477,7 +1477,7 @@
         "nassauMin": "{remaining, plural, one {minst 1 spiller til} other {minst 2 spillere}}",
         "nassauTooMany": "for mange spillere — Nassau tar maks 16",
         "skinsTooMany": "for mange spillere — Skins tar maks 16",
-        "bbbTooMany": "for mange spillere — Bingo Bango Bongo tar maks 16",
+        "bbbTooMany": "for mange spillere — Bingo Bango Bongo tar maks 4",
         "ninesUnderMin": "{remaining, plural, one {1 spiller til} other {{remaining} spillere til}}",
         "ninesTooMany": "for mange spillere — Nines krever nøyaktig 3",
         "rrUnderMin": "{remaining} {remaining, plural, one {spiller til} other {spillere til}}",
@@ -2213,7 +2213,7 @@
           },
           {
             "heading": "Innsats og gruppestørrelse",
-            "body": "Dere kan være fra to til seksten spillere. Fire er best, for da er det nok folk til at kampen om bango faktisk står. Vanlig oppgjør er en fast sum per poeng, eller at den med flest poeng tar potten. Noen legger til en fjerde kategori for lengste drive på fairway. Runden går raskt, for ingen står og venter på at noen skal telle slag på et hull de alt har mistet. Kombiner det gjerne med en vanlig stableford-runde, så har dere to konkurranser i gang samtidig uten ekstra jobb."
+            "body": "Dere kan være fra to til fire spillere, altså én flight. Fire er best, for da er det nok folk til at kampen om bango faktisk står. Vanlig oppgjør er en fast sum per poeng, eller at den med flest poeng tar potten. Noen legger til en fjerde kategori for lengste drive på fairway. Runden går raskt, for ingen står og venter på at noen skal telle slag på et hull de alt har mistet. Kombiner det gjerne med en vanlig stableford-runde, så har dere to konkurranser i gang samtidig uten ekstra jobb."
           }
         ],
         "example": "Hull 5, par 4: A chipper opp på green med andreslag (bingo). B og C er i ruff, og D er i bunkeren, så ingen av dem er på green ennå. Alle kommer på green til slutt. C ligger 60 cm fra hullet, B 1,5 m, D 2 m, A 3 m. C tar bango. Putte-rekkefølge: A putter først (lengst borte), så D og B. C putter sist og går i hull direkte: bongo til C.",
@@ -2232,7 +2232,7 @@
           },
           {
             "q": "Hvor mange bør spille?",
-            "a": "Fire er best. Da blir kampen om bango skarpest, og runden går fortsatt raskt. Dere kan likevel være alt fra to til seksten."
+            "a": "Fire er best. Da blir kampen om bango skarpest, og runden går fortsatt raskt. Dere kan være fra to til fire, altså én flight."
           }
         ]
       },
@@ -4446,7 +4446,7 @@
         "rotation_player_count_nines": "Nines trenger nøyaktig 3 spillere for å starte. Nå er {count} påmeldt.",
         "rotation_player_count_nassau": "Nassau trenger 2–16 spillere for å starte. Nå er {count} påmeldt.",
         "rotation_player_count_skins": "Skins trenger 2–16 spillere for å starte. Nå er {count} påmeldt.",
-        "rotation_player_count_bingo_bango_bongo": "Bingo Bango Bongo trenger 2–16 spillere for å starte. Nå er {count} påmeldt.",
+        "rotation_player_count_bingo_bango_bongo": "Bingo Bango Bongo trenger 2–4 spillere for å starte. Nå er {count} påmeldt.",
         "guest_invalid_name": "Gjesten trenger et navn (maks 80 tegn).",
         "guest_invalid_hcp": "Handicapet må være et tall mellom 0 og 54. Plusshandicap tastes med + foran.",
         "guest_invalid_tee": "Velg tee-kategori for gjesten.",
