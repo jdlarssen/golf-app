@@ -1,7 +1,6 @@
 // #2577: tekstene på godkjenningen (Type A). Ordlyden er designlerretets
 // (rad 68 «Godkjenningen i appen»).
 import {
-  APPROVE_TEXT,
   approvedLine,
   deliveredLine,
   notifiedLine,

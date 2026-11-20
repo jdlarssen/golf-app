@@ -91,7 +91,6 @@ import { fetchMyCups } from '../data/cup';
 import { fetchTerminliste } from '../data/terminliste';
 import { TerminDayCard, TerminDayHeading, TerminLeagueRow, TerminRow } from '../components/terminliste/TerminRow';
 import { TERMIN_TEXT, dayHeading, dayLabelText } from '../lib/terminlisteCopy';
-import { localDateParts } from '../lib/homeDates';
 import { clubRoundsForHome, clubSectionGroups } from '../lib/clubRounds';
 import { openOrReturn } from '../lib/backTo';
 import type { AppTerminEntry } from '../../../../lib/games/appTerminView';

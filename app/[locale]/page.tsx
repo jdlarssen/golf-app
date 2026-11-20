@@ -49,7 +49,6 @@ import {
 } from '@/lib/games/getActiveGameCardData';
 import {
   pairSplitDayGames,
-  type PairableGame,
   type SplitDayEntry,
 } from '@/lib/games/splitDayPairing';
 import { mergePairExtras } from '@/lib/games/pairActiveCard';

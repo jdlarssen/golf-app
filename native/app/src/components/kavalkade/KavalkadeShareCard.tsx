@@ -19,7 +19,6 @@ import {
 } from '../../../../../lib/kavalkade/cardImageLayout';
 import type { KavalkadeCardModel } from '../../../../../lib/kavalkade/cardModel';
 import {
-  CHAMP,
   CHAMP_DARK,
   CHAMP_PILL,
   CHAMP_TINT,

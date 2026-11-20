@@ -439,7 +439,7 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
         return [...prev, { userId: candidate.id, teamNumber: null, teeGender: null }];
       });
     },
-    [gameMode, registration, setup, userId],
+    [gameMode, registration, setup],
   );
 
   const assignTeam = useCallback((playerId: string, teamNumber: number) => {
