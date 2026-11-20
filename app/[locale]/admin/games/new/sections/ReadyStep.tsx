@@ -42,6 +42,7 @@ import { invitationWhen } from '@/lib/games/invitationCard';
 import { InvitationPreviewCard } from './InvitationPreviewCard';
 import { ReadyChecklist, type ReadyChecklistItem } from './ReadyChecklist';
 import { ReadySettings } from './ReadySettings';
+import { settleSubmit } from '../submitOutcome';
 import { RepeatWeeklyCard } from './RepeatWeeklyCard';
 import { SeatsAndDeadlineCard } from './SeatsAndDeadlineCard';
 import { SignupPreviewCard } from './SignupPreviewCard';
@@ -84,8 +85,9 @@ type Props = {
    */
   onSubmitStart?: () => void;
   /**
-   * Audit 20.11 (p11): the attempt came back; `ok` is false when it returned
-   * an error code. GameWizard clears its local draft only on `true`.
+   * Audit 20.11 (p11): the attempt came back; `ok` is true for a result
+   * without an error or a Next redirect (`settleSubmit`). GameWizard clears
+   * its local draft only on `true`.
    */
   onSubmitResult?: (ok: boolean) => void;
 };
@@ -176,16 +178,24 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart, onSubmitResu
     async (_prev: SubmitState, formData: FormData): Promise<SubmitState> => {
       // edit-draft-actionene returnerer void og redirecter selv ved feil —
       // normaliser til «ingen feil» så state-formen er lik for begge modi.
-      const result = (await actions?.publish(formData)) ?? NO_ERROR;
-      onSubmitResult?.(!result.error);
+      // Audit 20.11 (p11): a success redirects, and Next rejects the promise
+      // with the redirect; settleSubmit reads that as the success it is.
+      const result = await settleSubmit(
+        async () => (await actions?.publish(formData)) ?? NO_ERROR,
+        (ok) => onSubmitResult?.(ok),
+      );
       return { ...result, seq: ++resultSeq.current };
     },
     NO_SUBMIT,
   );
   const [draftResult, draftAction, draftPending] = useActionState(
     async (_prev: SubmitState, formData: FormData): Promise<SubmitState> => {
-      const result = (await actions?.draft(formData)) ?? NO_ERROR;
-      onSubmitResult?.(!result.error);
+      // Audit 20.11 (p11): a success redirects, and Next rejects the promise
+      // with the redirect; settleSubmit reads that as the success it is.
+      const result = await settleSubmit(
+        async () => (await actions?.draft(formData)) ?? NO_ERROR,
+        (ok) => onSubmitResult?.(ok),
+      );
       return { ...result, seq: ++resultSeq.current };
     },
     NO_SUBMIT,

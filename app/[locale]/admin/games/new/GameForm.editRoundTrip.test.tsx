@@ -8,7 +8,7 @@ import {
 } from '@/lib/games/editGameInitialValues';
 import { buildGameInsertPayload } from '@/lib/games/gamePayload';
 import { editedModeConfig } from '@/lib/games/modeConfigEdit';
-import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import { MODE_LABELS, type GameMode, type GameModeConfig } from '@/lib/scoring/modes/types';
 
 // Audit 20.11 (p11): «Rediger spill» on a scheduled game locks the format, and
 // a disabled control posts nothing. Every format is saved here as it stands,
@@ -271,12 +271,9 @@ function saveAsItStands(f: Fixture) {
 describe('«Rediger spill» keeps a scheduled game as it is (audit 20.11, p11)', () => {
   it('covers every format', () => {
     const covered = new Set(FIXTURES.map((f) => f.mode));
-    const all: GameMode[] = [
-      'best_ball', 'stableford', 'modified_stableford', 'singles_matchplay', 'solo_strokeplay',
-      'texas_scramble', 'ambrose', 'florida_scramble', 'fourball_matchplay', 'foursomes_matchplay',
-      'greensome_matchplay', 'chapman_matchplay', 'wolf', 'nassau', 'skins', 'bingo_bango_bongo',
-      'nines', 'round_robin', 'acey_deucey', 'shamble', 'patsome', 'gruesome_matchplay',
-    ];
+    // MODE_LABELS is a Record<GameMode, string>, so the compiler keeps it
+    // complete: a new format without a fixture here turns this test red.
+    const all = Object.keys(MODE_LABELS) as GameMode[];
     expect(all.filter((m) => !covered.has(m))).toEqual([]);
   });
 

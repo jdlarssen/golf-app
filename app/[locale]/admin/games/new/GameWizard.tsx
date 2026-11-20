@@ -1017,12 +1017,11 @@ function WizardBody({
    *
    * At the start the latest state is written at once (the debounce may still
    * hold it), and further writes are blocked: the redirect after a success IS
-   * a `pagehide`. The draft goes when the save succeeded:
-   *  - `handleSubmitResult(true)`: the action came back without an error;
-   *  - the wizard unmounts while the submission is open: a success redirects
-   *    (NEXT_REDIRECT) and the action may never come back.
-   * A refused save (#1379) leaves the wizard mounted with the draft stored,
-   * and the next change writes it again.
+   * a `pagehide`. The draft goes only on a positive success signal,
+   * `handleSubmitResult(true)` from ReadyStep's `settleSubmit`: a result
+   * without an error, or the Next redirect a successful save throws. A refused
+   * save (#1379), a crash or a lost connection leave the draft stored, and the
+   * next change writes it again. Leaving mid-save keeps it too.
    */
   function handleSubmitStart() {
     if (writeTimerRef.current) {
@@ -1047,15 +1046,6 @@ function WizardBody({
     lastWrittenRef.current = null;
     setSavedOk(false);
   }
-
-  // Audit 20.11 (p11): leaving while a submission is open means it succeeded
-  // (the redirect unmounts the wizard). A full reload runs no cleanup, so the
-  // draft survives exactly the case it is there for.
-  useEffect(() => {
-    return () => {
-      if (submittedRef.current && storageKey) clearWizardDraft(storageKey);
-    };
-  }, [storageKey]);
 
   // Neste-knappen gates per steg. Mangel-tekst under knappen henter første
   // element fra missingForPublish (mode-aware).
