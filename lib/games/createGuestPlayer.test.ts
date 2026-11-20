@@ -152,13 +152,14 @@ describe('isGuestPlaceholderEmail', () => {
 });
 
 const PROFILE = { name: 'Kari Gjest', hcpIndex: 18.4, tee: 'D' as const };
+const CREATOR = { createdBy: 'organiser-uuid-1' };
 
 describe('createGuestUser', () => {
   it('happy path: createUser → users-update med is_guest + profile_completed_at', async () => {
     const fake = fakeAdmin();
     getAdminClientMock.mockReturnValue(fake.client);
 
-    const res = await createGuestUser(PROFILE, { retryDelayMs: 0 });
+    const res = await createGuestUser(PROFILE, CREATOR, { retryDelayMs: 0 });
 
     expect(res).toMatchObject({ ok: true, userId: 'guest-uuid-1' });
     if (!res.ok) throw new Error('unreachable');
@@ -175,6 +176,8 @@ describe('createGuestUser', () => {
       gender: 'ladies',
       level: 'normal',
       is_guest: true,
+      // 0251: who made the guest decides who may reuse it.
+      guest_created_by: 'organiser-uuid-1',
     });
     // profile_completed_at MÅ settes — publish-/start-gatene og
     // orphan-sweeperen nekter/sletter ellers (se helper-docstring).
@@ -186,7 +189,7 @@ describe('createGuestUser', () => {
     const fake = fakeAdmin({ createUserFails: true });
     getAdminClientMock.mockReturnValue(fake.client);
 
-    const res = await createGuestUser(PROFILE, { retryDelayMs: 0 });
+    const res = await createGuestUser(PROFILE, CREATOR, { retryDelayMs: 0 });
 
     expect(res).toEqual({ ok: false, error: 'guest_auth_create_failed' });
     expect(fake.deleteUser).not.toHaveBeenCalled();
@@ -196,7 +199,7 @@ describe('createGuestUser', () => {
     const fake = fakeAdmin({ usersUpdateRows: [] });
     getAdminClientMock.mockReturnValue(fake.client);
 
-    const res = await createGuestUser(PROFILE, { retryDelayMs: 0 });
+    const res = await createGuestUser(PROFILE, CREATOR, { retryDelayMs: 0 });
 
     expect(res).toEqual({ ok: false, error: 'guest_profile_update_failed' });
     expect(fake.deleteUser).toHaveBeenCalledWith('guest-uuid-1');
@@ -208,7 +211,7 @@ describe('createGuestPlayer', () => {
     const fake = fakeAdmin();
     getAdminClientMock.mockReturnValue(fake.client);
 
-    const res = await createGuestPlayer('game-1', PROFILE, { retryDelayMs: 0 });
+    const res = await createGuestPlayer('game-1', PROFILE, CREATOR, { retryDelayMs: 0 });
 
     expect(res).toMatchObject({ ok: true, userId: 'guest-uuid-1' });
     expect(fake.gpInsertPayloads[0]).toMatchObject({
@@ -227,7 +230,7 @@ describe('createGuestPlayer', () => {
     const fake = fakeAdmin({ gamePlayersInsertError: { message: 'rls says no' } });
     getAdminClientMock.mockReturnValue(fake.client);
 
-    const res = await createGuestPlayer('game-1', PROFILE, { retryDelayMs: 0 });
+    const res = await createGuestPlayer('game-1', PROFILE, CREATOR, { retryDelayMs: 0 });
 
     expect(res).toEqual({ ok: false, error: 'guest_roster_insert_failed' });
     expect(fake.deleteUser).toHaveBeenCalledWith('guest-uuid-1');
@@ -237,7 +240,7 @@ describe('createGuestPlayer', () => {
     const fake = fakeAdmin({ createUserFails: true });
     getAdminClientMock.mockReturnValue(fake.client);
 
-    const res = await createGuestPlayer('game-1', PROFILE, { retryDelayMs: 0 });
+    const res = await createGuestPlayer('game-1', PROFILE, CREATOR, { retryDelayMs: 0 });
 
     expect(res).toEqual({ ok: false, error: 'guest_auth_create_failed' });
     expect(fake.gpInsert).not.toHaveBeenCalled();

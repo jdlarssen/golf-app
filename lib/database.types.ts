@@ -2522,6 +2522,7 @@ export type Database = {
           email: string
           friend_code: string
           gender: Database["public"]["Enums"]["user_gender"] | null
+          guest_created_by: string | null
           handicap_updated_at: string
           hcp_index: number
           id: string
@@ -2541,6 +2542,7 @@ export type Database = {
           email: string
           friend_code?: string
           gender?: Database["public"]["Enums"]["user_gender"] | null
+          guest_created_by?: string | null
           handicap_updated_at?: string
           hcp_index?: number
           id: string
@@ -2560,6 +2562,7 @@ export type Database = {
           email?: string
           friend_code?: string
           gender?: Database["public"]["Enums"]["user_gender"] | null
+          guest_created_by?: string | null
           handicap_updated_at?: string
           hcp_index?: number
           id?: string
@@ -2573,7 +2576,15 @@ export type Database = {
           product_updates_unsubscribed_at?: string | null
           profile_completed_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "users_guest_created_by_fkey"
+            columns: ["guest_created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wolf_hole_choices: {
         Row: {
@@ -2740,10 +2751,18 @@ export type Database = {
       }
       email_is_invited: { Args: { check_email: string }; Returns: boolean }
       email_is_registered: { Args: { p_email: string }; Returns: boolean }
+      foreign_guest_ids: {
+        Args: { p_actor: string; p_ids: string[] }
+        Returns: string[]
+      }
       generate_friend_code: { Args: never; Returns: string }
       generate_game_short_id: { Args: never; Returns: string }
       generate_group_short_id: { Args: never; Returns: string }
       generate_tournament_short_id: { Args: never; Returns: string }
+      guest_usable_by: {
+        Args: { p_actor: string; p_guest: string }
+        Returns: boolean
+      }
       incomplete_profile_ids: {
         Args: { p_user_ids: string[] }
         Returns: {
@@ -2797,6 +2816,7 @@ export type Database = {
         }
         Returns: Json
       }
+      purge_admin_action_rate_limit: { Args: never; Returns: number }
       record_gir_claims: {
         Args: {
           p_game_id: string

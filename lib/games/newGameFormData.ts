@@ -1,4 +1,5 @@
 import 'server-only';
+import { withoutForeignGuests } from '@/lib/games/guestOwnership';
 import { cache } from 'react';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -201,6 +202,11 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
       : base;
   });
 
+  // Audit 20.11 (0251): the picker offers a guest only to the one who made
+  // it or already has it in a round of their own (admins: any). Sharing a
+  // round with someone else's guest is not enough, and the save refuses it.
+  const pickerPlayers = user ? await withoutForeignGuests(user.id, players) : players;
+
   // Flat klubb-liste sortert på navn. `groups` er en many-to-one-embed og
   // kommer som et objekt, men en tom rad hoppes over likevel: RLS kan skjule
   // gruppa. Utløpte klubber (#50) utelates — en frossen klubb kan ikke ta imot
@@ -214,5 +220,5 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
     .filter((c): c is ClubOption => c !== null)
     .sort((a, b) => a.name.localeCompare(b.name, 'no'));
 
-  return { courses, players, clubs };
+  return { courses, players: pickerPlayers, clubs };
 });
