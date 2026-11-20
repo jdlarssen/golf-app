@@ -122,10 +122,9 @@ function ownTeeOffAt(
 /**
  * One `game_moved` to each player who should hear that the round moved, and a
  * mail to those who are away. Older unread `game_moved` rows for the same game
- * and player are marked read first, so the inbox never shows the old time on
- * top. Returns the players whose `notify` call did not throw, for the
- * confirmation. `notify` swallows a failed insert itself, so the list means
- * «sent to», not «delivered».
+ * and player are marked read once the new one landed, so the inbox never shows
+ * the old time on top, and a failed send never leaves the player with none.
+ * Returns the players whose new varsel landed, for the confirmation.
  *
  * Best-effort: logs every failure with `[notifyGameMoved]` and never throws,
  * so the move that called it always stands.
@@ -150,15 +149,19 @@ export async function notifyGameMoved(params: {
     const actor = (await readNames(admin, [actorUserId])).get(actorUserId);
     const movedByName = actor ? displayNameForOthers(actor) : null;
 
-    const { error: readError } = await admin
+    // The older unread moves are read now and marked read only after the
+    // player's new varsel landed: a failed send must not take the old notice
+    // away and leave the player with none.
+    const { data: olderMoves, error: olderError } = await admin
       .from('notifications')
-      .update({ read_at: new Date().toISOString() })
+      .select('id, user_id')
       .eq('kind', 'game_moved')
       .eq('payload->>game_id', gameId)
       .in('user_id', ids)
-      .is('read_at', null);
-    if (readError) {
-      console.error('[notifyGameMoved] marking older moves read failed', { gameId, error: readError });
+      .is('read_at', null)
+      .returns<{ id: string; user_id: string }[]>();
+    if (olderError) {
+      console.error('[notifyGameMoved] reading older moves failed', { gameId, error: olderError });
     }
 
     const results = await Promise.allSettled(
@@ -185,9 +188,23 @@ export async function notifyGameMoved(params: {
         console.error('[notifyGameMoved] notify failed', { gameId, userId: ids[i], error: r.reason });
         return;
       }
+      if (r.value.inserted === false) return;
       notified.push(recipients[i]);
       if (r.value.shouldAlsoSendMail) mailIds.push(ids[i]);
     });
+
+    const told = new Set(notified.map((r) => r.userId));
+    const supersededIds = (olderMoves ?? []).filter((r) => told.has(r.user_id)).map((r) => r.id);
+    if (supersededIds.length > 0) {
+      const { error: readError } = await admin
+        .from('notifications')
+        .update({ read_at: new Date().toISOString() })
+        .in('id', supersededIds)
+        .is('read_at', null);
+      if (readError) {
+        console.error('[notifyGameMoved] marking older moves read failed', { gameId, error: readError });
+      }
+    }
 
     await sendMails(admin, { gameId, gameName, teeOffAt, courseChanged, userIds: mailIds });
     return { notified };

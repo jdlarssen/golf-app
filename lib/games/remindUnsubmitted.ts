@@ -247,7 +247,7 @@ export async function sendReminders(gameId: string): Promise<ReminderResult> {
   // Best-effort: én død adresse skal ikke stoppe resten, og aldri velte
   // kallerens flyt. `sendDeliveryReminder` svelger allerede sine egne feil —
   // allSettled er beltet i tillegg til selen.
-  await Promise.allSettled(
+  const sends = await Promise.allSettled(
     targets.map((p) =>
       sendDeliveryReminder({
         player: {
@@ -262,7 +262,12 @@ export async function sendReminders(gameId: string): Promise<ReminderResult> {
     ),
   );
 
-  if (targets.length > 0) {
+  // Only the cards whose reminder landed are stamped: a failed one is left for
+  // the sweep to try again.
+  const landed = targets.filter(
+    (_, i) => sends[i]!.status === 'fulfilled' && (sends[i] as PromiseFulfilledResult<boolean>).value !== false,
+  );
+  if (landed.length > 0) {
     // Stemplet er påminnelses-sveipens engangs-guard (#2200): uten det ville
     // sveipen purre de samme kortene en gang til et kvarter etter.
     //
@@ -277,13 +282,13 @@ export async function sendReminders(gameId: string): Promise<ReminderResult> {
       .eq('game_id', gameId)
       .in(
         'user_id',
-        targets.map((t) => t.user_id),
+        landed.map((t) => t.user_id),
       )
       .select('user_id');
 
-    if (error || (stamped?.length ?? 0) < targets.length) {
+    if (error || (stamped?.length ?? 0) < landed.length) {
       console.error(
-        `[${LOG_PREFIX}] stamped ${stamped?.length ?? 0}/${targets.length} deliver_reminder_sent_at rows`,
+        `[${LOG_PREFIX}] stamped ${stamped?.length ?? 0}/${landed.length} deliver_reminder_sent_at rows`,
         error,
       );
     }

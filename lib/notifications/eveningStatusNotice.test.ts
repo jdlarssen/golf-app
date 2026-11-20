@@ -208,11 +208,22 @@ describe('runEveningNoticeForGame', () => {
     expect(notifyMock).not.toHaveBeenCalled();
   });
 
-  it('a failed send is logged, never thrown: the stamp is taken and the sweep goes on', async () => {
+  it.each([
+    ['notify threw', () => notifyMock.mockRejectedValue(new Error('push down'))],
+    ['the row did not land', () =>
+      notifyMock.mockResolvedValue({ shouldAlsoSendMail: true, inserted: false } as Awaited<ReturnType<typeof notify>>)],
+  ])('a failed send (%s) is logged, never thrown, and the stamp is released for the next sweep', async (_label, arrange) => {
     const err = vi.spyOn(console, 'error').mockImplementation(() => {});
-    notifyMock.mockRejectedValue(new Error('push down'));
-    await expect(run()).resolves.toEqual({ notified: true });
-    expect(err).toHaveBeenCalled();
+    arrange();
+    await expect(run()).resolves.toEqual({ notified: false });
+    const [, release, ...extra] = claims();
+    expect(extra).toEqual([]);
+    expect(release!.payload).toEqual({ organizer_evening_notice_sent_at: null });
+    expect(release!.filters).toEqual([
+      { op: 'eq', column: 'id', value: GAME_ID },
+      { op: 'eq', column: 'organizer_evening_notice_sent_at', value: new Date(NOW).toISOString() },
+    ]);
+    expect(mailMock).not.toHaveBeenCalled();
     err.mockRestore();
   });
 });

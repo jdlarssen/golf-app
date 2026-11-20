@@ -204,6 +204,23 @@ describe('runDeliveryReminderSweepForGame', () => {
     expect(notifyMock).not.toHaveBeenCalled();
   });
 
+  it('varselet kom ikke inn: stempelet ryddes, så neste sveip prøver igjen', async () => {
+    notifyMock.mockResolvedValueOnce({ shouldAlsoSendMail: true, inserted: false });
+
+    await expect(run()).resolves.toEqual({ reminded: 0 });
+
+    const [, release, ...extra] = claims();
+    expect(extra).toEqual([]);
+    expect(release.payload).toEqual({ deliver_reminder_sent_at: null });
+    // Only this run's own stamp, on the cards it won.
+    expect(release.filters).toEqual([
+      { op: 'eq', column: 'game_id', value: GAME.id },
+      { op: 'in', column: 'user_id', value: ['kari', 'ola', 'gjest'] },
+      { op: 'eq', column: 'deliver_reminder_sent_at', value: new Date(NOW).toISOString() },
+    ]);
+    expect(mailMock).not.toHaveBeenCalled();
+  });
+
   it('en feilet lesing av rosteret kaster, så ruta logger spillet', async () => {
     db.rosterError = true;
 

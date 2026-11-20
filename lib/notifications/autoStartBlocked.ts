@@ -51,6 +51,8 @@ export function isSilentBlockReason(reason: string): boolean {
  * KUN hvis den er null og spillet fortsatt er scheduled; ingen rad
  * tilbake → allerede varslet (eller spillet rakk å starte) → return.
  *
+ * Kom ikke varselet inn, ryddes stempelet igjen, så neste sveip prøver på nytt.
+ *
  * Kjent begrensning: kolonnen nullstilles ikke hvis admin re-planlegger
  * tee-tiden etterpå — et nytt blokkert forsøk gir ikke nytt varsel.
  *
@@ -75,11 +77,13 @@ export async function maybeNotifyAutoStartBlocked(opts: {
     return;
   }
 
+  const admin = getAdminClient();
+  const stamp = new Date().toISOString();
+  let claimed = false;
   try {
-    const admin = getAdminClient();
     const { data: won, error: updErr } = await admin
       .from('games')
-      .update({ auto_start_blocked_notified_at: new Date().toISOString() })
+      .update({ auto_start_blocked_notified_at: stamp })
       .eq('id', gameId)
       .is('auto_start_blocked_notified_at', null)
       .eq('status', 'scheduled')
@@ -91,13 +95,30 @@ export async function maybeNotifyAutoStartBlocked(opts: {
       return;
     }
     if (!won) return;
+    claimed = true;
 
-    await notify({
+    const r = await notify({
       userId: createdBy,
       kind: 'auto_start_blocked',
       payload: { game_id: gameId, game_name: gameName, reason },
     });
+    if (r.inserted !== false) return;
+    console.error(`[${logPrefix}] auto_start_blocked varsel did not land`, { gameId });
   } catch (e) {
     console.error(`[${logPrefix}] auto_start_blocked varsel failed`, e);
+  }
+  if (!claimed) return;
+
+  // The varsel did not land: give the stamp back (only this run's own), so the
+  // next sweep tries again.
+  try {
+    const { error } = await admin
+      .from('games')
+      .update({ auto_start_blocked_notified_at: null })
+      .eq('id', gameId)
+      .eq('auto_start_blocked_notified_at', stamp);
+    if (error) console.error(`[${logPrefix}] auto_start_blocked release failed`, { gameId, error });
+  } catch (e) {
+    console.error(`[${logPrefix}] auto_start_blocked release failed`, e);
   }
 }

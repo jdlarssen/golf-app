@@ -134,10 +134,28 @@ export async function runLeagueRoundNotices(
     results.forEach((r, i) => {
       if (r.status === 'rejected') {
         console.error(`[${LOG_PREFIX}] ${kind} to ${recipients[i]} failed`, { roundId: round.id, err: r.reason });
+      } else if (r.value.inserted === false) {
+        console.error(`[${LOG_PREFIX}] ${kind} to ${recipients[i]} did not land`, { roundId: round.id });
       } else {
         sent[kind] += 1;
       }
     });
+
+    // Nobody was told: give the stamp back (only this run's own), so the next
+    // run tries again. When some were told, the stamp stands, so nobody gets
+    // the message twice.
+    if (recipients.length > 0 && sent[kind] === 0) {
+      const release: TablesUpdate<'league_rounds'> =
+        kind === 'league_round_open' ? { opening_notice_sent_at: null } : { closing_reminder_sent_at: null };
+      const { error: releaseError } = await admin
+        .from('league_rounds')
+        .update(release)
+        .eq('id', round.id)
+        .eq(stamp, at);
+      if (releaseError) {
+        console.error(`[${LOG_PREFIX}] ${kind} release failed`, { roundId: round.id, error: releaseError });
+      }
+    }
   }
   return { sent };
 }

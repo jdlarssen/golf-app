@@ -79,6 +79,34 @@ describe('maybeNotifyAutoStartBlocked', () => {
     });
   });
 
+  it.each([
+    ['raden kom ikke inn', () => notifyMock.mockResolvedValueOnce({ shouldAlsoSendMail: false, inserted: false } as never)],
+    ['notify kastet', () => notifyMock.mockRejectedValueOnce(new Error('connection reset'))],
+  ])('varselet feilet (%s) → stempelet ryddes, så neste sveip prøver igjen', async (_label, arrange) => {
+    arrange();
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([
+      { data: { id: 'game-1' }, error: null },
+      { data: null, error: null },
+    ]);
+
+    await maybeNotifyAutoStartBlocked(OPTS);
+    err.mockRestore();
+
+    const calls = adminMock.__fromCalls;
+    const updates = calls.filter((c) => c.method === 'update');
+    expect(updates).toHaveLength(2);
+    expect(updates[1]!.args[0]).toEqual({ auto_start_blocked_notified_at: null });
+    // Only this run's own stamp is cleared.
+    const stamp = (updates[0]!.args[0] as { auto_start_blocked_notified_at: string })
+      .auto_start_blocked_notified_at;
+    const afterRelease = calls.slice(calls.indexOf(updates[1]!) + 1);
+    expect(afterRelease.filter((c) => c.method === 'eq').map((c) => c.args)).toEqual([
+      ['id', 'game-1'],
+      ['auto_start_blocked_notified_at', stamp],
+    ]);
+  });
+
   it('tapte raden (allerede varslet) → ingen varsel', async () => {
     adminMock = buildSupabaseMock([
       // maybeSingle gir null når guard-WHERE ikke matchet noen rad
