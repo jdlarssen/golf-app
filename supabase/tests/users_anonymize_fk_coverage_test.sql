@@ -120,6 +120,8 @@ insert into fk_coverage (tbl, col, handling) values
   ('invitations',                'invited_by',                          'kept_no_pii'),
   ('league_rounds',              'window_overridden_by',                'kept_no_pii'),
   ('leagues',                    'created_by',                          'kept_no_pii'),
+  -- 0246: the send log for one month's newsletter; the scrubbed row got it, no PII.
+  ('product_update_digest_recipients', 'user_id',                       'kept_no_pii'),
   ('product_update_digests',     'sent_by',                             'kept_no_pii'),
   ('product_updates',            'created_by',                          'kept_no_pii'),
   ('tournaments',                'created_by',                          'kept_no_pii');
