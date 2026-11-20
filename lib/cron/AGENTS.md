@@ -15,6 +15,8 @@ pg_cron (every minute) → EXISTS gate in the job body → `net.http_post` (pg_n
 | `league-round-reminder-sweep` (hourly, :41) | 0217 (stamps), 0218 | an open round (`opens_at <= now() < closes_at`) of an `active` league has `opening_notice_sent_at is null`, or `closing_reminder_sent_at is null` with under 48 h left | `app/api/cron/league-round-reminder/route.ts` |
 | `evening-before-sweep` (every 15 min) | 0241 (stamp), 0242 | it is 18:00 or later in Oslo, and a scheduled game that is not a cup match, derived game or league flight, has a `created_by`, `organizer_evening_notice_sent_at is null`, tee-off on tomorrow's Oslo date, was created before 18:00 Oslo today, and has another non-guest, non-withdrawn player than the organiser | `app/api/cron/evening-before/route.ts` |
 
+`purge-rate-limit-buckets` (nightly, 03:23 UTC, migration 0251) is plain SQL with no HTTP call: it runs `public.purge_admin_action_rate_limit()`, which deletes rate-limit buckets older than 2 days. Like `purge-cron-run-history` it is scheduled only where `cron_secret` is in Vault (prod).
+
 `/api/cron/product-update-digest` is not pg_cron: it is the one Vercel Cron in `vercel.json` (daily, GET). Both transports send the same `Authorization: Bearer <CRON_SECRET>`.
 
 ## Three signals — do not mix them up
