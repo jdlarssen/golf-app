@@ -447,7 +447,7 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
   });
 
   it('par-stableford: 4 spillere på 2 lag à 2 → canPublish true når øvrige felt er satt', () => {
-    const { container } = render(
+    render(
       <GameForm
         courses={COURSES}
         players={EIGHT_PLAYERS.slice(0, 4)}
@@ -530,7 +530,7 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
   });
 
   it('par-stableford: 4 spillere på samme lag (3 ekstra slots tomme) → canPublish false', () => {
-    const { container } = render(
+    render(
       <GameForm
         courses={COURSES}
         players={EIGHT_PLAYERS.slice(0, 4)}
@@ -578,7 +578,7 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
   });
 
   it('par-stableford: flight-seksjonen (lag-1+2 = flight-1) vises ikke', () => {
-    const { container } = render(
+    render(
       <GameForm
         courses={COURSES}
         players={EIGHT_PLAYERS}
@@ -653,7 +653,7 @@ describe('GameForm — lag-matchplay (#634)', () => {
   // representativt) beviser at side-grid-en rendrer, pluss en sjekk på at
   // Chapman fortsatt får sin allowance-toggle.
   it('fourball-matchplay: side-grid med to «Side»-kort à 2 slots vises når ≥2 spillere er valgt', () => {
-    const { container } = render(
+    render(
       <GameForm
         courses={COURSES}
         players={EIGHT_PLAYERS}
@@ -910,7 +910,7 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
   });
 
   it('matchplay: 2 spillere fordelt på Side 1 og Side 2 → canPublish=true', () => {
-    const { container } = render(
+    render(
       <GameForm
         courses={COURSES}
         players={EIGHT_PLAYERS.slice(0, 2)}
@@ -976,7 +976,7 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
   });
 
   it('matchplay: 2 spillere begge på Side 1 → canPublish=false + missingForPublish nevner «hver side»', () => {
-    const { container } = render(
+    render(
       <GameForm
         courses={COURSES}
         players={EIGHT_PLAYERS.slice(0, 2)}
