@@ -191,6 +191,29 @@ describe('runLeagueRoundNotices', () => {
     expect(notifyMock.mock.calls.map((c) => c[0].kind)).toEqual(['league_round_closing', 'league_round_closing']);
   });
 
+  it('no varsel landed: the stamp is released, so the next run tries again', async () => {
+    notifyMock.mockImplementation(async () => ({ shouldAlsoSendMail: false, inserted: false }));
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await expect(run(round())).resolves.toEqual({ sent: { league_round_open: 0, league_round_closing: 0 } });
+    err.mockRestore();
+    notifyMock.mockImplementation(async () => ({ shouldAlsoSendMail: false }));
+    const [, release, ...extra] = claims();
+    expect(extra).toEqual([]);
+    expect(release!.payload).toEqual({ opening_notice_sent_at: null });
+    expect(release!.filters).toEqual([
+      { op: 'eq', column: 'id', value: ROUND_ID },
+      { op: 'eq', column: 'opening_notice_sent_at', value: new Date(NOW).toISOString() },
+    ]);
+  });
+
+  it('some varsler landed: the stamp stands, so nobody is told twice', async () => {
+    notifyMock.mockResolvedValueOnce({ shouldAlsoSendMail: false, inserted: false });
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await expect(run(round())).resolves.toEqual({ sent: { league_round_open: 1, league_round_closing: 0 } });
+    err.mockRestore();
+    expect(claims()).toHaveLength(1);
+  });
+
   it('everyone has played: the stamp is still claimed, so the round does not come back, and nobody is told', async () => {
     db.players = ['per', 'ola'];
     await expect(run(round())).resolves.toEqual({ sent: { league_round_open: 0, league_round_closing: 0 } });

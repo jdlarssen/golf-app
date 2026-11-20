@@ -121,6 +121,7 @@ const SWEEP_LOG_PREFIX = 'deliveryReminderSweep';
  * kortene kravet vant, teller; vant det ingen, sendes ingenting. To kjøringer
  * samtidig, eller en kjøring nr. 2, sender derfor ikke noe to ganger, og hvert
  * kort purres én gang (eierens svar 2026-09-27: «Et kvarter, én gang»).
+ * Kom ikke varselet inn, ryddes stempelet igjen, så neste sveip prøver på nytt.
  *
  * Kaster ved en feilet lesing. Ruta fanger det per spill, så ett spill aldri
  * koster de andre påminnelsen. Selve sendingen er best-effort
@@ -179,11 +180,12 @@ export async function runDeliveryReminderSweepForGame(
     undeliveredSiblingUserIds: await undeliveredBack9SiblingUserIds(admin, game),
   });
 
+  const stamp = new Date(now).toISOString();
   let reminded = 0;
   for (const group of groups) {
     const { data: won, error: claimError } = await admin
       .from('game_players')
-      .update({ deliver_reminder_sent_at: new Date(now).toISOString() })
+      .update({ deliver_reminder_sent_at: stamp })
       .eq('game_id', game.id)
       .in('user_id', group.cardUserIds)
       .is('deliver_reminder_sent_at', null)
@@ -202,7 +204,7 @@ export async function runDeliveryReminderSweepForGame(
     if (wonIds.size === 0) continue;
 
     const recipient = rows.find((r) => r.user_id === group.recipientId)?.users;
-    await sendDeliveryReminder({
+    const delivered = await sendDeliveryReminder({
       player: {
         userId: group.recipientId,
         email: recipient?.email ?? null,
@@ -214,6 +216,24 @@ export async function runDeliveryReminderSweepForGame(
       othersCount: group.otherCardUserIds.filter((id) => wonIds.has(id)).length,
       cardUserIds: [...wonIds],
     });
+    if (!delivered) {
+      // The in-app row did not land, so nobody was reminded. Give the cards
+      // back (only this run's own stamp), and the next sweep tries again.
+      const { error: releaseError } = await admin
+        .from('game_players')
+        .update({ deliver_reminder_sent_at: null })
+        .eq('game_id', game.id)
+        .in('user_id', [...wonIds])
+        .eq('deliver_reminder_sent_at', stamp);
+      if (releaseError) {
+        console.error(`[${SWEEP_LOG_PREFIX}] reminder release failed`, {
+          gameId: game.id,
+          recipientId: group.recipientId,
+          error: releaseError,
+        });
+      }
+      continue;
+    }
     reminded += 1;
   }
   return { reminded };

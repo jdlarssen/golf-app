@@ -146,6 +146,26 @@ describe('notifyOrganizerIfAllDelivered', () => {
     expect(notifyMock).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['the row did not land', () => notifyMock.mockResolvedValueOnce({ shouldAlsoSendMail: true, inserted: false })],
+    ['notify threw', () => notifyMock.mockRejectedValueOnce(new Error('connection reset'))],
+  ])('the varsel failed (%s): the stamp is released, so a later delivery tries again', async (_label, arrange) => {
+    arrange();
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await notifyOrganizerIfAllDelivered(GAME_ID, PER, 'test');
+    err.mockRestore();
+
+    const [claim, release, ...extra] = claims();
+    expect(extra).toEqual([]);
+    const stamp = claim!.payload!.organizer_all_delivered_notified_at;
+    expect(release!.payload).toEqual({ organizer_all_delivered_notified_at: null });
+    expect(release!.filters).toEqual([
+      { op: 'eq', column: 'id', value: GAME_ID },
+      { op: 'eq', column: 'organizer_all_delivered_notified_at', value: stamp },
+    ]);
+    expect(mailMock).not.toHaveBeenCalled();
+  });
+
   it('the organiser made it ready: the stamp is taken, nothing is sent (O10)', async () => {
     await notifyOrganizerIfAllDelivered(GAME_ID, ORG, 'test');
     expect(claims()).toHaveLength(1);
@@ -260,6 +280,20 @@ describe('runStaleGameReminderForGame', () => {
     db.claimWins = false;
     await expect(run()).resolves.toEqual({ reminded: false });
     expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('the varsel did not land: the stamp is released, so the next sweep tries again', async () => {
+    db.lastScore = [{ updated_at: '2026-10-04T09:00:00.000Z' }];
+    notifyMock.mockResolvedValueOnce({ shouldAlsoSendMail: true, inserted: false });
+    await expect(run()).resolves.toEqual({ reminded: false });
+
+    const [, release, ...extra] = claims();
+    expect(extra).toEqual([]);
+    expect(release!.payload).toEqual({ organizer_stale_reminder_sent_at: null });
+    expect(release!.filters).toEqual([
+      { op: 'eq', column: 'id', value: GAME_ID },
+      { op: 'eq', column: 'organizer_stale_reminder_sent_at', value: new Date(NOW).toISOString() },
+    ]);
   });
 
   it('off-app organiser: the stale mail', async () => {

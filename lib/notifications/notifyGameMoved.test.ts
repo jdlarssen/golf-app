@@ -9,8 +9,8 @@ import {
 /**
  * Type A (#2480): the send behind «Flytt runden». Who is told has its own
  * suite (`lib/games/gameMovedRecipients.test.ts`); here: one varsel per
- * recipient with the payload the card reads, older unread moves marked read
- * first, mail only to those who are away, and a failure never leaves the
+ * recipient with the payload the card reads, older unread moves marked read once
+ * the new one landed, mail only to those who are away, and a failure never leaves the
  * function.
  */
 
@@ -20,6 +20,8 @@ const TEE_OFF = '2026-10-04T07:00:00.000Z';
 
 type Db = {
   game: Record<string, unknown> | null;
+  /** Older unread game_moved rows for this game. */
+  olderMoves: { id: string; user_id: string }[];
   roster: Record<string, unknown>[];
   rosterError: boolean;
   users: Record<string, unknown>[];
@@ -36,6 +38,10 @@ function respond(op: QueryOp): QueryResponse {
     return { data: db.users.filter((u) => ids.includes(u.id as string)) };
   }
   if (op.table === 'notifications' && op.kind === 'update') return { data: null };
+  if (op.table === 'notifications' && op.kind === 'select') {
+    const ids = op.filters.find((f) => f.op === 'in')?.value as string[];
+    return { data: db.olderMoves.filter((r) => ids.includes(r.user_id)) };
+  }
   throw new Error(`uventet spørring: ${op.kind} ${op.table}`);
 }
 
@@ -75,6 +81,10 @@ beforeEach(() => {
   fake.reset();
   db = {
     game: { name: 'Lørdagsrunden', created_by: ORG },
+    olderMoves: [
+      { id: 'gammel-marte', user_id: 'marte' },
+      { id: 'gammel-jonas', user_id: 'jonas' },
+    ],
     roster: [player(ORG), player('marte'), player('jonas'), player('gjest'), player('borte', TEE_OFF)],
     rosterError: false,
     users: [user(ORG, 'Jørgen Larssen'), user('marte', 'Marte Kirkerud'), user('jonas', 'Jonas Gahr', 'en')],
@@ -107,9 +117,9 @@ describe('notifyGameMoved', () => {
     ]);
   });
 
-  it('marks older unread moves of the same game read for the same players, before the new ones', async () => {
-    const updatedBeforeSend: boolean[] = [];
+  it('marks the older unread moves read after the new varsel landed, never the new row', async () => {
     const isUpdate = (op: QueryOp) => op.table === 'notifications' && op.kind === 'update';
+    const updatedBeforeSend: boolean[] = [];
     notifyMock.mockImplementation(async () => {
       updatedBeforeSend.push(fake.ops.some(isUpdate));
       return { shouldAlsoSendMail: false };
@@ -117,15 +127,38 @@ describe('notifyGameMoved', () => {
 
     await send();
 
-    const update = fake.ops.find(isUpdate);
-    expect(update?.filters).toEqual([
+    const read = fake.ops.find((op) => op.table === 'notifications' && op.kind === 'select');
+    expect(read?.filters).toEqual([
       { op: 'eq', column: 'kind', value: 'game_moved' },
       { op: 'eq', column: 'payload->>game_id', value: GAME_ID },
       { op: 'in', column: 'user_id', value: ['marte', 'jonas'] },
       { op: 'is', column: 'read_at', value: null },
     ]);
+    const update = fake.ops.find(isUpdate);
+    expect(update?.filters).toEqual([
+      { op: 'in', column: 'id', value: ['gammel-marte', 'gammel-jonas'] },
+      { op: 'is', column: 'read_at', value: null },
+    ]);
     expect(Object.keys(update?.payload ?? {})).toEqual(['read_at']);
-    expect(updatedBeforeSend).toEqual([true, true]);
+    expect(updatedBeforeSend).toEqual([false, false]);
+  });
+
+  it('a player whose new varsel failed keeps the old move unread, and is not counted as told', async () => {
+    notifyMock.mockImplementation(async ({ userId }) =>
+      userId === 'marte'
+        ? { shouldAlsoSendMail: true, inserted: false }
+        : { shouldAlsoSendMail: false, inserted: true },
+    );
+
+    const result = await send();
+
+    const update = fake.ops.find((op) => op.table === 'notifications' && op.kind === 'update');
+    expect(update?.filters).toEqual([
+      { op: 'in', column: 'id', value: ['gammel-jonas'] },
+      { op: 'is', column: 'read_at', value: null },
+    ]);
+    expect(result.notified).toEqual([{ userId: 'jonas', shortName: 'Jonas' }]);
+    expect(mailMock).not.toHaveBeenCalled();
   });
 
   it('mails only the players notify says are away, in their own language', async () => {

@@ -87,9 +87,10 @@ export async function notifyOrganizerIfAllDelivered(
     if (!allDelivered(rosterRes.data ?? [], game.require_peer_approval)) return;
     const organizerId = game.created_by!;
 
+    const stamp = new Date().toISOString();
     const { data: won, error: claimError } = await admin
       .from('games')
-      .update({ organizer_all_delivered_notified_at: new Date().toISOString() })
+      .update({ organizer_all_delivered_notified_at: stamp })
       .eq('id', gameId)
       .is('organizer_all_delivered_notified_at', null)
       .eq('status', 'active')
@@ -104,12 +105,15 @@ export async function notifyOrganizerIfAllDelivered(
     if (!won || won.length === 0) return;
     if (actorId === organizerId) return;
 
-    await sendOrganizerNotice(admin, {
+    const sent = await sendOrganizerNotice(admin, {
       kind: 'all_scorecards_delivered',
       organizerId,
       game: { id: gameId, name: game.name },
       logPrefix,
     });
+    if (!sent) {
+      await releaseStamp(admin, gameId, 'organizer_all_delivered_notified_at', stamp, logPrefix);
+    }
   } catch (err) {
     console.error(`[${logPrefix}] all_scorecards_delivered failed`, { gameId, err });
   }
@@ -175,9 +179,10 @@ export async function runStaleGameReminderForGame(
   });
   if (!stale) return { reminded: false };
 
+  const stamp = new Date(now).toISOString();
   const { data: won, error: claimError } = await admin
     .from('games')
-    .update({ organizer_stale_reminder_sent_at: new Date(now).toISOString() })
+    .update({ organizer_stale_reminder_sent_at: stamp })
     .eq('id', game.id)
     .is('organizer_stale_reminder_sent_at', null)
     .eq('status', 'active')
@@ -185,13 +190,41 @@ export async function runStaleGameReminderForGame(
   if (claimError) throw new Error(`${STALE_LOG_PREFIX} claim: ${claimError.message}`);
   if (!won || won.length === 0) return { reminded: false };
 
-  await sendOrganizerNotice(admin, {
+  const sent = await sendOrganizerNotice(admin, {
     kind: 'game_stale_reminder',
     organizerId: game.created_by,
     game: { id: game.id, name: game.name },
     logPrefix: STALE_LOG_PREFIX,
   });
+  if (!sent) {
+    await releaseStamp(admin, game.id, 'organizer_stale_reminder_sent_at', stamp, STALE_LOG_PREFIX);
+    return { reminded: false };
+  }
   return { reminded: true };
+}
+
+/**
+ * Gives a claimed stamp back when the varsel did not land, so the next trigger
+ * (a later delivery, or the next sweep) tries again. Only this run's own stamp
+ * is cleared. A failed release is logged, never thrown.
+ */
+async function releaseStamp(
+  admin: AdminClient,
+  gameId: string,
+  column: 'organizer_all_delivered_notified_at' | 'organizer_stale_reminder_sent_at',
+  stamp: string,
+  logPrefix: string,
+): Promise<void> {
+  const { error } = await admin
+    .from('games')
+    .update(
+      column === 'organizer_all_delivered_notified_at'
+        ? { organizer_all_delivered_notified_at: null }
+        : { organizer_stale_reminder_sent_at: null },
+    )
+    .eq('id', gameId)
+    .eq(column, stamp);
+  if (error) console.error(`[${logPrefix}] ${column} release failed`, { gameId, error });
 }
 
 /**
@@ -199,6 +232,8 @@ export async function runStaleGameReminderForGame(
  * organiser is off-app. Name and locale come from `users` with the admin
  * client, the address from `getPrivateUserFields`. The varsel never waits on
  * the `users` row. Best-effort: never throws.
+ *
+ * Answers true when the varsel landed. The mail does not change the answer.
  */
 async function sendOrganizerNotice(
   admin: AdminClient,
@@ -208,7 +243,7 @@ async function sendOrganizerNotice(
     game: { id: string; name: string };
     logPrefix: string;
   },
-): Promise<void> {
+): Promise<boolean> {
   const { kind, organizerId, game, logPrefix } = opts;
   let shouldMail = false;
   try {
@@ -217,12 +252,13 @@ async function sendOrganizerNotice(
       kind,
       payload: { game_id: game.id, game_name: game.name },
     });
+    if (r.inserted === false) return false;
     shouldMail = r.shouldAlsoSendMail;
   } catch (err) {
     console.error(`[${logPrefix}] ${kind} notify failed`, { gameId: game.id, err });
-    return;
+    return false;
   }
-  if (!shouldMail) return;
+  if (!shouldMail) return true;
 
   try {
     const [userRes, privateFields] = await Promise.all([
@@ -234,7 +270,7 @@ async function sendOrganizerNotice(
       getPrivateUserFields([organizerId]),
     ]);
     const email = privateFields.get(organizerId)?.email;
-    if (!email) return;
+    if (!email) return true;
     await sendOrganizerGameNotice({
       to: email,
       recipientFirstName: firstName(userRes.data?.name ?? null),
@@ -246,4 +282,5 @@ async function sendOrganizerNotice(
   } catch (err) {
     console.error(`[${logPrefix}] ${kind} mail failed`, { gameId: game.id, err });
   }
+  return true;
 }

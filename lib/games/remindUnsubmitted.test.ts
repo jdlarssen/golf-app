@@ -141,6 +141,9 @@ function writes() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // clearAllMocks keeps an implementation a test set; a reminder one test made
+  // fail must not fail the next test's sends.
+  reminderMock.mockReset();
   fake.reset();
   db = {
     game: {
@@ -371,6 +374,22 @@ describe('sendReminders — stempling', () => {
     expect(stamp.filters).toEqual([
       { op: 'eq', column: 'game_id', value: GAME_ID },
       { op: 'in', column: 'user_id', value: ['a', 'b'] },
+    ]);
+  });
+
+  it('stempler ikke et kort der påminnelsen ikke kom inn, så sveipen kan prøve igjen', async () => {
+    db.players = [player('a'), player('b')];
+    db.scores = [...holes('a', 18), ...holes('b', 18)];
+    db.stamp = { data: [{ user_id: 'a' }] };
+    reminderMock.mockImplementation(async (opts) => opts.player.userId !== 'b');
+
+    await sendReminders(GAME_ID);
+
+    const [stamp, ...extra] = writes();
+    expect(extra).toEqual([]);
+    expect(stamp.filters).toEqual([
+      { op: 'eq', column: 'game_id', value: GAME_ID },
+      { op: 'in', column: 'user_id', value: ['a'] },
     ]);
   });
 

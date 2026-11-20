@@ -71,9 +71,10 @@ export async function runEveningNoticeForGame(
 
   if (!isEveningNoticeDue(game, roster, now)) return { notified: false };
 
+  const stamp = new Date(now).toISOString();
   const { data: won, error: claimError } = await admin
     .from('games')
-    .update({ organizer_evening_notice_sent_at: new Date(now).toISOString() })
+    .update({ organizer_evening_notice_sent_at: stamp })
     .eq('id', game.id)
     .is('organizer_evening_notice_sent_at', null)
     .eq('status', 'scheduled')
@@ -96,29 +97,45 @@ export async function runEveningNoticeForGame(
     ...summarizeUnanswered(names),
   };
 
-  await sendEveningStatus(admin, organizerId, game, payload);
-  return { notified: true };
+  if (await sendEveningStatus(admin, organizerId, game, payload)) return { notified: true };
+
+  // The varsel did not land: give the stamp back (only this run's own), so the
+  // next sweep tries again while the evening lasts.
+  const { error: releaseError } = await admin
+    .from('games')
+    .update({ organizer_evening_notice_sent_at: null })
+    .eq('id', game.id)
+    .eq('organizer_evening_notice_sent_at', stamp);
+  if (releaseError) {
+    console.error(`[${LOG_PREFIX}] release failed`, { gameId: game.id, error: releaseError });
+  }
+  return { notified: false };
 }
 
 /**
  * The varsel (in-app, push when away), then the mail when `notify` says the
- * organiser is off-app. Best-effort: never throws.
+ * organiser is off-app. Best-effort: never throws. Answers true when the
+ * varsel landed; the mail does not change the answer.
  */
 async function sendEveningStatus(
   admin: AdminClient,
   organizerId: string,
   game: EveningSweepGame,
   payload: NotificationPayload<'organizer_evening_status'>,
-): Promise<void> {
+): Promise<boolean> {
   let shouldMail = false;
   try {
     const r = await notify({ userId: organizerId, kind: 'organizer_evening_status', payload });
+    if (r.inserted === false) {
+      console.error(`[${LOG_PREFIX}] varsel did not land`, { gameId: game.id });
+      return false;
+    }
     shouldMail = r.shouldAlsoSendMail;
   } catch (err) {
     console.error(`[${LOG_PREFIX}] notify failed`, { gameId: game.id, err });
-    return;
+    return false;
   }
-  if (!shouldMail) return;
+  if (!shouldMail) return true;
 
   try {
     const [userRes, privateFields] = await Promise.all([
@@ -130,7 +147,7 @@ async function sendEveningStatus(
       getPrivateUserFields([organizerId]),
     ]);
     const email = privateFields.get(organizerId)?.email;
-    if (!email) return;
+    if (!email) return true;
     await sendOrganizerGameNotice({
       to: email,
       recipientFirstName: firstName(userRes.data?.name ?? null),
@@ -143,4 +160,5 @@ async function sendEveningStatus(
   } catch (err) {
     console.error(`[${LOG_PREFIX}] mail failed`, { gameId: game.id, err });
   }
+  return true;
 }
