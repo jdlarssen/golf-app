@@ -28,6 +28,15 @@ Scoring-modulene er **pure logic** uten side-effects. Tester her er **Type A —
 
 Ingen quick-fixes. Aldri. Bruker har eksplisitt sagt at scoring-feil koster troverdighet og krever full disiplin.
 
+## `rulebook/`: regelbokas eksempler (#2927)
+
+`lib/scoring/rulebook/` kjører regelbøkenes egne eksempler (NGFs handicapregler, R&A, golfreglene) gjennom de ekte funksjonene og motorene. Hver fil har kildene øverst, og hver test nevner regel og side. Funnene står i `docs/regelbok-gjennomgang.md`, nummerert F1, F2 osv.
+
+- **Kjent avvik** er en `it.fails('F<n>: …')` i en `describe('Kjent avvik')`-blokk. Testen påstår regelens tall og feiler i dag.
+- **Rettingen** av F<n> gjør testen rød, fordi den begynner å passere. Samme PR gjør den om til `it` og oppdaterer raden i funnlista.
+- Aldri `it.skip` eller `it.todo` for et avvik, og aldri en test som låser motorens feil tall som riktig.
+- F1 ligger i kallestedene utenfor `lib/scoring`. Testene leser derfor kildeteksten der, etter mønsteret i `lib/names/nameRuleSites.test.ts`.
+
 ## Hvis du ikke er sikker
 
 Hvis du tror du må endre `lib/scoring/` uten test først — stopp og spør hovedchat. Det er sannsynligvis et signal om at logikken ikke hører hjemme her, eller at testen burde vært skrevet på et høyere nivå.
