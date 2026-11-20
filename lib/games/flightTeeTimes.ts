@@ -61,6 +61,32 @@ export function hasStartGroups(gameMode: GameMode): boolean {
   return !ONE_GROUP_MODES.has(gameMode);
 }
 
+/** The links that make a round part of something bigger. */
+export type RoundLinks = {
+  tournamentId?: string | null;
+  leagueRoundId?: string | null;
+  sourceGameId?: string | null;
+};
+
+/**
+ * True for a standalone round: not a cup match, not a league round, not a
+ * derived game. Only such a round stores an interval; the cup keeps its own
+ * fixed 10 minutes, and league rounds and derived games follow their source.
+ */
+export function isStandaloneRound(links: RoundLinks): boolean {
+  return !links.tournamentId && !links.leagueRoundId && !links.sourceGameId;
+}
+
+/**
+ * Whether a round may have start times per flight: a standalone round
+ * (`isStandaloneRound`) in a format with start groups (`hasStartGroups`). The
+ * one home for the wizard, «Rediger spill», the Startlista and
+ * `setTeeInterval`; the payload applies the same two parts.
+ */
+export function startTimesAllowed(gameMode: GameMode, links: RoundLinks): boolean {
+  return isStandaloneRound(links) && hasStartGroups(gameMode);
+}
+
 /**
  * The start group a player goes out with: everyone who tees off together, up
  * to four. Not always `flight_number`, which is the side in matchplay and the

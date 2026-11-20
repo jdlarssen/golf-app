@@ -19,7 +19,7 @@ import {
 import { hasStartlista } from '@/lib/games/flightScope';
 import { expectedTeamSize } from '@/lib/games/teamScope';
 import { buildStartlist } from '@/lib/games/startlist';
-import { hasStartGroups } from '@/lib/games/flightTeeTimes';
+import { startTimesAllowed } from '@/lib/games/flightTeeTimes';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { playerName } from '@/lib/names/playerName';
 import { firstName, sharesFirstName } from '@/lib/firstName';
@@ -199,8 +199,12 @@ export default async function StartlistaPage({
  * rule as `setTeeInterval`, a standalone round in a format with start groups.
  */
 function startlistaStartTimes(game: GameRow): StartlistaStartTimes | null {
-  if (game.tournament_id || game.league_round_id || game.source_game_id) return null;
-  if (!hasStartGroups(game.game_mode)) return null;
+  const links = {
+    tournamentId: game.tournament_id,
+    leagueRoundId: game.league_round_id,
+    sourceGameId: game.source_game_id,
+  };
+  if (!startTimesAllowed(game.game_mode, links)) return null;
   return {
     gameMode: game.game_mode,
     teamSize: expectedTeamSize(game.mode_config),

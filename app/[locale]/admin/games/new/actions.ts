@@ -21,6 +21,7 @@ import { isValidActiveGameMode } from '@/lib/formats/validateGameMode';
 import { resolveGameClubId } from '@/lib/clubs/gameClubId';
 import { isClubTournament } from '@/lib/games/registration';
 import { canRepeatWeekly } from '@/lib/games/weeklyRepeat';
+import { isStandaloneRound } from '@/lib/games/flightTeeTimes';
 import { guestOnlyRoster } from '@/lib/games/guestOnlyRoster';
 import { stampNewGameModeConfig } from '@/lib/games/modeConfigEdit';
 import { parseInviteEmailList } from '@/lib/games/inviteEmail';
@@ -122,7 +123,7 @@ async function createGameInternal(
   });
   // #2451: start times per flight for a standalone round, never a cup match.
   // The raw cup id again: it can only make the server stricter.
-  const teeIntervalAllowed = rawTournamentId === '';
+  const teeIntervalAllowed = isStandaloneRound({ tournamentId: rawTournamentId });
   const payload = buildGameInsertPayload(formData, mode, {
     clubScoped,
     repeatAllowed,

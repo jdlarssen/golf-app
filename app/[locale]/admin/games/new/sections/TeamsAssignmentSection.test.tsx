@@ -422,12 +422,12 @@ describe('TeamsAssignmentSection — fornavn på brikkene (#2456)', () => {
   });
 });
 
-// Type C (#2451), one render: the start times part shows a row per start
-// group and the three choices, 10 pressed, and a tap moves the choice. The
+// Type C (#2451): the start times part shows a row per start group and the
+// three choices, 10 pressed, and a tap moves the choice; matchplay has none. The
 // times themselves are the rule's (`flightTeeTimes.test.ts`) and the hook's
 // (`useGameFormState.test.ts`); matchplay and small rounds have no part.
 describe('TeamsAssignmentSection — starttider per flight (#2451)', () => {
-  it('best ball med 12: én rad per flight og tre valg; et trykk flytter valget; fourball har ingen del', () => {
+  it('best ball med 12: én rad per flight og tre valg; et trykk flytter valget', () => {
     setup('best_ball', 2, 12);
     act(() => latest.drawRandomTeams());
     act(() => latest.setScheduledTeeOffAt('2026-11-21T09:00'));

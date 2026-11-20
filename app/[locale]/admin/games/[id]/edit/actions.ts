@@ -41,6 +41,7 @@ import {
 import { isTeeOffMove } from '@/lib/games/moveGameChoices';
 import { isClubTournament } from '@/lib/games/registration';
 import { canRepeatWeekly } from '@/lib/games/weeklyRepeat';
+import { isStandaloneRound } from '@/lib/games/flightTeeTimes';
 import { guestOnlyRoster } from '@/lib/games/guestOnlyRoster';
 import { resolveGameClubId } from '@/lib/clubs/gameClubId';
 import { parseInviteEmailList } from '@/lib/games/inviteEmail';
@@ -187,8 +188,11 @@ async function updateGameInternal(
   // #2451: start times per flight only for a standalone round, judged from
   // the stored links like repeatAllowed: a cup match, a league round and a
   // derived game keep null.
-  const teeIntervalAllowed =
-    !existing.tournament_id && !existing.league_round_id && !existing.source_game_id;
+  const teeIntervalAllowed = isStandaloneRound({
+    tournamentId: existing.tournament_id,
+    leagueRoundId: existing.league_round_id,
+    sourceGameId: existing.source_game_id,
+  });
   const payload = buildGameInsertPayload(formData, payloadMode, {
     clubScoped,
     repeatAllowed,
