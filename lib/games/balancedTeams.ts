@@ -10,8 +10,10 @@
  *
  * A player with no index (`hcpIndex: null` — an invitee who has not finished
  * the profile and still carries the 54.0 default) is dealt last, to the team
- * with the lowest value that has room, and is left out of every sum, average
- * and spread.
+ * with the lowest sum (or average) of its counted players that has room. A
+ * team with such a player has no value of its own, so the cards show «–» and
+ * the spread leaves it out (the orchestrator's choice after review, #2478):
+ * one player's sum against two players' would compare nothing.
  *
  * Pure: no React, no `PlayerOption`. The hook and the team cards read it.
  */
@@ -21,9 +23,9 @@ export type BalancePlayer = { id: string; name: string; hcpIndex: number | null 
 /**
  * The numbers the team cards and the line under the buttons show. `values[i]`
  * is team i + 1's sum (`mode: 'sum'`, the teams are equal in size) or average
- * (`'average'`), over its players with an index; `null` when it has none.
+ * (`'average'`); `null` when the team has no players or one without an index.
  * `spread` is the largest value minus the smallest among the teams that have
- * one, unrounded; `null` when no team has one.
+ * one; `null` when fewer than two teams have one.
  */
 export type TeamHcp = {
   values: (number | null)[];
@@ -54,18 +56,23 @@ function tidy(value: number): number {
   return Math.round(value * 1e9) / 1e9;
 }
 
+/** Sum or average over the roster's players with an index; `null` when none has one. */
+function countedValue(roster: BalancePlayer[], mode: TeamHcp['mode']): number | null {
+  const counted = roster.filter((p) => p.hcpIndex !== null);
+  if (counted.length === 0) return null;
+  const sum = counted.reduce((total, p) => total + (p.hcpIndex ?? 0), 0);
+  return tidy(mode === 'sum' ? sum : sum / counted.length);
+}
+
 function hcpValues(
   rosters: BalancePlayer[][],
   mode: TeamHcp['mode'],
 ): Pick<TeamHcp, 'values' | 'spread'> {
-  const values = rosters.map((roster) => {
-    const counted = roster.filter((p) => p.hcpIndex !== null);
-    if (counted.length === 0) return null;
-    const sum = counted.reduce((total, p) => total + (p.hcpIndex ?? 0), 0);
-    return tidy(mode === 'sum' ? sum : sum / counted.length);
-  });
+  const values = rosters.map((roster) =>
+    roster.every((p) => p.hcpIndex !== null) ? countedValue(roster, mode) : null,
+  );
   const present = values.filter((v): v is number => v !== null);
-  const spread = present.length === 0 ? null : tidy(Math.max(...present) - Math.min(...present));
+  const spread = present.length < 2 ? null : tidy(Math.max(...present) - Math.min(...present));
   return { values, spread };
 }
 
@@ -99,7 +106,7 @@ export function balancedTeams(
   const mode: TeamHcp['mode'] = sizes.every((size) => size === sizes[0]) ? 'sum' : 'average';
   for (const player of players) {
     if (player.hcpIndex !== null) continue;
-    const { values } = hcpValues(rosters, mode);
+    const values = rosters.map((roster) => countedValue(roster, mode));
     let lowest = -1;
     for (let team = 0; team < rosters.length; team++) {
       if (!hasRoom(team)) continue;

@@ -228,13 +228,14 @@ export function teamsAssignmentHasContent(state: GameFormState): boolean {
 }
 
 /**
- * #2478: the line under the buttons, once two teams (sides) have a counted
- * player: why the teams look as they do (only while they are what «Jevne lag»
- * gave), how far apart the strongest and the weakest are, and how many players
- * were left out. Team matchplay is two sides of two: while one side is short
- * its cards show averages, and «samlet handicap mellom sidene» would not fit,
- * so the line waits for 2 + 2. Mounted at all times so a screen reader hears
- * it appear; empty, it has no height.
+ * #2478: the line under the buttons once a team has players: why the teams
+ * look as they do (only while they are what «Jevne lag» gave and everyone on
+ * the cards is counted), how far apart the strongest and the weakest fully
+ * counted teams are (two or more of them), and how many players were left out.
+ * Team matchplay is two sides of two: while one side is short its cards show
+ * averages, and «samlet handicap mellom sidene» would not fit, so that part
+ * waits for 2 + 2. Mounted at all times so a screen reader hears it appear;
+ * empty, it has no height.
  */
 function BalanceLine({
   teamHcp,
@@ -249,28 +250,28 @@ function BalanceLine({
 }) {
   const t = useTranslations('wizard.sections.teams');
   const locale = useLocale() as AppLocale;
-  const countedTeams = teamHcp.values.filter((v) => v !== null).length;
-  const show =
-    countedTeams >= 2 && teamHcp.spread !== null && (!sides || teamHcp.mode === 'sum');
   const spreadKey = sides
     ? 'balanceSpreadSides'
     : teamHcp.mode === 'sum'
       ? 'balanceSpreadSum'
       : 'balanceSpreadAverage';
-  const text = show
-    ? [
-        explain ? t(sides ? 'balanceExplainSides' : 'balanceExplain') : null,
-        t(spreadKey, {
-          spread: formatNumber(teamHcp.spread ?? 0, locale, {
+  const spreadText =
+    teamHcp.spread !== null && (!sides || teamHcp.mode === 'sum')
+      ? t(spreadKey, {
+          spread: formatNumber(teamHcp.spread, locale, {
             minimumFractionDigits: 1,
             maximumFractionDigits: 1,
           }),
-        }),
-        uncountedCount > 0 ? t('balanceUncounted', { count: uncountedCount }) : null,
-      ]
-        .filter(Boolean)
-        .join(' ')
-    : null;
+        })
+      : null;
+  const hasTeams = teamHcp.values.length > 0;
+  const text = [
+    explain && spreadText ? t(sides ? 'balanceExplainSides' : 'balanceExplain') : null,
+    spreadText,
+    hasTeams && uncountedCount > 0 ? t('balanceUncounted', { count: uncountedCount }) : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
   return (
     <p
       data-testid="balance-line"
@@ -458,9 +459,9 @@ export function TeamsAssignmentSection({
    * quiet empty rows for the rest. A card with no room, or the picked player's
    * own, has the ordinary frame and no «Flytt hit».
    *
-   * #2478: a team card (`withHcp`) shows each player's index and, with at least
-   * one counted player, the team's sum or average under a divider. Singles
-   * matchplay's one-player sides do not.
+   * #2478: a team card (`withHcp`) shows each player's index and, once it has
+   * players, the team's sum or average under a divider, or «–» while one of
+   * them has no index. Singles matchplay's one-player sides do not.
    */
   const renderCard = (team: number, slots: number, withHcp = false) => {
     const members = playersByTeam[team]
@@ -469,7 +470,7 @@ export function TeamsAssignmentSection({
     const hasRoom = members.length < slots;
     const isTarget = selectedPlayer !== undefined && selectedTeam !== team && hasRoom;
     const label = cardsAreSides ? t('sideTeamLabel', { team }) : t('teamLabel', { team });
-    const hcpValue = withHcp ? (teamHcp.values[team - 1] ?? null) : null;
+    const hcpValue = teamHcp.values[team - 1] ?? null;
     return (
       <SlotCard
         key={team}
@@ -524,14 +525,14 @@ export function TeamsAssignmentSection({
             />
           ),
         )}
-        {hcpValue !== null && (
+        {withHcp && members.length > 0 && (
           <div
             data-testid="team-hcp"
             className="flex justify-between gap-2 border-t border-row-divider-warm pt-1.5 font-sans text-xs leading-[normal] text-muted"
           >
             <span>{t(teamHcp.mode === 'sum' ? 'teamHcpSum' : 'teamHcpAverage')}</span>
             <span className="font-semibold tabular-nums text-text">
-              {formatHcpDisplay(hcpValue, locale)}
+              {hcpValue === null ? '–' : formatHcpDisplay(hcpValue, locale)}
             </span>
           </div>
         )}
@@ -732,7 +733,12 @@ export function TeamsAssignmentSection({
             <BalanceLine
               teamHcp={teamHcp}
               sides={isTeamMatchplay}
-              explain={isBalancedLayout}
+              // Not while someone on the cards is uncounted: the deal cannot
+              // say who the weakest is.
+              explain={
+                isBalancedLayout &&
+                !teamHcp.uncounted.some((pid) => teamByPlayer[pid] !== undefined)
+              }
               uncountedCount={
                 teamHcp.uncounted.filter((pid) => playerById(pid)?.pending).length
               }

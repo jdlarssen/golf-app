@@ -140,8 +140,9 @@ describe('balancedTeams — den beste med den svakeste (#2478)', () => {
     ];
     const result = balancedTeams(all, [2, 2]);
     expect(result.teamOf).toEqual({ a: 1, b: 2, u1: 1, u2: 2 });
-    expect(result.values).toEqual([5, 25]);
-    expect(result.spread).toBe(20);
+    // Both teams have a player without an index, so neither has a sum.
+    expect(result.values).toEqual([null, null]);
+    expect(result.spread).toBeNull();
     expect(result.uncounted).toEqual(['u1', 'u2']);
   });
 
@@ -160,7 +161,10 @@ describe('balancedTeams — den beste med den svakeste (#2478)', () => {
     expect(teamOf).toMatchObject({ u1: 1, u2: 2, u3: 3 });
   });
 
-  it('snitt og sum regnes uten spillerne uten indeks', () => {
+  // Orchestrator's choice after review (#2478): a team with a player without an
+  // index has no sum and no average, so the cards say «–» and the spread
+  // leaves it out. The deal itself is unchanged.
+  it('et lag med en spiller uten indeks har ingen sum eller snitt', () => {
     const all: BalancePlayer[] = [
       { id: 'a', name: 'A', hcpIndex: 10 },
       { id: 'b', name: 'B', hcpIndex: 20 },
@@ -169,17 +173,33 @@ describe('balancedTeams — den beste med den svakeste (#2478)', () => {
       { id: 'd', name: 'D', hcpIndex: 40 },
     ];
     // Lag à 3 og 2: 10 → 1, 20 → 2, så baklengs 30 → 2 og 40 → 1. U tar plassen
-    // som er igjen på lag 1, og snittet der er (10 + 40) / 2, ikke / 3.
+    // som er igjen på lag 1, så lag 1 har ingen verdi. Ett fullt regnet lag gir
+    // ingen forskjell å vise.
     const result = balancedTeams(all, [3, 2]);
     expect(result.mode).toBe('average');
     expect(result.teamOf).toEqual({ a: 1, d: 1, u: 1, b: 2, c: 2 });
-    expect(result.values).toEqual([25, 25]);
-    expect(result.spread).toBe(0);
+    expect(result.values).toEqual([null, 25]);
+    expect(result.spread).toBeNull();
 
     const equal = balancedTeams(all.slice(0, 4), [2, 2]);
-    // 10 → 1, 20 → 2, 30 → 2; U fyller lag 1, og summen der er bare 10.
+    // 10 → 1, 20 → 2, 30 → 2; U fyller lag 1.
     expect(equal.mode).toBe('sum');
-    expect(equal.values).toEqual([10, 50]);
+    expect(equal.values).toEqual([null, 50]);
+  });
+
+  it('best ball med 8 der én venter: forskjellen regnes mellom de tre fullt regnede lagene', () => {
+    const seven = ARTBOARD.filter((p) => p.id !== 'anders');
+    const all = [...seven, { id: 'venter', name: 'Venter', hcpIndex: null }];
+    const result = balancedTeams(all, [2, 2, 2, 2]);
+    // 4,2 → 1, 9,4 → 2, 12,1 → 3, 15,8 → 4, så baklengs 18,4 → 4, 21,0 → 3,
+    // 24,3 → 2. Den som venter, tar plassen på lag 1.
+    expect(result.teamOf).toEqual({
+      ida: 1, venter: 1, jonas: 2, tone: 2, sondre: 3, eirik: 3, kari: 4, marte: 4,
+    });
+    expect(result.values.map((v) => (v === null ? null : Number(v.toFixed(1))))).toEqual([
+      null, 33.7, 33.1, 34.2,
+    ]);
+    expect(result.spread).toBeCloseTo(34.2 - 33.1, 9);
   });
 
   it('alle uten indeks: ingen verdier og spread null', () => {
@@ -246,6 +266,15 @@ describe('teamHcpValues — tallene for et vilkårlig oppsett (#2478)', () => {
     const result = teamHcpValues({ b: 1, e: 1, h: 1, j: 1, c: 2, d: 2, i: 2 }, all);
     expect(result.values).toEqual([5.55, 4]);
     expect(result.spread).toBe(1.55);
+  });
+
+  it('færre enn to fullt regnede lag gir ingen forskjell', () => {
+    const all = players([10, null, 20]);
+    expect(teamHcpValues({ p1: 1 }, all).spread).toBeNull();
+    expect(teamHcpValues({ p1: 1, p2: 2, p3: 2 }, all)).toMatchObject({
+      values: [10, null],
+      spread: null,
+    });
   });
 
   it('lag uten spillere gir null, og spillere uten lag regnes ikke', () => {
