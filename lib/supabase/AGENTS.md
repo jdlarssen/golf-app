@@ -134,4 +134,5 @@ Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
 - En eier-rad slettes bare av en eier eller global admin (`is_group_owner`). TS-speilet er `lib/clubs/memberRemoval.ts`; de to endres sammen.
 - `groups`: bare global admin (eller tjenesteklienten bak `requireAdmin`) oppretter klubber og setter `member_cap` og `valid_until`. Triggeren `guard_groups_locked_fields` låser dem, og `short_id`, `created_by`, `created_at`, `id`, for alle andre.
 - En klubb med ligaer eller cuper kan ikke slettes (`ON DELETE RESTRICT` på `leagues.group_id` og `tournaments.group_id`). En liga eller cup uten klubb har et bredere publikum, så slett eller flytt dem først.
+- Klubben til en liga eller cup (`group_id`) kan ikke endres av en innlogget klient når den først er satt. Triggeren `guard_club_scope_locked` står på begge tabellene; global admin og tjenesteklienten slipper gjennom.
 - Fasit: `supabase/tests/club_roles_and_terms_guard_test.sql`.

@@ -5,8 +5,8 @@
 --   1. Only a club owner (or a global admin) gives or removes the owner role.
 --   2. A club's agreement terms (member_cap, valid_until) are set by a global
 --      admin only. The club's identity columns are fixed.
---   3. A club that still has leagues or cups cannot be deleted, so they never
---      lose their club scope.
+--   3. A league or a cup keeps its club: a club that still has leagues or cups
+--      cannot be deleted, and only a global admin moves one out of its club.
 --
 -- Members are written by the SECURITY DEFINER RPCs only (admin_create_club,
 -- add_club_member_by_email, decide_join_request, accept_club_invitations,
@@ -15,7 +15,8 @@
 -- Same move as 0078, which dropped the client UPDATE policy.
 --
 -- Read from staging 2026-11-20: no app code inserts into group_members or
--- groups with a signed-in client, and none updates or deletes a groups row.
+-- groups with a signed-in client, none updates or deletes a groups row, and
+-- none changes group_id on a league or a cup after it is created.
 -- The service role (admin pages) and global admins keep full access.
 --
 -- Backward compatible with the deployed code. Safe before or after the code
@@ -125,3 +126,42 @@ alter table public.tournaments
   drop constraint tournaments_group_id_fkey,
   add constraint tournaments_group_id_fkey
     foreign key (group_id) references public.groups(id) on delete restrict;
+
+-- The club of a league or a cup is fixed once set. The UPDATE policies decide
+-- who may edit the row; this trigger keeps group_id itself out of reach of a
+-- signed-in client. A standalone league or cup (group_id NULL) is not affected.
+create or replace function public.guard_club_scope_locked()
+  returns trigger
+  language plpgsql
+  security definer
+  set search_path = ''
+as $$
+  begin
+    -- Service role (no JWT) and global admins may move a league or a cup.
+    if auth.uid() is null or public.is_admin() then
+      return new;
+    end if;
+
+    if old.group_id is not null and new.group_id is distinct from old.group_id then
+      raise exception
+        'group_id of a club league or a club cup is changed by an administrator'
+        using errcode = 'insufficient_privilege';
+    end if;
+
+    return new;
+  end;
+$$;
+
+revoke all on function public.guard_club_scope_locked() from public;
+revoke execute on function public.guard_club_scope_locked() from anon, authenticated;
+grant execute on function public.guard_club_scope_locked() to service_role;
+
+drop trigger if exists guard_leagues_group_id on public.leagues;
+create trigger guard_leagues_group_id
+  before update on public.leagues
+  for each row execute function public.guard_club_scope_locked();
+
+drop trigger if exists guard_tournaments_group_id on public.tournaments;
+create trigger guard_tournaments_group_id
+  before update on public.tournaments
+  for each row execute function public.guard_club_scope_locked();
