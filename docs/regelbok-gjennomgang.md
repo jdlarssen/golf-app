@@ -89,3 +89,49 @@ Formater: stableford (solo og lag), modified stableford, solo slagspill, best ba
 | F7 | `lib/games/formatSetupDefaults.test.ts` (standardverdien ligger i veiviseren, utenfor `lib/scoring`) |
 
 F1 ligger utenfor `lib/scoring`. Testene leser derfor de to kallestedene som tekst. De blir røde når kallet ikke lenger sender det frosne tallet. En retting som i stedet endrer tallet før kallet, eller det kolonnen lagrer, må snu testene for hånd.
+
+## Runde 2: matchspill
+
+Formater: singles, four-ball, foursomes, greensome, chapman, gruesome og Round Robin, også på cupens splittede dag (ni hull). Testene står i `lib/scoring/rulebook/matchplay.rulebook.test.ts`. F1 (differensialen) gjelder også singles, som bruker den generelle andelen.
+
+Golfreglene 3.2c(2) sier at slagene gis per hull, og at laveste netto vinner hullet. 23.2b(2) sier at sidens laveste score teller i four-ball. Begge stemmer med motorene, og begge er testet.
+
+### Avvik
+
+| Nr | Format | Motoren gjør | Regelen sier | Regneeksempel | Hvor ofte og hvor mye | Forslag |
+|---|---|---|---|---|---|---|
+| F15 | Singles, four-ball og Round Robin (hypotese 7). | Hver spiller får sine egne slag etter hullindeks. Singles gir hele banehandicapet (`lib/scoring/modes/singlesMatchplay.ts:340-341`). Four-ball og Round Robin gir hver spiller andelen av sitt eget banehandicap (`lib/scoring/modes/fourballMatchplay.ts:108` og `:171`, `lib/scoring/modes/roundRobin.ts:308` og `:352`). | NGF vedlegg C, s. 76: «spiller den spilleren med det laveste spillehandicapet med null handicapslag relativt til den andre spilleren/spillerne. Den andre spilleren/spillerne får differansen mellom deres eget spillehandicap og spillehandicapet til spilleren med det laveste spillehandicapet.» NGF s. 8 (endringer 2024): i lagmatcher brukes prosentandelen på differansen. Eksemplene C/2 og C/3, s. 76–78. | C/2 eksempel 1: A har banehandicap 10 og B har 18. Regelen gir A 0 slag og B ett slag på hullindeks 1–8. Appen gir A ett slag på hullindeks 1–10 og B ett slag på alle 18 hull. B får fortsatt 8 slag mer, men på hullindeks 11–18 i stedet for 1–8. Four-ball ved 90 % (C/2 eksempel 2): regelen gir 0, 7, 15 og 26 slag, og appen gir 9, 16, 24 og 35. I C/3 gir A (+4) fire slag tilbake i appen, men spiller på 0 etter regelen. | Slagene havner på andre hull i hver match der spillerne har ulikt banehandicap og den laveste ikke har 0, 18, 36 eller 54. Ved 100 % (singles) er forskjellen i antall slag alltid den samme. Ved 85 og 90 % blir den ett slag annerledes for 477 og 471 av 2 016 par av banehandicap 0–62. Hvor ofte et hull får et annet resultat, er ikke målt. Avviket er kjent fra #2455 og #2924. | produktvalg |
+| F16 | Four-ball, Round Robin og foursomes-familien (foursomes, greensome, chapman og gruesome). Hypotese 1, trinn 2 i #2924. | Andelen tas av det frosne, avrundede banehandicapet. Four-ball og Round Robin bruker `applyAllowance` (`lib/scoring/modes/fourballMatchplay.ts:108`, `lib/scoring/modes/roundRobin.ts:308`). Foursomes-kjernen runder differansen ganger andelen (`lib/scoring/modes/foursomesMatchplay.ts:190-191`), og greensome og chapman runder 60/40-tallet for hvert lag først (`lib/scoring/modes/greensomeMatchplay.ts:32`, `lib/scoring/modes/foursomesMatchplay.ts:127-128`). | NGF 6.2a avklaring 6.2a/1, s. 55: «For å unngå dobbel avrunding, legges handicapgodtgjørelsen (i prosent) til uavrundet spillehandicap.» | Foursomes ved 50 %: lag 1 har indeks 8,6 og 10,3 på tee 125/71,0/71, altså 9,513 + 11,394 = 20,907. Lag 2 har to spillere med banehandicap 0. Regelen gir 50 % av 20,907 = 10,45, som blir 10 slag. Appen gir 50 % av 10 + 11 = 21, som er 10,5 og blir 11 slag. | Four-ball og Round Robin: 111–124 av 541 indekser fra 0,0 til 54,0 får et annet tall per spiller ved 85 eller 90 %, på de tre teene. Foursomes ved 50 % mot et par med banehandicap 0: 24,6–27,4 % av lagene. Forskjellen er ett slag. | ikke nytt: trinn 2 i #2924 venter på ditt ja |
+| F17 | Matchspill med ulik par mellom spillerne, for eksempel herre mot dame på samme tee. | Hullet avgjøres på netto slag (`lib/scoring/modes/singlesMatchplay.ts:340-350`). Ingen får tilleggsslag for forskjellen i par. Spillerens egen par brukes bare til visning (`lib/scoring/modes/singlesMatchplay.ts:372-373`). | NGF 6.2b(i), s. 56, for slagspill og matchspill der resultatet registreres som brutto eller netto score: «En spiller som konkurrerer fra et utslagssted med en høyere par må få tilleggsslag for runden, lik differansen mellom par fra de utslagsstedene de spiller og utslagsstedene med lavest par.» Golfreglene 3.2c(2): «the lower net score wins the hole». NGF 6.2b anmerkning 1, s. 57, åpner for å gi spillerne med lavere par færre slag i stedet. | En herre på par 72 og en dame på par 74 har begge banehandicap 0. Damen har par 5 på hullindeks 1 og 2. Regelen gir henne to slag, på hullindeks 1 og 2. Slår hun 5 og han 4 på hull 1, er hullet delt etter regelen. Appen gir hullet til ham. | Gjelder bare matcher med ulik par. Hvor mange det er, er ikke målt. Forskjellen er like mange slag som forskjellen i par. Det er samme regel som F6 i runde 1 (slagspill), som du svarte «Rett» på (#2941). | rett |
+| F18 | Four-ball og Round Robin (standardprosenten, nevnt uten forslag). | Skjemaet starter four-ball på 85 % (`app/[locale]/admin/games/new/sections/HandicapSettings.tsx:62`) og Round Robin på 85 % (`:127`). | NGF vedlegg C, s. 75: four-ball matchspill 90 %. Round Robin står ikke i tabellen. | En forskjell på 20 i banehandicap gir 17 slag ved 85 % og 18 slag ved 90 %. | Gjelder alle nye four-ball-matcher der arrangøren ikke endrer andelen. #2924 nevnte det samme for cupen. Ingen test: standardverdien ligger i veiviseren, utenfor `lib/scoring`. | la stå (veiviserens standardverdier er utenfor saken). Du svarte «Rett» på samme type funn i F7. |
+
+### Sjekket, ingen avvik
+
+| Nr | Format | Motoren gjør | Regelen sier | Regneeksempel | Hvor ofte og hvor mye | Forslag |
+|---|---|---|---|---|---|---|
+| F19 | Foursomes og gruesome (hypotese 9). | Høylaget får andelen av differansen i sammenlagt banehandicap, og lavlaget får 0 (`lib/scoring/modes/foursomesMatchplay.ts:181-196`). Skjemaet og spilloppsettet starter på 50 % (`lib/games/gamePayload.ts:1623`), og gruesome bruker samme formel og 50 % (`lib/scoring/modes/gruesomeMatchplay.ts:42`). | NGF vedlegg C, s. 75: foursome «50 % av sammenlagt spillehandicap». NGF s. 8: i lagmatcher brukes prosentandelen på differansen. Gruesome står ikke i tabellen. | C/2 eksempel 3 (s. 77): 28 mot 66 i sammenlagt banehandicap gir lag 2 19 slag, i appen også. C/3 eksempel 3 (s. 78): 12 mot 33 gir 11 slag i begge. | Ingen avvik utover F16. Reservetallet 100 % i motoren brukes bare når andelen mangler i spilloppsettet, og spilloppsettet har alltid en andel. | la stå |
+| F20 | Greensome og chapman (hypotese 9). | Hvert lag får 60 % av laveste og 40 % av høyeste banehandicap, rundet. Høylaget får så differansen ved 100 % (`lib/scoring/modes/greensomeMatchplay.ts:32`, `lib/scoring/modes/foursomesMatchplay.ts:127-128`). | NGF vedlegg C, s. 75: greensome «60 % av laveste spillehandicap + 40 % av høyeste spillehandicap». Chapman står ikke i NGFs tabell. | Firerlaget fra C/2 som greensome: 13,2 og 31,8 rundes til 13 og 32, og lag 2 får 19 slag. Uten avrunding per lag er differansen 18,6, som også blir 19. | Ingen avvik. Avrundingen per lag før differansen hører til F16. | la stå |
+| F21 | Singles, four-ball og foursomes-familien på cupens splittede dag (hypotese 8, ni hull). | Matchen regnes på front 9 eller back 9 med 18-hulls banehandicap og 18-hullsindeksen. Siden får slagene som faller på de ni hullene (`lib/scoring/holeSegment.ts:32-43`, `lib/scoring/strokesReceived.ts`). | NGF 6.1b, s. 55: 18-hulls spillehandicapet «fordeles på alle de 18 hullene på scorekortet, etter hullenes indeks», og slagene gis etter «hvordan de er fordelt blant de 9 hullene som skal spilles». R&A-tolkning 6.1b/1 regner i stedet et eget 9-hulls banehandicap, men NGF har valgt 18-hullsveien. | En forskjell på 5 på siste ni med NGFs eksempelindeks (vedlegg E, s. 82) gir slag på hull 14 og 16 (hullindeks 2 og 4), både i appen og etter regelen. | Ingen avvik for norske baner. Hypotese 8 er avkreftet. | la stå |
+| F22 | Round Robin (hypotese 10). | Hver spiller får 85 % av sitt eget banehandicap. 85 er også reservetallet når andelen mangler (`lib/scoring/modes/roundRobin.ts:192` og `:308`). | NGF vedlegg C har ikke Round Robin. Nærmest er four-ball matchspill med 90 % av differansen. | Banehandicap 20 gir 17 slag ved 85 %. | Ingen regel å sammenligne med. Egne slag står i F15, og standardprosenten står i F18. | la stå |
+
+### Hypotesene fra kontrakten, runde 2
+
+| Hypotese | Svar |
+|---|---|
+| 1. Dobbeltavrunding, trinn 2 | F16: reelt i four-ball, Round Robin og foursomes-familien. Trinn 2 i #2924 venter på ditt ja. |
+| 7. Egne slag i singles og four-ball | F15: reelt. Gjelder også Round Robin. |
+| 8. Ni hull | F21: avkreftet for norske baner. NGF 6.1b bruker 18-hullsveien. |
+| 9. Foursomes-familien | F19 og F20: formlene stemmer med vedlegg C. Dobbeltavrundingen står i F16. |
+| 10. Round Robin 85 % | F22: ikke i vedlegg C. |
+| Nytt i runde 2 | F17 (ulik par i matchspill) og F18 (four-ball starter på 85 %). |
+
+### Testene og funnene, runde 2
+
+| Funn | Test |
+|---|---|
+| F15 | `matchplay.rulebook.test.ts`, tre `it.fails` (singles C/2, four-ball C/2 og four-ball C/3) |
+| F17 | `matchplay.rulebook.test.ts`, `it.fails` |
+| F19–F21 | vanlige `it` i samme fil, pluss golfreglene 3.2c(2) og 23.2b(2) |
+| F16 | ingen egen test: motoren får bare det frosne heltallet, så rettingen hører til trinn 2 i #2924 |
+| F18 | ingen test (standardverdien ligger i veiviseren) |
+| F22 | ingen test (formatet står ikke i regelboka) |
