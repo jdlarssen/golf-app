@@ -1,5 +1,5 @@
 import { localDb, scoreKey, type ConflictRecord, type LocalScore } from './db';
-import { conflictRecordFor } from './conflict';
+import { conflictRecordFor, resolveConflict } from './conflict';
 
 /** A scores row as it comes back from the server, in local field names. */
 export interface ServerScoreRow {
@@ -85,8 +85,15 @@ export async function mergeServerScores(
         // Last-write-wins by clientUpdatedAt. Older events are stale; an EQUAL
         // one is the echo of this device's own write coming back through
         // realtime, and dropping it here is what keeps the echo from ever
-        // looking like a conflict.
-        if (existing && existing.clientUpdatedAt >= incoming.clientUpdatedAt) {
+        // looking like a conflict. Compared as INSTANTS (p18, as #2211 did for
+        // the drain): the server writes `…+00:00`, this device `…Z`.
+        if (
+          existing &&
+          resolveConflict({
+            localClientUpdatedAt: existing.clientUpdatedAt,
+            serverClientUpdatedAt: incoming.clientUpdatedAt,
+          }) !== 'server-wins'
+        ) {
           return 'kept-local';
         }
 

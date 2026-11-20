@@ -17,6 +17,7 @@ import {
   formatHoleList,
 } from '@/lib/sync/quarantineSummary';
 import { isActiveForGame } from '@/lib/sync/queueScope';
+import { isLockedCardError } from '@/lib/sync/classifyError';
 import { Disclosure } from '@/components/ui/Disclosure';
 
 /**
@@ -179,7 +180,11 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
     // retrying "active" items — a lost stroke must never be silent. Kept
     // UNFILTERED across games on purpose: the quarantine branch below names
     // stranded strokes from other rounds too (#1369).
-    const abandoned = queue.filter((i) => i.abandonedAt != null);
+    //
+    // A dismissed item (p18) no longer shows here; it stays in the queue so
+    // the hole keeps saying «not saved».
+    const shown = queue.filter((i) => i.dismissedAt == null);
+    const abandoned = shown.filter((i) => i.abandonedAt != null);
     // Active items are scoped to the round on screen (#1370). "N strokes
     // waiting", the error copy and «Prøv igjen» describe THIS round — a stroke
     // still retrying for another round is that round's business, and drainQueue
@@ -220,7 +225,7 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
     // Quarantine variant (#1369): name the affected holes, link to them, show
     // the raw error without hover, and offer a confirmed cleanup path.
     if (abandoned.length > 0) {
-      const summary = summarizeQuarantine(queue, gameId ?? null);
+      const summary = summarizeQuarantine(shown, gameId ?? null);
       const { currentGame, otherGames } = summary;
 
       // Deleting only the ids that were quarantined at render time guarantees
@@ -234,11 +239,22 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
         ) {
           return;
         }
-        const teeShotIds = abandoned.filter(isTeeShotItem).map((i) => i.id);
-        const strokeIds = abandoned.filter((i) => !isTeeShotItem(i)).map((i) => i.id);
+        // A locked refusal is settled: the phone shows the server's number,
+        // so the item goes. Anything else never reached the server (p18): it
+        // is only marked dismissed, so the hole keeps saying «not saved».
+        const locked = abandoned.filter((i) => isLockedCardError(i.lastError));
+        const unsent = abandoned.filter((i) => !isLockedCardError(i.lastError));
+        const teeShotIds = locked.filter(isTeeShotItem).map((i) => i.id);
+        const strokeIds = locked.filter((i) => !isTeeShotItem(i)).map((i) => i.id);
+        const dismissedAt = new Date().toISOString();
         await Promise.all([
           strokeIds.length > 0 ? localDb.syncQueue.bulkDelete(strokeIds) : null,
           teeShotIds.length > 0 ? localDb.teeShotQueue.bulkDelete(teeShotIds) : null,
+          ...unsent.map((i) =>
+            isTeeShotItem(i)
+              ? localDb.teeShotQueue.update(i.id, { dismissedAt })
+              : localDb.syncQueue.update(i.id, { dismissedAt }),
+          ),
         ]);
       };
 

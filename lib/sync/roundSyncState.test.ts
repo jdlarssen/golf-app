@@ -130,6 +130,15 @@ describe('roundSyncState', () => {
     expect(state([score('g1:a:1', overrides)]).settled).toBe(expected);
   });
 
+  // Audit 20.11 (p18): «Fjern varselet» hides the notice, but the stroke was
+  // never sent — the hole and the chip must still say so.
+  it('a dismissed quarantine item still marks its hole as not saved', () => {
+    const s = state([score('g1:u1:4', { ...ABANDONED, dismissedAt: OLD })]);
+    expect(s.quarantinedHoles).toEqual([4]);
+    expect(syncChipState(s)).toBe('quarantined');
+    expect(syncCellState(4, s, new Set([4]))).toBe('quarantined');
+  });
+
   it('a quarantined item never settles the active set', () => {
     expect(state([score('g1:a:1', ABANDONED)]).settled).toBe(false);
   });

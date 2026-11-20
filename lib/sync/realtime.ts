@@ -62,7 +62,11 @@ export function subscribeGameScores(
         const row = (payload.new ?? payload.old) as Partial<ScoreRowFromDb>;
         if (!row || !row.game_id || !row.user_id || row.hole_number == null)
           return;
-        void mergeIncoming(row as ScoreRowFromDb);
+        // p18: a failed merge (session lookup, IndexedDB) is logged, never an
+        // unhandled rejection; the catch-up on resubscribe/focus reads it again.
+        mergeIncoming(row as ScoreRowFromDb).catch((err: unknown) => {
+          console.error('[realtime] score merge failed', err);
+        });
       },
     ),
     opts,
@@ -90,7 +94,9 @@ export function subscribeGameTeeShots(
       (payload) => {
         const row = payload.new as Partial<TeeShotRowFromDb> | null;
         if (!row || !row.game_id || row.team_number == null || row.hole_number == null) return;
-        void mergeServerTeeShots([fromTeeShotRow(row as TeeShotRowFromDb)]);
+        mergeServerTeeShots([fromTeeShotRow(row as TeeShotRowFromDb)]).catch((err: unknown) => {
+          console.error('[realtime] tee-shot merge failed', err);
+        });
       },
     ),
     opts,
