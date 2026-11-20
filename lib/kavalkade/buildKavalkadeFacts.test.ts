@@ -1243,6 +1243,16 @@ describe('navn på kortene — fornavn og forbokstav i etternavnet', () => {
     expect(storedName({ name: 'ola hansen-berg' })).toBe('ola H.');
   });
 
+  it('takes the initial from the last name itself, not from the upper-cased initials', () => {
+    // 'ß'.toUpperCase() is 'SS', which shifted the old index onto the wrong letter.
+    expect(storedName({ name: 'ßtefan Berg' })).toBe('ßtefan B.');
+  });
+
+  it('normalises a decomposed (NFD) name, so Å stays Å', () => {
+    const nfd = 'A\u030Ase A\u030As';
+    expect(storedName({ name: nfd })).toBe('\u00C5se \u00C5.');
+  });
+
   it('shows the first name alone for a one-word name', () => {
     expect(storedName({ name: 'Cher', nickname: 'C' })).toBe('Cher');
   });

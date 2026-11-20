@@ -32,7 +32,6 @@
  * (`loadKavalkadeInput.ts`) eier all databasekontakt.
  */
 import { computeRoundScore } from '@/lib/games/roundScore';
-import { nameInitials } from '@/lib/names/initials';
 import { playerFirstName } from '@/lib/names/playerName';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
 import { modeCollapsesToTeamCard, type GameMode } from '@/lib/scoring/modes/types';
@@ -341,19 +340,24 @@ export function buildKavalkadeFacts(input: KavalkadeInput): KavalkadeFacts {
  * last-name initial — when the name has a last name, the first name alone for
  * a one-word name, and the nickname only when there is no name (owner 20.11,
  * audit cards 2 and 3). The order is the house rule in `lib/names/playerName.ts`
- * (#2813); the last name and its initial are as `nameInitials` defines them
- * (the last word, first letter, upper case).
+ * (#2813). The last name is the last word, as in `nameInitials`; its first
+ * letter is upper-cased on its own, and kept as it is when upper case would
+ * change its length («ß»). The name is NFC-normalised first, so a decomposed
+ * «Å» stays one letter.
  *
  * The facts are stored once and shared as images, so a full name never enters
  * them. Done here, once, so every card, the in-app deck, the app's share card
  * and the narrative get the same name.
  */
 function kavalkadeCardName(player: KavalkadePlayerRound): string | null {
-  const first = playerFirstName(player);
-  const words = player.name?.trim().split(/\s+/) ?? [];
+  const name = player.name?.normalize('NFC') ?? null;
+  const first = playerFirstName({ ...player, name });
+  const words = name?.trim().split(/\s+/) ?? [];
   if (first == null || words.length < 2) return first;
-  const lastInitial = Array.from(nameInitials(player.name))[1];
-  return lastInitial ? `${first} ${lastInitial}.` : first;
+  const letter = Array.from(words[words.length - 1])[0];
+  if (!letter) return first;
+  const upper = letter.toUpperCase();
+  return `${first} ${Array.from(upper).length === 1 ? upper : letter}.`;
 }
 
 /** The round with every player's name cut by `kavalkadeCardName`. */
