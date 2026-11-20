@@ -51,6 +51,7 @@ const WOLF_ERROR_KEYS = new Set([
   'not_wolf_on_hole',
   'game_not_active',
   'partner_not_in_game',
+  'hole_taken',
   'rls_denied',
   'save_failed',
 ]);

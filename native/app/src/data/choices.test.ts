@@ -291,6 +291,7 @@ describe('choices', () => {
       ['wolf_choice_not_in_game', 'not_wolf_on_hole'],
       ['wolf_choice_game_not_active', 'game_not_active'],
       ['wolf_choice_partner_not_in_game', 'partner_not_in_game'],
+      ['wolf_choice_hole_taken', 'hole_taken'],
     ];
 
     it.each(REFUSALS)('databasen avviser med %s → %s', async (message, error) => {

@@ -104,6 +104,8 @@ export function describeChoiceFailure(
       return 'Du kan bare lagre Wolf-valg mens runden pågår.';
     case 'partner_not_in_game':
       return 'Partneren er ikke med i dette spillet. Velg en annen.';
+    case 'hole_taken':
+      return 'En annen spiller har alt lagret Wolf-valget på dette hullet.';
     case 'rls_denied':
       return 'Du har ikke lov til å lagre dette valget.';
     case 'no_rows':

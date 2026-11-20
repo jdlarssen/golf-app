@@ -19,6 +19,8 @@ export type WolfChoiceRefusal =
   | 'game_not_active'
   /** The partner does not play in this game. */
   | 'partner_not_in_game'
+  /** Another player's choice is already saved on this hole. */
+  | 'hole_taken'
   /** Refused, with a reason no screen can cause. */
   | 'rls_denied'
   /** Not a refusal: the write never got an answer, or the server failed. */
@@ -30,6 +32,7 @@ export const WOLF_CHOICE_DB_REFUSALS: Readonly<Record<string, WolfChoiceRefusal>
   wolf_choice_not_in_game: 'not_wolf_on_hole',
   wolf_choice_game_not_active: 'game_not_active',
   wolf_choice_partner_not_in_game: 'partner_not_in_game',
+  wolf_choice_hole_taken: 'hole_taken',
 };
 
 export function wolfChoiceRefusal(error: {

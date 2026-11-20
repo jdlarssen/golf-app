@@ -219,6 +219,9 @@ describe('setWolfChoice — DB-interaksjon', () => {
     ['wolf_choice_not_your_hole', 'not_wolf_on_hole'],
     ['wolf_choice_game_not_active', 'game_not_active'],
     ['wolf_choice_partner_not_in_game', 'partner_not_in_game'],
+    // En annen rakk å lagre valget på et hull stillingen avgjør: ikke «du må
+    // være Wolf».
+    ['wolf_choice_hole_taken', 'hole_taken'],
   ])('databasen avviser med %s → %s', async (message, expected) => {
     mockAuthed('wolf-1');
     upsertMock.mockResolvedValue({ error: { code: '42501', message } });
