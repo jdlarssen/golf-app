@@ -11,6 +11,7 @@ import {
   allowancePart,
   maxStrokesPart,
   approveButton,
+  ownTeeOffLine,
   fieldA11y,
   flightOf,
   playedLine,
@@ -74,3 +75,24 @@ describe('formene', () => {
     }
   });
 });
+
+// #2451: linja er webbens `game.waitingRoom.ownTeeOff*`, uten fet skrift.
+describe('ownTeeOffLine — paritet mot messages/no.json (#2451)', () => {
+  const room = source.game.waitingRoom;
+  const web = (template: string, values: Record<string, string | number>) =>
+    Object.entries(values).reduce(
+      (text, [key, value]) => text.replace(`{${key}}`, String(value)),
+      template.replace(/<\/?b>/g, ''),
+    );
+
+  it('flight, lag og uten begge er webbens setninger', () => {
+    expect(ownTeeOffLine({ clock: '09:10', flight: 2, team: null })).toBe(
+      web(room.ownTeeOffFlight, { time: '09:10', flight: 2 }),
+    );
+    expect(ownTeeOffLine({ clock: '09:10', flight: null, team: 3 })).toBe(
+      web(room.ownTeeOffTeam, { time: '09:10', team: 3 }),
+    );
+    expect(ownTeeOffLine({ clock: '09:10', flight: null, team: null })).toBe(web(room.ownTeeOff, { time: '09:10' }));
+  });
+});
+

@@ -70,7 +70,7 @@ it.each<[string, TicketStubModel, string]>([
   ['trukket av seg selv', { kind: 'withdrawn', bySelf: true, canUndo: true }, 'withdrawn-undo'],
   ['trukket fra en cup-kamp før start', { kind: 'cupWithdrawn', bySelf: true }, 'cup-withdrawn-banner'],
   ['utkast', { kind: 'draft' }, 'ticket-draft'],
-  ['planlagt', { kind: 'scheduled' }, 'waiting-room'],
+  ['planlagt', { kind: 'scheduled', ownTeeOff: null }, 'waiting-room'],
   ['avsluttet uten plass', { kind: 'finished', result: null }, 'finished-banner'],
   [
     'levert, venter på makker',
@@ -84,12 +84,20 @@ it.each<[string, TicketStubModel, string]>([
 
 it('planlagt: påmeldt, venterom og «Vis på kart» med banenavnet som søk', async () => {
   const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
-  await renderStub({ kind: 'scheduled' });
+  await renderStub({ kind: 'scheduled', ownTeeOff: null });
   expect(screen.getByTestId('ticket-registered')).toBeTruthy();
   expect(screen.getByTestId('waiting-room-countdown')).toBeTruthy();
   await fireEvent.press(screen.getByTestId('view-on-map'));
   expect(open).toHaveBeenCalledWith(expect.stringContaining('Losby%20Golf'));
   open.mockRestore();
+  // #2451: uten egen starttid står ingen linje.
+  expect(screen.queryByTestId('waiting-room-own-tee-off')).toBeNull();
+});
+
+it('planlagt med egen starttid: linja står under nedtellingen (#2451)', async () => {
+  await renderStub({ kind: 'scheduled', ownTeeOff: { clock: '09:24', flight: 3, team: null } });
+  expect(screen.getByTestId('waiting-room-countdown')).toBeTruthy();
+  expect(screen.getByTestId('waiting-room-own-tee-off')).toHaveTextContent(/09:24/);
 });
 
 it.each<[string, TicketStubModel, string, object]>([
@@ -185,7 +193,7 @@ describe('«Legg til i kalender» (#2255 PR 2)', () => {
 
   it('sender hendelsen til kalenderen, og et ja gir ingen melding', async () => {
     mockAddToCalendar.mockResolvedValue({ ok: true });
-    await renderStub({ kind: 'scheduled' });
+    await renderStub({ kind: 'scheduled', ownTeeOff: null });
     await fireEvent.press(screen.getByTestId('add-to-calendar'));
     expect(mockAddToCalendar).toHaveBeenCalledWith(EVENT);
     expect(screen.queryByTestId('scheduled-action-notice')).toBeNull();
@@ -196,13 +204,13 @@ describe('«Legg til i kalender» (#2255 PR 2)', () => {
     ['feil fra modulen', { ok: false, reason: 'failed' }],
   ])('%s gir en rolig melding under knappene, ingen krasj', async (_case, result) => {
     mockAddToCalendar.mockResolvedValue(result);
-    await renderStub({ kind: 'scheduled' });
+    await renderStub({ kind: 'scheduled', ownTeeOff: null });
     await fireEvent.press(screen.getByTestId('add-to-calendar'));
     expect(screen.getByTestId('scheduled-action-notice')).toBeTruthy();
   });
 
   it('uten tee-off står ikke knappen, men kartet gjør det', async () => {
-    await renderStub({ kind: 'scheduled' }, null, null);
+    await renderStub({ kind: 'scheduled', ownTeeOff: null }, null, null);
     expect(screen.queryByTestId('add-to-calendar')).toBeNull();
     expect(screen.getByTestId('view-on-map')).toBeTruthy();
   });

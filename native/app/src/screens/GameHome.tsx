@@ -88,6 +88,7 @@ import {
   ticketHeaderLine,
   ticketSlot,
   ticketStrokes,
+  ownTeeOff,
   ticketStub,
 } from '../lib/gameTicket';
 import { holeByHoleKind } from '../lib/holeByHole';
@@ -342,6 +343,8 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const runningTotal =
     hero?.standing?.total != null && hero.unit ? stubTotal(hero.standing.total, hero.unit) : null;
   const stub = ticketStub({
+    // #2451: spillerens egen starttid, til venterommet i stubben.
+    ownTeeOff: game.status === 'scheduled' ? ownTeeOff(bundle, userId) : null,
     cupGame: game.tournamentId != null,
     gameMode: game.gameMode,
     status: game.status,

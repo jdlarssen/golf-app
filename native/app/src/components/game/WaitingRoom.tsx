@@ -18,6 +18,10 @@
 // #2255: venterommet står i stubben på startbilletten og har stubbens drakt,
 // ikke et eget banner. Oppførselen er den samme.
 //
+// #2451: har runden flere startgrupper, står spillerens egen tid under
+// nedtellingen: «Du går ut 09:10 i flight 2.». Nedtellingen teller fortsatt mot
+// rundestart, som på webben.
+//
 // #2204: er tee-off passert og runden står fast, sier venterommet hvorfor i
 // stedet for «Starter snart». Sperren hentes bare etter tee-off, én gang per ny
 // bundel (altså høyst én gang per tikk), og et svar som kommer etter at
@@ -39,6 +43,7 @@ export function WaitingRoom({
   teeOffAt,
   onChanged,
   bundle,
+  ownTeeOff = null,
 }: {
   gameId: string;
   teeOffAt: string | null;
@@ -46,6 +51,8 @@ export function WaitingRoom({
   onChanged: () => void | Promise<void>;
   /** #2204: til sperren etter tee-off. Uten bundel teller venterommet ned som før. */
   bundle?: GameBundle;
+  /** #2451: linja med spillerens egen starttid, eller `null` når alle går ut samtidig. */
+  ownTeeOff?: string | null;
 }) {
   const { colors, ui } = useTheme();
   const [now, setNow] = useState(() => Date.now());
@@ -95,6 +102,11 @@ export function WaitingRoom({
           {view.countdown}
         </Text>
       ) : null}
+      {ownTeeOff ? (
+        <Text style={[styles.own, ui.num, { color: colors.text }]} testID="waiting-room-own-tee-off">
+          {ownTeeOff}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -103,4 +115,6 @@ const styles = StyleSheet.create({
   room: { gap: 4 },
   /** Brødtekst i billetten er 13 pt i muted, som i designet (#2255). */
   headline: { fontSize: 13, fontFamily: FONTS.sans },
+  /** #2451: samme størrelse som overskriften, i tekstfarge, så tiden er det spilleren ser. */
+  own: { fontSize: 13, fontFamily: FONTS.sansSemiBold },
 });

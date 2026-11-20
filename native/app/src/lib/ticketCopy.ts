@@ -9,6 +9,18 @@
 import type { LiveBoardUnit } from '../../../../lib/leaderboard/liveBoard';
 import { formatVsPar } from '../../../../lib/leaderboard/vsPar';
 
+/**
+ * #2451: spillerens egen starttid i venterommet. Webbens
+ * `game.waitingRoom.ownTeeOffFlight` og `ownTeeOffTeam`, uten fet skrift:
+ * «Du går ut 09:10 i flight 2.» der flighten er startgruppen (fri inndeling,
+ * best ball), «Du går ut 09:10 med lag 2.» i de andre lagformatene.
+ */
+export function ownTeeOffLine(own: { clock: string; flight: number | null; team: number | null }): string {
+  if (own.flight != null) return `Du går ut ${own.clock} i flight ${own.flight}.`;
+  if (own.team != null) return `Du går ut ${own.clock} med lag ${own.team}.`;
+  return `Du går ut ${own.clock}.`;
+}
+
 export const TICKET_TEXT = {
   // Feltene på billetten, små etiketter i setningsstor bokstav.
   start: 'Start',
