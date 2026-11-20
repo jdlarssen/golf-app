@@ -2758,6 +2758,7 @@ export type Database = {
       }
       is_group_admin: { Args: { p_group_id: string }; Returns: boolean }
       is_group_member: { Args: { p_group_id: string }; Returns: boolean }
+      is_group_owner: { Args: { p_group_id: string }; Returns: boolean }
       is_in_game: { Args: { p_game_id: string }; Returns: boolean }
       is_invite_eligible: {
         Args: { p_creator: string; p_group_id: string; p_recipient: string }
