@@ -108,6 +108,25 @@ describe('AllowanceField — toggle state machine', () => {
     fireEvent.change(input, { target: { value: '50' } });
     expect(hidden()).toBe('50');
   });
+
+  // Audit 20.11 (p11): an emptied box read as 0, so the game saved as gross
+  // (0 %) while the screen still said «Netto». It keeps the last share.
+  it.each([
+    ['the number field', {}],
+    ['the counter', { presets: [100, 95, 90, 85] }],
+  ])('netto in %s: an emptied box or 0 keeps the last share', (_label, extra) => {
+    const { container } = render(<AllowanceField {...baseProps} {...extra} initialPct={85} />);
+    const input = screen.getByLabelText('Handicap-andel (%)') as HTMLInputElement;
+    const hidden = () => (container.querySelector('input[name="hcp_allowance_pct"]') as HTMLInputElement).value;
+
+    fireEvent.change(input, { target: { value: '' } });
+    expect(hidden()).toBe('85');
+    fireEvent.change(input, { target: { value: '0' } });
+    expect(hidden()).toBe('85');
+    expect(screen.getByRole('radio', { name: 'Netto' })).toBeChecked();
+    fireEvent.change(input, { target: { value: '70' } });
+    expect(hidden()).toBe('70');
+  });
 });
 
 // #2455: the general «Scoring» field in the wizard's Handicap sheet gets the

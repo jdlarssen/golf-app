@@ -186,6 +186,20 @@ export function AllowanceField({
     commitPct(next);
   }
 
+  /**
+   * A typed netto share. Audit 20.11 (p11): an emptied box reads as
+   * `Number('') === 0`, and 0 is brutto in the data model, so the round saved
+   * as gross while the screen said «Netto». An empty box or 0 keeps the last
+   * share; brutto is chosen with its own card.
+   */
+  function typeNettoPct(raw: string) {
+    if (raw.trim() === '') return;
+    const v = Number(raw);
+    if (Number.isInteger(v) && v >= 1 && v <= maxPct) {
+      setNettoPct(v);
+    }
+  }
+
   const radioGroupName = `${fieldName}__scoring_mode`;
   const inputId = `${fieldName}__input`;
   const shownPct = pct === 0 ? lastNettoPct : pct;
@@ -224,12 +238,7 @@ export function AllowanceField({
           max={maxPct}
           step={1}
           value={shownPct}
-          onChange={(e) => {
-            const v = Number(e.target.value);
-            if (Number.isInteger(v) && v >= 0 && v <= maxPct) {
-              setNettoPct(v);
-            }
-          }}
+          onChange={(e) => typeNettoPct(e.target.value)}
           inputClassName="tabular-nums"
         />
       )}
@@ -277,12 +286,7 @@ export function AllowanceField({
                     max={maxPct}
                     step={1}
                     value={shownPct}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      if (Number.isInteger(v) && v >= 0 && v <= maxPct) {
-                        setNettoPct(v);
-                      }
-                    }}
+                    onChange={(e) => typeNettoPct(e.target.value)}
                     // Fraunces' tabular digits are 0.6 em; `ch` (0.67 em) left
                     // a gap before «%» the artboard does not have.
                     style={{ width: `${String(shownPct).length * 0.62}em` }}
