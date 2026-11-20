@@ -231,6 +231,23 @@ describe('teamHcpValues — tallene for et vilkårlig oppsett (#2478)', () => {
     expect(teamHcpValues({ p1: 1, p2: 1, p3: 3, p4: 3 }, all).mode).toBe('sum');
   });
 
+  // Found on staging (4/4/3 in Texas): 0,4 + 1,8 + 9,8 sums to 12.000000000000002
+  // in floating point, so the cards showed 5,6 and 4,0 while the line said 1,5.
+  it('tallene har ikke flyttallsstøy: 5,55 og 4 skiller 1,55, ikke 1,5499…', () => {
+    const all: BalancePlayer[] = [
+      { id: 'b', name: 'B', hcpIndex: -1.2 },
+      { id: 'e', name: 'E', hcpIndex: 3.5 },
+      { id: 'h', name: 'H', hcpIndex: 8.4 },
+      { id: 'j', name: 'J', hcpIndex: 11.5 },
+      { id: 'c', name: 'C', hcpIndex: 0.4 },
+      { id: 'd', name: 'D', hcpIndex: 1.8 },
+      { id: 'i', name: 'I', hcpIndex: 9.8 },
+    ];
+    const result = teamHcpValues({ b: 1, e: 1, h: 1, j: 1, c: 2, d: 2, i: 2 }, all);
+    expect(result.values).toEqual([5.55, 4]);
+    expect(result.spread).toBe(1.55);
+  });
+
   it('lag uten spillere gir null, og spillere uten lag regnes ikke', () => {
     const all = players([10, 20, 30]);
     const result = teamHcpValues({ p1: 1, p3: 3 }, all);
