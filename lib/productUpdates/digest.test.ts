@@ -24,6 +24,8 @@ type Db = {
 };
 let db: Db;
 const reached = new Set<string>();
+/** Users another run holds the claim for and then releases: the insert says duplicate, no row stays. */
+const heldThenReleased = new Set<string>();
 
 const DIGEST = { id: 'digest-1', sent_at: '2026-11-01T07:00:00.000Z', completed_at: null };
 
@@ -47,6 +49,9 @@ function respond(op: QueryOp): QueryResponse {
   if (op.table === 'product_update_digest_recipients') {
     const userId = op.payload?.user_id as string | undefined;
     if (op.kind === 'insert') {
+      if (heldThenReleased.has(userId!)) {
+        return { error: { message: 'duplicate key value', code: '23505' } as never };
+      }
       if (reached.has(userId!)) {
         return { error: { message: 'duplicate key value', code: '23505' } as never };
       }
@@ -57,7 +62,7 @@ function respond(op: QueryOp): QueryResponse {
       reached.delete(op.filters.find((f) => f.column === 'user_id')!.value as string);
       return { data: null };
     }
-    return { data: null, count: reached.size };
+    return { data: op.range?.[0] === 0 ? [...reached].map((user_id) => ({ user_id })) : [] };
   }
   throw new Error(`unexpected query: ${op.kind} ${op.table}`);
 }
@@ -68,6 +73,7 @@ vi.mock('@/lib/mail/productUpdateDigest', () => ({ sendProductUpdateDigest: vi.f
 vi.mock('./unsubscribeToken', () => ({ signUnsubToken: (id: string) => `token-${id}` }));
 
 import { sendProductUpdateDigest } from '@/lib/mail/productUpdateDigest';
+import { MailSendError } from '@/lib/mail/send';
 import { osloMonthStartIso, previousMonthPeriod, sendDigestForPeriod } from './digest';
 
 const mailMock = vi.mocked(sendProductUpdateDigest);
@@ -82,6 +88,7 @@ beforeEach(() => {
   mailMock.mockReset();
   fake.reset();
   reached.clear();
+  heldThenReleased.clear();
   db = {
     updates: [{ id: 'pu1', title: 'Nytt', body: 'Tekst', link: null, cta_label: null }],
     updatesError: false,
@@ -207,7 +214,7 @@ describe('sendDigestForPeriod', () => {
 
     await expect(run()).resolves.toMatchObject({ kind: 'sent', recipientCount: 1, failedCount: 1 });
     const [close] = writes('product_update_digests', 'update');
-    expect(close!.payload).toEqual({ recipient_count: 1 });
+    expect(close!.payload).toEqual({ recipient_count: 1, completed_at: null });
 
     // Day 2: the month is there and still open.
     mailMock.mockReset();
@@ -216,6 +223,48 @@ describe('sendDigestForPeriod', () => {
     await expect(run()).resolves.toMatchObject({ kind: 'sent', recipientCount: 2, failedCount: 0 });
     expect(mailMock.mock.calls.map((c) => c[0].to)).toEqual(['bo@example.test']);
     err.mockRestore();
+  });
+
+  it('Resend refused the send: the recipient is given back for the next run', async () => {
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mailMock.mockImplementation(async (p) => {
+      if (p.to === 'bo@example.test') {
+        throw new MailSendError('Resend send failed: invalid', { outcome: 'not_sent', statusCode: 422 });
+      }
+    });
+    await expect(run()).resolves.toMatchObject({ recipientCount: 1, failedCount: 1, unknownCount: 0 });
+    expect(reached.has('bo')).toBe(false);
+    expect(writes('product_update_digests', 'update')[0]!.payload).toEqual({ recipient_count: 1, completed_at: null });
+    err.mockRestore();
+  });
+
+  it('an unknown outcome (network failure) keeps the recipient, so the mail is never sent twice', async () => {
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mailMock.mockImplementation(async (p) => {
+      if (p.to === 'bo@example.test') {
+        throw new MailSendError('Resend send failed: fetch failed', { outcome: 'unknown' });
+      }
+    });
+    await expect(run()).resolves.toMatchObject({ recipientCount: 2, failedCount: 0, unknownCount: 1 });
+    expect(writes('product_update_digest_recipients', 'delete')).toEqual([]);
+    // Nobody is left to try: the month is finished.
+    expect(writes('product_update_digests', 'update')[0]!.payload).toMatchObject({ completed_at: expect.any(String) });
+
+    // Day 2 sends nothing.
+    mailMock.mockReset();
+    fake.reset();
+    db.existingDigest = DIGEST;
+    await run();
+    expect(mailMock).not.toHaveBeenCalled();
+    err.mockRestore();
+  });
+
+  it('a recipient another run skipped past and then released keeps the month open', async () => {
+    db.existingDigest = DIGEST;
+    heldThenReleased.add('ada');
+    await expect(run()).resolves.toMatchObject({ recipientCount: 1, failedCount: 0 });
+    expect(mailMock.mock.calls.map((c) => c[0].to)).toEqual(['bo@example.test']);
+    expect(writes('product_update_digests', 'update')[0]!.payload).toEqual({ recipient_count: 1, completed_at: null });
   });
 
   it('a later run reaches only users who existed when the month was claimed', async () => {

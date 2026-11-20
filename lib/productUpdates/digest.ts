@@ -9,6 +9,7 @@ import { signUnsubToken } from './unsubscribeToken';
 import { formatMonthLongNb } from '@/lib/format/date';
 import { firstName } from '@/lib/firstName';
 import { allSettledInBatches } from '@/lib/async/allSettledInBatches';
+import { MailSendError } from '@/lib/mail/send';
 
 /**
  * Monthly product-update digest sender (issue #202).
@@ -30,7 +31,8 @@ import { allSettledInBatches } from '@/lib/async/allSettledInBatches';
  *  5. Per recipient: insert a product_update_digest_recipients row (the
  *     primary key makes two runs skip each other), send, and delete the row
  *     again when the send fails, so the next run tries that recipient again.
- *  6. Store the recipient count. With no failed send, set `completed_at`.
+ *  6. Store the recipient count. When every recipient has a row, set
+ *     `completed_at`.
  *
  * Every read and write checks its error and throws, so a failed lookup can
  * never look like "not sent" and send the month twice.
@@ -51,8 +53,13 @@ export type SendDigestResult =
       periodLabel: string;
       /** Recipients reached for the month so far, this run and earlier ones. */
       recipientCount: number;
-      /** Sends that failed in this run; the next run tries them again. */
+      /** Sends Resend refused in this run; the next run tries them again. */
       failedCount: number;
+      /**
+       * Sends whose outcome is unknown (network failure, 5xx). The mail may
+       * have gone out, so the recipient stays claimed and is not sent again.
+       */
+      unknownCount: number;
       updateCount: number;
     }
   | { kind: 'already_sent'; periodStart: string; periodEnd: string; periodLabel: string }
@@ -197,28 +204,41 @@ export async function sendDigestForPeriod(
     SEND_BATCH,
   );
   let failedCount = 0;
+  let unknownCount = 0;
   outcomes.forEach((o, i) => {
     if (o.status === 'rejected') {
       failedCount += 1;
       console.error('[sendDigestForPeriod] send failed', { userId: recipients[i]!.id, err: o.reason });
     } else if (o.value === 'failed') {
       failedCount += 1;
+    } else if (o.value === 'unknown') {
+      unknownCount += 1;
     }
   });
 
-  // How many the month has reached, over every run.
-  const { count, error: countError } = await admin
-    .from('product_update_digest_recipients')
-    .select('user_id', { count: 'exact', head: true })
-    .eq('digest_id', digest.id);
-  if (countError) throw new Error(`sendDigestForPeriod count: ${countError.message}`);
-  const recipientCount = count ?? 0;
+  // Who the month has reached, over every run. The month is finished only
+  // when every recipient has a row: a recipient another run skipped past and
+  // then released is still missing, whatever this run's own sends did.
+  const reachedRows = await selectAllRows(
+    (from, to) =>
+      admin
+        .from('product_update_digest_recipients')
+        .select('user_id')
+        .eq('digest_id', digest.id)
+        .order('user_id')
+        .range(from, to)
+        .returns<{ user_id: string }[]>(),
+    'sendDigestForPeriod reached',
+  );
+  const reached = new Set(reachedRows.map((r) => r.user_id));
+  const recipientCount = reached.size;
+  const everyoneReached = recipients.every((r) => reached.has(r.id));
 
   const { error: closeError } = await admin
     .from('product_update_digests')
     .update({
       recipient_count: recipientCount,
-      ...(failedCount === 0 ? { completed_at: new Date().toISOString() } : {}),
+      completed_at: everyoneReached ? new Date().toISOString() : null,
     })
     .eq('id', digest.id);
   if (closeError) {
@@ -234,6 +254,7 @@ export async function sendDigestForPeriod(
     periodLabel,
     recipientCount,
     failedCount,
+    unknownCount,
     updateCount: updates.length,
   };
 }
@@ -276,15 +297,17 @@ async function claimMonth(
 
 /**
  * One recipient, at most once per month: the recipient row is the claim. A
- * recipient another run (or an earlier one) already has is skipped. A failed
- * send gives the claim back, so the next run tries again.
+ * recipient another run (or an earlier one) already has is skipped. A send
+ * that surely did not go out (Resend refused it, or it failed before any
+ * request) gives the claim back, so the next run tries again. A send whose
+ * outcome is unknown keeps the claim: a duplicate is worse than a miss.
  */
 async function sendOnce(
   admin: ReturnType<typeof getAdminClient>,
   digestId: string,
   r: Recipient,
   mail: { periodLabel: string; entries: ProductUpdateDigestEntry[] },
-): Promise<'sent' | 'skipped' | 'failed'> {
+): Promise<'sent' | 'skipped' | 'failed' | 'unknown'> {
   const { error: claimError } = await admin
     .from('product_update_digest_recipients')
     .insert({ digest_id: digestId, user_id: r.id });
@@ -305,6 +328,12 @@ async function sendOnce(
     });
     return 'sent';
   } catch (err) {
+    // sendMail throws a MailSendError for every failure after the request
+    // left; a plain Error comes from before it (e.g. a missing API key).
+    if (err instanceof MailSendError && err.outcome === 'unknown') {
+      console.error('[sendDigestForPeriod] send outcome unknown, recipient kept', { userId: r.id, err });
+      return 'unknown';
+    }
     console.error('[sendDigestForPeriod] send failed', { userId: r.id, err });
     const { error: releaseError } = await admin
       .from('product_update_digest_recipients')
