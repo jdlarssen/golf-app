@@ -136,3 +136,11 @@ Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
 - En klubb med ligaer eller cuper kan ikke slettes (`ON DELETE RESTRICT` på `leagues.group_id` og `tournaments.group_id`). En liga eller cup uten klubb har et bredere publikum, så slett eller flytt dem først.
 - Klubben til en liga eller cup (`group_id`) kan ikke endres av en innlogget klient når den først er satt. Triggeren `guard_club_scope_locked` står på begge tabellene; global admin og tjenesteklienten slipper gjennom.
 - Fasit: `supabase/tests/club_roles_and_terms_guard_test.sql`.
+
+## Liga og cup — hvem leser hva (0250)
+
+- `leagues.join_code` og `leagues.spectate_token` kan ikke leses med en innlogget klient (kolonnerettigheter, samme grep som `users.email`). Serveren leser dem med tjenesteklienten bak porten til siden som viser dem: `setLeagueJoinLink`, `setLeagueEmbed` og `getLigaSnapshot`. En skriving spør tilbake `id`, aldri kolonnen, og aldri `*`.
+- **En ny kolonne på `leagues` trenger sin egen `grant select (kolonne) on public.leagues to anon, authenticated`**, ellers ser ikke appen den. `supabase/tests/league_cup_read_rules_test.sql` blir rød for en kolonne som verken er gitt eller er en av de to.
+- En cup (`tournaments`) leses av dem som er med i den: deltakerne, spillerne i en startet kamp, arrangøren, cupens klubb og global admin. `tournament_participants`, `tournament_plans` og `tournament_side_awards` følger cupen (`can_view_tournament`). De lenke-delte sidene (`/cup/[id]`, `/cup/bli-med/[shortId]`) leser med tjenesteklienten bak sin egen port, som før.
+- Kortet bak en celle i ligatabellen åpnes av deltakerne og dem som styrer ligaen (`canOpenLeagueCards` i `lib/league/canViewLeague.ts`). Porten, lenkene på nettsiden og appens liga-rute leser den ene regelen.
+- Fasit: `supabase/tests/league_cup_read_rules_test.sql`.
