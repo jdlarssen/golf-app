@@ -157,7 +157,7 @@ Jørgen — tornygolf.no
 Akseptansekriterium #3 i issuet (List-Unsubscribe-header) er **allerede oppfylt
 i koden** — ingen ny header skal legges til.
 
-- **Hvor:** `lib/mail/productUpdateDigest.ts` (linje 174–178) setter både
+- **Hvor:** `lib/mail/productUpdateDigest.ts` setter både
   `List-Unsubscribe: <…>` og `List-Unsubscribe-Post: List-Unsubscribe=One-Click`
   (RFC 8058 ett-klikks-avmelding) på produkt-oppdaterings-digesten.
 - **Lås:** Testen `lib/mail/productUpdateDigest.test.ts` (blokka «inkluderer
