@@ -13,7 +13,8 @@ type CupDoorData = {
  * Dør-status-data (#1472): bane/tee-navn fra lagret plan + antall påmeldte.
  * Kun kalt mens cupen er `draft` (dørene vises bare da). Trukket ut av
  * `CupManagement` for å holde komponentens cyclomatic complexity nede — leser
- * fra request-klienten (SELECT-policy tillater authenticated, 0154-mønsteret).
+ * fra request-klienten (SELECT-policyene i 0250 viser cupens rader til den som
+ * styrer cupen).
  */
 async function fetchCupDoorData(tournamentId: string): Promise<CupDoorData> {
   const supabase = await getServerClient();

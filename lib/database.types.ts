@@ -2669,6 +2669,10 @@ export type Database = {
         Args: { p_game_id: string; p_other_user: string }
         Returns: boolean
       }
+      can_view_tournament: {
+        Args: { p_tournament_id: string }
+        Returns: boolean
+      }
       claim_apns_token: {
         Args: { p_token: string; p_user_agent: string }
         Returns: undefined
@@ -2774,6 +2778,10 @@ export type Database = {
         Returns: boolean
       }
       is_sole_club_owner: { Args: { p_user_id: string }; Returns: boolean }
+      is_tournament_participant: {
+        Args: { p_tournament_id: string }
+        Returns: boolean
+      }
       join_club_league: { Args: { p_league_id: string }; Returns: string }
       league_group_id: { Args: { p_league_id: string }; Returns: string }
       leave_club_league: { Args: { p_league_id: string }; Returns: string }
