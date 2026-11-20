@@ -1,4 +1,4 @@
-> **SNAPSHOT, NOT AUTHORITY. Verified 2026-06-18 via Supabase MCP.**
+> **SNAPSHOT, NOT AUTHORITY. Hand-written sections verified 2026-06-18 via Supabase MCP; the generated snapshot at the bottom carries its own date.**
 > The live DB is the source of truth — regenerate with `npm run gen:types` / query via MCP when in doubt.
 > Facts here go stale (e.g. `team_number` was `1..4`, now `>=1`).
 
