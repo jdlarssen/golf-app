@@ -32,6 +32,14 @@ export interface SyncQueueItem {
    * still-retrying items.
    */
   abandonedAt?: string | null;
+  /**
+   * Audit 20.11 (p18): set when the player dismisses the quarantine notice
+   * («Fjern varselet») for a stroke that never reached the server. The notice
+   * stops showing it; the item stays, so the hole keeps saying «not saved»
+   * (`roundSyncState` reads `abandonedAt` only). A new tap re-puts the item
+   * without it and the stroke is tried again. Non-indexed, no version bump.
+   */
+  dismissedAt?: string | null;
 }
 
 /**
@@ -61,6 +69,8 @@ export interface TeeShotQueueItem {
   lastError: string | null;
   createdAt: string;
   abandonedAt?: string | null;
+  /** As `SyncQueueItem.dismissedAt` (p18). */
+  dismissedAt?: string | null;
 }
 
 /**
@@ -72,7 +82,7 @@ export interface TeeShotQueueItem {
  */
 export type QueueItemBase = Pick<
   SyncQueueItem,
-  'id' | 'attemptCount' | 'lastError' | 'createdAt' | 'abandonedAt'
+  'id' | 'attemptCount' | 'lastError' | 'createdAt' | 'abandonedAt' | 'dismissedAt'
 > &
   ({ scoreId: string } | { teeShotId: string });
 

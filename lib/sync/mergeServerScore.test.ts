@@ -242,3 +242,38 @@ describe('mergeServerScores', () => {
     expect(fake.localDb.transaction).not.toHaveBeenCalled();
   });
 });
+
+// Audit 20.11 (p18): last-write-wins compared the two stamps as strings. The
+// local stamp comes from toISOString() (`…Z`); the server echoes timestamptz
+// as `…+00:00` with trailing zeros trimmed. As text those disagree with the
+// instants they name, so the verdict must compare instants (resolveConflict).
+describe('mergeServerScore — stamps compared as instants (p18)', () => {
+  it('the same instant in server form is the echo: kept, no rewrite', async () => {
+    seedLocal({ clientUpdatedAt: '2026-11-20T10:00:01.52+00:00' });
+
+    const { mergeServerScore } = await import('./mergeServerScore');
+    const outcome = await mergeServerScore(
+      incoming({ clientUpdatedAt: '2026-11-20T10:00:01.520Z', strokes: 4 }),
+      ME,
+    );
+
+    expect(outcome).toBe('kept-local');
+    expect(fake.scores.get(ID)!.strokes).toBe(5);
+  });
+
+  it('an OLDER server row in another offset never overwrites a newer local one', async () => {
+    seedLocal({ clientUpdatedAt: '2026-11-20T10:30:00.000Z', strokes: 5 });
+    seedQueueItem();
+
+    const { mergeServerScore } = await import('./mergeServerScore');
+    // 11:15+01:00 is 10:15Z — fifteen minutes older than the local row.
+    const outcome = await mergeServerScore(
+      incoming({ clientUpdatedAt: '2026-11-20T11:15:00+01:00', strokes: 4 }),
+      ME,
+    );
+
+    expect(outcome).toBe('kept-local');
+    expect(fake.scores.get(ID)!.strokes).toBe(5);
+    expect(fake.syncQueue.has(ID)).toBe(true);
+  });
+});

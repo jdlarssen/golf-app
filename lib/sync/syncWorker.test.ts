@@ -601,3 +601,143 @@ describe('drainQueue — tee shots (#2580)', () => {
     expect(fake.teeShots.get(TID)?.teeShotBy).toBe('per');
   });
 });
+
+// Audit 20.11 (p18): the failure branch used to write the attempt, the error
+// and the quarantine stamp onto the queue item by id, without checking that
+// the player had not typed again while the RPC was in the air. writeScore had
+// then re-put the item (attemptCount 0) for the NEWER value, and the stale
+// failure quarantined it: the new value never left the phone.
+describe('drainQueue — failure branch respects a mid-flight edit (p18)', () => {
+  it('a permanent error on the last attempt does not quarantine a newer value', async () => {
+    seedScore(4, '2026-11-20T10:00:00.000Z');
+    setAttempts(4);
+    rpcMock.mockImplementationOnce(async () => {
+      burstEditDuringFlight(6, '2026-11-20T10:00:00.500Z');
+      return { data: null, error: { message: 'violates check constraint "scores_strokes_check"' } };
+    });
+
+    const { drainQueue } = await import('./syncWorker');
+    const result = await drainQueue();
+
+    expect(result.abandoned).toBe(0);
+    expect(fake.syncQueue.get(ID)).toMatchObject({ attemptCount: 0, lastError: null });
+    expect(fake.syncQueue.get(ID)?.abandonedAt).toBeUndefined();
+    expect(fake.scores.get(ID)!.strokes).toBe(6);
+  });
+
+  it('a transient error does not stamp the stale attempt onto the newer value', async () => {
+    seedScore(4, '2026-11-20T10:00:00.000Z');
+    setAttempts(3);
+    rpcMock.mockImplementationOnce(async () => {
+      burstEditDuringFlight(6, '2026-11-20T10:00:00.500Z');
+      return { data: null, error: { message: 'Failed to fetch' } };
+    });
+
+    const { drainQueue } = await import('./syncWorker');
+    await drainQueue();
+
+    expect(fake.syncQueue.get(ID)).toMatchObject({ attemptCount: 0, lastError: null });
+  });
+
+  it('control: without an edit the last permanent attempt still quarantines', async () => {
+    seedScore(4, '2026-11-20T10:00:00.000Z');
+    setAttempts(4);
+    rpcMock.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'violates check constraint "scores_strokes_check"' },
+    });
+
+    const { drainQueue } = await import('./syncWorker');
+    const result = await drainQueue();
+
+    expect(result.abandoned).toBe(1);
+    expect(fake.syncQueue.get(ID)).toMatchObject({ attemptCount: 5, abandonedAt: expect.any(String) });
+  });
+
+  it('a tee-shot error on the last attempt does not quarantine a newer choice', async () => {
+    const TID = 'g1:1:7';
+    fake.teeShots.set(TID, {
+      id: TID,
+      gameId: 'g1',
+      teamNumber: 1,
+      holeNumber: 7,
+      teeShotBy: 'per',
+      enteredBy: 'u1',
+      clientUpdatedAt: '2026-11-20T10:00:00.000Z',
+      serverUpdatedAt: null,
+    });
+    fake.teeShotQueue.set(TID, {
+      id: TID,
+      teeShotId: TID,
+      attemptCount: 4,
+      lastError: 'violates check constraint',
+      createdAt: '2026-11-20T10:00:00.000Z',
+    });
+    rpcMock.mockImplementationOnce(async () => {
+      fake.teeShots.set(TID, {
+        ...fake.teeShots.get(TID)!,
+        teeShotBy: 'marte',
+        clientUpdatedAt: '2026-11-20T10:00:00.500Z',
+      });
+      fake.teeShotQueue.set(TID, {
+        id: TID,
+        teeShotId: TID,
+        attemptCount: 0,
+        lastError: null,
+        createdAt: '2026-11-20T10:00:00.500Z',
+      });
+      return { data: null, error: { message: 'violates check constraint' } };
+    });
+
+    const { drainQueue } = await import('./syncWorker');
+    const result = await drainQueue();
+
+    expect(result.abandoned).toBe(0);
+    expect(fake.teeShotQueue.get(TID)).toMatchObject({ attemptCount: 0, lastError: null });
+    expect(fake.teeShotQueue.get(TID)?.abandonedAt).toBeUndefined();
+  });
+});
+
+// Audit 20.11 (p18): the triggers fired `void drainQueue()` with no catch, so a
+// failing local read became an unhandled rejection on every online/focus/tick.
+describe('startSyncListener — a failing drain is caught (p18)', () => {
+  it('drainQueue resolves with zero counts instead of rejecting (retry button stays usable)', async () => {
+    fake.localDb.syncQueue.orderBy.mockImplementation(() => ({
+      toArray: async () => {
+        throw new Error('IndexedDB closed');
+      },
+    }));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { drainQueue } = await import('./syncWorker');
+    await expect(drainQueue()).resolves.toEqual({ pushed: 0, rejected: 0, errored: 0, abandoned: 0 });
+    errorSpy.mockRestore();
+  });
+
+  it('logs the failure instead of leaving an unhandled rejection', async () => {
+    const boom = new Error('IndexedDB closed');
+    fake.localDb.syncQueue.orderBy.mockImplementation(() => ({
+      toArray: async () => {
+        throw boom;
+      },
+    }));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => unhandled.push(reason);
+    process.on('unhandledRejection', onUnhandled);
+    vi.useFakeTimers();
+    try {
+      const { startSyncListener } = await import('./syncWorker');
+      startSyncListener();
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(30_000);
+      await vi.runOnlyPendingTimersAsync();
+    } finally {
+      vi.useRealTimers();
+      await new Promise((r) => setTimeout(r, 0));
+      process.off('unhandledRejection', onUnhandled);
+    }
+    expect(unhandled).toEqual([]);
+    expect(errorSpy).toHaveBeenCalledWith('[sync] drain failed', boom);
+    errorSpy.mockRestore();
+  });
+});

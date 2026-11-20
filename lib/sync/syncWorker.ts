@@ -23,12 +23,14 @@ let inFlight = false;
 // leave its item to the next 30 s tick. Remember it and run once more.
 let rerunRequested = false;
 
-export async function drainQueue(): Promise<{
+type DrainCounts = {
   pushed: number;
   rejected: number;
   errored: number;
   abandoned: number;
-}> {
+};
+
+export async function drainQueue(): Promise<DrainCounts> {
   if (inFlight) {
     rerunRequested = true;
     return { pushed: 0, rejected: 0, errored: 0, abandoned: 0 };
@@ -39,188 +41,15 @@ export async function drainQueue(): Promise<{
   }
   inFlight = true;
   try {
-    const queue = await localDb.syncQueue.orderBy('createdAt').toArray();
-    // #2580: tee shots drain after the strokes, with the same rules.
-    const teeShotQueue = await localDb.teeShotQueue.orderBy('createdAt').toArray();
-    if (queue.length === 0 && teeShotQueue.length === 0)
-      return { pushed: 0, rejected: 0, errored: 0, abandoned: 0 };
-
-    const supabase = getBrowserClient();
-
-    // #1368: who is logged in on THIS device. Read once per drain — the
-    // conflict gate below needs it for every item.
-    const currentUserId = await currentDeviceUserId();
-
-    let pushed = 0;
-    let rejected = 0;
-    let errored = 0;
-    let abandoned = 0;
-
-    for (const item of queue) {
-      // Quarantined (#668): a permanently-failing item we already gave up on.
-      // Skip it so it never re-enters the retry loop; it stays in the queue as
-      // a record of failure that SyncBanner surfaces to the player.
-      if (item.abandonedAt) continue;
-
-      const score = await localDb.scores.get(item.scoreId);
-      if (!score) {
-        await localDb.syncQueue.delete(item.id);
-        continue;
-      }
-
-      const { data, error } = await supabase.rpc('upsert_score_if_newer', {
-        p_game_id: score.gameId,
-        p_user_id: score.userId,
-        p_hole_number: score.holeNumber,
-        // scores.strokes is a nullable column; null is a valid score-clear value.
-        // Generated RPC arg type is non-null so we cast.
-        p_strokes: score.strokes as number,
-        p_entered_by: score.enteredBy,
-        p_client_updated_at: score.clientUpdatedAt,
-        // #939: putts rides the same LWW row. Cast like p_strokes — null/undefined
-        // are both valid (the RPC param defaults to null). Always send the current
-        // value so a stroke-only edit never nulls a stored putt count.
-        p_putts: (score.putts ?? null) as number,
-      });
-
-      if (error) {
-        // #668: a stuck item used to retry forever. Cap ONLY explicitly
-        // permanent failures (RLS / constraint / malformed) — transient
-        // network / auth / rate-limit / unknown errors keep retrying so a
-        // genuinely-entered stroke is never dropped because the player was
-        // offline.
-        const decision = syncRetryDecision({
-          attemptCount: item.attemptCount,
-          errorMessage: error.message,
-        });
-        // #2211: a locked card (the INSERT's RLS violation, or the 0148
-        // finished-game guard on an UPDATE) settles instead of just parking.
-        if (decision === 'abandon' && isLockedCardError(error.message)) {
-          const settled = await settleLockedRefusal(
-            item,
-            score,
-            error.message,
-            currentUserId,
-          );
-          if (settled === 'abandoned') abandoned++;
-          else if (settled === 'errored') errored++;
-          continue;
-        }
-        if (decision === 'abandon') {
-          await localDb.syncQueue.update(item.id, {
-            attemptCount: item.attemptCount + 1,
-            lastError: error.message,
-            abandonedAt: new Date().toISOString(),
-          });
-          abandoned++;
-        } else {
-          await localDb.syncQueue.update(item.id, {
-            attemptCount: item.attemptCount + 1,
-            lastError: error.message,
-          });
-          errored++;
-        }
-        continue;
-      }
-
-      const row = Array.isArray(data) ? data[0] : data;
-      const reply = interpretUpsertReply(row, score.clientUpdatedAt);
-
-      // #2211: the card is locked (submitted / withdrawn / round not active).
-      // RLS filtered the UPDATE to 0 rows and the RPC answered an all-NULL
-      // row with no error — this used to be dequeued as success, and the
-      // phone kept a number the server never took.
-      if (reply === 'refused') {
-        const settled = await settleLockedRefusal(
-          item,
-          score,
-          REFUSED_WRITE_ERROR,
-          currentUserId,
-        );
-        if (settled === 'abandoned') abandoned++;
-        else if (settled === 'errored') errored++;
-        continue;
-      }
-
-      // #1457: alt etter RPC-en skjer i én transaksjon MED ferskhets-sjekk.
-      // Spilleren kan ha tastet videre på samme felt mens RPC-en var i lufta —
-      // da har writeScore re-putt kø-elementet (samme id) for den NYERE
-      // verdien. Uten sjekken slettet dequeue-en det nye elementet ubetinget,
-      // køen så tom ut, og databasen beholdt mellomverdien til neste tasting.
-      // Endret rad → rør ingenting; neste drain laster opp sluttverdien.
-      const outcome = await localDb.transaction(
-        'rw',
-        localDb.scores,
-        localDb.syncQueue,
-        localDb.conflicts,
-        async () => {
-          const current = await localDb.scores.get(item.scoreId);
-          if (!current || current.clientUpdatedAt !== score.clientUpdatedAt) {
-            return 'edited-mid-flight' as const;
-          }
-
-          if (reply === 'applied') {
-            await localDb.scores.update(item.scoreId, {
-              serverUpdatedAt: row.updated_at,
-            });
-            await localDb.syncQueue.delete(item.id);
-            return 'applied' as const;
-          }
-
-          // The server kept a newer-or-equal entry (`interpretUpsertReply`):
-          //
-          // - 'server-wins': overwrite local with the server row (genuine LWW).
-          // - 'kept-local': the same instant — the echo of a write that already
-          //   landed but whose reply was lost, or a second tab draining the
-          //   same item. Keep local, just dequeue.
-          //
-          // When server genuinely wins AND the local score was entered on this
-          // device AND strokes actually differ, write a ConflictRecord so
-          // SyncBanner can surface the silent overwrite (#688 Part 2).
-          if (reply === 'server-wins') {
-            // Surface the overwrite as a ConflictRecord when the rule says so.
-            // The rule itself lives in `conflictRecordFor` (#1611) because the
-            // realtime/catch-up merge needs the very same test; `score` is the
-            // local row read above — no extra DB call needed.
-            const conflict = conflictRecordFor({
-              existing: score,
-              incomingStrokes: row.strokes,
-              currentUserId,
-            });
-            if (conflict) await localDb.conflicts.put(conflict);
-
-            await localDb.scores.update(item.scoreId, {
-              strokes: row.strokes,
-              // #939: keep putts in sync with the server-wins row so a later
-              // local edit merges the authoritative putt count, not a stale one.
-              putts: row.putts ?? null,
-              enteredBy: row.entered_by,
-              clientUpdatedAt: row.client_updated_at,
-              serverUpdatedAt: row.updated_at,
-            });
-            await localDb.syncQueue.delete(item.id);
-            return 'server-wins' as const;
-          }
-
-          // 'kept-local': keep local data as-is, just dequeue.
-          await localDb.syncQueue.delete(item.id);
-          return 'kept-local' as const;
-        },
-      );
-
-      if (outcome === 'edited-mid-flight') continue;
-      if (outcome === 'applied') pushed++;
-      else if (outcome === 'server-wins') rejected++;
-    }
-
-    const tee = await drainTeeShots(teeShotQueue, currentUserId);
-
-    return {
-      pushed: pushed + tee.pushed,
-      rejected: rejected + tee.rejected,
-      errored: errored + tee.errored,
-      abandoned: abandoned + tee.abandoned,
-    };
+    return await drainOnce();
+  } catch (err: unknown) {
+    // Audit 20.11 (p18): every caller fires this and forgets it (triggers,
+    // the retry button, the hole and submit screens). A failing local read
+    // (IndexedDB closed, quota) used to surface as an unhandled rejection —
+    // and left the retry button disabled. Log it; the queue is untouched, so
+    // the next trigger simply tries again.
+    console.error('[sync] drain failed', err);
+    return { pushed: 0, rejected: 0, errored: 0, abandoned: 0 };
   } finally {
     inFlight = false;
     if (rerunRequested) {
@@ -228,6 +57,222 @@ export async function drainQueue(): Promise<{
       void drainQueue();
     }
   }
+}
+
+/** One pass over both queues; `drainQueue` owns the in-flight guard and the catch. */
+async function drainOnce(): Promise<DrainCounts> {
+  const queue = await localDb.syncQueue.orderBy('createdAt').toArray();
+  // #2580: tee shots drain after the strokes, with the same rules.
+  const teeShotQueue = await localDb.teeShotQueue.orderBy('createdAt').toArray();
+  if (queue.length === 0 && teeShotQueue.length === 0)
+    return { pushed: 0, rejected: 0, errored: 0, abandoned: 0 };
+
+  const supabase = getBrowserClient();
+
+  // #1368: who is logged in on THIS device. Read once per drain — the
+  // conflict gate below needs it for every item.
+  const currentUserId = await currentDeviceUserId();
+
+  let pushed = 0;
+  let rejected = 0;
+  let errored = 0;
+  let abandoned = 0;
+
+  for (const item of queue) {
+    // Quarantined (#668): a permanently-failing item we already gave up on.
+    // Skip it so it never re-enters the retry loop; it stays in the queue as
+    // a record of failure that SyncBanner surfaces to the player.
+    if (item.abandonedAt) continue;
+
+    const score = await localDb.scores.get(item.scoreId);
+    if (!score) {
+      await localDb.syncQueue.delete(item.id);
+      continue;
+    }
+
+    const { data, error } = await supabase.rpc('upsert_score_if_newer', {
+      p_game_id: score.gameId,
+      p_user_id: score.userId,
+      p_hole_number: score.holeNumber,
+      // scores.strokes is a nullable column; null is a valid score-clear value.
+      // Generated RPC arg type is non-null so we cast.
+      p_strokes: score.strokes as number,
+      p_entered_by: score.enteredBy,
+      p_client_updated_at: score.clientUpdatedAt,
+      // #939: putts rides the same LWW row. Cast like p_strokes — null/undefined
+      // are both valid (the RPC param defaults to null). Always send the current
+      // value so a stroke-only edit never nulls a stored putt count.
+      p_putts: (score.putts ?? null) as number,
+    });
+
+    if (error) {
+      // #668: a stuck item used to retry forever. Cap ONLY explicitly
+      // permanent failures (RLS / constraint / malformed) — transient
+      // network / auth / rate-limit / unknown errors keep retrying so a
+      // genuinely-entered stroke is never dropped because the player was
+      // offline.
+      const decision = syncRetryDecision({
+        attemptCount: item.attemptCount,
+        errorMessage: error.message,
+      });
+      // #2211: a locked card (the INSERT's RLS violation, or the 0148
+      // finished-game guard on an UPDATE) settles instead of just parking.
+      if (decision === 'abandon' && isLockedCardError(error.message)) {
+        const settled = await settleLockedRefusal(
+          item,
+          score,
+          error.message,
+          currentUserId,
+        );
+        if (settled === 'abandoned') abandoned++;
+        else if (settled === 'errored') errored++;
+        continue;
+      }
+      const marked = await markScoreItemIfUnchanged(item, score, {
+        attemptCount: item.attemptCount + 1,
+        lastError: error.message,
+        ...(decision === 'abandon' ? { abandonedAt: new Date().toISOString() } : {}),
+      });
+      if (!marked) continue;
+      if (decision === 'abandon') abandoned++;
+      else errored++;
+      continue;
+    }
+
+    const row = Array.isArray(data) ? data[0] : data;
+    const reply = interpretUpsertReply(row, score.clientUpdatedAt);
+
+    // #2211: the card is locked (submitted / withdrawn / round not active).
+    // RLS filtered the UPDATE to 0 rows and the RPC answered an all-NULL
+    // row with no error — this used to be dequeued as success, and the
+    // phone kept a number the server never took.
+    if (reply === 'refused') {
+      const settled = await settleLockedRefusal(
+        item,
+        score,
+        REFUSED_WRITE_ERROR,
+        currentUserId,
+      );
+      if (settled === 'abandoned') abandoned++;
+      else if (settled === 'errored') errored++;
+      continue;
+    }
+
+    // #1457: alt etter RPC-en skjer i én transaksjon MED ferskhets-sjekk.
+    // Spilleren kan ha tastet videre på samme felt mens RPC-en var i lufta —
+    // da har writeScore re-putt kø-elementet (samme id) for den NYERE
+    // verdien. Uten sjekken slettet dequeue-en det nye elementet ubetinget,
+    // køen så tom ut, og databasen beholdt mellomverdien til neste tasting.
+    // Endret rad → rør ingenting; neste drain laster opp sluttverdien.
+    const outcome = await localDb.transaction(
+      'rw',
+      localDb.scores,
+      localDb.syncQueue,
+      localDb.conflicts,
+      async () => {
+        const current = await localDb.scores.get(item.scoreId);
+        if (!current || current.clientUpdatedAt !== score.clientUpdatedAt) {
+          return 'edited-mid-flight' as const;
+        }
+
+        if (reply === 'applied') {
+          await localDb.scores.update(item.scoreId, {
+            serverUpdatedAt: row.updated_at,
+          });
+          await localDb.syncQueue.delete(item.id);
+          return 'applied' as const;
+        }
+
+        // The server kept a newer-or-equal entry (`interpretUpsertReply`):
+        //
+        // - 'server-wins': overwrite local with the server row (genuine LWW).
+        // - 'kept-local': the same instant — the echo of a write that already
+        //   landed but whose reply was lost, or a second tab draining the
+        //   same item. Keep local, just dequeue.
+        //
+        // When server genuinely wins AND the local score was entered on this
+        // device AND strokes actually differ, write a ConflictRecord so
+        // SyncBanner can surface the silent overwrite (#688 Part 2).
+        if (reply === 'server-wins') {
+          // Surface the overwrite as a ConflictRecord when the rule says so.
+          // The rule itself lives in `conflictRecordFor` (#1611) because the
+          // realtime/catch-up merge needs the very same test; `score` is the
+          // local row read above — no extra DB call needed.
+          const conflict = conflictRecordFor({
+            existing: score,
+            incomingStrokes: row.strokes,
+            currentUserId,
+          });
+          if (conflict) await localDb.conflicts.put(conflict);
+
+          await localDb.scores.update(item.scoreId, {
+            strokes: row.strokes,
+            // #939: keep putts in sync with the server-wins row so a later
+            // local edit merges the authoritative putt count, not a stale one.
+            putts: row.putts ?? null,
+            enteredBy: row.entered_by,
+            clientUpdatedAt: row.client_updated_at,
+            serverUpdatedAt: row.updated_at,
+          });
+          await localDb.syncQueue.delete(item.id);
+          return 'server-wins' as const;
+        }
+
+        // 'kept-local': keep local data as-is, just dequeue.
+        await localDb.syncQueue.delete(item.id);
+        return 'kept-local' as const;
+      },
+    );
+
+    if (outcome === 'edited-mid-flight') continue;
+    if (outcome === 'applied') pushed++;
+    else if (outcome === 'server-wins') rejected++;
+  }
+
+  const tee = await drainTeeShots(teeShotQueue, currentUserId);
+
+  return {
+    pushed: pushed + tee.pushed,
+    rejected: rejected + tee.rejected,
+    errored: errored + tee.errored,
+    abandoned: abandoned + tee.abandoned,
+  };
+}
+
+/**
+ * Audit 20.11 (p18): write a failed attempt onto the queue item only when the
+ * row is still the one that was sent. While the RPC was in the air the player
+ * may have typed again; `writeScore` then re-put the item (same id, attempt 0)
+ * for the newer value. Stamping the stale failure on it — worst case the
+ * quarantine stamp — kept the newer value from ever being sent. Same
+ * freshness test as the success branch (#1457). Returns false when the row
+ * moved on and nothing was written.
+ */
+async function markScoreItemIfUnchanged(
+  item: SyncQueueItem,
+  sent: LocalScore,
+  patch: Pick<SyncQueueItem, 'attemptCount' | 'lastError'> & { abandonedAt?: string },
+): Promise<boolean> {
+  return localDb.transaction('rw', localDb.scores, localDb.syncQueue, async () => {
+    const current = await localDb.scores.get(item.scoreId);
+    if (!current || current.clientUpdatedAt !== sent.clientUpdatedAt) return false;
+    await localDb.syncQueue.update(item.id, patch);
+    return true;
+  });
+}
+
+/** `markScoreItemIfUnchanged` for the tee-shot queue (#2580). */
+async function markTeeShotItemIfUnchanged(
+  item: TeeShotQueueItem,
+  sent: LocalTeeShot,
+  patch: Pick<TeeShotQueueItem, 'attemptCount' | 'lastError'> & { abandonedAt?: string },
+): Promise<boolean> {
+  return localDb.transaction('rw', localDb.teeShots, localDb.teeShotQueue, async () => {
+    const current = await localDb.teeShots.get(item.teeShotId);
+    if (!current || current.clientUpdatedAt !== sent.clientUpdatedAt) return false;
+    await localDb.teeShotQueue.update(item.id, patch);
+    return true;
+  });
 }
 
 /**
@@ -256,11 +301,11 @@ async function settleLockedRefusal(
   currentUserId: string | null,
 ): Promise<'abandoned' | 'errored' | 'edited-mid-flight'> {
   const keepForRetry = async () => {
-    await localDb.syncQueue.update(item.id, {
+    const marked = await markScoreItemIfUnchanged(item, score, {
       attemptCount: item.attemptCount + 1,
       lastError,
     });
-    return 'errored' as const;
+    return marked ? ('errored' as const) : ('edited-mid-flight' as const);
   };
 
   if (currentUserId == null) return keepForRetry();
@@ -354,11 +399,12 @@ async function drainTeeShots(
         attemptCount: item.attemptCount,
         errorMessage: error.message,
       });
-      await localDb.teeShotQueue.update(item.id, {
+      const marked = await markTeeShotItemIfUnchanged(item, shot, {
         attemptCount: item.attemptCount + 1,
         lastError: error.message,
         ...(decision === 'abandon' ? { abandonedAt: new Date().toISOString() } : {}),
       });
+      if (!marked) continue;
       if (decision === 'abandon') counts.abandoned++;
       else counts.errored++;
       continue;
@@ -420,11 +466,11 @@ async function settleRefusedTeeShot(
   currentUserId: string | null,
 ): Promise<'abandoned' | 'errored' | 'edited-mid-flight'> {
   const keepForRetry = async () => {
-    await localDb.teeShotQueue.update(item.id, {
+    const marked = await markTeeShotItemIfUnchanged(item, shot, {
       attemptCount: item.attemptCount + 1,
       lastError: REFUSED_TEE_SHOT_ERROR,
     });
-    return 'errored' as const;
+    return marked ? ('errored' as const) : ('edited-mid-flight' as const);
   };
 
   if (currentUserId == null) return keepForRetry();

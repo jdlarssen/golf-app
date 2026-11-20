@@ -5,7 +5,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('dexie-react-hooks', () => ({ useLiveQuery: vi.fn() }));
 vi.mock('@/lib/sync/db', () => ({
   localDb: {
-    syncQueue: { bulkDelete: vi.fn().mockResolvedValue(undefined) },
+    syncQueue: {
+      bulkDelete: vi.fn().mockResolvedValue(undefined),
+      update: vi.fn().mockResolvedValue(1),
+    },
     conflicts: { delete: vi.fn().mockResolvedValue(undefined) },
   },
 }));
@@ -100,7 +103,11 @@ describe('SyncBanner — karantene-varianten', () => {
     expect(container.querySelector('[title]')).toBeNull();
   });
 
-  it('dismiss med bekreftelse sletter kun karantene-elementene', async () => {
+  // Audit 20.11 (p18): dismissing used to DELETE the item, and with it the
+  // only record that the stroke never reached the server — the hole then read
+  // «saved». An unsent stroke is now only marked dismissed: the notice goes,
+  // the hole keeps «not saved».
+  it('dismiss med bekreftelse merker usendte slag som avvist, uten å slette dem', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     mockDexieData([
       qItem({ scoreId: 'g1:u1:7' }),
@@ -110,8 +117,12 @@ describe('SyncBanner — karantene-varianten', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Fjern varselet' }));
     await waitFor(() =>
-      expect(localDb.syncQueue.bulkDelete).toHaveBeenCalledWith(['g1:u1:7']),
+      expect(localDb.syncQueue.update).toHaveBeenCalledWith('g1:u1:7', {
+        dismissedAt: expect.any(String),
+      }),
     );
+    expect(localDb.syncQueue.update).toHaveBeenCalledTimes(1);
+    expect(localDb.syncQueue.bulkDelete).not.toHaveBeenCalled();
     expect(screen.queryByTestId('quarantine-locked-hint')).toBeNull();
 
     // #2211: only locked-card refusals → the banner says why, and the dismiss
@@ -130,6 +141,15 @@ describe('SyncBanner — karantene-varianten', () => {
     expect(window.confirm).not.toHaveBeenCalled();
   });
 
+  it('et avvist varsel vises ikke igjen', () => {
+    mockDexieData([
+      qItem({ scoreId: 'g1:u1:7', dismissedAt: '2026-11-20T10:06:00.000Z' }),
+    ]);
+    render(<SyncBanner gameId="g1" />);
+
+    expect(screen.queryByTestId('quarantine-banner')).toBeNull();
+  });
+
   it('avbrutt bekreftelse sletter ingenting', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(false);
     mockDexieData([qItem({ scoreId: 'g1:u1:7' })]);
@@ -137,6 +157,7 @@ describe('SyncBanner — karantene-varianten', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Fjern varselet' }));
     expect(localDb.syncQueue.bulkDelete).not.toHaveBeenCalled();
+    expect(localDb.syncQueue.update).not.toHaveBeenCalled();
   });
 
   it('kun aktive elementer → kompakt variant uten dismiss, med retry', () => {
