@@ -231,16 +231,22 @@ describe('Regel 3.1b: netto dobbeltbogey (NGF s. 30-31)', () => {
 });
 
 describe('Kjent avvik', () => {
-  // F1 lives in the caller, outside lib/scoring: persistScoreDifferentials
-  // passes `game_players.course_handicap`, the number frozen after the game's
-  // share and cap. NGF 3.1b (s. 31): «Spillerens fulle spillehandicap (100 %)
-  // skal brukes for alle netto dobbel bogey justeringer», and 7.2a (s. 65)
-  // says the same for a capped competition. The league example above gives
-  // 20,8 with the rule and 19,9 with the frozen 23. A fix changes the
-  // argument, this assertion holds, and the test turns red.
-  it.fails('F1: differensialen får fullt banehandicap til netto dobbeltbogey, ikke spillehandicapet etter andel og tak', () => {
+  // F1 lives in the two callers, outside lib/scoring: both pass
+  // `game_players.course_handicap`, the number frozen after the game's share
+  // and cap. NGF 3.1b (s. 31): «Spillerens fulle spillehandicap (100 %) skal
+  // brukes for alle netto dobbel bogey justeringer», and 7.2a (s. 65) says the
+  // same for a capped competition. The league example above gives 20,8 with
+  // the rule and 19,9 with the frozen 23. A fix changes the argument, the
+  // assertion holds, and the test turns red. One test per caller, so a fix of
+  // one site cannot hide behind the other.
+  it.fails('F1: differensialen ved avslutning får fullt banehandicap til netto dobbeltbogey', () => {
     const caller = readFileSync('lib/games/persistScoreDifferentials.ts', 'utf8');
     expect(caller).not.toMatch(/courseHandicap:\s*player\.course_handicap\b/);
+  });
+
+  it.fails('F1: differensialen historikken fryser selv får fullt banehandicap til netto dobbeltbogey', () => {
+    const caller = readFileSync('lib/stats/roundDifferentials.ts', 'utf8');
+    expect(caller).not.toMatch(/courseHandicap:\s*game\.course_handicap\b/);
   });
 
   // NGF 3.1b (s. 31): «Når et spillehandicap er beregnet til mer enn 54 og en
