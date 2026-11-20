@@ -324,8 +324,16 @@ describe('lokalt skjema', () => {
        VALUES ('${GAME}:1:7', '${GAME}:1:7', 5, 'violates', '2026-11-20T09:00:04.000Z', '2026-11-20T09:01:00.000Z');`,
     );
 
-    const { getDb, listQueue, listTeeShotQueue, markQueueDismissed, markTeeShotQueueDismissed, putQueueItem } =
-      require('./db') as Db;
+    const {
+      getDb,
+      listQueue,
+      listTeeShotQueue,
+      markQueueAbandoned,
+      markQueueDismissed,
+      markTeeShotQueueAbandoned,
+      markTeeShotQueueDismissed,
+      putQueueItem,
+    } = require('./db') as Db;
     const db = await getDb();
 
     expect(await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;')).toEqual({ user_version: 7 });
@@ -339,6 +347,20 @@ describe('lokalt skjema', () => {
     });
     expect((await listTeeShotQueue(db))[0]).toMatchObject({ dismissedAt: '2026-11-20T10:00:00.000Z' });
 
+    // Opus-gjennomgangen av p18: en ny karantene skjules aldri av et gammelt merke.
+    await markQueueAbandoned(db, `${GAME}:${ME}:5`, {
+      attemptCount: 6,
+      lastError: 'violates',
+      abandonedAt: '2026-11-20T10:00:30.000Z',
+    });
+    expect((await listQueue(db))[0]).toMatchObject({ dismissedAt: null });
+    await markTeeShotQueueAbandoned(db, `${GAME}:1:7`, {
+      attemptCount: 6,
+      lastError: 'violates',
+      abandonedAt: '2026-11-20T10:00:30.000Z',
+    });
+    expect((await listTeeShotQueue(db))[0]).toMatchObject({ dismissedAt: null });
+
     // Et nytt trykk legger elementet i køen på nytt: uten merke, klart til å sendes.
     await putQueueItem(db, {
       id: `${GAME}:${ME}:5`,
@@ -348,6 +370,11 @@ describe('lokalt skjema', () => {
       createdAt: '2026-11-20T10:01:00.000Z',
     });
     expect((await listQueue(db))[0]).toMatchObject({ abandonedAt: null, dismissedAt: null });
+
+    // Merket lander bare på et element som FORTSATT står i karantene: et hull
+    // som er tastet på nytt, er aktivt igjen og skal ikke merkes.
+    await markQueueDismissed(db, `${GAME}:${ME}:5`, '2026-11-20T10:02:00.000Z');
+    expect((await listQueue(db))[0]).toMatchObject({ dismissedAt: null });
   });
 
   // #2751: første valg står også på telefonen, og raden gir ikke etter for et nytt trykk.

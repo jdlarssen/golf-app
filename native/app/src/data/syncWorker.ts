@@ -15,6 +15,7 @@ import {
 import { SERVER_TEE_SHOT_COLUMNS } from '../../../../lib/sync/teeShotRow';
 import { conflictRecordFor } from '../../../../lib/sync/conflict';
 import { interpretUpsertReply } from '../../../../lib/sync/upsertReply';
+import { isConfirmedLock, LOCK_STATE_COLUMNS, type LockStateRow } from '../../../../lib/sync/lockedCard';
 import { currentDeviceUserId, supabase } from '../supabase';
 import {
   deleteQueueItem,
@@ -384,6 +385,23 @@ async function settleLockedRefusal(
     serverRow = data;
   } catch {
     return keepForRetry();
+  }
+
+  // p18: uten server-rad betyr oppgjøret at det lokale slaget slettes. Gjør det
+  // bare når låsen er bekreftet (`isConfirmedLock`); ellers står slaget, «ikke
+  // sendt», og prøves igjen.
+  if (!serverRow) {
+    try {
+      const { data, error } = await supabase
+        .from('game_players')
+        .select(LOCK_STATE_COLUMNS)
+        .eq('game_id', score.gameId)
+        .eq('user_id', score.userId)
+        .maybeSingle();
+      if (error || !isConfirmedLock(data as LockStateRow | null)) return keepForRetry();
+    } catch {
+      return keepForRetry();
+    }
   }
 
   return withTxn(async (txn) => {

@@ -13,10 +13,14 @@
 --                         MAX_PERMANENT_ATTEMPTS times, showing a failed save,
 --                         before it settled.
 --
--- The INSERT branch now catches exactly that error (insufficient_privilege)
--- and returns the same all-NULL row. No rule is added or copied here: who may
--- write is still decided by the RLS policies only. Every other error (CHECK,
--- foreign key, unique race) still raises.
+-- The INSERT branch now catches that error (insufficient_privilege) and
+-- returns the same all-NULL row, but ONLY when the refusal is positively the
+-- locked case: the player's card is delivered or withdrawn, or the round is
+-- not active. Any other RLS refusal (a lost session, a player the caller may
+-- not score for) raises as before, so the client keeps the stroke as «not
+-- sent» and never deletes it on a refusal it cannot explain. The check only
+-- classifies the reply; who may write is still decided by the RLS policies.
+-- Every other error (CHECK, foreign key, unique race) still raises.
 --
 -- Same signature, body and settings as the live function (staging, read
 -- 2026-11-20) apart from the exception block. Backward compatible: the web and
@@ -67,8 +71,24 @@ begin
       into game_id, user_id, hole_number, strokes, putts, entered_by,
            client_updated_at, updated_at, was_applied;
     exception when insufficient_privilege then
-      -- RLS refused the first stroke (card delivered or withdrawn, round not
-      -- active, or not the caller's to write). Answer like the UPDATE path.
+      -- Answer like the UPDATE path only for a locked card. Read as the
+      -- caller (security invoker): a row the caller may not see does not
+      -- count as locked.
+      if not (
+        exists (
+          select 1 from public.game_players gp
+           where gp.game_id = p_game_id
+             and gp.user_id = p_user_id
+             and (gp.submitted_at is not null or gp.withdrawn_at is not null)
+        )
+        or exists (
+          select 1 from public.games g
+           where g.id = p_game_id
+             and g.status <> 'active'
+        )
+      ) then
+        raise;
+      end if;
       game_id := null;
       user_id := null;
       hole_number := null;

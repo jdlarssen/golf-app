@@ -419,10 +419,16 @@ describe('drainQueue — låst kort-avslag (#2211)', () => {
     setAttempts(4);
     rpcMock.mockResolvedValueOnce({ data: null, error: { message: RLS_INSERT_ERROR } });
     maybeSingleMock.mockResolvedValueOnce({ data: null, error: null });
+    // p18: the lock is confirmed before a local stroke is deleted.
+    maybeSingleMock.mockResolvedValueOnce({
+      data: { submitted_at: '2026-09-25T09:00:00+00:00', withdrawn_at: null, games: { status: 'active' } },
+      error: null,
+    });
 
     const { drainQueue } = await import('./syncWorker');
     await drainQueue();
 
+    expect(fromMock).toHaveBeenCalledWith('game_players');
     expect(fake.scores.has(ID)).toBe(false);
     expect(fake.syncQueue.get(ID)).toMatchObject({
       lastError: RLS_INSERT_ERROR,
@@ -739,5 +745,78 @@ describe('startSyncListener — a failing drain is caught (p18)', () => {
     expect(unhandled).toEqual([]);
     expect(errorSpy).toHaveBeenCalledWith('[sync] drain failed', boom);
     errorSpy.mockRestore();
+  });
+});
+
+// Opus review of p18: with 0245 every RLS refusal of a first stroke answers
+// the all-NULL row, and the settle deleted the local stroke on the first drain
+// whenever the server had no row. «Usendte slag skal aldri forsvinne stille»:
+// a local stroke is deleted only when the lock is confirmed (card delivered or
+// withdrawn, or the round not active). Otherwise it stays, «not sent».
+describe('drainQueue — a refused first stroke is deleted only when the lock is confirmed (p18)', () => {
+  it('player not locked: the stroke stays and the item keeps retrying', async () => {
+    seedScore(4, '2026-11-20T10:00:00.000Z');
+    rpcMock.mockResolvedValueOnce({ data: REFUSED_REPLY_FIXTURE, error: null });
+    maybeSingleMock.mockResolvedValueOnce({ data: null, error: null });
+    maybeSingleMock.mockResolvedValueOnce({
+      data: { submitted_at: null, withdrawn_at: null, games: { status: 'active' } },
+      error: null,
+    });
+
+    const { drainQueue } = await import('./syncWorker');
+    const res = await drainQueue();
+
+    expect(fake.scores.get(ID)!.strokes).toBe(4);
+    const item = fake.syncQueue.get(ID)!;
+    expect(item).toMatchObject({ attemptCount: 1, lastError: REFUSED_WRITE_ERROR });
+    expect(item.abandonedAt).toBeUndefined();
+    expect(res).toMatchObject({ errored: 1, abandoned: 0 });
+  });
+
+  it('the lock cannot be read (no player row): the stroke stays', async () => {
+    seedScore(4, '2026-11-20T10:00:00.000Z');
+    rpcMock.mockResolvedValueOnce({ data: REFUSED_REPLY_FIXTURE, error: null });
+    maybeSingleMock.mockResolvedValueOnce({ data: null, error: null });
+    maybeSingleMock.mockResolvedValueOnce({ data: null, error: null });
+
+    const { drainQueue } = await import('./syncWorker');
+    await drainQueue();
+
+    expect(fake.scores.get(ID)!.strokes).toBe(4);
+    expect(fake.syncQueue.get(ID)?.abandonedAt).toBeUndefined();
+  });
+
+  it('round no longer active: confirmed lock, the stroke goes and the item is quarantined', async () => {
+    seedScore(4, '2026-11-20T10:00:00.000Z');
+    rpcMock.mockResolvedValueOnce({ data: REFUSED_REPLY_FIXTURE, error: null });
+    maybeSingleMock.mockResolvedValueOnce({ data: null, error: null });
+    maybeSingleMock.mockResolvedValueOnce({
+      data: { submitted_at: null, withdrawn_at: null, games: { status: 'finished' } },
+      error: null,
+    });
+
+    const { drainQueue } = await import('./syncWorker');
+    await drainQueue();
+
+    expect(fake.scores.has(ID)).toBe(false);
+    expect(fake.syncQueue.get(ID)?.abandonedAt).toEqual(expect.any(String));
+  });
+});
+
+// Opus review of p18: a quarantine stamp clears an old dismissal, so a new
+// quarantine is never hidden by a dismissal meant for an earlier one.
+describe('drainQueue — quarantine clears dismissedAt (p18)', () => {
+  it('the last permanent attempt quarantines with dismissedAt cleared', async () => {
+    seedScore(4, '2026-11-20T10:00:00.000Z');
+    fake.syncQueue.set(ID, { ...fake.syncQueue.get(ID)!, attemptCount: 4, dismissedAt: '2026-11-20T09:00:00.000Z' });
+    rpcMock.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'violates check constraint "scores_strokes_check"' },
+    });
+
+    const { drainQueue } = await import('./syncWorker');
+    await drainQueue();
+
+    expect(fake.syncQueue.get(ID)).toMatchObject({ abandonedAt: expect.any(String), dismissedAt: null });
   });
 });
