@@ -127,3 +127,11 @@ databasen og `lib/users/getCoPlayerIds.ts` i app-koden. Et utkast gjør bare
 arrangøren til medspiller.
 
 Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
+
+## Klubber — hvem skriver hva (0248)
+
+- `group_members`: rader skrives bare av RPC-ene (`admin_create_club`, `add_club_member_by_email`, `decide_join_request`, `accept_club_invitations`, `set_club_member_role`). De holder medlemstaket, sluttdatoen og rollereglene. Det finnes ingen INSERT- eller UPDATE-policy for innloggede klienter; ikke legg til en.
+- En eier-rad slettes bare av en eier eller global admin (`is_group_owner`). TS-speilet er `lib/clubs/memberRemoval.ts`; de to endres sammen.
+- `groups`: bare global admin (eller tjenesteklienten bak `requireAdmin`) oppretter klubber og setter `member_cap` og `valid_until`. Triggeren `guard_groups_locked_fields` låser dem, og `short_id`, `created_by`, `created_at`, `id`, for alle andre.
+- En klubb med ligaer eller cuper kan ikke slettes (`ON DELETE RESTRICT` på `leagues.group_id` og `tournaments.group_id`). En liga eller cup uten klubb har et bredere publikum, så slett eller flytt dem først.
+- Fasit: `supabase/tests/club_roles_and_terms_guard_test.sql`.
