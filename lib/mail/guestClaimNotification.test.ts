@@ -168,4 +168,22 @@ describe('sendGuestClaimNotification', () => {
       "
     `);
   });
+
+  it('no organiser name: the fallback comes in the recipient\'s language', async () => {
+    const payload = await send({ ...baseParams, invitedByName: null, locale: 'en' });
+    expect(payload.text).toMatchInlineSnapshot(`
+      "Your result from Sommercup 2026
+
+      Hi Kari!
+
+      An organiser added you as a guest in Sommercup 2026. The round is finished, and your scorecard is waiting on a Tørny account of your own.
+
+      Log in with this email address and the account is yours. You'll get a one-time code by email instead of a password.
+
+      Log in: https://tornygolf.no/en/login
+
+      Tørny — fire up your golf tournament in a couple of minutes.
+      "
+    `);
+  });
 });

@@ -10,9 +10,11 @@ import {
 /**
  * The sender name in a game invitation: the inviter's name, otherwise the role.
  * One home for the e-mail core, `sendHeldGameInvites` and «Send på nytt» (#2445).
+ * `null` = an organiser without a name: the mail fills «En arrangør» in the
+ * recipient's language.
  */
-export function inviteMailSenderName(name: string | null, isAdmin: boolean): string {
-  return name?.trim() || (isAdmin ? 'Admin' : 'En arrangør');
+export function inviteMailSenderName(name: string | null, isAdmin: boolean): string | null {
+  return name?.trim() || (isAdmin ? 'Admin' : null);
 }
 
 /**

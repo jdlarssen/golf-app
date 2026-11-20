@@ -38,6 +38,19 @@ describe('buildNotificationText', () => {
     expect(buildNotificationText(kind, payload, t).title).toBe(title);
   });
 
+  it('club_join_request without a requester name: the fallback in the reader\'s language', () => {
+    const en = createTranslator({ locale: 'en', messages: enMessages, namespace: 'inbox' });
+    const text = buildNotificationText(
+      'club_join_request',
+      { group_id: 'g', group_name: 'Byneset', requester_name: null } as NotificationPayload,
+      en as unknown as NotificationTranslator,
+    );
+    expect(text.title).toBe(
+      en('kinds.clubJoinRequest.title', { requesterName: en('somePlayerFallback') }),
+    );
+    expect(text.title).not.toContain('En bruker');
+  });
+
   // #2749: the app shows the entry fee, so the reminder names the amount on
   // every channel.
   it('#2749: payment_reminder names the amount', () => {

@@ -311,7 +311,8 @@ export async function inviteByEmail(
   // or another friend-invite) — don't send a second invite-mail.
   if (invitedResult.data) return done('already_invited');
 
-  const inviterName = profile.name?.trim() || 'En venn';
+  // null → «En venn» in the recipient's language (the mail fills it in).
+  const inviterName = profile.name?.trim() || null;
 
   // Audit log. Token is required NOT NULL UNIQUE; we generate a uuid here
   // just to satisfy the column. The actual OTP code is sent by Supabase
@@ -338,6 +339,7 @@ export async function inviteByEmail(
     await sendInviteNotification({
       to: email,
       invitedByName: inviterName,
+      inviterFallback: 'friend',
       inviteToken,
       expiresAt,
     });

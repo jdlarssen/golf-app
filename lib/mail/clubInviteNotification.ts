@@ -21,10 +21,10 @@ import { escapeHtml } from './escapeHtml';
 
 export type ClubInviteNotificationParams = {
   to: string;
-  /** Display name of the club owner/admin who added the email. */
-  invitedByName: string;
-  /** The club the recipient is invited to. */
-  clubName: string;
+  /** Display name of the club owner/admin who added the email. `null` → «En klubbvenn» in the recipient's language. */
+  invitedByName: string | null;
+  /** The club the recipient is invited to. `null` → «klubben» in the recipient's language. */
+  clubName: string | null;
   /**
    * Mottakerens locale (#594). Invitéer er konto-løse, så dette er normalt
    * udefinert → norsk. Beholdt som param for symmetri med øvrige mail-sendere.
@@ -35,9 +35,11 @@ export type ClubInviteNotificationParams = {
 export async function sendClubInviteNotification(
   params: ClubInviteNotificationParams,
 ): Promise<void> {
-  const { to, invitedByName, clubName, locale } = params;
+  const { to, locale } = params;
   const loc = resolveMailLocale(locale);
   const t = await getMailTranslator(locale);
+  const invitedByName = params.invitedByName ?? t('common.someClubFriendFallback');
+  const clubName = params.clubName ?? t('common.someClubFallback');
 
   const loginUrl = mailUrl(locale, '/login');
 

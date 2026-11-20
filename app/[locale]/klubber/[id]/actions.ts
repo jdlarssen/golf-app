@@ -93,9 +93,9 @@ export async function addMember(formData: FormData) {
           ? admin.from('users').select('name, nickname').eq('id', user.id).maybeSingle<{ name: string | null; nickname: string | null }>()
           : Promise.resolve({ data: null }),
       ]);
-      const invitedByName =
-        playerName(meRow) ?? 'En klubbvenn';
-      const clubName = clubRow?.name?.trim() || 'klubben';
+      // null → the fallback in the recipient's language (the mail fills it in).
+      const invitedByName = playerName(meRow) ?? null;
+      const clubName = clubRow?.name?.trim() || null;
       await sendClubInviteNotification({ to: email, invitedByName, clubName });
     } catch (err) {
       // Mail failed — the invitation row still stands. Surface a softer code so

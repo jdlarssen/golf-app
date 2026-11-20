@@ -386,10 +386,12 @@ const cupLineupRevealedSchema = z.object({
 // club_join_request: noen ba om å bli med i en klubb via del-lenken. Sendes til
 // klubbens eier(e)/admin(er). group_id deeplinker til /klubber/[group_id]/administrer hvor
 // forespørselen godkjennes/avslås. (#442)
+// requester_name nullable: the card fills the localized fallback at render
+// (#583), so the payload stays locale-agnostic.
 const clubJoinRequestSchema = z.object({
   group_id: uuid,
   group_name: z.string().min(1),
-  requester_name: z.string().min(1),
+  requester_name: z.string().min(1).nullable(),
 });
 
 // club_role_changed: en klubb-eier endret et medlems rolle. Sendes til den

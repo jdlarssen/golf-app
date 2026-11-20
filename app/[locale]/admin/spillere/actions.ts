@@ -154,7 +154,7 @@ export async function resendInvitation(formData: FormData) {
   // invitation to a finished round (#1009); the organiser resends those from
   // the claim form on /games/<id>/spillere. Captain (team) invitations get
   // the game mail as well: the login routes them to the team page anyway.
-  let senderName = invitedByName;
+  let senderName: string | null = invitedByName;
   let gameMail: { gameName: string; gameMode: string } | null = null;
   if (inv.game_id) {
     const { data: game, error: gameError } = await supabase
