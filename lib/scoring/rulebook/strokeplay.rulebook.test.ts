@@ -155,6 +155,31 @@ describe('Solo slagspill: netto = brutto − slag etter hullindeks', () => {
     const net = Object.fromEntries(result.players.map((p) => [p.userId, p.totalNetStrokes]));
     expect(net).toEqual({ a: 80, b: 72, c: 63, d: 51 });
   });
+
+  // NGF 6.2b(ii) s. 57: when results are against par, no extra strokes are
+  // added for a different par, and the scores count as equal when both
+  // players make their own par. New stroke play games rank on net to par.
+  it('6.2b(ii): netto par mot egen par står likt, også når parene er ulike', () => {
+    const holes: ScoringHole[] = [1, 2].map((n) => ({
+      number: n,
+      par: 4,
+      parByGender: { mens: 4, ladies: 5, juniors: 4 },
+      strokeIndex: n,
+    }));
+    const result = computeSoloStrokeplay(
+      ctx(
+        'solo_strokeplay',
+        { kind: 'solo_strokeplay', team_size: 1, ranking: 'net_to_par' },
+        [solo('herre', 0, 'mens'), solo('dame', 0, 'ladies')],
+        holes,
+        [...card('herre', [4, 4]), ...card('dame', [5, 5])],
+      ),
+    );
+    expect(result.players.map((p) => [p.userId, p.netToPar, p.rank])).toEqual([
+      ['herre', 0, 1],
+      ['dame', 0, 1],
+    ]);
+  });
 });
 
 describe('Best ball (four-ball slagspill), vedlegg C/3', () => {
@@ -254,14 +279,14 @@ describe('Like plasseringer: tilbaketelling, Committee Procedures 5A(6)(d)', () 
     expect(result.players[1].decidedBy).toBe('back9');
   });
 
-  // Net stroke play in the app gives strokes by stroke index on each hole, so
-  // the count-back uses the same net hole scores (the rule's fractions,
-  // one-half, one-third and one-sixth, are for competitions «where the stroke
-  // index allocation as set by the Committee is not used»).
-  it('netto slagspill: lik netto sum avgjøres på netto for de siste ni hullene', () => {
+  // The engine counts back on net hole scores, strokes given by stroke index.
+  // For individual stroke play the rule deducts one-half of the handicap from
+  // the last nine instead (F5 under «Kjent avvik»). Here both methods agree.
+  it('netto slagspill: lik netto sum avgjøres på de siste ni hullene', () => {
     // A: banehandicap 9 (strokes on index 1-9 = holes 1-9), 5 on every hole:
     // net 4 on 1-9, 5 on 10-18 = 81. B: banehandicap 0, 5 on 1-9, 4 on
-    // 10-18 = 81. B is better on the last nine.
+    // 10-18 = 81. B is better on the last nine: 36 against 45 net hole by
+    // hole, and 36 against 45 − 4,5 = 40,5 with the rule's half.
     const result = computeSoloStrokeplay(
       ctx(
         'solo_strokeplay',
@@ -303,6 +328,39 @@ describe('Kjent avvik', () => {
         ],
       ),
     ) as StablefordSoloResult;
+    expect(result.players.map((p) => [p.userId, p.rank])).toEqual([
+      ['A', 1],
+      ['B', 2],
+    ]);
+  });
+
+  // 5A(6)(d): «For net competitions where the stroke index allocation as set by
+  // the Committee is not used, such as individual stroke play, if the last
+  // nine, last six, last three holes scenario is used, one-half, one-third,
+  // one-sixth, etc. of the handicaps should be deducted from the score for
+  // those holes.» The engine counts back on net hole scores instead
+  // (soloStrokeplay.ts → tiebreaker.ts).
+  it.fails('F5: solo slagspill teller tilbake med halve handicapet på siste ni, ikke netto per hull', () => {
+    // Stroke index from NGF's example, vedlegg E s. 82 (odd in front, even
+    // behind). A: banehandicap 9, which is 5 strokes in front and 4 behind
+    // (holes 10, 12, 14 and 16). B: banehandicap 0. Both net 81.
+    // Last nine: A 40 gross. Hole by hole A has 36 net against B's 36; the
+    // rule's half gives A 40 − 4,5 = 35,5, better than 36, so A wins there.
+    // The engine goes on to the last six: A 27 − 2 = 25 against B 24, B wins.
+    const ngfIndex = [7, 15, 5, 11, 1, 13, 3, 17, 9, 8, 16, 6, 12, 2, 14, 4, 18, 10];
+    const holes: ScoringHole[] = ngfIndex.map((strokeIndex, i) => ({ number: i + 1, par: 4, strokeIndex }));
+    const result = computeSoloStrokeplay(
+      ctx(
+        'solo_strokeplay',
+        { kind: 'solo_strokeplay', team_size: 1, ranking: 'net_to_par' },
+        [solo('A', 9), solo('B', 0)],
+        holes,
+        [
+          ...card('A', [6, 6, 6, 6, 6, 5, 5, 5, 5, 5, 4, 4, 5, 5, 5, 4, 4, 4]),
+          ...card('B', [...Array(9).fill(5), ...Array(9).fill(4)]),
+        ],
+      ),
+    );
     expect(result.players.map((p) => [p.userId, p.rank])).toEqual([
       ['A', 1],
       ['B', 2],

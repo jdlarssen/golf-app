@@ -238,7 +238,10 @@ describe('Kjent avvik', () => {
   // same for a capped competition. The league example above gives 20,8 with
   // the rule and 19,9 with the frozen 23. A fix changes the argument, the
   // assertion holds, and the test turns red. One test per caller, so a fix of
-  // one site cannot hide behind the other.
+  // one site cannot hide behind the other. Not caught: a fix that feeds the
+  // full number into `course_handicap` upstream (the history page and the
+  // app's roundHistory.ts build the input) or changes what the column stores;
+  // such a fix flips these tests by hand.
   it.fails('F1: differensialen ved avslutning får fullt banehandicap til netto dobbeltbogey', () => {
     const caller = readFileSync('lib/games/persistScoreDifferentials.ts', 'utf8');
     expect(caller).not.toMatch(/courseHandicap:\s*player\.course_handicap\b/);
