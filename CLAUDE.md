@@ -1,5 +1,6 @@
 @AGENTS.md
 @docs/agent-discipline/core.md
+@docs/writing-to-owner.md
 
 # Tørny — golf-turneringsapp
 
@@ -142,5 +143,6 @@ Utløsertabellen står i `core.md` (lastet øverst). Les fila når utløseren in
 - `docs/uat-empty-states-and-scheduled-status.md` — UAT-sjekkliste for tomtilstander og planlagt status
 - `docs/user-flows.md` — brukerflytene i tekst
 - `docs/visjon.md` — visjonen, planleggingsløken (visjon → kvartalsmål → månedsmål → uke → issue) og reglene harnesset håndhever
+- `docs/writing-to-owner.md` — de 16 skrivereglene for alt eieren skal lese (lastet øverst)
 
 AGENTS.md per område: `AGENTS.md` (Next.js 16, fem feller) · `lib/cron/AGENTS.md` (cron-helse, staging uten cron) · `lib/games/AGENTS.md` (spill-cache) · `lib/mail/AGENTS.md` (Type B) · `lib/scoring/AGENTS.md` (Type A, test først) · `lib/supabase/AGENTS.md` (skriveregler, RLS) · `lib/sync/AGENTS.md` (sync, realtime) · `native/app/AGENTS.md` (native-appen)
