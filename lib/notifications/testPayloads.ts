@@ -103,6 +103,11 @@ export const testPayloads: { [K in NotificationKind]: NotificationPayload<K> } =
     course_changed: false,
     moved_by_name: 'Per',
   },
+  tee_time_changed: {
+    game_id: TEST_GAME_ID,
+    game_name: 'X',
+    tee_off_at: '2026-10-04T07:10:00.000Z',
+  },
   auto_start_blocked: { game_id: TEST_GAME_ID, game_name: 'X', reason: 'pending_players' },
   achievement_unlocked: {
     game_id: TEST_GAME_ID,

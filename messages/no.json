@@ -79,7 +79,8 @@
     "kinds": {
       "invite": {
         "title": "{invitedByName} inviterte deg",
-        "detail": "{gameName}"
+        "detail": "{gameName}",
+        "detailTeeOff": "{gameName} · du går ut {teeOffAt, time, ::HHmm}"
       },
       "peerApprovalRequest": {
         "title": "Godkjenning trengs",
@@ -243,7 +244,13 @@
       "gameMoved": {
         "title": "{gameName} er flyttet",
         "detail": "Ny tid: {teeOffAt, date, ::EEEEdMMM} kl. {teeOffAt, time, ::HHmm}. Samme bane og tee.",
-        "detailCourseChanged": "Ny tid: {teeOffAt, date, ::EEEEdMMM} kl. {teeOffAt, time, ::HHmm}. Bane eller tee er også endret."
+        "detailCourseChanged": "Ny tid: {teeOffAt, date, ::EEEEdMMM} kl. {teeOffAt, time, ::HHmm}. Bane eller tee er også endret.",
+        "detailOwn": "Ny tid: {teeOffAt, date, ::EEEEdMMM} kl. {teeOffAt, time, ::HHmm}, og du går ut {ownTeeOffAt, time, ::HHmm}. Samme bane og tee.",
+        "detailOwnCourseChanged": "Ny tid: {teeOffAt, date, ::EEEEdMMM} kl. {teeOffAt, time, ::HHmm}, og du går ut {ownTeeOffAt, time, ::HHmm}. Bane eller tee er også endret."
+      },
+      "teeTimeChanged": {
+        "title": "Starttiden din er endret",
+        "detail": "{gameName} · du går ut {teeOffAt, time, ::HHmm}"
       },
       "gameStarted": {
         "title": "Runden er i gang",

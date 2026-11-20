@@ -45,6 +45,8 @@ export function notificationDestination(n: DeeplinkInput): string | null {
     case 'game_reopened':
     // #2480: spill-hjem viser den nye tee-tiden.
     case 'game_moved':
+    // #2451: spill-hjem viser spillerens egen starttid.
+    case 'tee_time_changed':
     case 'registration_approved': {
       const p = n.payload as NotificationPayload<'invite'>;
       return `/games/${p.game_id}`;

@@ -11,6 +11,7 @@
  */
 
 import type { PlannedBundleMatch } from './cupPairing';
+import { DEFAULT_TEE_INTERVAL_MINUTES, startGroupTeeOffAt } from '@/lib/games/flightTeeTimes';
 
 /** Hvilket lag en flight-posisjon tilhører — speiler `PlannedBundleMatch`s
  * `side1`/`side2`-felt (lag 1 / lag 2), ikke cupens `team1`/`team2`-navn. */
@@ -188,7 +189,7 @@ export function splitDayTotalMatches(team1Size: number, team2Size: number): numb
  * flight er "cup-start". Så blir alle flightene etter satt til 10 min
  * etter, om det trengs» — eierbeslutning, ikke en konfigurerbar innstilling.
  */
-export const FLIGHT_TEE_OFF_STAGGER_MINUTES = 10;
+export const FLIGHT_TEE_OFF_STAGGER_MINUTES = DEFAULT_TEE_INTERVAL_MINUTES;
 
 /**
  * Utleder `games.scheduled_tee_off_at` for ÉN generert match fra wizardens
@@ -217,7 +218,6 @@ export function resolveScheduledTeeOffAt(
   flightIndex: number | undefined,
 ): string | null {
   if (!cupStartIso) return null;
-  if (!flightIndex || flightIndex <= 1) return cupStartIso;
-  const offsetMs = (flightIndex - 1) * FLIGHT_TEE_OFF_STAGGER_MINUTES * 60 * 1000;
-  return new Date(new Date(cupStartIso).getTime() + offsetMs).toISOString();
+  // The same rule as a standalone round's start groups (#2451).
+  return startGroupTeeOffAt(cupStartIso, flightIndex ?? 1, FLIGHT_TEE_OFF_STAGGER_MINUTES);
 }
