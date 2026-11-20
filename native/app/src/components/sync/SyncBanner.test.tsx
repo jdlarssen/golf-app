@@ -41,13 +41,21 @@ jest.mock('../../data/db', () => ({
   deleteQueueItem: jest.fn(async (_db: unknown, id: string) => {
     mockState.queue = mockState.queue.filter((i) => i.id !== id);
   }),
+  // p18: et usendt slag slettes ikke når varselet fjernes, det merkes.
+  markQueueDismissed: jest.fn(async (_db: unknown, id: string, dismissedAt: string) => {
+    mockState.queue = mockState.queue.map((i) => (i.id === id ? { ...i, dismissedAt } : i));
+  }),
+  markTeeShotQueueDismissed: jest.fn(async (_db: unknown, id: string, dismissedAt: string) => {
+    mockState.teeShots = mockState.teeShots.map((i) => (i.id === id ? { ...i, dismissedAt } : i));
+  }),
   deleteConflict: jest.fn(async (_db: unknown, id: string) => {
     mockState.conflicts = mockState.conflicts.filter((c) => c.id !== id);
   }),
 }));
 jest.mock('../../data/syncWorker', () => ({ drainQueue: jest.fn(async () => undefined) }));
 
-const { deleteQueueItem, deleteConflict, deleteTeeShotQueueItem } = require('../../data/db') as {
+const { deleteQueueItem, deleteConflict, deleteTeeShotQueueItem, markQueueDismissed } = require('../../data/db') as {
+  markQueueDismissed: jest.Mock;
   deleteQueueItem: jest.Mock;
   deleteConflict: jest.Mock;
   deleteTeeShotQueueItem: jest.Mock;
@@ -132,12 +140,16 @@ describe('SyncBanner', () => {
 
     confirm!();
     await waitFor(() => expect(screen.queryByTestId('quarantine-banner')).toBeNull());
-    // Bare karantene-radene — hull 5 prøver fortsatt og blir liggende.
-    expect(deleteQueueItem.mock.calls.map((c) => c[1]).sort()).toEqual(['q3', 'q7', 'q9']);
-    // Gjennom `withTxn`: en sletting på den delte forbindelsen mens en drain står
+    // Revisjonen 20.11 (p18): slagene ble aldri sendt. De slettes ikke, de merkes
+    // som avvist, så hullet fortsatt sier «ikke lagret». Bare karantene-radene —
+    // hull 5 prøver fortsatt og blir liggende urørt.
+    expect(deleteQueueItem).not.toHaveBeenCalled();
+    expect(markQueueDismissed.mock.calls.map((c) => c[1]).sort()).toEqual(['q3', 'q7', 'q9']);
+    // Gjennom `withTxn`: en skriving på den delte forbindelsen mens en drain står
     // i en transaksjon gir «database is locked» på enheten (#1954 A4).
-    expect(deleteQueueItem.mock.calls.every((c) => (c[0] as { txn?: boolean }).txn)).toBe(true);
-    expect(mockState.queue.map((i) => i.id)).toEqual(['q5']);
+    expect(markQueueDismissed.mock.calls.every((c) => (c[0] as { txn?: boolean }).txn)).toBe(true);
+    expect(mockState.queue.map((i) => i.id).sort()).toEqual(['q3', 'q5', 'q7', 'q9']);
+    expect(mockState.queue.find((i) => i.id === 'q5')?.dismissedAt).toBeUndefined();
 
     // #2211: bare låste avslag → varselet sier hvorfor, og fjernes uten å
     // spørre (et slikt slag kan aldri sendes). Samme skjerm: neste lesing av

@@ -158,24 +158,19 @@ export async function drainQueue(reason = 'manuell'): Promise<DrainResult> {
           else if (settled === 'errored') errored++;
           continue;
         }
-        if (decision === 'abandon') {
-          await withTxn((txn) =>
-            markQueueAbandoned(txn, item.id, {
-              attemptCount: item.attemptCount + 1,
-              lastError: error.message,
-              abandonedAt: new Date().toISOString(),
-            }),
-          );
-          abandoned++;
-        } else {
-          await withTxn((txn) =>
-            markQueueRetry(txn, item.id, {
-              attemptCount: item.attemptCount + 1,
-              lastError: error.message,
-            }),
-          );
-          errored++;
-        }
+        const marked = await markScoreItemIfUnchanged(
+          item,
+          score,
+          decision === 'abandon'
+            ? {
+                attemptCount: item.attemptCount + 1,
+                lastError: error.message,
+                abandonedAt: new Date().toISOString(),
+              }
+            : { attemptCount: item.attemptCount + 1, lastError: error.message },
+        );
+        if (marked && decision === 'abandon') abandoned++;
+        else if (marked) errored++;
         if (isNetworkFailureMessage(error.message)) {
           networkDown = true;
           break;
@@ -282,6 +277,13 @@ export async function drainQueue(reason = 'manuell'): Promise<DrainResult> {
       queued: queue.length + teeShotQueue.length,
     };
     return result;
+  } catch (err: unknown) {
+    // Revisjonen 20.11 (p18): utløserne og skjermene kaller dette og glemmer
+    // det (`void drainQueue(...)`). Et uventet unntak (SQLite, en RPC som
+    // avviser) ble et ubehandlet løfte. Logg det; køen står, og neste utløser
+    // prøver igjen.
+    console.error('[drainQueue] feilet', err);
+    return EMPTY;
   } finally {
     inFlight = false;
     if (rerunRequested) {
@@ -289,6 +291,47 @@ export async function drainQueue(reason = 'manuell'): Promise<DrainResult> {
       void drainQueue('etter pågående drain');
     }
   }
+}
+
+type FailedAttempt =
+  | { attemptCount: number; lastError: string | null }
+  | { attemptCount: number; lastError: string | null; abandonedAt: string };
+
+/**
+ * Revisjonen 20.11 (p18): skriv et mislykket forsøk på kø-elementet bare når
+ * raden fortsatt er den som ble sendt. Spilleren kan ha tastet på nytt mens
+ * RPC-en var i lufta; da har writeScore lagt elementet i køen på nytt (samme
+ * id, forsøk 0) for den nyere verdien. Å stemple den foreldede feilen på det —
+ * verst karantenen — holdt den nye verdien igjen for godt. Samme ferskhets-
+ * sjekk som suksessgrenen (#1457). Usann når raden har gått videre.
+ */
+async function markScoreItemIfUnchanged(
+  item: SyncQueueItem,
+  sent: LocalScore,
+  attempt: FailedAttempt,
+): Promise<boolean> {
+  return withTxn(async (txn) => {
+    const current = await getScore(txn, item.scoreId);
+    if (!current || current.clientUpdatedAt !== sent.clientUpdatedAt) return false;
+    if ('abandonedAt' in attempt) await markQueueAbandoned(txn, item.id, attempt);
+    else await markQueueRetry(txn, item.id, attempt);
+    return true;
+  });
+}
+
+/** `markScoreItemIfUnchanged` for utslagskøen (#2580). */
+async function markTeeShotItemIfUnchanged(
+  item: TeeShotQueueItem,
+  sent: LocalTeeShot,
+  attempt: FailedAttempt,
+): Promise<boolean> {
+  return withTxn(async (txn) => {
+    const current = await getTeeShot(txn, item.teeShotId);
+    if (!current || current.clientUpdatedAt !== sent.clientUpdatedAt) return false;
+    if ('abandonedAt' in attempt) await markTeeShotQueueAbandoned(txn, item.id, attempt);
+    else await markTeeShotQueueRetry(txn, item.id, attempt);
+    return true;
+  });
 }
 
 /**
@@ -313,13 +356,11 @@ async function settleLockedRefusal(
   currentUserId: string | null,
 ): Promise<'abandoned' | 'errored' | 'edited-mid-flight'> {
   const keepForRetry = async () => {
-    await withTxn((txn) =>
-      markQueueRetry(txn, item.id, {
-        attemptCount: item.attemptCount + 1,
-        lastError,
-      }),
-    );
-    return 'errored' as const;
+    const marked = await markScoreItemIfUnchanged(item, score, {
+      attemptCount: item.attemptCount + 1,
+      lastError,
+    });
+    return marked ? ('errored' as const) : ('edited-mid-flight' as const);
   };
 
   if (currentUserId == null) return keepForRetry();
@@ -406,17 +447,19 @@ async function drainTeeShots(
 
     if (error) {
       const decision = syncRetryDecision({ attemptCount: item.attemptCount, errorMessage: error.message });
-      await withTxn((txn) =>
+      const marked = await markTeeShotItemIfUnchanged(
+        item,
+        shot,
         decision === 'abandon'
-          ? markTeeShotQueueAbandoned(txn, item.id, {
+          ? {
               attemptCount: item.attemptCount + 1,
               lastError: error.message,
               abandonedAt: new Date().toISOString(),
-            })
-          : markTeeShotQueueRetry(txn, item.id, { attemptCount: item.attemptCount + 1, lastError: error.message }),
+            }
+          : { attemptCount: item.attemptCount + 1, lastError: error.message },
       );
-      if (decision === 'abandon') counts.abandoned++;
-      else counts.errored++;
+      if (marked && decision === 'abandon') counts.abandoned++;
+      else if (marked) counts.errored++;
       // #1954 D2: samme stopp som slagene, ved første nettfeil.
       if (isNetworkFailureMessage(error.message)) {
         counts.networkDown = true;
@@ -480,10 +523,11 @@ async function settleRefusedTeeShot(
   currentUserId: string | null,
 ): Promise<'abandoned' | 'errored' | 'edited-mid-flight'> {
   const keepForRetry = async () => {
-    await withTxn((txn) =>
-      markTeeShotQueueRetry(txn, item.id, { attemptCount: item.attemptCount + 1, lastError: REFUSED_TEE_SHOT_ERROR }),
-    );
-    return 'errored' as const;
+    const marked = await markTeeShotItemIfUnchanged(item, shot, {
+      attemptCount: item.attemptCount + 1,
+      lastError: REFUSED_TEE_SHOT_ERROR,
+    });
+    return marked ? ('errored' as const) : ('edited-mid-flight' as const);
   };
 
   if (currentUserId == null) return keepForRetry();

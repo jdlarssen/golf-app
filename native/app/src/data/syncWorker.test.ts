@@ -720,3 +720,111 @@ describe('drainQueue', () => {
     });
   });
 });
+
+// Revisjonen 20.11 (p18): feilgrenen skrev forsøket, feilen og karantene-
+// stempelet på kø-elementet etter id, uten å sjekke at spilleren ikke hadde
+// tastet på nytt mens RPC-en var i lufta. writeScore hadde da lagt elementet i
+// køen på nytt (forsøk 0) for den NYERE verdien, og den foreldede feilen satte
+// det i karantene: den nye verdien kom aldri av telefonen.
+describe('drainQueue: feilgrenen respekterer en tasting under kallet (p18)', () => {
+  useFreshModules();
+
+  beforeEach(() => {
+    jest.useFakeTimers({ now: new Date(FROZEN) });
+    mocks().currentDeviceUserId.mockResolvedValue(ME);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  async function primeAttempts(attemptCount: number): Promise<void> {
+    const { getDb, putQueueItem, scoreKey } = require('./db') as Db;
+    const id = scoreKey(GAME, ME, 1);
+    await putQueueItem(await getDb(), {
+      id,
+      scoreId: id,
+      attemptCount,
+      lastError: 'violates check constraint',
+      createdAt: FROZEN,
+    });
+  }
+
+  it('en permanent feil på siste forsøk setter ikke en nyere verdi i karantene', async () => {
+    const { supabase } = mocks();
+    await typeStroke(4);
+    await primeAttempts(MAX_PERMANENT_ATTEMPTS - 1);
+    supabase.rpc.mockImplementationOnce(async () => {
+      jest.advanceTimersByTime(500);
+      await typeStroke(6);
+      return { data: null, error: { message: 'new row violates check constraint "scores_strokes_check"' } };
+    });
+
+    const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+    expect(await drainQueue('test')).toEqual({ pushed: 0, rejected: 0, errored: 0, abandoned: 0 });
+
+    const { getDb, listQueue } = require('./db') as Db;
+    const [queued] = await listQueue(await getDb());
+    expect(queued).toMatchObject({ attemptCount: 0, lastError: null, abandonedAt: null });
+  });
+
+  it('en forbigående feil skriver ikke det gamle forsøket på den nyere verdien', async () => {
+    const { supabase } = mocks();
+    await typeStroke(4);
+    await primeAttempts(2);
+    supabase.rpc.mockImplementationOnce(async () => {
+      jest.advanceTimersByTime(500);
+      await typeStroke(6);
+      return { data: null, error: { message: 'Network request failed' } };
+    });
+
+    const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+    await drainQueue('test');
+
+    const { getDb, listQueue } = require('./db') as Db;
+    expect((await listQueue(await getDb()))[0]).toMatchObject({ attemptCount: 0, lastError: null });
+  });
+
+  it('et utslag på siste forsøk setter ikke et nyere valg i karantene', async () => {
+    const { supabase } = mocks();
+    const { writeTeeShot } = require('./writeTeeShot') as typeof import('./writeTeeShot');
+    const tap = (teeShotBy: string) =>
+      writeTeeShot({ gameId: GAME, teamNumber: 1, holeNumber: 7, teeShotBy, enteredBy: ME });
+    await tap(ME);
+    const { getDb, listTeeShotQueue, putTeeShotQueueItem, teeShotKey } = require('./db') as Db;
+    const db = await getDb();
+    const id = teeShotKey(GAME, 1, 7);
+    await putTeeShotQueueItem(db, {
+      id,
+      teeShotId: id,
+      attemptCount: MAX_PERMANENT_ATTEMPTS - 1,
+      lastError: 'violates check constraint',
+      createdAt: FROZEN,
+    });
+    supabase.rpc.mockImplementationOnce(async () => {
+      jest.advanceTimersByTime(500);
+      await tap(MATE);
+      return { data: null, error: { message: 'violates check constraint' } };
+    });
+
+    const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+    expect((await drainQueue('test')).abandoned).toBe(0);
+    expect((await listTeeShotQueue(db))[0]).toMatchObject({ attemptCount: 0, lastError: null, abandonedAt: null });
+  });
+
+  // Revisjonen 20.11 (p18): utløserne kaller `void drainQueue(...)`. Et kall som
+  // kaster (en RPC som avviser i stedet for å svare med feil), ble et ubehandlet
+  // løfte. Nå logges det, og drainen svarer med null.
+  it('kaster aldri: et uventet unntak logges og gir null-svar', async () => {
+    const { supabase } = mocks();
+    await typeStroke(4);
+    const boom = new Error('uventet');
+    supabase.rpc.mockRejectedValue(boom);
+    const error = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+    await expect(drainQueue('test')).resolves.toEqual({ pushed: 0, rejected: 0, errored: 0, abandoned: 0 });
+    expect(error).toHaveBeenCalledWith('[drainQueue] feilet', boom);
+    error.mockRestore();
+  });
+});

@@ -846,9 +846,20 @@ function HoleView({
       : undefined;
 
   // Kortveien (Bingo Bango Bongo): «−»/«+» og tapp på kortet, som før.
+  // Revisjonen 20.11 (p18): tallet regnes ut fra det som er lagret, inne i
+  // skrivingen (`strokesFrom`). Skjermens tilstand henger etter til neste
+  // lesing, så to raske trykk ga ett slag.
   const adjustStrokes = async (playerUserId: string, delta: number) => {
-    const current = byUserHole.get(`${playerUserId}#${holeNumber}`)?.strokes ?? null;
-    await writeStrokes(playerUserId, nextStrokes({ current, par, delta }));
+    await saveLocally(
+      {
+        gameId,
+        userId: playerUserId,
+        holeNumber,
+        strokesFrom: (current) => nextStrokes({ current, par, delta }),
+        enteredBy: userId,
+      },
+      'strokes',
+    );
   };
 
   // Tapp på selve kortet er en SNARVEI TIL FØRSTE FØRING — som på web. Står det

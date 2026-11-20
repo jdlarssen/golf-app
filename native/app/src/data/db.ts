@@ -38,7 +38,7 @@ export interface LocalTeeStarter {
 export const DATABASE_NAME = 'torny.db';
 
 /** Bumpes når skjemaet endres; styrer `PRAGMA user_version`-migrasjonen. */
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 
 /**
  * Nøkkelen for én score-rad. Speiler `scoreKey` i `lib/sync/db.ts` — den kan
@@ -186,6 +186,16 @@ CREATE TABLE IF NOT EXISTS tee_starters (
 );
 `;
 
+/**
+ * Revisjonen 20.11 (p18): «Fjern varselet» merker et usendt slag eller utslag i
+ * stedet for å slette det, så hullet fortsatt sier «ikke lagret». Rent
+ * additivt: en nullbar kolonne i hver kø, hver rad står.
+ */
+export const MIGRATION_V7 = `
+ALTER TABLE sync_queue ADD COLUMN dismissed_at TEXT;
+ALTER TABLE tee_shot_queue ADD COLUMN dismissed_at TEXT;
+`;
+
 /** Verdiene `device_settings` hadde da v4 fjernet den, til noen tar dem. */
 const legacyDeviceSettings = new Map<string, string>();
 
@@ -214,10 +224,11 @@ async function openAndMigrate(): Promise<SQLite.SQLiteDatabase> {
     'PRAGMA user_version;',
   );
   const current = versionRow?.user_version ?? 0;
-  // Sekvensielt, ett steg om gangen: en fersk installasjon går 0 → 1 → … → 6,
-  // en enhet som alt kjørte N2 går 1 → 2 → … → 6 og beholder radene sine.
-  // Skrittene rører aldri spillernes data: 1–3, 5 og 6 legger til tabeller, og
-  // 4 fjerner bare `device_settings`, etter at verdiene i den er lest.
+  // Sekvensielt, ett steg om gangen: en fersk installasjon går 0 → 1 → … → 7,
+  // en enhet som alt kjørte N2 går 1 → 2 → … → 7 og beholder radene sine.
+  // Skrittene rører aldri spillernes data: 1–3, 5 og 6 legger til tabeller, 7
+  // legger til en kolonne, og 4 fjerner bare `device_settings`, etter at
+  // verdiene i den er lest.
   if (current < 1) await db.execAsync(MIGRATION_V1);
   if (current < 2) await db.execAsync(MIGRATION_V2);
   if (current < 3) await db.execAsync(MIGRATION_V3);
@@ -227,6 +238,7 @@ async function openAndMigrate(): Promise<SQLite.SQLiteDatabase> {
   }
   if (current < 5) await db.execAsync(MIGRATION_V5);
   if (current < 6) await db.execAsync(MIGRATION_V6);
+  if (current < 7) await db.execAsync(MIGRATION_V7);
   if (current < SCHEMA_VERSION) {
     // PRAGMA tar ikke bind-parametre; SCHEMA_VERSION er en tallkonstant i denne
     // fila, aldri brukerdata.
@@ -365,6 +377,7 @@ interface TeeShotQueueRow {
   last_error: string | null;
   created_at: string;
   abandoned_at: string | null;
+  dismissed_at: string | null;
 }
 
 interface QueueRow {
@@ -374,6 +387,7 @@ interface QueueRow {
   last_error: string | null;
   created_at: string;
   abandoned_at: string | null;
+  dismissed_at: string | null;
 }
 
 /**
@@ -425,6 +439,7 @@ function toQueueItem(row: QueueRow): SyncQueueItem {
     lastError: row.last_error,
     createdAt: row.created_at,
     abandonedAt: row.abandoned_at,
+    dismissedAt: row.dismissed_at,
   };
 }
 
@@ -459,6 +474,7 @@ function toTeeShotQueueItem(row: TeeShotQueueRow): TeeShotQueueItem {
     lastError: row.last_error,
     createdAt: row.created_at,
     abandonedAt: row.abandoned_at,
+    dismissedAt: row.dismissed_at,
   };
 }
 
@@ -567,9 +583,9 @@ export async function putQueueItem(
 ): Promise<void> {
   await db.runAsync(
     `INSERT OR REPLACE INTO sync_queue
-       (id, score_id, attempt_count, last_error, created_at, abandoned_at)
+       (id, score_id, attempt_count, last_error, created_at, abandoned_at, dismissed_at)
      VALUES
-       ($id, $score_id, $attempt_count, $last_error, $created_at, $abandoned_at);`,
+       ($id, $score_id, $attempt_count, $last_error, $created_at, $abandoned_at, $dismissed_at);`,
     {
       $id: item.id,
       $score_id: item.scoreId,
@@ -577,6 +593,7 @@ export async function putQueueItem(
       $last_error: item.lastError,
       $created_at: item.createdAt,
       $abandoned_at: item.abandonedAt ?? null,
+      $dismissed_at: item.dismissedAt ?? null,
     },
   );
 }
@@ -624,6 +641,22 @@ export async function markQueueAbandoned(
       $abandoned_at: patch.abandonedAt,
     },
   );
+}
+
+/**
+ * Revisjonen 20.11 (p18): spilleren fjernet varselet for et slag som aldri kom
+ * fram. Elementet står, så hullet fortsatt sier «ikke lagret»; varselet viser
+ * det ikke mer. Et nytt trykk legger elementet i køen på nytt uten merket.
+ */
+export async function markQueueDismissed(
+  db: SQLite.SQLiteDatabase,
+  id: string,
+  dismissedAt: string,
+): Promise<void> {
+  await db.runAsync('UPDATE sync_queue SET dismissed_at = $dismissed_at WHERE id = $id;', {
+    $id: id,
+    $dismissed_at: dismissedAt,
+  });
 }
 
 export async function putConflict(
@@ -770,9 +803,9 @@ export async function getTeeShotQueueItem(
 export async function putTeeShotQueueItem(db: SQLite.SQLiteDatabase, item: TeeShotQueueItem): Promise<void> {
   await db.runAsync(
     `INSERT OR REPLACE INTO tee_shot_queue
-       (id, tee_shot_id, attempt_count, last_error, created_at, abandoned_at)
+       (id, tee_shot_id, attempt_count, last_error, created_at, abandoned_at, dismissed_at)
      VALUES
-       ($id, $tee_shot_id, $attempt_count, $last_error, $created_at, $abandoned_at);`,
+       ($id, $tee_shot_id, $attempt_count, $last_error, $created_at, $abandoned_at, $dismissed_at);`,
     {
       $id: item.id,
       $tee_shot_id: item.teeShotId,
@@ -780,6 +813,7 @@ export async function putTeeShotQueueItem(db: SQLite.SQLiteDatabase, item: TeeSh
       $last_error: item.lastError,
       $created_at: item.createdAt,
       $abandoned_at: item.abandonedAt ?? null,
+      $dismissed_at: item.dismissedAt ?? null,
     },
   );
 }
@@ -811,6 +845,18 @@ export async function markTeeShotQueueAbandoned(
       WHERE id = $id;`,
     { $id: id, $attempt_count: patch.attemptCount, $last_error: patch.lastError, $abandoned_at: patch.abandonedAt },
   );
+}
+
+/** `markQueueDismissed` for utslagskøen (p18). */
+export async function markTeeShotQueueDismissed(
+  db: SQLite.SQLiteDatabase,
+  id: string,
+  dismissedAt: string,
+): Promise<void> {
+  await db.runAsync('UPDATE tee_shot_queue SET dismissed_at = $dismissed_at WHERE id = $id;', {
+    $id: id,
+    $dismissed_at: dismissedAt,
+  });
 }
 
 // ---------------------------------------------------------------------------

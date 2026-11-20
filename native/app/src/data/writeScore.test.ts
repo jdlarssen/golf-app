@@ -201,4 +201,23 @@ describe('writeScore', () => {
 
     expect(await getScore(db, scoreKey(GAME, ME, 5))).toBeUndefined();
   });
+
+  // Revisjonen 20.11 (p18): «+» i Bingo Bango Bongo leste tallet fra skjermens
+  // tilstand, som henger etter til neste lesing. To raske trykk så begge 4 og
+  // skrev begge 5. `strokesFrom` regnes ut fra raden INNE i transaksjonen, og
+  // transaksjonskøen tar trykkene ett og ett.
+  it('to raske trykk regnet fra lagret tall gir to slag', async () => {
+    const { writeScore } = require('./writeScore') as typeof import('./writeScore');
+    const { getDb, getScore, scoreKey } = require('./db') as typeof import('./db');
+    await writeScore({ gameId: GAME, userId: ME, holeNumber: 3, strokes: 4, enteredBy: ME });
+
+    const plusOne = (current: number | null) => (current ?? 0) + 1;
+    await Promise.all([
+      writeScore({ gameId: GAME, userId: ME, holeNumber: 3, strokesFrom: plusOne, enteredBy: ME }),
+      writeScore({ gameId: GAME, userId: ME, holeNumber: 3, strokesFrom: plusOne, enteredBy: ME }),
+    ]);
+
+    const db = await getDb();
+    expect(await getScore(db, scoreKey(GAME, ME, 3))).toMatchObject({ strokes: 6 });
+  });
 });
