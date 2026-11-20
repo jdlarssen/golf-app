@@ -6,8 +6,8 @@ import { routing } from './routing';
 
 export default getRequestConfig(async ({ requestLocale }) => {
   // Locale comes from the `[locale]` ROOT PARAM, not from a request header.
-  // This is the cacheComponents-compatible pattern (Next 16.2 `next/root-params`
-  // + `experimental.rootParams`): a route param is part of the prerender cache
+  // This is the cacheComponents-compatible pattern (`next/root-params`, stable
+  // from Next 16.3, no flag): a route param is part of the prerender cache
   // key, so PPR static shells render per locale — reading next-intl's
   // middleware header here instead would mark every page dynamic (#538).
   //

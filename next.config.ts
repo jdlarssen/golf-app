@@ -15,8 +15,9 @@ const nextConfig: NextConfig = {
   // #475: `next/root-params` lets i18n/request.ts read the [locale] segment
   // as a cache-key-safe route param instead of a request header — required
   // for next-intl to coexist with cacheComponents (PPR shells per locale).
+  // It is stable from Next 16.3 and needs no flag: `experimental.rootParams`
+  // left the config type (docs: 03-api-reference/04-functions/next-root-params.md).
   experimental: {
-    rootParams: true,
     // #2292: `app/global-not-found.tsx` serves addresses no route matches.
     // The root layout sits under the dynamic `[locale]` segment, which is the
     // case the docs name for it (node_modules/next/dist/docs/01-app/
