@@ -2658,6 +2658,7 @@ export type Database = {
       }
       admin_key_metrics: { Args: never; Returns: Json }
       anonymize_user: { Args: { p_user_id: string }; Returns: undefined }
+      bbb_max_players: { Args: never; Returns: number }
       befriend_inviter: { Args: { p_inviter: string }; Returns: string }
       can_manage_tournament: {
         Args: { p_tournament_id: string }
@@ -2961,6 +2962,10 @@ export type Database = {
           user_id: string
           was_applied: boolean
         }[]
+      }
+      wolf_rotation_slot: {
+        Args: { p_hole: number; p_players: number; p_rule: string }
+        Returns: number
       }
     }
     Enums: {
