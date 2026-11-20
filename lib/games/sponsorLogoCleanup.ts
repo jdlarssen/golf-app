@@ -24,12 +24,14 @@ export function replacedSponsorLogoPaths(
  * The one place a stored sponsor logo file is deleted on the server (the edit
  * save and `deleteGame`). Each path is deleted only when no other game's
  * `prizes` still names it: «Gjenta hver uke» copies the prizes, path and all,
- * to the next round, so one file can sit on many games (5 on staging, 20.11).
+ * to the next round, so one file can sit on many games (9 on staging, 20.11).
  *
- * The service client does both the check and the delete. The paths come from
- * the stored row of `gameId`, never from the form, and the bucket's owner-only
- * DELETE policy (0143) would otherwise match nothing when an admin edits or
- * deletes another organiser's game.
+ * The service client does both the check and the delete, so an admin who
+ * edits or deletes another organiser's game can clear that game's files.
+ * Only files in the game's own folders go: an upload lands in
+ * `{uploader id}/{uuid}.{ext}` (lib/storage/sponsorLogos.ts), so a path is
+ * deleted only when its first folder is one of `ownerIds` (the game's creator
+ * and the person saving). Any other path is kept and logged.
  *
  * The filter is a JSON string: postgrest-js turns an array argument into a
  * Postgres array literal (`cs.{…}`), which a jsonb column rejects.
@@ -44,15 +46,27 @@ export function replacedSponsorLogoPaths(
 export async function removeUnusedSponsorLogos({
   gameId,
   paths,
+  ownerIds,
 }: {
   gameId: string;
   paths: readonly string[];
+  /** The game's creator and the person saving; null entries are ignored. */
+  ownerIds: readonly (string | null | undefined)[];
 }): Promise<void> {
-  if (paths.length === 0) return;
+  const owners = new Set(ownerIds.filter((id): id is string => !!id));
+  const ownPaths = paths.filter((path) => inOwnFolder(path, owners));
+  const foreign = paths.filter((path) => !ownPaths.includes(path));
+  if (foreign.length > 0) {
+    console.error("[sponsorLogoCleanup] path outside the game's folders, kept", {
+      gameId,
+      paths: foreign,
+    });
+  }
+  if (ownPaths.length === 0) return;
   try {
     const admin = getAdminClient();
     const unused: string[] = [];
-    for (const path of paths) {
+    for (const path of ownPaths) {
       const { data, error } = await admin
         .from('games')
         .select('id')
@@ -73,15 +87,28 @@ export async function removeUnusedSponsorLogos({
   }
 }
 
+/** `{owner}/{file}` with no empty or `..` segment, and `owner` in `owners`. */
+function inOwnFolder(path: string, owners: ReadonlySet<string>): boolean {
+  const segments = path.split('/');
+  if (segments.length < 2 || segments.some((s) => s === '' || s === '.' || s === '..')) {
+    return false;
+  }
+  return owners.has(segments[0]);
+}
+
 /** The edit save: removes the logos this save replaced, after `games.update`. */
 export async function removeReplacedSponsorLogos({
   gameId,
   before,
   after,
+  ownerIds,
 }: {
   gameId: string;
   before: unknown;
   after: readonly GamePrize[];
+  ownerIds: readonly (string | null | undefined)[];
 }): Promise<void> {
-  await removeUnusedSponsorLogos({ gameId, paths: replacedSponsorLogoPaths(before, after) });
+  const paths = replacedSponsorLogoPaths(before, after);
+  if (paths.length === 0) return;
+  await removeUnusedSponsorLogos({ gameId, paths, ownerIds });
 }
