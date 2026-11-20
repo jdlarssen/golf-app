@@ -1856,6 +1856,10 @@ function FormDataInputs({
           publish and to «Lagre som utkast». Off when the round may not repeat
           (`repeatWeeklyAllowed`), and the server checks again. */}
       <input type="hidden" name="repeat_weekly" value={state.repeatWeekly ? '1' : ''} />
+      {/* #2451: «Tid mellom flightene» on step 4 has no name; this carries it to
+          a publish and to «Lagre som utkast», also from a step where the part
+          is not drawn. Empty when the round has no start times. */}
+      <input type="hidden" name="tee_interval_minutes" value={state.teeIntervalForSave ?? ''} />
       {/* #2258: «Shotgun-start» lives in BasicsSection (step 3, no name); the
           mirror here carries it to a publish from any step. */}
       <input type="hidden" name="start_type" value={startType} />

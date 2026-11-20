@@ -54,6 +54,14 @@ const ONE_GROUP_MODES: ReadonlySet<GameMode> = new Set<GameMode>([
 ]);
 
 /**
+ * True when the format can go out in more than one start group, so a round of
+ * it stores an interval: every format but those in `ONE_GROUP_MODES`.
+ */
+export function hasStartGroups(gameMode: GameMode): boolean {
+  return !ONE_GROUP_MODES.has(gameMode);
+}
+
+/**
  * The start group a player goes out with: everyone who tees off together, up
  * to four. Not always `flight_number`, which is the side in matchplay and the
  * team in most team formats (`useGameFormState`), and which this never changes.

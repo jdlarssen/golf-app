@@ -180,7 +180,16 @@ async function updateGameInternal(
     groupId: savedGroupId,
     teeOffNow: formData.get('tee_off_now') === '1',
   });
-  const payload = buildGameInsertPayload(formData, payloadMode, { clubScoped, repeatAllowed });
+  // #2451: start times per flight only for a standalone round, judged from
+  // the stored links like repeatAllowed: a cup match, a league round and a
+  // derived game keep null.
+  const teeIntervalAllowed =
+    !existing.tournament_id && !existing.league_round_id && !existing.source_game_id;
+  const payload = buildGameInsertPayload(formData, payloadMode, {
+    clubScoped,
+    repeatAllowed,
+    teeIntervalAllowed,
+  });
 
   if (payload.errorCode) {
     redirect({ href: editHref({ error: payload.errorCode }), locale });
@@ -406,6 +415,9 @@ async function updateGameInternal(
       // #2460: posted by the wizard's mirror or GameForm's switch; false when
       // the round may not repeat (repeatAllowed above) or the switch is off.
       repeat_weekly: payload.repeat_weekly,
+      // #2451: posted by the wizard's mirror or GameForm's; null when the
+      // round may not have start times (teeIntervalAllowed above).
+      tee_interval_minutes: payload.tee_interval_minutes,
       status: nextStatus,
       // started_at is intentionally not touched — only D5's "Start runden nå"
       // flow transitions out of 'scheduled'.

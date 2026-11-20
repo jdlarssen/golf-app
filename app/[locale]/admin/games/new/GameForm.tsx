@@ -114,6 +114,18 @@ export type InitialValues = {
    * state; these links it cannot see in an edit.
    */
   repeat_weekly_linked?: boolean;
+  /**
+   * #2451: minutes between the flights as stored (8, 10 or 12), null when
+   * everyone goes out together. Omitted = a new round, which starts on the
+   * default (10).
+   */
+  tee_interval_minutes?: number | null;
+  /**
+   * #2451: the stored game is a cup match or a league round, so it has no
+   * start times per flight. Like `repeat_weekly_linked`, the form cannot see
+   * those links in an edit.
+   */
+  tee_interval_linked?: boolean;
   /** #2258: «Shotgun-start». Omitted = first tee. */
   start_type?: StartType;
   hcp_allowance_pct?: string;
@@ -726,6 +738,9 @@ export function GameForm({
       <input type="hidden" name="signup_deadline" value={state.signupDeadline} />
       <input type="hidden" name="waitlist_enabled" value={state.waitlistEnabled ? '1' : ''} />
       <input type="hidden" name="payment_link" value={state.paymentLink} />
+      {/* #2451: «Tid mellom flightene» in the start times part has no name;
+          always mounted (#1011), empty when the round has no start times. */}
+      <input type="hidden" name="tee_interval_minutes" value={state.teeIntervalForSave ?? ''} />
       {initialValues?.tournament_id && (
         <>
           <input
