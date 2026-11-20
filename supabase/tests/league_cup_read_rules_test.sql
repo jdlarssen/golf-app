@@ -44,6 +44,12 @@
 --   32    a club admin creates a club league and gets its id back (RETURNING)
 --   33    a participant confirms their own participation               → 1 row
 --
+-- A plain member of the club, who neither created the club's league or cup
+-- nor takes part in them (outsider_id, made a member for these two cases):
+--   34    reads the club league, its participants and its rounds       → 1 1 1
+--   35    reads the club cup, its participants and its plan            → 1 1 1 0
+--   Outside the club the same player reads none of them: cases 15 and 26.
+--
 -- Depends on 0250. Run via: supabase test db (see supabase/tests/README.md)
 -- ─────────────────────────────────────────────────────────────────────────────
 
@@ -51,7 +57,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(33);
+select plan(35);
 
 \ir fixtures/rls_helpers.psql
 
@@ -416,6 +422,29 @@ select is(
   1,
   'case 33: a participant confirms their own participation');
 rollback to savepoint case_33;
+
+-- ═════════════════════════════════════════════════════════════════════════════
+-- A plain member of the club: the membership alone opens the club's league and cup
+-- ═════════════════════════════════════════════════════════════════════════════
+-- outsider_id read nothing in cases 15 and 26. Here the same player is made a
+-- plain member of the club: not its owner, not the creator of the league or
+-- the cup, not a participant of either.
+savepoint case_34;
+select torny_rls.as_service();
+insert into public.group_members (group_id, user_id, role)
+  values (torny_rls.group_id(), torny_rls.outsider_id(), 'member');
+select torny_rls.as_user(torny_rls.outsider_id());
+
+-- 34
+select is(torny_rls.lc_league_seen(), array[1, 1, 1],
+  'case 34: a plain member of the club reads the club league, its participants and its rounds, and no other league');
+
+-- 35
+select is(torny_rls.lc_seen(), array[1, 1, 1, 0],
+  'case 35: a plain member of the club reads the club cup, its participants and its plan, and no other cup');
+rollback to savepoint case_34;
+
+select torny_rls.as_service();
 
 select * from finish();
 rollback;
