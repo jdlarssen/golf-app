@@ -666,7 +666,8 @@ describe('useGameFormState — drawBalancedTeams, «Jevne lag» (#2478)', () => 
     // 2 → 1, 6 → 2, 10 → 2; the pending player takes side 1's free seat.
     expect(mixed.current.teamByPlayer).toEqual({ b1: 1, v1: 1, b2: 2, b3: 2 });
     expect(mixed.current.teamHcp.uncounted).toEqual(['v1']);
-    expect(mixed.current.teamHcp.values).toEqual([2, 16]);
+    // Side 1 has the pending player, so it has no sum (#2478, orchestrator's choice).
+    expect(mixed.current.teamHcp.values).toEqual([null, 16]);
 
     const allPending = setupBalance('fourball_matchplay', 4, pending);
     expect(allPending.current.canDrawBalancedTeams).toBe(false);

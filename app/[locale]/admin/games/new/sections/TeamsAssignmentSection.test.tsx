@@ -595,9 +595,26 @@ describe('TeamsAssignmentSection — «Jevne lag» (#2478)', () => {
     // 4,2 → side 1, 9,4 og 12,1 → side 2; den ventende tar plassen på side 1.
     expect(latest.teamByPlayer).toEqual({ ida: 1, ventende: 1, jonas: 2, sondre: 2 });
     expect(within(cardOf(1)).getByRole('button', { name: 'ventende@example.test' })).toHaveTextContent('–');
-    expect(within(cardOf(1)).getByTestId('team-hcp')).toHaveTextContent('Sum HCP4,2');
+    // Orchestrator's choice after review: a side with a player without an index
+    // has no sum, so there is nothing to compare and no explanation either.
+    expect(within(cardOf(1)).getByTestId('team-hcp')).toHaveTextContent('Sum HCP–');
+    expect(within(cardOf(2)).getByTestId('team-hcp')).toHaveTextContent('Sum HCP21,5');
     expect(line()).toHaveTextContent(
-      '1 spiller er ikke regnet med fordi profilen ikke er fullført.',
+      /^1 spiller er ikke regnet med fordi profilen ikke er fullført\.$/,
+    );
+  });
+
+  it('best ball med 8 der én venter: forskjellen regnes mellom de tre fullt regnede lagene', () => {
+    setupWith('best_ball', 2, [...artboardIds.filter((id) => id !== 'anders'), 'ventende']);
+    fireEvent.click(balanceButton()!);
+    expect(latest.teamByPlayer).toEqual({
+      ida: 1, ventende: 1, jonas: 2, tone: 2, sondre: 3, eirik: 3, kari: 4, marte: 4,
+    });
+    expect(within(cardOf(1)).getByTestId('team-hcp')).toHaveTextContent('Sum HCP–');
+    expect(within(cardOf(2)).getByTestId('team-hcp')).toHaveTextContent('Sum HCP33,7');
+    // 34,2 − 33,1 among teams 2–4; no explanation while someone is not counted.
+    expect(line()).toHaveTextContent(
+      /^Det skiller 1,1 i samlet handicap mellom sterkeste og svakeste lag\. 1 spiller er ikke regnet med fordi profilen ikke er fullført\.$/,
     );
   });
 
