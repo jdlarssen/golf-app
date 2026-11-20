@@ -32,7 +32,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(9);
+select plan(10);
 
 \ir fixtures/rls_helpers.psql
 
@@ -188,6 +188,14 @@ select throws_ok(
   '23514',
   null,
   'year utenfor 2020–2100 er REJECTED'
+);
+
+select throws_ok(
+  $$ insert into public.kavalkade_shares (user_id, year, card_kind)
+       values (torny_rls.active_id(), 2026, 'best-round') $$,
+  '23505',
+  null,
+  'samme spiller, år og kort to ganger er REJECTED (0244: én rad per kort)'
 );
 
 -- Kontroll: raden finnes fortsatt, så assertene over målte noe ekte.
