@@ -12,9 +12,9 @@ vi.mock('./realtimeChannel', () => ({
     _topic: string,
     build: (channel: { on: (...args: unknown[]) => unknown }) => unknown,
   ) => {
-    const channel = {
-      on: (_event: unknown, _filter: unknown, handler: Handler) => {
-        handlers.push(handler);
+    const channel: { on: (...args: unknown[]) => unknown } = {
+      on: (...args: unknown[]) => {
+        handlers.push(args[2] as Handler);
         return channel;
       },
     };
