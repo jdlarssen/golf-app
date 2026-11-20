@@ -158,4 +158,33 @@ describe('WolfChoiceModal', () => {
     expect(onClose).not.toHaveBeenCalled();
     expect(onChoiceSaved).not.toHaveBeenCalled();
   });
+
+  // Each refusal has its own sentence. A hole another player already saved must
+  // not read as «du må være Wolf».
+  it.each([
+    ['hole_taken', 'En annen spiller har alt lagret Wolf-valget på dette hullet'],
+    ['not_wolf_on_hole', 'Du er ikke Wolf på dette hullet'],
+    ['game_not_active', 'mens runden pågår'],
+    ['partner_not_in_game', 'Partneren er ikke med i dette spillet'],
+    ['save_failed', 'Fikk ikke lagret valget'],
+  ])('viser egen tekst for %s', async (error, text) => {
+    setWolfChoiceMock.mockResolvedValueOnce({ ok: false, error });
+    const onClose = vi.fn();
+    render(<WolfChoiceModal {...defaultProps({ onClose })} />);
+    fireEvent.click(screen.getByTestId('wolf-lone-button'));
+    await waitFor(() => {
+      expect(screen.getByTestId('wolf-modal-error').textContent).toContain(text);
+    });
+    expect(screen.getByTestId('wolf-modal-error').textContent).not.toContain('Du må være Wolf');
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('en kode modalen ikke kjenner, gir den generelle feilen', async () => {
+    setWolfChoiceMock.mockResolvedValueOnce({ ok: false, error: 'a_code_from_a_newer_server' });
+    render(<WolfChoiceModal {...defaultProps()} />);
+    fireEvent.click(screen.getByTestId('wolf-lone-button'));
+    await waitFor(() => {
+      expect(screen.getByTestId('wolf-modal-error').textContent).toContain('Noe gikk galt');
+    });
+  });
 });
