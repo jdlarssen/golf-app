@@ -39,6 +39,36 @@ export type MailMessage = {
   headers?: Record<string, string>;
 };
 
+/**
+ * What a failed send means for the recipient (audit 20.11):
+ * - `not_sent`: Resend answered with a 4xx rejection, so nothing went out and
+ *   a retry is safe.
+ * - `unknown`: a network failure (`application_error`, statusCode null), a 5xx
+ *   or a throw from the SDK. The mail may have gone out; a caller that
+ *   remembers recipients must not send it again.
+ */
+export type MailSendOutcome = 'not_sent' | 'unknown';
+
+export class MailSendError extends Error {
+  readonly outcome: MailSendOutcome;
+  readonly resendName: string | null;
+  readonly statusCode: number | null;
+
+  constructor(message: string, opts: { outcome: MailSendOutcome; resendName?: string | null; statusCode?: number | null }) {
+    super(message);
+    this.name = 'MailSendError';
+    this.outcome = opts.outcome;
+    this.resendName = opts.resendName ?? null;
+    this.statusCode = opts.statusCode ?? null;
+  }
+}
+
+function outcomeFor(statusCode: number | null | undefined): MailSendOutcome {
+  return typeof statusCode === 'number' && statusCode >= 400 && statusCode < 500
+    ? 'not_sent'
+    : 'unknown';
+}
+
 function resolveFromEmail(): string {
   const raw = process.env.RESEND_FROM_EMAIL?.trim();
   if (!raw) return 'Tørny <noreply@tornygolf.no>';
@@ -62,8 +92,9 @@ function retryDelayMs(headers: Record<string, string> | null | undefined): numbe
 
 /**
  * Sends one mail through Resend, paced under the team's rate limit. Resolves
- * once Resend accepted it; throws `Resend send failed: …` otherwise — callers
- * keep wrapping it in `Promise.allSettled` / try-catch as before.
+ * once Resend accepted it; throws a `MailSendError` (`Resend send failed: …`)
+ * otherwise — callers keep wrapping it in `Promise.allSettled` / try-catch as
+ * before. Its `outcome` says whether the mail may have gone out.
  */
 export async function sendMail(message: MailMessage): Promise<void> {
   const resend = getClient();
@@ -71,7 +102,16 @@ export async function sendMail(message: MailMessage): Promise<void> {
 
   for (let attempt = 1; ; attempt++) {
     await pacer.acquire();
-    const result = await resend.emails.send({ from, ...message });
+    let result: Awaited<ReturnType<typeof resend.emails.send>>;
+    try {
+      result = await resend.emails.send({ from, ...message });
+    } catch (err) {
+      // The request may have reached Resend before it failed.
+      throw new MailSendError(
+        `Resend send failed: ${err instanceof Error ? err.message : String(err)}`,
+        { outcome: 'unknown' },
+      );
+    }
     if (!result.error) return;
 
     if (result.error.name === 'rate_limit_exceeded' && attempt < MAX_ATTEMPTS) {
@@ -79,8 +119,13 @@ export async function sendMail(message: MailMessage): Promise<void> {
       continue;
     }
 
-    throw new Error(
+    throw new MailSendError(
       `Resend send failed: ${result.error.message ?? JSON.stringify(result.error)}`,
+      {
+        outcome: outcomeFor(result.error.statusCode),
+        resendName: result.error.name,
+        statusCode: result.error.statusCode,
+      },
     );
   }
 }

@@ -458,4 +458,34 @@ describe('Resend-kontrakt — tempo og nytt forsøk (#2227)', () => {
     expect(outcome).toMatch(/Resend send failed/);
     expect(sendMock).toHaveBeenCalledTimes(1);
   });
+
+  // Audit 20.11: a caller that remembers who got a mail (the newsletter) must
+  // know whether Resend refused it, or whether it may have gone out.
+  it.each([
+    ['validation_error', 422, 'not_sent'],
+    ['daily_quota_exceeded', 429, 'not_sent'],
+    ['application_error', null, 'unknown'],
+    ['internal_server_error', 500, 'unknown'],
+  ] as const)('%s (%s) → outcome %s', async (name, statusCode, outcome) => {
+    sendMock.mockResolvedValue({ data: null, error: { name, statusCode, message: 'x' }, headers: {} });
+    const { sendMail, MailSendError } = await import('../send');
+    const work = sendMail({ to: 'a@example.com', subject: 's', html: 'h', text: 't' }).catch((e) => e);
+    await vi.runAllTimersAsync();
+    const err = await work;
+    expect(err).toBeInstanceOf(MailSendError);
+    expect({ outcome: err.outcome, message: err.message }).toEqual({
+      outcome,
+      message: expect.stringMatching(/^Resend send failed/),
+    });
+  });
+
+  it('a throw from the SDK itself (the request may have left) → outcome unknown', async () => {
+    sendMock.mockRejectedValue(new Error('socket hang up'));
+    const { sendMail, MailSendError } = await import('../send');
+    const work = sendMail({ to: 'a@example.com', subject: 's', html: 'h', text: 't' }).catch((e) => e);
+    await vi.runAllTimersAsync();
+    const err = await work;
+    expect(err).toBeInstanceOf(MailSendError);
+    expect(err.outcome).toBe('unknown');
+  });
 });

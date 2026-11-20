@@ -62,6 +62,7 @@ export async function GET(request: NextRequest) {
       ok: true,
       sent: result.recipientCount,
       failed: result.failedCount,
+      unknown: result.unknownCount,
       updates: result.updateCount,
       period: result.periodLabel,
     });
