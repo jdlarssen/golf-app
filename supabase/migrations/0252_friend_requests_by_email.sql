@@ -5,7 +5,10 @@
 --   1. «Legg til venn med e-post» answers the same for every address. The
 --      server does the lookup with the service role and never hands the result
 --      to the caller: `friend_request_by_email` is not callable through a user
---      session, and the old `send_friend_request_by_email` is gone.
+--      session, and the old `send_friend_request_by_email` is gone. The same
+--      call writes the sender's receipt, one game-less row in `invitations`
+--      for every address, in the same transaction as the request: both land,
+--      or neither.
 --   2. A request sent by e-mail (`friendships.by_email`) is read by the person
 --      who received it. The sender reads it once it is accepted. A request
 --      sent to a person the sender picked from a list is read by both, as
@@ -16,6 +19,8 @@
 --      together (lib/friends/inviteEligibilityRule.test.ts).
 --   4. `email_is_registered` and `email_is_in_auth_users` are server helpers:
 --      the service role calls them, a user session does not.
+--   5. When a request sent by e-mail is accepted, the sender's receipt is
+--      marked accepted, as it is when an invited person joins.
 --
 -- Order: apply this first, then deploy the code. The code before this change
 -- calls `send_friend_request_by_email` and the two helpers through a user
@@ -43,59 +48,103 @@ create policy "friendships view own" on public.friendships
 -- ── 2. The lookup: service role only ────────────────────────────────────────
 drop function if exists public.send_friend_request_by_email(text);
 
-create function public.friend_request_by_email(p_requester uuid, p_email text)
+-- The sender's receipt for a request sent by e-mail is marked accepted when
+-- the request is (rule 5). Internal: called by the functions below only.
+create function public.mark_email_receipt_accepted(p_sender uuid, p_recipient uuid)
+  returns void
+  language sql
+  security definer
+  set search_path = ''
+as $$
+  update public.invitations i
+     set accepted_at = now(),
+         opened_at = coalesce(i.opened_at, now())
+    from public.users u
+   where u.id = p_recipient
+     and i.invited_by = p_sender
+     and i.game_id is null
+     and i.accepted_at is null
+     and lower(i.email) = lower(u.email);
+$$;
+
+revoke all on function public.mark_email_receipt_accepted(uuid, uuid) from public, anon, authenticated;
+
+create function public.friend_request_by_email(
+  p_requester uuid,
+  p_email text,
+  p_token text,
+  p_expires_at timestamptz
+)
   returns jsonb
   language plpgsql
   security definer
   set search_path = ''
 as $$
   declare
-    v_email  text := lower(trim(coalesce(p_email, '')));
-    v_target uuid;
+    v_email   text := lower(trim(coalesce(p_email, '')));
+    v_target  uuid;
+    v_outcome text;
   begin
     if p_requester is null then raise exception 'requester_required'; end if;
     if length(v_email) = 0 then raise exception 'email_required'; end if;
+    if p_token is null or p_expires_at is null then raise exception 'receipt_required'; end if;
 
     select id into v_target
       from public.users
      where lower(email) = v_email
        and deleted_at is null
      limit 1;
-    if v_target is null then
-      return jsonb_build_object('outcome', 'unknown', 'target_id', null);
-    end if;
     if v_target = p_requester then
       return jsonb_build_object('outcome', 'self', 'target_id', v_target);
     end if;
 
+    -- Asked this address already, and the receipt is still open: nothing more
+    -- is written and nothing is sent twice.
     if exists (
+      select 1 from public.invitations
+       where invited_by = p_requester
+         and game_id is null
+         and accepted_at is null
+         and expires_at > now()
+         and lower(email) = v_email
+    ) then
+      return jsonb_build_object('outcome', 'already_sent', 'target_id', null);
+    end if;
+
+    if v_target is null then
+      v_outcome := 'unknown';
+    elsif exists (
       select 1 from public.friendships
        where status = 'accepted'
          and ((requester_id = p_requester and addressee_id = v_target)
            or (requester_id = v_target and addressee_id = p_requester))
     ) then
-      return jsonb_build_object('outcome', 'already_friends', 'target_id', v_target);
+      v_outcome := 'already_friends';
+    else
+      -- The other person already asked: this is the answer.
+      update public.friendships
+         set status = 'accepted', responded_at = now()
+       where requester_id = v_target and addressee_id = p_requester and status = 'pending';
+      if found then
+        perform public.mark_email_receipt_accepted(v_target, p_requester);
+        v_outcome := 'accepted';
+      else
+        insert into public.friendships (requester_id, addressee_id, status, by_email)
+        values (p_requester, v_target, 'pending', true)
+        on conflict (requester_id, addressee_id) do nothing;
+        v_outcome := case when found then 'requested' else 'already_pending' end;
+      end if;
     end if;
 
-    -- The other person already asked: this is the answer.
-    update public.friendships
-       set status = 'accepted', responded_at = now()
-     where requester_id = v_target and addressee_id = p_requester and status = 'pending';
-    if found then
-      return jsonb_build_object('outcome', 'accepted', 'target_id', v_target);
-    end if;
+    -- The receipt: one row for every address, in the same transaction.
+    insert into public.invitations (email, token, invited_by, game_id, expires_at)
+    values (v_email, p_token, p_requester, null, p_expires_at);
 
-    insert into public.friendships (requester_id, addressee_id, status, by_email)
-    values (p_requester, v_target, 'pending', true)
-    on conflict (requester_id, addressee_id) do nothing;
-    if found then
-      return jsonb_build_object('outcome', 'requested', 'target_id', v_target);
-    end if;
-    return jsonb_build_object('outcome', 'already_pending', 'target_id', v_target);
+    return jsonb_build_object('outcome', v_outcome, 'target_id', v_target);
   end $$;
 
-revoke all on function public.friend_request_by_email(uuid, text) from public, anon, authenticated;
-grant execute on function public.friend_request_by_email(uuid, text) to service_role;
+revoke all on function public.friend_request_by_email(uuid, text, text, timestamptz) from public, anon, authenticated;
+grant execute on function public.friend_request_by_email(uuid, text, text, timestamptz) to service_role;
 
 -- ── 3. The id-based request and the withdrawal follow rule 2 ────────────────
 -- A request to a person picked from a list is read by both. If an e-mail
@@ -130,6 +179,7 @@ as $$
     ) then
       update public.friendships set status = 'accepted', responded_at = now()
         where requester_id = p_addressee and addressee_id = v_uid and status = 'pending';
+      perform public.mark_email_receipt_accepted(p_addressee, v_uid);
       return 'accepted';
     end if;
     update public.friendships set by_email = false
@@ -173,6 +223,36 @@ as $$
     return 'removed';
   end $$;
 
+-- The answer marks the sender's receipt (rule 5).
+create or replace function public.respond_friend_request(p_request_id uuid, p_accept boolean)
+  returns text
+  language plpgsql
+  security definer
+  set search_path = ''
+as $$
+  declare
+    v_uid       uuid := auth.uid();
+    v_requester uuid;
+    v_addressee uuid;
+    v_status    text;
+  begin
+    if v_uid is null then raise exception 'not_authenticated'; end if;
+    select requester_id, addressee_id, status into v_requester, v_addressee, v_status
+      from public.friendships where id = p_request_id;
+    if v_addressee is null then return 'not_found'; end if;
+    if v_addressee <> v_uid then raise exception 'not_authorized'; end if;
+    if v_status <> 'pending' then return 'already_decided'; end if;
+    if p_accept then
+      update public.friendships set status = 'accepted', responded_at = now()
+        where id = p_request_id;
+      perform public.mark_email_receipt_accepted(v_requester, v_uid);
+      return 'accepted';
+    else
+      delete from public.friendships where id = p_request_id;
+      return 'declined';
+    end if;
+  end $$;
+
 -- ── 4. Invite eligibility: accepted friendships only ────────────────────────
 create or replace function public.is_invite_eligible(p_creator uuid, p_recipient uuid, p_group_id uuid)
   returns boolean
@@ -206,6 +286,9 @@ as $$
         )
       );
   $$;
+
+comment on function public.is_invite_eligible(uuid, uuid, uuid) is
+  'May p_creator put p_recipient on a roster? Yes for an ACCEPTED friendship (either direction), a shared game (a draft counts for its organiser only), or membership of the game''s club. A request that is not answered does not count (0252). Mirror: lib/games/inviteEligibility.ts.';
 
 -- ── 5. The two address helpers: service role only ───────────────────────────
 revoke execute on function public.email_is_registered(text) from public, anon, authenticated;

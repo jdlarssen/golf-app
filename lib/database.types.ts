@@ -2744,7 +2744,12 @@ export type Database = {
       email_is_invited: { Args: { check_email: string }; Returns: boolean }
       email_is_registered: { Args: { p_email: string }; Returns: boolean }
       friend_request_by_email: {
-        Args: { p_email: string; p_requester: string }
+        Args: {
+          p_email: string
+          p_expires_at: string
+          p_requester: string
+          p_token: string
+        }
         Returns: Json
       }
       generate_friend_code: { Args: never; Returns: string }
@@ -2794,6 +2799,10 @@ export type Database = {
       join_club_league: { Args: { p_league_id: string }; Returns: string }
       league_group_id: { Args: { p_league_id: string }; Returns: string }
       leave_club_league: { Args: { p_league_id: string }; Returns: string }
+      mark_email_receipt_accepted: {
+        Args: { p_recipient: string; p_sender: string }
+        Returns: undefined
+      }
       promote_waitlist_seat: {
         Args: {
           p_cap: number
