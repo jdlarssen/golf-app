@@ -8,7 +8,7 @@
 // varsel?» — én definisjon, aldri to (#1611).
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { SQLiteDatabase } from 'expo-sqlite';
-import { conflictRecordFor } from '../../../../lib/sync/conflict';
+import { conflictRecordFor, resolveConflict } from '../../../../lib/sync/conflict';
 import type {
   MergeOutcome,
   ServerScoreRow,
@@ -117,7 +117,15 @@ async function applyServerScore(
   // Last-write-wins på clientUpdatedAt. Eldre eventer er foreldet, og en LIK
   // er ekkoet av denne enhetens egen skriving på vei tilbake — at den droppes
   // her er hele grunnen til at ekkoet aldri ser ut som en konflikt.
-  if (existing && existing.clientUpdatedAt >= incoming.clientUpdatedAt) {
+  // Stemplene sammenlignes som ØYEBLIKK (p18, som drainen etter #2211):
+  // serveren skriver `…+00:00`, telefonen `…Z`.
+  if (
+    existing &&
+    resolveConflict({
+      localClientUpdatedAt: existing.clientUpdatedAt,
+      serverClientUpdatedAt: incoming.clientUpdatedAt,
+    }) !== 'server-wins'
+  ) {
     return 'kept-local';
   }
 
@@ -399,7 +407,12 @@ export function subscribeGameScores(
           const row = (payload.new ?? payload.old) as Partial<ScoreRowFromDb>;
           if (!row || !row.game_id || !row.user_id || row.hole_number == null)
             return;
-          void mergeIncoming(row as ScoreRowFromDb, handlers.onMerge);
+          // p18: en merge som feiler (sesjon, SQLite), logges, aldri et
+          // ubehandlet løfte; skjermen leser alt på nytt ved fokus og
+          // gjenoppkobling.
+          mergeIncoming(row as ScoreRowFromDb, handlers.onMerge).catch((err: unknown) => {
+            console.error('[realtime] slag', err);
+          });
         },
       ),
     handlers,

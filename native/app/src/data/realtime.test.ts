@@ -149,6 +149,38 @@ describe('mergeServerScore', () => {
   });
 });
 
+// Revisjonen 20.11 (p18): siste-skriving-vinner sammenlignet stemplene som
+// tekst. Serveren svarer `…+00:00` med nuller kuttet, telefonen skriver `…Z`;
+// som tekst stemmer de ikke med øyeblikkene de står for.
+describe('mergeServerScore: stempler som øyeblikk (p18)', () => {
+  useFreshModules();
+
+  beforeEach(() => {
+    jest.useFakeTimers({ now: new Date('2026-11-20T10:30:00.000Z') });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('en ELDRE server-rad med annen tidssone skriver aldri over en nyere lokal', async () => {
+    await typeStroke(5);
+    const { mergeServerScore } = require('./realtime') as typeof import('./realtime');
+
+    // 11:15+01:00 er 10:15Z, et kvarter eldre enn den lokale raden (10:30Z).
+    const outcome = await mergeServerScore(
+      incoming({ strokes: 9, clientUpdatedAt: '2026-11-20T11:15:00+01:00' }),
+      ME,
+    );
+
+    expect(outcome).toBe('kept-local');
+    const { getDb, getScore, listQueue, scoreKey } = require('./db') as Db;
+    const db = await getDb();
+    expect(await getScore(db, scoreKey(GAME, ME, 1))).toMatchObject({ strokes: 5 });
+    expect(await listQueue(db)).toHaveLength(1);
+  });
+});
+
 describe('subscribeGameScores: gjenoppkobling (#2093)', () => {
   useFreshModules();
 
@@ -384,3 +416,47 @@ async function waitForRow(check: () => Promise<boolean>): Promise<void> {
   }
   throw new Error('row never arrived');
 }
+
+// Revisjonen 20.11 (p18): handleren startet mergen med `void` og uten catch. En
+// merge som feilet (sesjonsoppslag, SQLite), ble et ubehandlet løfte, og
+// endringen forsvant uten spor.
+describe('subscribeGameScores: en feilet merge fanges (p18)', () => {
+  useFreshModules();
+
+  it('logger feilen i stedet for et ubehandlet løfte', async () => {
+    const boom = new Error('database is locked');
+    const { currentDeviceUserId, realtimeChannels } =
+      require('../test/supabaseMock') as typeof import('../test/supabaseMock');
+    currentDeviceUserId.mockRejectedValue(boom);
+    const error = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => unhandled.push(reason);
+    process.on('unhandledRejection', onUnhandled);
+    try {
+      const { subscribeGameScores } = require('./realtime') as typeof import('./realtime');
+      const stop = subscribeGameScores(GAME);
+      await new Promise((r) => setTimeout(r, 0));
+      const binding = realtimeChannels.at(-1)!.bindings[0]!;
+      const handler = binding[2] as (payload: unknown) => void;
+      handler({
+        new: {
+          game_id: GAME,
+          user_id: MATE,
+          hole_number: 2,
+          strokes: 4,
+          putts: null,
+          entered_by: MATE,
+          client_updated_at: '2026-11-20T10:00:00+00:00',
+          updated_at: '2026-11-20T10:00:01+00:00',
+        },
+      });
+      for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
+      stop();
+    } finally {
+      process.off('unhandledRejection', onUnhandled);
+    }
+    expect(unhandled).toEqual([]);
+    expect(error).toHaveBeenCalledWith('[realtime] slag', boom);
+    error.mockRestore();
+  });
+});

@@ -21,6 +21,13 @@ interface WriteScoreArgs {
   userId: string;
   holeNumber: number;
   strokes?: number | null;
+  /**
+   * Revisjonen 20.11 (p18): slagene regnet ut fra det som ER lagret, inne i
+   * transaksjonen. «−»/«+» i kortveien leste tallet fra skjermens tilstand, som
+   * henger etter til neste lesing: to raske trykk så begge samme tall. Brukes
+   * bare når `strokes` er utelatt.
+   */
+  strokesFrom?: (current: number | null) => number | null;
   putts?: number | null;
   enteredBy: string;
 }
@@ -68,7 +75,11 @@ export async function writeScore(args: WriteScoreArgs): Promise<LocalScore> {
       userId: args.userId,
       holeNumber: args.holeNumber,
       strokes:
-        args.strokes !== undefined ? args.strokes : (existing?.strokes ?? null),
+        args.strokes !== undefined
+          ? args.strokes
+          : args.strokesFrom
+            ? args.strokesFrom(existing?.strokes ?? null)
+            : (existing?.strokes ?? null),
       putts: args.putts !== undefined ? args.putts : (existing?.putts ?? null),
       enteredBy: args.enteredBy,
       clientUpdatedAt,

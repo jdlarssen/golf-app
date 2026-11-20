@@ -15,6 +15,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { isActiveForGame } from '../../../../../lib/sync/queueScope';
 import { summarizeQuarantine } from '../../../../../lib/sync/quarantineSummary';
+import { isLockedCardError } from '../../../../../lib/sync/classifyError';
 import {
   deleteConflict,
   deleteQueueItem,
@@ -23,6 +24,8 @@ import {
   listConflictsForGame,
   listQueue,
   listTeeShotQueue,
+  markQueueDismissed,
+  markTeeShotQueueDismissed,
   withTxn,
   type ConflictRecord,
   type SyncQueueItem,
@@ -105,7 +108,10 @@ export function SyncBanner({ gameId }: { gameId: string }) {
     };
   }, [gameId, reload]);
 
-  const abandoned = queue.filter((i) => i.abandonedAt != null);
+  // Revisjonen 20.11 (p18): et avvist varsel vises ikke mer, men elementet står
+  // i køen, så hullet fortsatt sier «ikke lagret».
+  const shown = queue.filter((i) => i.dismissedAt == null);
+  const abandoned = shown.filter((i) => i.abandonedAt != null);
   const active = queue.filter((i) => isActiveForGame(i, gameId));
 
   if (abandoned.length === 0 && conflicts.length === 0) return null;
@@ -121,7 +127,7 @@ export function SyncBanner({ gameId }: { gameId: string }) {
     await reload();
   };
 
-  const summary = abandoned.length > 0 ? summarizeQuarantine(queue, gameId) : null;
+  const summary = abandoned.length > 0 ? summarizeQuarantine(shown, gameId) : null;
 
   // Bare id-ene som sto i karantene da varselet ble tegnet: et slag som
   // fortsatt prøver, blir aldri feid med.
@@ -132,10 +138,18 @@ export function SyncBanner({ gameId }: { gameId: string }) {
         try {
           // Transaksjonskøen: en drain kan stå i en transaksjon akkurat nå, og
           // en sletting utenfor køen gir «database is locked» (#1954 A4).
+          // Et låst avslag er gjort opp: telefonen viser serverens tall, så
+          // elementet går. Alt annet kom aldri fram (p18): det merkes bare, så
+          // hullet fortsatt sier «ikke lagret».
+          const dismissedAt = new Date().toISOString();
           await withTxn(async (txn) => {
             for (const item of stranded) {
-              if (isTeeShotItem(item)) await deleteTeeShotQueueItem(txn, item.id);
-              else await deleteQueueItem(txn, item.id);
+              const locked = isLockedCardError(item.lastError);
+              if (isTeeShotItem(item)) {
+                if (locked) await deleteTeeShotQueueItem(txn, item.id);
+                else await markTeeShotQueueDismissed(txn, item.id, dismissedAt);
+              } else if (locked) await deleteQueueItem(txn, item.id);
+              else await markQueueDismissed(txn, item.id, dismissedAt);
             }
           });
         } catch {

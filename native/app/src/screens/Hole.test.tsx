@@ -1105,6 +1105,33 @@ describe('Hole', () => {
     });
   });
 
+  // Revisjonen 20.11 (p18): «+» sendte et ferdig tall regnet fra skjermens
+  // tilstand, som henger etter til neste lesing. To raske trykk sendte begge 5.
+  // Nå sender hvert trykk et steg som writeScore regner ut fra den lagrede raden.
+  it('bingo bango bongo: to raske trykk på pluss gir to slag', async () => {
+    mockState.bundle = {
+      ...mockSoloBundle,
+      game: { ...GAME_BASE, gameMode: 'bingo_bango_bongo' },
+    };
+    await renderHole();
+    await waitFor(() => expect(screen.getByTestId('player-me-plus')).toBeTruthy());
+    (writeScore as jest.Mock).mockClear();
+
+    await fireEvent.press(screen.getByTestId('player-me-plus'));
+    await fireEvent.press(screen.getByTestId('player-me-plus'));
+
+    expect(writeScore).toHaveBeenCalledTimes(2);
+    const calls = (writeScore as jest.Mock).mock.calls.map(
+      (c) => c[0] as { strokes?: number | null; strokesFrom?: (n: number | null) => number | null },
+    );
+    // Ingen av trykkene sender et ferdig tall …
+    expect(calls.every((c) => c.strokes === undefined)).toBe(true);
+    // … og stegene, brukt etter hverandre på det lagrede tallet, gir to slag.
+    const stored = 4;
+    const after = calls.reduce<number | null>((n, c) => c.strokesFrom!(n), stored);
+    expect(after).toBe(6);
+  });
+
   it('sidekonkurransen (#2283): raden står bare på konkurransehullene, under hullhodet og over flighten', async () => {
     mockState.bundle = {
       ...mockSoloBundle,

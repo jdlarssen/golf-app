@@ -43,7 +43,7 @@ describe('writeTeeShot', () => {
     });
     expect(await getTeeShot(db, id)).toEqual(row);
     expect(await listTeeShotQueue(db)).toEqual([
-      { id, teeShotId: id, attemptCount: 0, lastError: null, createdAt: FROZEN, abandonedAt: null },
+      { id, teeShotId: id, attemptCount: 0, lastError: null, createdAt: FROZEN, abandonedAt: null, dismissedAt: null },
     ]);
     expect(await listQueue(db)).toEqual([]);
   });

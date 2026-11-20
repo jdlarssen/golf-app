@@ -42,13 +42,13 @@ async function countRows(
 describe('lokalt skjema', () => {
   useFreshModules();
 
-  it('åpner en fersk base rett på v6, uten device_settings og med utslagstabellene', async () => {
+  it('åpner en fersk base rett på v7, uten device_settings og med utslagstabellene', async () => {
     const { getCacheEntry, getDb, putCacheEntry } = require('./db') as Db;
     const db = await getDb();
 
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 6 });
+    ).toEqual({ user_version: 7 });
     expect(await tableNames(db)).not.toContain('device_settings');
     expect(await tableNames(db)).toEqual(expect.arrayContaining(['tee_shots', 'tee_shot_queue', 'tee_starters']));
 
@@ -91,7 +91,7 @@ describe('lokalt skjema', () => {
 
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 6 });
+    ).toEqual({ user_version: 7 });
 
     // Slaget står, uendret.
     expect(await listScoresForGame(db, GAME)).toEqual([
@@ -140,7 +140,7 @@ describe('lokalt skjema', () => {
 
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 6 });
+    ).toEqual({ user_version: 7 });
     expect(await getCacheEntry(db, 'home')).toMatchObject({ payload: '{"cards":[]}' });
     expect(await tableNames(db)).not.toContain('device_settings');
     expect(takeLegacyDeviceSetting('theme')).toBeUndefined();
@@ -178,7 +178,7 @@ describe('lokalt skjema', () => {
 
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 6 });
+    ).toEqual({ user_version: 7 });
     expect(await tableNames(db)).not.toContain('device_settings');
     expect(await countRows(db, ['scores', 'sync_queue', 'cache_entries'])).toEqual({
       scores: 1,
@@ -226,7 +226,7 @@ describe('lokalt skjema', () => {
 
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 6 });
+    ).toEqual({ user_version: 7 });
     expect(await countRows(db, ['scores', 'sync_queue', 'conflicts', 'cache_entries', 'tee_shots', 'tee_shot_queue'])).toEqual({
       scores: 1,
       sync_queue: 1,
@@ -287,7 +287,7 @@ describe('lokalt skjema', () => {
 
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 6 });
+    ).toEqual({ user_version: 7 });
     expect(
       await countRows(db, ['scores', 'sync_queue', 'conflicts', 'cache_entries', 'tee_shots', 'tee_shot_queue', 'tee_starters']),
     ).toEqual({
@@ -301,6 +301,53 @@ describe('lokalt skjema', () => {
     });
     expect(await getScore(db, `${GAME}:${ME}:5`)).toMatchObject({ strokes: 3, putts: 1 });
     expect(await getTeeShot(db, `${GAME}:1:7`)).toMatchObject({ teeShotBy: ME });
+  });
+
+  // Revisjonen 20.11 (p18): «Fjern varselet» merker et usendt slag i stedet for
+  // å slette det. v7 legger til kolonnen og beholder hver rad i begge køene.
+  it('løfter en v6-base til v7 og kan merke et avvist varsel i begge køene', async () => {
+    const { DATABASE_NAME, MIGRATION_V1, MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6 } =
+      require('./db') as Db;
+    const { openDatabaseAsync } = require('../test/sqliteMock') as SqliteMock;
+
+    const existing = await openDatabaseAsync(DATABASE_NAME);
+    for (const step of [MIGRATION_V1, MIGRATION_V2, MIGRATION_V3, MIGRATION_V4, MIGRATION_V5, MIGRATION_V6]) {
+      await existing.execAsync(step);
+    }
+    await existing.execAsync('PRAGMA user_version = 6;');
+    await existing.runAsync(
+      `INSERT INTO sync_queue (id, score_id, attempt_count, last_error, created_at, abandoned_at)
+       VALUES ('${GAME}:${ME}:5', '${GAME}:${ME}:5', 5, 'violates', '2026-11-20T09:00:01.000Z', '2026-11-20T09:01:00.000Z');`,
+    );
+    await existing.runAsync(
+      `INSERT INTO tee_shot_queue (id, tee_shot_id, attempt_count, last_error, created_at, abandoned_at)
+       VALUES ('${GAME}:1:7', '${GAME}:1:7', 5, 'violates', '2026-11-20T09:00:04.000Z', '2026-11-20T09:01:00.000Z');`,
+    );
+
+    const { getDb, listQueue, listTeeShotQueue, markQueueDismissed, markTeeShotQueueDismissed, putQueueItem } =
+      require('./db') as Db;
+    const db = await getDb();
+
+    expect(await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;')).toEqual({ user_version: 7 });
+    expect(await listQueue(db)).toEqual([expect.objectContaining({ id: `${GAME}:${ME}:5`, dismissedAt: null })]);
+
+    await markQueueDismissed(db, `${GAME}:${ME}:5`, '2026-11-20T10:00:00.000Z');
+    await markTeeShotQueueDismissed(db, `${GAME}:1:7`, '2026-11-20T10:00:00.000Z');
+    expect((await listQueue(db))[0]).toMatchObject({
+      abandonedAt: '2026-11-20T09:01:00.000Z',
+      dismissedAt: '2026-11-20T10:00:00.000Z',
+    });
+    expect((await listTeeShotQueue(db))[0]).toMatchObject({ dismissedAt: '2026-11-20T10:00:00.000Z' });
+
+    // Et nytt trykk legger elementet i køen på nytt: uten merke, klart til å sendes.
+    await putQueueItem(db, {
+      id: `${GAME}:${ME}:5`,
+      scoreId: `${GAME}:${ME}:5`,
+      attemptCount: 0,
+      lastError: null,
+      createdAt: '2026-11-20T10:01:00.000Z',
+    });
+    expect((await listQueue(db))[0]).toMatchObject({ abandonedAt: null, dismissedAt: null });
   });
 
   // #2751: første valg står også på telefonen, og raden gir ikke etter for et nytt trykk.
@@ -366,7 +413,7 @@ describe('lokalt skjema', () => {
     await putTeeShotQueueItem(db, { id, teeShotId: id, attemptCount: 0, lastError: null, createdAt: '2026-10-15T10:00:00.000Z' });
     await markTeeShotQueueRetry(db, id, { attemptCount: 1, lastError: 'nett' });
     expect(await listTeeShotQueue(db)).toEqual([
-      { id, teeShotId: id, attemptCount: 1, lastError: 'nett', createdAt: '2026-10-15T10:00:00.000Z', abandonedAt: null },
+      { id, teeShotId: id, attemptCount: 1, lastError: 'nett', createdAt: '2026-10-15T10:00:00.000Z', abandonedAt: null, dismissedAt: null },
     ]);
     await markTeeShotQueueAbandoned(db, id, { attemptCount: 2, lastError: 'tee shot refused', abandonedAt: '2026-10-15T10:01:00.000Z' });
     expect((await listTeeShotQueue(db))[0]).toMatchObject({ attemptCount: 2, abandonedAt: '2026-10-15T10:01:00.000Z' });
@@ -520,7 +567,7 @@ describe('wipeLocalData', () => {
     // Ingen ny migrasjonsrunde, ingen død forbindelse: samme `getDb()` svarer.
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 6 });
+    ).toEqual({ user_version: 7 });
     expect(await getCacheEntry(db, 'home')).toBeUndefined();
 
     await putCacheEntry(db, {
