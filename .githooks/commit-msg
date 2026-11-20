@@ -81,7 +81,7 @@ fi
 # main og ville stoppet mandagens slipp.
 # Uten node: en advarsel, og commiten slipper gjennom (ingen økt låses ute).
 # ─────────────────────────────────────────────────────────────────────
-if git diff --cached --name-only --diff-filter=AM \
+if git -c core.quotepath=off diff --cached --name-only --diff-filter=AM \
    | grep -E '^\.changes/[^/]+\.md$' \
    | grep -qvxF '.changes/README.md'; then
   if command -v node >/dev/null 2>&1; then
@@ -114,7 +114,7 @@ fi
 
 # Kun NYE filer teller: en endring i et eksisterende notat er ikke en ny oppføring.
 # README.md er malen, ikke et notat.
-if git diff --cached --name-only --diff-filter=A \
+if git -c core.quotepath=off diff --cached --name-only --diff-filter=A \
    | grep -E '^\.changes/.+\.md$' \
    | grep -qvxF '.changes/README.md'; then
   exit 0
