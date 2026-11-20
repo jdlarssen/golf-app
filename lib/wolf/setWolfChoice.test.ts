@@ -215,10 +215,46 @@ describe('setWolfChoice — DB-interaksjon', () => {
     );
   });
 
-  it('Postgres-feil → rls_denied (uten å lekke detaljer)', async () => {
+  it.each([
+    ['wolf_choice_not_your_hole', 'not_wolf_on_hole'],
+    ['wolf_choice_game_not_active', 'game_not_active'],
+    ['wolf_choice_partner_not_in_game', 'partner_not_in_game'],
+  ])('databasen avviser med %s → %s', async (message, expected) => {
+    mockAuthed('wolf-1');
+    upsertMock.mockResolvedValue({ error: { code: '42501', message } });
+
+    const result = await setWolfChoice({
+      gameId: 'g',
+      holeNumber: 1,
+      wolfUserId: 'wolf-1',
+      choice: 'lone',
+      partnerUserId: null,
+    });
+
+    expect(result).toEqual({ ok: false, error: expected });
+    expect(updateTagMock).not.toHaveBeenCalled();
+  });
+
+  it('en feil som ikke er en avvisning → save_failed, ikke «du er ikke Wolf»', async () => {
+    mockAuthed('wolf-1');
+    upsertMock.mockResolvedValue({ error: { message: 'fetch failed' } });
+
+    const result = await setWolfChoice({
+      gameId: 'g',
+      holeNumber: 1,
+      wolfUserId: 'wolf-1',
+      choice: 'lone',
+      partnerUserId: null,
+    });
+
+    expect(result).toEqual({ ok: false, error: 'save_failed' });
+    expect(updateTagMock).not.toHaveBeenCalled();
+  });
+
+  it('RLS-avvisning uten grunn → rls_denied (uten å lekke detaljer)', async () => {
     mockAuthed('wolf-1');
     upsertMock.mockResolvedValue({
-      error: { message: 'new row violates row-level security policy' },
+      error: { code: '42501', message: 'new row violates row-level security policy' },
     });
 
     const result = await setWolfChoice({

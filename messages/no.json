@@ -3149,7 +3149,11 @@
         "partner_must_be_null": "Partner skal ikke være satt for Lone/Blind Wolf.",
         "partner_cannot_be_wolf": "Du kan ikke velge deg selv som partner.",
         "invalid_hole": "Ugyldig hull-nummer.",
+        "not_wolf_on_hole": "Du er ikke Wolf på dette hullet, så du kan ikke velge.",
+        "game_not_active": "Du kan bare lagre Wolf-valg mens runden pågår.",
+        "partner_not_in_game": "Partneren er ikke med i dette spillet. Velg en annen.",
         "rls_denied": "Du må være Wolf på dette hullet for å velge.",
+        "save_failed": "Fikk ikke lagret valget. Sjekk nettet og prøv igjen.",
         "unknown": "Noe gikk galt. Prøv igjen."
       }
     },

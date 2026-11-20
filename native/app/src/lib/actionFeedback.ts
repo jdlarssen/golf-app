@@ -7,6 +7,7 @@ import type {
   BingoBangoBongoValidationError,
   BingoBangoBongoWriteError,
   ChoiceWriteFailure,
+  WolfChoiceRefusalReason,
   WolfChoiceValidationError,
 } from '../data/choices';
 // Kun typene: `data/playerActions.ts` og `data/submitCard.ts` drar med seg
@@ -77,7 +78,8 @@ export function describeChoiceFailure(
     | WolfChoiceValidationError
     | BingoBangoBongoValidationError
     | BingoBangoBongoWriteError
-    | ChoiceWriteFailure,
+    | ChoiceWriteFailure
+    | WolfChoiceRefusalReason,
 ): string {
   switch (error) {
     case 'not_authenticated':
@@ -96,6 +98,12 @@ export function describeChoiceFailure(
       return 'Runden er avsluttet. Nå kan ingenting registreres mer.';
     case 'game_not_found':
       return 'Fant ikke spillet. Det kan ha blitt slettet.';
+    case 'not_wolf_on_hole':
+      return 'Du er ikke Wolf på dette hullet, så du kan ikke velge.';
+    case 'game_not_active':
+      return 'Du kan bare lagre Wolf-valg mens runden pågår.';
+    case 'partner_not_in_game':
+      return 'Partneren er ikke med i dette spillet. Velg en annen.';
     case 'rls_denied':
       return 'Du har ikke lov til å lagre dette valget.';
     case 'no_rows':

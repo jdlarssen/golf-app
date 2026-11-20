@@ -53,6 +53,10 @@ import {
   validateWolfChoice,
   type WolfChoiceValidationError,
 } from '../../../../lib/wolf/validateWolfChoice';
+import {
+  wolfChoiceRefusal,
+  type WolfChoiceRefusal,
+} from '../../../../lib/wolf/wolfChoiceRefusal';
 import { currentDeviceUserId, supabase } from '../supabase';
 import { refreshWebCache } from './refreshWebCache';
 
@@ -175,15 +179,24 @@ export type BingoBangoBongoValidationError = 'invalid_hole' | 'game_finished';
 
 /**
  * Feil bare BBB-skrivingen kan gi, fordi bare den slår opp spillet på nytt før
- * upserten. Wolf har ingen tilsvarende — webben har bevisst ingen status-lås
- * der, og paritet er poenget.
+ * upserten. Wolf slår ikke opp: der svarer databasen selv `game_not_active`.
  */
 export type BingoBangoBongoWriteError = 'game_not_found';
 
 export type ChoiceWriteResult<E> = { ok: true } | { ok: false; error: E };
 
+/**
+ * Grunnene databasen gir når den avviser et wolf-valg (migrasjon 0249), delt
+ * med webben (`lib/wolf/wolfChoiceRefusal.ts`). `rls_denied` og `save_failed`
+ * har alt en tvilling i `ChoiceWriteFailure` (`rls_denied`, `db_error`).
+ */
+export type WolfChoiceRefusalReason = Exclude<
+  WolfChoiceRefusal,
+  'rls_denied' | 'save_failed'
+>;
+
 export type SetWolfChoiceResult = ChoiceWriteResult<
-  WolfChoiceValidationError | ChoiceWriteFailure
+  WolfChoiceValidationError | ChoiceWriteFailure | WolfChoiceRefusalReason
 >;
 
 export type SetBingoBangoBongoHoleResult = ChoiceWriteResult<
@@ -270,8 +283,9 @@ function readUpsertResult(
  *
  * Upsert på `(game_id, hole_number)` — tabellens primærnøkkel — så wolfen kan
  * ombestemme seg så lenge hullet står åpent. `entered_by` er den som taster
- * (audit-sporet); `wolf_user_id` er den valget gjelder, og RLS krever at de er
- * samme person med mindre du er admin.
+ * (audit-sporet); `wolf_user_id` er den valget gjelder, og databasen krever at
+ * de er samme person med mindre du er admin, at runden pågår, og at ulven har
+ * hullet i rundgangen (migrasjon 0249). En avvisning kommer med grunnen.
  */
 export async function setWolfChoice(
   input: WolfChoiceWrite,
@@ -282,24 +296,31 @@ export async function setWolfChoice(
   const userId = await currentDeviceUserId();
   if (!userId) return { ok: false, error: 'not_authenticated' };
 
-  const failure = readUpsertResult(
-    await supabase
-      .from('wolf_hole_choices')
-      .upsert(
-        {
-          game_id: input.gameId,
-          hole_number: input.holeNumber,
-          wolf_user_id: input.wolfUserId,
-          choice: input.choice,
-          partner_user_id: input.partnerUserId,
-          entered_by: userId,
-        },
-        { onConflict: 'game_id,hole_number' },
-      )
-      // Uten `.select()` finnes det ikke noe radantall å sjekke (trap 2).
-      .select('hole_number'),
-    'setWolfChoice',
-  );
+  const result = await supabase
+    .from('wolf_hole_choices')
+    .upsert(
+      {
+        game_id: input.gameId,
+        hole_number: input.holeNumber,
+        wolf_user_id: input.wolfUserId,
+        choice: input.choice,
+        partner_user_id: input.partnerUserId,
+        entered_by: userId,
+      },
+      { onConflict: 'game_id,hole_number' },
+    )
+    // Uten `.select()` finnes det ikke noe radantall å sjekke (trap 2).
+    .select('hole_number');
+
+  if (result.error) {
+    const refusal = wolfChoiceRefusal(result.error);
+    return {
+      ok: false,
+      error: refusal === 'save_failed' ? 'db_error' : refusal,
+    };
+  }
+
+  const failure = readUpsertResult(result, 'setWolfChoice');
   if (failure) return { ok: false, error: failure };
 
   // Valget er lagret; svaret herfra endrer ikke det.
