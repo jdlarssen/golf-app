@@ -8,7 +8,11 @@ vi.mock('@/lib/sync/db', () => ({
     syncQueue: {
       bulkDelete: vi.fn().mockResolvedValue(undefined),
       update: vi.fn().mockResolvedValue(1),
+      // p18: the dismiss re-reads each item inside a transaction.
+      get: vi.fn(),
     },
+    teeShotQueue: { bulkDelete: vi.fn(), update: vi.fn(), get: vi.fn() },
+    transaction: vi.fn(async (...args: unknown[]) => (args.at(-1) as () => Promise<unknown>)()),
     conflicts: { delete: vi.fn().mockResolvedValue(undefined) },
   },
 }));
@@ -113,6 +117,7 @@ describe('SyncBanner — karantene-varianten', () => {
       qItem({ scoreId: 'g1:u1:7' }),
       qItem({ scoreId: 'g1:u1:9', abandonedAt: null, attemptCount: 1 }),
     ]);
+    vi.mocked(localDb.syncQueue.get).mockResolvedValue(qItem({ scoreId: 'g1:u1:7' }));
     const { rerender } = render(<SyncBanner gameId="g1" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Fjern varselet' }));
@@ -139,6 +144,22 @@ describe('SyncBanner — karantene-varianten', () => {
       expect(localDb.syncQueue.bulkDelete).toHaveBeenCalledWith(['g1:u1:8']),
     );
     expect(window.confirm).not.toHaveBeenCalled();
+  });
+
+  // Opus review of p18: the stamp used to land on whatever item had the id.
+  // A hole re-entered between render and confirm is an active item again; it
+  // must not be stamped, or its next quarantine would stay hidden.
+  it('dismiss stempler ikke et slag som er tastet på nytt før bekreftelsen', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    mockDexieData([qItem({ scoreId: 'g1:u1:7' })]);
+    vi.mocked(localDb.syncQueue.get).mockResolvedValue(
+      qItem({ scoreId: 'g1:u1:7', abandonedAt: null, attemptCount: 0 }),
+    );
+    render(<SyncBanner gameId="g1" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fjern varselet' }));
+    await waitFor(() => expect(localDb.syncQueue.get).toHaveBeenCalledWith('g1:u1:7'));
+    expect(localDb.syncQueue.update).not.toHaveBeenCalled();
   });
 
   it('et avvist varsel vises ikke igjen', () => {

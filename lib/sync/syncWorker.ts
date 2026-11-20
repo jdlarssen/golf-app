@@ -17,6 +17,7 @@ import { conflictRecordFor } from './conflict';
 import { currentDeviceUserId } from './currentUser';
 import { isOwnerWipeBlocked } from './ownerWipeBlock';
 import { interpretUpsertReply } from './upsertReply';
+import { isConfirmedLock, LOCK_STATE_COLUMNS, type LockStateRow } from './lockedCard';
 
 let inFlight = false;
 // #2211: a call that lands while a drain is running used to return empty and
@@ -256,7 +257,8 @@ async function markScoreItemIfUnchanged(
   return localDb.transaction('rw', localDb.scores, localDb.syncQueue, async () => {
     const current = await localDb.scores.get(item.scoreId);
     if (!current || current.clientUpdatedAt !== sent.clientUpdatedAt) return false;
-    await localDb.syncQueue.update(item.id, patch);
+    // A new quarantine is never hidden by an older dismissal.
+    await localDb.syncQueue.update(item.id, patch.abandonedAt ? { ...patch, dismissedAt: null } : patch);
     return true;
   });
 }
@@ -270,7 +272,7 @@ async function markTeeShotItemIfUnchanged(
   return localDb.transaction('rw', localDb.teeShots, localDb.teeShotQueue, async () => {
     const current = await localDb.teeShots.get(item.teeShotId);
     if (!current || current.clientUpdatedAt !== sent.clientUpdatedAt) return false;
-    await localDb.teeShotQueue.update(item.id, patch);
+    await localDb.teeShotQueue.update(item.id, patch.abandonedAt ? { ...patch, dismissedAt: null } : patch);
     return true;
   });
 }
@@ -331,6 +333,23 @@ async function settleLockedRefusal(
     return keepForRetry();
   }
 
+  // p18: with no server row, settling deletes the local stroke. Do that only
+  // when the lock is confirmed (`isConfirmedLock`); otherwise keep it, «not
+  // sent», and try again.
+  if (!serverRow) {
+    try {
+      const { data, error } = await getBrowserClient()
+        .from('game_players')
+        .select(LOCK_STATE_COLUMNS)
+        .eq('game_id', score.gameId)
+        .eq('user_id', score.userId)
+        .maybeSingle();
+      if (error || !isConfirmedLock(data as LockStateRow | null)) return keepForRetry();
+    } catch {
+      return keepForRetry();
+    }
+  }
+
   return localDb.transaction(
     'rw',
     localDb.scores,
@@ -355,6 +374,7 @@ async function settleLockedRefusal(
         attemptCount: item.attemptCount + 1,
         lastError,
         abandonedAt: new Date().toISOString(),
+        dismissedAt: null,
       });
       return 'abandoned' as const;
     },
@@ -514,6 +534,7 @@ async function settleRefusedTeeShot(
       attemptCount: item.attemptCount + 1,
       lastError: REFUSED_TEE_SHOT_ERROR,
       abandonedAt: new Date().toISOString(),
+      dismissedAt: null,
     });
     return 'abandoned' as const;
   });

@@ -7,6 +7,7 @@
 -- INSERT path — the first stroke on a hole — it raised 42501, so the offline
 -- queue retried MAX_PERMANENT_ATTEMPTS times before it settled. Both paths now
 -- give the all-NULL row, which `interpretUpsertReply` reads as 'refused'.
+-- Only for a locked card: any other RLS refusal still raises 42501.
 --
 -- Unchanged: an active player's first stroke inserts, and an admin may still
 -- write a locked card (RLS lets admins through; the RPC adds no rule of its own).
@@ -16,7 +17,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(8);
+select plan(9);
 
 \ir fixtures/rls_helpers.psql
 
@@ -76,6 +77,13 @@ select is(torny_rls.call_upsert(torny_rls.active_id(), 4), 'true',
 select torny_rls.as_user(torny_rls.admin_id());
 select is(torny_rls.call_upsert(torny_rls.submitted_id(), 5), 'true',
   'admin may still write a submitted card');
+
+-- ── Not swallowed: a refusal that is not a locked card still raises ──────────
+-- An outsider writing for an active player: RLS refuses, the card is not
+-- locked, so the client must see the error and keep the stroke.
+select torny_rls.as_user(torny_rls.outsider_id());
+select is(torny_rls.call_upsert(torny_rls.active_id(), 6), '42501',
+  'a refusal that is not a locked card (outsider) still raises 42501');
 
 -- ── Not swallowed: an error that is not a locked card still raises ────────────
 select torny_rls.as_user(torny_rls.active_id());

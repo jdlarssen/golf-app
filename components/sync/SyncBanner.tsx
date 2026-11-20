@@ -250,12 +250,19 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
         await Promise.all([
           strokeIds.length > 0 ? localDb.syncQueue.bulkDelete(strokeIds) : null,
           teeShotIds.length > 0 ? localDb.teeShotQueue.bulkDelete(teeShotIds) : null,
-          ...unsent.map((i) =>
-            isTeeShotItem(i)
-              ? localDb.teeShotQueue.update(i.id, { dismissedAt })
-              : localDb.syncQueue.update(i.id, { dismissedAt }),
-          ),
         ]);
+        // Stamp only an item that is STILL quarantined: a hole re-entered
+        // since the render is an active item again, and a stamp on it would
+        // hide its next quarantine.
+        if (unsent.length > 0) {
+          await localDb.transaction('rw', localDb.syncQueue, localDb.teeShotQueue, async () => {
+            for (const i of unsent) {
+              const table = isTeeShotItem(i) ? localDb.teeShotQueue : localDb.syncQueue;
+              const current = await table.get(i.id);
+              if (current?.abandonedAt != null) await table.update(i.id, { dismissedAt });
+            }
+          });
+        }
       };
 
       return (

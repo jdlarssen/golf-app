@@ -828,3 +828,63 @@ describe('drainQueue: feilgrenen respekterer en tasting under kallet (p18)', () 
     error.mockRestore();
   });
 });
+
+// Opus-gjennomgangen av p18: med 0245 gir hvert RLS-avslag av et førstegangsslag
+// NULL-raden, og oppgjøret slettet det lokale slaget ved første drain når
+// serveren ikke hadde noen rad. «Usendte slag skal aldri forsvinne stille»: et
+// lokalt slag slettes bare når låsen er bekreftet (kortet levert eller trukket,
+// eller runden ikke aktiv). Ellers står det, «ikke sendt».
+describe('drainQueue: et avvist førstegangsslag slettes bare ved bekreftet lås (p18)', () => {
+  useFreshModules();
+
+  beforeEach(() => {
+    jest.useFakeTimers({ now: new Date(FROZEN) });
+    mocks().currentDeviceUserId.mockResolvedValue(ME);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  async function refuseWithoutServerRow(lockState: Record<string, unknown> | null) {
+    const { supabase, queryStub, routeFrom } = mocks();
+    await typeStroke(4);
+    supabase.rpc.mockResolvedValue({ data: REFUSED_REPLY_FIXTURE, error: null });
+    routeFrom({
+      scores: [queryStub({ data: null, error: null })],
+      game_players: [queryStub({ data: lockState, error: null })],
+    });
+    const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+    const result = await drainQueue('test');
+    const { getDb, getScore, listQueue, scoreKey } = require('./db') as Db;
+    const db = await getDb();
+    return { result, score: await getScore(db, scoreKey(GAME, ME, 1)), queue: await listQueue(db) };
+  }
+
+  it('levert kort: slaget går, og elementet settes i karantene', async () => {
+    const { score, queue } = await refuseWithoutServerRow({
+      submitted_at: '2026-08-30T09:00:00+00:00',
+      withdrawn_at: null,
+      games: { status: 'active' },
+    });
+    expect(score).toBeUndefined();
+    expect(queue[0]!.abandonedAt).not.toBeNull();
+  });
+
+  it('spilleren spiller fortsatt: slaget står, og elementet prøver igjen', async () => {
+    const { result, score, queue } = await refuseWithoutServerRow({
+      submitted_at: null,
+      withdrawn_at: null,
+      games: { status: 'active' },
+    });
+    expect(score).toMatchObject({ strokes: 4 });
+    expect(queue[0]).toMatchObject({ attemptCount: 1, lastError: REFUSED_WRITE_ERROR, abandonedAt: null });
+    expect(result).toMatchObject({ errored: 1, abandoned: 0 });
+  });
+
+  it('låsen kan ikke leses (ingen spillerrad): slaget står', async () => {
+    const { score, queue } = await refuseWithoutServerRow(null);
+    expect(score).toMatchObject({ strokes: 4 });
+    expect(queue[0]!.abandonedAt).toBeNull();
+  });
+});

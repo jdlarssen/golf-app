@@ -631,8 +631,10 @@ export async function markQueueAbandoned(
   patch: { attemptCount: number; lastError: string | null; abandonedAt: string },
 ): Promise<void> {
   await db.runAsync(
+    // p18: en ny karantene skjules aldri av et gammelt «Fjern varselet».
     `UPDATE sync_queue
-        SET attempt_count = $attempt_count, last_error = $last_error, abandoned_at = $abandoned_at
+        SET attempt_count = $attempt_count, last_error = $last_error, abandoned_at = $abandoned_at,
+            dismissed_at = NULL
       WHERE id = $id;`,
     {
       $id: id,
@@ -653,7 +655,9 @@ export async function markQueueDismissed(
   id: string,
   dismissedAt: string,
 ): Promise<void> {
-  await db.runAsync('UPDATE sync_queue SET dismissed_at = $dismissed_at WHERE id = $id;', {
+  // Bare et element som FORTSATT står i karantene: et hull som er tastet på
+  // nytt, er aktivt igjen, og et merke på det ville skjult neste karantene.
+  await db.runAsync('UPDATE sync_queue SET dismissed_at = $dismissed_at WHERE id = $id AND abandoned_at IS NOT NULL;', {
     $id: id,
     $dismissed_at: dismissedAt,
   });
@@ -841,7 +845,8 @@ export async function markTeeShotQueueAbandoned(
 ): Promise<void> {
   await db.runAsync(
     `UPDATE tee_shot_queue
-        SET attempt_count = $attempt_count, last_error = $last_error, abandoned_at = $abandoned_at
+        SET attempt_count = $attempt_count, last_error = $last_error, abandoned_at = $abandoned_at,
+            dismissed_at = NULL
       WHERE id = $id;`,
     { $id: id, $attempt_count: patch.attemptCount, $last_error: patch.lastError, $abandoned_at: patch.abandonedAt },
   );
@@ -853,7 +858,7 @@ export async function markTeeShotQueueDismissed(
   id: string,
   dismissedAt: string,
 ): Promise<void> {
-  await db.runAsync('UPDATE tee_shot_queue SET dismissed_at = $dismissed_at WHERE id = $id;', {
+  await db.runAsync('UPDATE tee_shot_queue SET dismissed_at = $dismissed_at WHERE id = $id AND abandoned_at IS NOT NULL;', {
     $id: id,
     $dismissed_at: dismissedAt,
   });
