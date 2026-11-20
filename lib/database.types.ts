@@ -1891,8 +1891,42 @@ export type Database = {
           },
         ]
       }
+      product_update_digest_recipients: {
+        Row: {
+          digest_id: string
+          sent_at: string
+          user_id: string
+        }
+        Insert: {
+          digest_id: string
+          sent_at?: string
+          user_id: string
+        }
+        Update: {
+          digest_id?: string
+          sent_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_update_digest_recipients_digest_id_fkey"
+            columns: ["digest_id"]
+            isOneToOne: false
+            referencedRelation: "product_update_digests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_update_digest_recipients_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_update_digests: {
         Row: {
+          completed_at: string | null
           id: string
           period_end: string
           period_start: string
@@ -1902,15 +1936,17 @@ export type Database = {
           update_ids: string[]
         }
         Insert: {
+          completed_at?: string | null
           id?: string
           period_end: string
           period_start: string
-          recipient_count: number
+          recipient_count?: number
           sent_at?: string
           sent_by?: string | null
           update_ids: string[]
         }
         Update: {
+          completed_at?: string | null
           id?: string
           period_end?: string
           period_start?: string
