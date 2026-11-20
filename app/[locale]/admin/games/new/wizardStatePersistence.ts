@@ -66,6 +66,7 @@ export type PersistedInitialValues = Pick<
   | 'scheduled_tee_off_at'
   | 'tee_off_now'
   | 'start_type'
+  | 'tee_interval_minutes'
   | 'hcp_allowance_pct'
   | 'require_peer_approval'
   | 'score_visibility'
@@ -247,6 +248,9 @@ export function wizardDraftFromState({
       // WIZARD_DRAFT_VERSION stays.
       tee_off_now: state.teeOffNow || undefined,
       start_type: state.startType,
+      // #2451: optional, so an older draft without it starts on the default
+      // (10), and WIZARD_DRAFT_VERSION stays.
+      tee_interval_minutes: state.teeIntervalMinutes,
       hcp_allowance_pct: String(state.hcpAllowance),
       require_peer_approval: state.requirePeerApproval,
       // #1400: controlled state siden synlighets-valget måtte overleve en

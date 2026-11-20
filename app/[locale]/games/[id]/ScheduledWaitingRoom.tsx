@@ -27,6 +27,13 @@ type WaitingRoomProps = {
    * instead of «Starter snart» and the promise to notify.
    */
   blockedReason?: StartBlockReason | null;
+  /**
+   * #2451: the player's own start time when the round has several start
+   * groups: «Du går ut 09:10 i flight 2» (`flight`), or «med lag 2» in a team
+   * format (`team`). The page works it out with the shared rule
+   * (`playerTeeOff`) and again after the player picks a flight (the refresh).
+   */
+  ownTeeOff?: { time: string; flight: number | null; team: number | null } | null;
 };
 
 /**
@@ -60,6 +67,7 @@ export function ScheduledWaitingRoom({
   flightOptions = null,
   currentFlightNumber = null,
   blockedReason = null,
+  ownTeeOff = null,
 }: WaitingRoomProps) {
   const blocked = blockedReason != null;
   const router = useRouter();
@@ -162,6 +170,29 @@ export function ScheduledWaitingRoom({
           </>
         )}
       </div>
+
+      {/* #2451: the player's own start time; the countdown above stays the
+          round's start. */}
+      {ownTeeOff && (
+        <p data-testid="waiting-room-own-tee-off" className="px-1 font-sans text-sm text-text">
+          {ownTeeOff.flight != null
+            ? t.rich('ownTeeOffFlight', {
+                time: ownTeeOff.time,
+                flight: ownTeeOff.flight,
+                b: (chunks) => <span className="font-semibold tabular-nums">{chunks}</span>,
+              })
+            : ownTeeOff.team != null
+              ? t.rich('ownTeeOffTeam', {
+                  time: ownTeeOff.time,
+                  team: ownTeeOff.team,
+                  b: (chunks) => <span className="font-semibold tabular-nums">{chunks}</span>,
+                })
+              : t.rich('ownTeeOff', {
+                  time: ownTeeOff.time,
+                  b: (chunks) => <span className="font-semibold tabular-nums">{chunks}</span>,
+                })}
+        </p>
+      )}
 
       {/* #543: flight-velger — kun når spillet trenger inndeling */}
       {flightOptions && flightOptions.length > 0 && (

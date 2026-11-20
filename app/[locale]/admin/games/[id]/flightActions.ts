@@ -32,6 +32,11 @@ import {
   FLIGHT_PLAYER_ORDER,
 } from './flightPlayerColumns';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import { hasStartGroups, isTeeInterval } from '@/lib/games/flightTeeTimes';
+import {
+  notifyTeeTimeChanged,
+  readTeeTimeSnapshot,
+} from '@/lib/notifications/notifyTeeTimeChanged';
 
 /**
  * Admin/creator: action-kontekst med authz og admin-client for flight-actions.
@@ -147,7 +152,7 @@ async function readActionGame<T>(
  */
 export async function suggestFlightAssignment(gameId: string): Promise<void> {
   const locale = await getLocale();
-  const { admin, startlistaPath: detailPath } = await loadFlightContext(gameId);
+  const { admin, userId, startlistaPath: detailPath } = await loadFlightContext(gameId);
 
   // Verifiser at spillet er scheduled/active og trenger inndeling.
   const game = await readActionGame<FlightGameRow>(
@@ -181,6 +186,9 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
 
   const assignments = suggestFlightSplit(players);
   const previousFlight = new Map(players.map((p) => [p.user_id, p.flight_number]));
+  // #2451: the start times as they stand, so the players whose time the
+  // split moves hear it (`notifyTeeTimeChanged`, best-effort).
+  const teeTimesBefore = await readTeeTimeSnapshot(gameId);
 
   const written: RevertRow[] = [];
   for (const { user_id, flight_number } of assignments) {
@@ -220,6 +228,7 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
     }
   }
 
+  await notifyTeeTimeChanged({ gameId, actorUserId: userId, before: teeTimesBefore });
   expireFlightCaches(gameId);
   redirect({ href: `${detailPath}?status=flight_suggested`, locale });
 }
@@ -240,7 +249,7 @@ export async function setPlayerFlight(
   targetFlight: number,
 ): Promise<void> {
   const locale = await getLocale();
-  const { admin, startlistaPath: detailPath } = await loadFlightContext(gameId);
+  const { admin, userId, startlistaPath: detailPath } = await loadFlightContext(gameId);
 
   // Grunnleggende validering
   if (!Number.isInteger(targetFlight) || targetFlight < 1) {
@@ -303,6 +312,9 @@ export async function setPlayerFlight(
     redirect({ href: `${detailPath}?error=flight_full`, locale });
   }
 
+  // #2451: read before the write, so the moved player hears a new start time.
+  const teeTimesBefore = await readTeeTimeSnapshot(gameId);
+
   let failure: unknown = null;
   try {
     // Same rule as suggestFlightAssignment: 0 rows is a failure (#2293).
@@ -348,6 +360,7 @@ export async function setPlayerFlight(
     });
   }
 
+  await notifyTeeTimeChanged({ gameId, actorUserId: userId, before: teeTimesBefore });
   expireFlightCaches(gameId);
   // `flight` lets the page put focus on the flight the player went to.
   redirect({ href: `${detailPath}?status=flight_updated&flight=${targetFlight}`, locale });
@@ -420,7 +433,7 @@ async function loadTeamGame(
  */
 export async function suggestTeamAssignment(gameId: string): Promise<void> {
   const locale = await getLocale();
-  const { admin, detailPath } = await loadFlightContext(gameId);
+  const { admin, userId, detailPath } = await loadFlightContext(gameId);
 
   const { mode, teamSize, shambleCount } = await loadTeamGame(admin, gameId, detailPath, locale);
 
@@ -438,6 +451,8 @@ export async function suggestTeamAssignment(gameId: string): Promise<void> {
   const previousRow = new Map(
     players.map((p) => [p.user_id, { team_number: p.team_number, flight_number: p.flight_number }]),
   );
+  // #2451: a new team gives a start group, and with it a start time.
+  const teeTimesBefore = await readTeeTimeSnapshot(gameId);
 
   const written: RevertRow[] = [];
   for (const { user_id, team_number, flight_number } of assignments) {
@@ -474,6 +489,7 @@ export async function suggestTeamAssignment(gameId: string): Promise<void> {
     }
   }
 
+  await notifyTeeTimeChanged({ gameId, actorUserId: userId, before: teeTimesBefore });
   expireFlightCaches(gameId);
   redirect({ href: `${detailPath}?status=team_suggested`, locale });
 }
@@ -494,7 +510,7 @@ export async function setPlayerTeam(
   targetTeam: number,
 ): Promise<void> {
   const locale = await getLocale();
-  const { admin, detailPath } = await loadFlightContext(gameId);
+  const { admin, userId, detailPath } = await loadFlightContext(gameId);
 
   if (!Number.isInteger(targetTeam) || targetTeam < 1) {
     redirect({ href: `${detailPath}?error=bad_team`, locale });
@@ -529,6 +545,8 @@ export async function setPlayerTeam(
   // The CHECK (0030/0095) needs a flight once there is a team, and the
   // flight follows the team (#2290).
   const targetFlight = flightForTeam(mode, players, targetUserId, targetTeam);
+  // #2451: read before the write, so the moved player hears a new start time.
+  const teeTimesBefore = await readTeeTimeSnapshot(gameId);
   let failure: unknown = null;
   try {
     expectAffected(
@@ -572,8 +590,76 @@ export async function setPlayerTeam(
     });
   }
 
+  await notifyTeeTimeChanged({ gameId, actorUserId: userId, before: teeTimesBefore });
   expireFlightCaches(gameId);
   redirect({ href: `${detailPath}?status=team_updated`, locale });
+}
+
+/**
+ * Admin/creator: «Tid mellom flightene» on the Startlista (#2451). Writes 8, 10
+ * or 12 to `games.tee_interval_minutes`, and the players whose start time it
+ * moves hear it (`notifyTeeTimeChanged`). Same gate as the flight actions
+ * (`loadFlightContext`). Only a standalone round in a format that can go out
+ * in more than one group (`hasStartGroups`): a cup match, league round or
+ * derived game keeps null, as the wizard and «Rediger spill» do.
+ */
+export async function setTeeInterval(gameId: string, minutes: number): Promise<void> {
+  const locale = await getLocale();
+  const { admin, userId, startlistaPath: detailPath } = await loadFlightContext(gameId);
+
+  if (!isTeeInterval(minutes)) {
+    redirect({ href: `${detailPath}?error=bad_interval`, locale });
+  }
+
+  const game = await readActionGame<
+    FlightGameRow & {
+      tournament_id: string | null;
+      league_round_id: string | null;
+      source_game_id: string | null;
+    }
+  >(
+    admin,
+    gameId,
+    'id, status, game_mode, mode_config, tournament_id, league_round_id, source_game_id',
+    'setTeeInterval',
+    detailPath,
+    locale,
+  );
+  if (game.status !== 'scheduled' && game.status !== 'active') {
+    redirect({ href: `${detailPath}?error=not_active`, locale });
+  }
+  if (
+    game.tournament_id ||
+    game.league_round_id ||
+    game.source_game_id ||
+    !hasStartGroups(game.game_mode)
+  ) {
+    redirect({ href: detailPath, locale });
+  }
+
+  const teeTimesBefore = await readTeeTimeSnapshot(gameId);
+  let failure: unknown = null;
+  try {
+    // 0 rows (the game was deleted in another tab) is a failure (#2293).
+    expectAffected(
+      await admin
+        .from('games')
+        .update({ tee_interval_minutes: minutes })
+        .eq('id', gameId)
+        .select('id'),
+      'setTeeInterval',
+    );
+  } catch (e) {
+    failure = e;
+  }
+  if (failure) {
+    console.error('[setTeeInterval] interval update failed', failure);
+    redirect({ href: `${detailPath}?error=db_game`, locale });
+  }
+
+  await notifyTeeTimeChanged({ gameId, actorUserId: userId, before: teeTimesBefore });
+  expireFlightCaches(gameId);
+  redirect({ href: `${detailPath}?status=tee_interval_updated`, locale });
 }
 
 /**

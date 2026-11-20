@@ -2490,6 +2490,9 @@
         "body": "Runden starter av seg selv når det som mangler, er på plass."
       },
       "joinFlightLabel": "Velg din flight",
+      "ownTeeOff": "Du går ut <b>{time}</b>.",
+      "ownTeeOffFlight": "Du går ut <b>{time}</b> i flight {flight}.",
+      "ownTeeOffTeam": "Du går ut <b>{time}</b> med lag {team}.",
       "flightLabel": "Flight {number}",
       "flightYours": "Din",
       "flightFull": "Full",
@@ -4425,6 +4428,7 @@
         "flight_full": "Den valgte flighten er full (maks 4 spillere). Velg en annen flight.",
         "signups_not_scheduled": "Kun planlagte spill kan stenge eller gjenåpne påmeldingen.",
         "bad_flight": "Ugyldig flight-nummer. Velg en positiv flight fra listen.",
+        "bad_interval": "Velg 8, 10 eller 12 minutter mellom flightene.",
         "team_full": "Det laget er fullt. Velg et annet lag.",
         "bad_team": "Ugyldig lagnummer. Velg et lag fra listen.",
         "rotation_player_count_wolf": "Wolf trenger 3–5 spillere for å starte. Nå er {count} påmeldt.",
@@ -4497,6 +4501,7 @@
         "player_reinstated": "Spilleren er gjeninnsatt i rangeringen.",
         "flight_suggested": "Inndeling er foreslått og lagret.",
         "flight_updated": "Spillerens flight er oppdatert.",
+        "tee_interval_updated": "Starttidene er oppdatert.",
         "team_suggested": "Lagene er satt opp og lagret.",
         "team_updated": "Spillerens lag er oppdatert.",
         "player_removed_team_short": "Spilleren er fjernet. Lag {team} spiller nå med {count}, og lagets handicap regnes for {count, plural, one {# spiller} other {# spillere}}.",
@@ -4645,7 +4650,13 @@
         "moveHere": "Flytt {name} hit",
         "moveHereLabel": "Flytt {name} til flight {n}",
         "chipLabel": "{name}, HCP {hcp}",
-        "unassignedShort": "{count} uten flight"
+        "unassignedShort": "{count} uten flight",
+        "teeIntervalHeading": "Tid mellom flightene",
+        "teeIntervalChoice": "{minutes} min",
+        "teeFirstOut": "Første ut {time}",
+        "teeAllOut": "Alle går ut {time}",
+        "teeAllOutNoTime": "Alle går ut samtidig",
+        "teeIntervalOffline": "Endring krever nett"
       },
       "teams": {
         "sectionLabel": "Lag",
@@ -4787,6 +4798,7 @@
         "noTeeOff": "Tee-tiden er ikke satt",
         "flights": "{count, plural, one {Én flight} =2 {To flights} =3 {Tre flights} =4 {Fire flights} other {# flights}}",
         "flightLine": "Flight {n}: {names}",
+        "flightLineTimed": "{time} flight {n}: {names}",
         "unassigned": "{count} uten flight",
         "noFlights": "Ingen flighter ennå",
         "noFlightsHint": "Del inn spillerne på startlista",

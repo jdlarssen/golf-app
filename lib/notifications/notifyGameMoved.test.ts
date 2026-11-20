@@ -159,3 +159,44 @@ describe('notifyGameMoved', () => {
     expect(notifyMock).not.toHaveBeenCalled();
   });
 });
+
+// #2451: a later flight hears its own start time in the same varsel.
+describe('notifyGameMoved — own start time per flight (#2451)', () => {
+  const flightPlayer = (user_id: string, flight_number: number) => ({
+    user_id,
+    withdrawn_at: null,
+    flight_number,
+    team_number: null,
+  });
+
+  beforeEach(() => {
+    db.game = {
+      name: 'Lørdagsrunden',
+      created_by: ORG,
+      game_mode: 'solo_strokeplay',
+      mode_config: { kind: 'solo_strokeplay', team_size: 1 },
+      tee_interval_minutes: 10,
+    };
+    db.roster = [
+      flightPlayer(ORG, 1),
+      flightPlayer('marte', 1),
+      flightPlayer('a', 1),
+      flightPlayer('b', 1),
+      flightPlayer('jonas', 2),
+      flightPlayer('c', 2),
+    ];
+  });
+
+  it('adds own_tee_off_at for flight 2, and leaves it out for flight 1', async () => {
+    await send({ teeOffAt: '2026-10-04T07:30:00.000Z' });
+    const payloads = new Map(notifyMock.mock.calls.map(([c]) => [c.userId, c.payload as Record<string, unknown>]));
+    expect(payloads.get('jonas')?.own_tee_off_at).toBe('2026-10-04T07:40:00.000Z');
+    expect(payloads.get('marte')).not.toHaveProperty('own_tee_off_at');
+  });
+
+  it('leaves it out when everyone goes out together (no interval)', async () => {
+    db.game = { ...db.game!, tee_interval_minutes: null };
+    await send();
+    expect(notifyMock.mock.calls.every(([c]) => !('own_tee_off_at' in (c.payload as object)))).toBe(true);
+  });
+});
