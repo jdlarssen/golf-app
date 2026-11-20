@@ -25,6 +25,8 @@ import { computePrimaryCtaState, type PrimaryCtaState } from '../../../../lib/ga
 import { softWithdrawOpen } from '../../../../lib/games/softWithdrawRule';
 import type { GameStatus } from '../../../../lib/games/status';
 import { expectedTeamSize, modeRequiresTeamNumber } from '../../../../lib/games/teamScope';
+import { flightIsFreeGrouping } from '../../../../lib/games/flightScope';
+import { playerTeeOff } from '../../../../lib/games/flightTeeTimes';
 import { getRatingForGender, type Rating, type TeeGender } from '../../../../lib/games/teeRating';
 import { revealState, shouldHideNetto, type ScoreVisibility } from '../../../../lib/games/visibility';
 import { fromSignedHcp } from '../../../../lib/handicap/sign';
@@ -301,6 +303,52 @@ export function calendarEvent(
 }
 
 /** Hvilken stubb billetten skal ha. */
+/**
+ * #2451: spillerens egen starttid, til linja «Du går ut 09:10 i flight 2.» i
+ * venterommet. `flight` der flighten er startgruppen (fri inndeling, best
+ * ball), ellers `team` (lagformatene, der to par går ut sammen). Klokka står
+ * i enhetens lokaltid, som resten av billetten.
+ */
+export interface OwnTeeOff {
+  clock: string;
+  flight: number | null;
+  team: number | null;
+}
+
+/**
+ * Spillerens egen starttid etter den delte regelen (`playerTeeOff`, webbens
+ * `lib/games/flightTeeTimes.ts`), eller `null`: ingen tee-off, ingen tid mellom
+ * flightene (også en bundel i cachen fra før feltet fantes), én gruppe, eller
+ * en spiller uten gruppe.
+ */
+export function ownTeeOff(bundle: Pick<GameBundle, 'game' | 'players'>, userId: string): OwnTeeOff | null {
+  const { game, players } = bundle;
+  const me = players.find((p) => p.userId === userId);
+  if (!me) return null;
+  const gameMode = game.gameMode as GameMode;
+  const teamSize = expectedTeamSize(game.modeConfig as { team_size?: number } | null);
+  const toRow = (p: BundlePlayer) => ({
+    user_id: p.userId,
+    flight_number: p.flightNumber,
+    team_number: p.teamNumber,
+    withdrawn_at: p.withdrawnAt,
+  });
+  const own = playerTeeOff(
+    {
+      game_mode: gameMode,
+      team_size: teamSize,
+      scheduled_tee_off_at: game.scheduledTeeOffAt,
+      tee_interval_minutes: game.teeIntervalMinutes ?? null,
+      players: players.map(toRow),
+    },
+    toRow(me),
+  );
+  const clock = own ? formatClock(own.teeOffAt) : null;
+  if (!own || clock === null) return null;
+  const byFlight = gameMode === 'best_ball' || flightIsFreeGrouping(gameMode, teamSize);
+  return { clock, flight: byFlight ? own.group : null, team: byFlight ? null : me.teamNumber };
+}
+
 export type TicketStub =
   | { kind: 'gated'; reason: GateReason }
   | { kind: 'notPlayer' }
@@ -310,7 +358,8 @@ export type TicketStub =
   /** Trukket fra en cup-kamp før start: bare arrangøren kan angre (#2752, E7). */
   | { kind: 'cupWithdrawn'; bySelf: boolean }
   | { kind: 'draft' }
-  | { kind: 'scheduled' }
+  /** #2451: `ownTeeOff` er spillerens egen starttid, eller `null` når alle går ut samtidig. */
+  | { kind: 'scheduled'; ownTeeOff: OwnTeeOff | null }
   | { kind: 'finished'; result: { text: string; isWin: boolean } | null }
   | {
       kind: 'active';
@@ -329,6 +378,8 @@ export type TicketStub =
  * `computePrimaryCtaState`).
  */
 export function ticketStub(opts: {
+  /** #2451: spillerens egen starttid (`ownTeeOff`), bare i en planlagt runde. */
+  ownTeeOff?: OwnTeeOff | null;
   status: string;
   gate: GateReason | null;
   me: BundlePlayer | undefined;
@@ -375,7 +426,7 @@ export function ticketStub(opts: {
     };
   }
   if (status === 'draft') return { kind: 'draft' };
-  if (status === 'scheduled') return { kind: 'scheduled' };
+  if (status === 'scheduled') return { kind: 'scheduled', ownTeeOff: opts.ownTeeOff ?? null };
   if (status === 'finished') {
     const summary = me.resultSummary ?? null;
     if (!summary) return { kind: 'finished', result: null };

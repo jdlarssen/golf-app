@@ -21,7 +21,14 @@ import {
 import { holeHeaderParams } from '../../lib/holeHeader';
 import { HOME_TEXT, continueOnHole } from '../../lib/homeCopy';
 import { WITHDRAW_SELF, describeSelfWithdrawFailure } from '../../lib/rosterCopy';
-import { TICKET_TEXT, bridgeLabel, derivedBody, derivedLink, playedLine } from '../../lib/ticketCopy';
+import {
+  TICKET_TEXT,
+  bridgeLabel,
+  derivedBody,
+  derivedLink,
+  ownTeeOffLine,
+  playedLine,
+} from '../../lib/ticketCopy';
 import type { ScreenProps } from '../../navigation';
 import { FONTS, fraunces, useTheme } from '../../theme';
 import { WebLinkButton } from '../WebLinkButton';
@@ -126,6 +133,7 @@ export function TicketStub({
             teeOffAt={teeOffAt}
             onChanged={onChanged}
             bundle={bundle}
+            ownTeeOff={stub.ownTeeOff ? ownTeeOffLine(stub.ownTeeOff) : null}
           />
           <ScheduledActions calendarEvent={calendarEvent} courseName={courseName} />
         </View>

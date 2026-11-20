@@ -217,6 +217,14 @@ export interface BundleGame {
    * får «Meld på laget ditt». Valgfri på samme måte som de to over.
    */
   registrationMode?: string | null;
+  /**
+   * #2451: `games.tee_interval_minutes`, minuttene mellom startgruppene, så
+   * startbilletten kan si «Du går ut 09:10 i flight 2.». Valgfri og uten ny
+   * versjon, som de over: en bundel i cachen fra før feltet fantes, har det
+   * ikke, og da står ingen linje til neste henting. En ny versjon ville kastet
+   * cachen, og da kunne ikke spillet åpnes uten nett.
+   */
+  teeIntervalMinutes?: number | null;
 }
 
 /**
@@ -428,6 +436,7 @@ export function toBundle(
       shortId: game.short_id ?? null,
       registrationType: game.registration_type ?? null,
       registrationMode: game.registration_mode ?? null,
+      teeIntervalMinutes: game.tee_interval_minutes ?? null,
     },
     players: players.map((row) => ({
       userId: row.user_id,

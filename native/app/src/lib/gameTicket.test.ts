@@ -8,6 +8,7 @@ import { homeBundle, homePlayer } from '../test/homeFixtures';
 import {
   calendarEvent,
   mapSearchUrl,
+  ownTeeOff,
   rosterNames,
   slotField,
   startField,
@@ -405,7 +406,7 @@ describe('ticketStub — samme grener og rekkefølge som før', () => {
       { kind: 'withdrawn', bySelf: true, canUndo: false },
     ],
     ['utkast', { status: 'draft' }, { kind: 'draft' }],
-    ['planlagt', { status: 'scheduled' }, { kind: 'scheduled' }],
+    ['planlagt', { status: 'scheduled' }, { kind: 'scheduled', ownTeeOff: null }],
     [
       'avsluttet med plass',
       { status: 'finished', me: { ...me, resultSummary: { kind: 'placement' as const, rank: 3, fieldSize: 12, isTeam: false } } },
@@ -470,5 +471,74 @@ describe('calendarEvent — «Legg til i kalender» (#2255 PR 2)', () => {
     ['med en ulesbar tee-off', 'ikke en dato'],
   ])('%s: ingen hendelse, og knappen vises ikke', (_case, iso) => {
     expect(calendarEvent(bundleWith({ scheduledTeeOffAt: iso }, []))).toBeNull();
+  });
+});
+
+// #2451: spillerens egen starttid etter den delte regelen. Suitene kjører med
+// TZ=UTC, så 08:00Z står som 08:00.
+describe('ownTeeOff (#2451)', () => {
+  const nine = (gameMode: string, teamSize?: number) =>
+    bundleWith(
+      {
+        gameMode,
+        status: 'scheduled',
+        modeConfig: teamSize ? { team_size: teamSize } : {},
+        scheduledTeeOffAt: '2026-11-21T08:00:00.000Z',
+        teeIntervalMinutes: 12,
+      },
+      Array.from({ length: 9 }, (_, i) =>
+        homePlayer({ userId: i === 8 ? 'me' : `p${i}`, flightNumber: Math.floor(i / 3) + 1 }),
+      ),
+    );
+
+  it('slagspill, 12 min: flight 3 går ut 08:24 og får «i flight 3»', () => {
+    expect(ownTeeOff(nine('solo_strokeplay'), 'me')).toEqual({ clock: '08:24', flight: 3, team: null });
+  });
+
+  it('lagformat med par: gruppen er to par, og linja sier laget', () => {
+    const pairs = bundleWith(
+      { gameMode: 'patsome', status: 'scheduled', modeConfig: { team_size: 2 }, scheduledTeeOffAt: '2026-11-21T08:00:00.000Z', teeIntervalMinutes: 10 },
+      Array.from({ length: 8 }, (_, i) =>
+        homePlayer({ userId: i === 5 ? 'me' : `p${i}`, teamNumber: Math.floor(i / 2) + 1, flightNumber: Math.floor(i / 2) + 1 }),
+      ),
+    );
+    expect(ownTeeOff(pairs, 'me')).toEqual({ clock: '08:10', flight: null, team: 3 });
+  });
+
+  it('ingen linje uten tid mellom flightene, også i en bundel fra før feltet fantes', () => {
+    const b = nine('solo_strokeplay');
+    expect(ownTeeOff({ ...b, game: { ...b.game, teeIntervalMinutes: null } }, 'me')).toBeNull();
+    const { teeIntervalMinutes: _gone, ...stale } = b.game;
+    expect(ownTeeOff({ ...b, game: stale }, 'me')).toBeNull();
+  });
+
+  it('ingen linje med fire eller færre, uten tee-off, eller for en som ikke spiller', () => {
+    const four = bundleWith(
+      { gameMode: 'solo_strokeplay', status: 'scheduled', scheduledTeeOffAt: '2026-11-21T08:00:00.000Z', teeIntervalMinutes: 10 },
+      [1, 1, 2, 2].map((f, i) => homePlayer({ userId: i === 3 ? 'me' : `p${i}`, flightNumber: f })),
+    );
+    expect(ownTeeOff(four, 'me')).toBeNull();
+    const b = nine('solo_strokeplay');
+    expect(ownTeeOff({ ...b, game: { ...b.game, scheduledTeeOffAt: null } }, 'me')).toBeNull();
+    expect(ownTeeOff(b, 'tilskuer')).toBeNull();
+  });
+
+  it('ticketStub tar den med i en planlagt runde', () => {
+    const own = { clock: '08:24', flight: 3, team: null };
+    const opts = {
+      status: 'scheduled',
+      gate: null,
+      me: homePlayer({ userId: 'me' }),
+      filled: [],
+      holes: [],
+      submittedAt: null,
+      approvedAt: null,
+      requirePeerApproval: false,
+      ownTeeOff: own,
+    };
+    expect(ticketStub(opts)).toEqual({
+      kind: 'scheduled',
+      ownTeeOff: own,
+    });
   });
 });

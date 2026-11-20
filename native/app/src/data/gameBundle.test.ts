@@ -207,6 +207,22 @@ describe('gameBundle', () => {
   });
 
   // #2840 del 3: raden til lagsiden på runden før start.
+  it('#2451: tiden mellom flightene rir med på spillet, og kolonnen er i select-lista', async () => {
+    const { queryStub, routeFrom, stepArgs } = mocks();
+    const gamesQuery = queryStub({ data: { ...GAME_ROW, tee_interval_minutes: 12 }, error: null });
+    routeFrom({
+      games: [gamesQuery],
+      game_players: [queryStub({ data: PLAYER_ROWS, error: null })],
+    });
+    expect((await bundleModule().refreshGameBundle(GAME)).game.teeIntervalMinutes).toBe(12);
+    expect(String(stepArgs(gamesQuery, 'select')[0]![0])).toContain('tee_interval_minutes');
+  });
+
+  it('#2451: en rad uten kolonnen gir null, så billetten står uten linje', async () => {
+    riggFetch();
+    expect((await bundleModule().refreshGameBundle(GAME)).game.teeIntervalMinutes).toBeNull();
+  });
+
   it('#2840: påmeldingskoden og -typen rir med på spillet', async () => {
     riggFetch({ short_id: 'abcd2345', registration_type: 'team', registration_mode: 'open' });
     expect((await bundleModule().refreshGameBundle(GAME)).game).toMatchObject({
@@ -468,6 +484,7 @@ describe('gameBundle', () => {
       shortId: null,
       registrationType: null,
       registrationMode: null,
+      teeIntervalMinutes: null,
     });
     expect(fetched.courseName).toBe('Losby');
     expect(fetched.teeBoxName).toBe('Gul');
