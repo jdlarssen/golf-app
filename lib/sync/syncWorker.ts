@@ -333,10 +333,12 @@ async function settleLockedRefusal(
     return keepForRetry();
   }
 
-  // p18: with no server row, settling deletes the local stroke. Do that only
-  // when the lock is confirmed (`isConfirmedLock`); otherwise keep it, «not
-  // sent», and try again.
-  if (!serverRow) {
+  // p18: settling replaces the local stroke — with the server's row, or by
+  // deleting it when the server has none. Do either only when the lock is
+  // confirmed (`isConfirmedLock`); a refusal that is not a lock (the device
+  // may no longer score for a flight-mate) keeps the unsent stroke, «not
+  // sent», and tries again.
+  {
     try {
       const { data, error } = await getBrowserClient()
         .from('game_players')

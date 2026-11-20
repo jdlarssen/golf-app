@@ -277,7 +277,16 @@ describe('drainQueue', () => {
       await typeStroke(4);
       supabase.rpc.mockResolvedValue({ data: REFUSED_REPLY_FIXTURE, error: null });
       const read = queryStub({ data: SERVER_ROW, error: null });
-      routeFrom({ scores: [read] });
+      routeFrom({
+        scores: [read],
+        // p18: låsen bekreftes før serverens tall skrives over det lokale.
+        game_players: [
+          queryStub({
+            data: { submitted_at: '2026-08-30T09:00:00+00:00', withdrawn_at: null, games: { status: 'active' } },
+            error: null,
+          }),
+        ],
+      });
 
       const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
       const result = await drainQueue('test');
@@ -315,7 +324,12 @@ describe('drainQueue', () => {
         data: null,
         error: { message: FINISHED_GAME_GUARD, code: '42501' },
       });
-      routeFrom({ scores: [queryStub({ data: SERVER_ROW, error: null })] });
+      routeFrom({
+        scores: [queryStub({ data: SERVER_ROW, error: null })],
+        game_players: [
+          queryStub({ data: { submitted_at: null, withdrawn_at: null, games: { status: 'finished' } }, error: null }),
+        ],
+      });
 
       const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
       await drainQueue('test');
@@ -879,6 +893,37 @@ describe('drainQueue: et avvist førstegangsslag slettes bare ved bekreftet lås
     });
     expect(score).toMatchObject({ strokes: 4 });
     expect(queue[0]).toMatchObject({ attemptCount: 1, lastError: REFUSED_WRITE_ERROR, abandonedAt: null });
+    expect(result).toMatchObject({ errored: 1, abandoned: 0 });
+  });
+
+  // Opus-gjennomgang nr. 2 av p18: samme feil når serveren HAR en rad. Et avslag
+  // som ikke er en lås, skal ikke skrive serverens tall over det usendte slaget.
+  it('serveren har en rad, men kortet er ikke låst: det lokale slaget står', async () => {
+    const { supabase, queryStub, routeFrom } = mocks();
+    await typeStroke(4);
+    supabase.rpc.mockResolvedValue({ data: REFUSED_REPLY_FIXTURE, error: null });
+    routeFrom({
+      scores: [
+        queryStub({
+          data: {
+            strokes: 6,
+            putts: null,
+            entered_by: MATE,
+            client_updated_at: '2026-08-30T09:59:00+00:00',
+            updated_at: '2026-08-30T09:59:01+00:00',
+          },
+          error: null,
+        }),
+      ],
+      game_players: [queryStub({ data: { submitted_at: null, withdrawn_at: null, games: { status: 'active' } }, error: null })],
+    });
+    const { drainQueue } = require('./syncWorker') as typeof import('./syncWorker');
+    const result = await drainQueue('test');
+
+    const { getDb, getScore, listQueue, scoreKey } = require('./db') as Db;
+    const db = await getDb();
+    expect(await getScore(db, scoreKey(GAME, ME, 1))).toMatchObject({ strokes: 4 });
+    expect((await listQueue(db))[0]).toMatchObject({ attemptCount: 1, abandonedAt: null });
     expect(result).toMatchObject({ errored: 1, abandoned: 0 });
   });
 

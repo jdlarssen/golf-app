@@ -350,15 +350,20 @@ describe('drainQueue — låst kort-avslag (#2211)', () => {
     seedScore(4, '2026-09-25T10:00:00.000Z', { userId: 'mate', enteredBy: 'me' });
     rpcMock.mockResolvedValueOnce({ data: REFUSED_REPLY_FIXTURE, error: null });
     maybeSingleMock.mockResolvedValueOnce({ data: SERVER_ROW, error: null });
+    maybeSingleMock.mockResolvedValueOnce({ data: { submitted_at: '2026-09-25T09:00:00+00:00', withdrawn_at: null, games: { status: 'active' } }, error: null });
 
     const { drainQueue } = await import('./syncWorker');
     const res = await drainQueue();
 
     expect(fromMock).toHaveBeenCalledWith('scores');
+    expect(fromMock).toHaveBeenCalledWith('game_players');
     expect(eqMock.mock.calls).toEqual([
       ['game_id', 'g1'],
       ['user_id', 'mate'],
       ['hole_number', 5],
+      // p18: the lock is read for the same player before the overwrite.
+      ['game_id', 'g1'],
+      ['user_id', 'mate'],
     ]);
     expect(fake.scores.get(ID)).toMatchObject({
       strokes: 5,
@@ -384,6 +389,7 @@ describe('drainQueue — låst kort-avslag (#2211)', () => {
       error: { message: FINISHED_GAME_GUARD },
     });
     maybeSingleMock.mockResolvedValueOnce({ data: SERVER_ROW, error: null });
+    maybeSingleMock.mockResolvedValueOnce({ data: { submitted_at: null, withdrawn_at: null, games: { status: 'finished' } }, error: null });
 
     const { drainQueue } = await import('./syncWorker');
     await drainQueue();
@@ -818,5 +824,29 @@ describe('drainQueue — quarantine clears dismissedAt (p18)', () => {
     await drainQueue();
 
     expect(fake.syncQueue.get(ID)).toMatchObject({ abandonedAt: expect.any(String), dismissedAt: null });
+  });
+});
+
+// Opus re-review of p18: the same defect where the server HAS a row. The
+// settle overwrote the unsent edit with the server value and called the card
+// locked without asking. A refusal that is not a lock (the device may no
+// longer score for a flight-mate) keeps the local stroke and retries.
+describe('drainQueue — a refusal overwrites the stroke only on a confirmed lock (p18)', () => {
+  it('server row exists but the card is not locked: local stroke kept, no quarantine', async () => {
+    seedScore(4, '2026-11-20T10:00:00.000Z');
+    rpcMock.mockResolvedValueOnce({ data: REFUSED_REPLY_FIXTURE, error: null });
+    maybeSingleMock.mockResolvedValueOnce({ data: SERVER_ROW, error: null });
+    maybeSingleMock.mockResolvedValueOnce({
+      data: { submitted_at: null, withdrawn_at: null, games: { status: 'active' } },
+      error: null,
+    });
+
+    const { drainQueue } = await import('./syncWorker');
+    const res = await drainQueue();
+
+    expect(fake.scores.get(ID)!.strokes).toBe(4);
+    expect(fake.syncQueue.get(ID)).toMatchObject({ attemptCount: 1, lastError: REFUSED_WRITE_ERROR });
+    expect(fake.syncQueue.get(ID)?.abandonedAt).toBeUndefined();
+    expect(res).toMatchObject({ errored: 1, abandoned: 0 });
   });
 });

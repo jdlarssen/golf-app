@@ -387,10 +387,12 @@ async function settleLockedRefusal(
     return keepForRetry();
   }
 
-  // p18: uten server-rad betyr oppgjøret at det lokale slaget slettes. Gjør det
-  // bare når låsen er bekreftet (`isConfirmedLock`); ellers står slaget, «ikke
-  // sendt», og prøves igjen.
-  if (!serverRow) {
+  // p18: oppgjøret erstatter det lokale slaget — med serverens rad, eller ved
+  // å slette det når serveren ikke har noen. Gjør begge deler bare når låsen er
+  // bekreftet (`isConfirmedLock`); et avslag som ikke er en lås (enheten fører
+  // kanskje ikke lenger for en makker), lar det usendte slaget stå, «ikke
+  // sendt», og prøver igjen.
+  {
     try {
       const { data, error } = await supabase
         .from('game_players')
