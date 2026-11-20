@@ -352,8 +352,9 @@ describe('ukjent adresse', () => {
       { inviterName: '  ' },
     );
 
+    // null: the mail fills «En arrangør» in the recipient's language.
     expect(sendInviteNotificationMock).toHaveBeenCalledWith(
-      expect.objectContaining({ invitedByName: 'En arrangør' }),
+      expect.objectContaining({ invitedByName: null }),
     );
   });
 

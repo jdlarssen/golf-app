@@ -21,10 +21,10 @@ function isDuplicateError(err: { code?: string; message?: string } | null): bool
 
 /**
  * Slå opp displayName for notify-payload: navn, ellers maskert e-post (#2271),
- * med kallenavn i «». Best-effort: returnerer fallback "En bruker" hvis raden
- * mangler.
+ * med kallenavn i «». Best-effort: returnerer null hvis raden mangler, og
+ * innbokskortet viser da reserven på leserens språk.
  */
-async function getRequesterName(userId: string): Promise<string> {
+async function getRequesterName(userId: string): Promise<string | null> {
   const admin = getAdminClient();
   const { data } = await admin
     .from('users')
@@ -35,8 +35,9 @@ async function getRequesterName(userId: string): Promise<string> {
       nickname: string | null;
       email: string;
     }>();
-  if (!data) return 'En bruker';
-  return displayNameForOthers(data) ?? 'En bruker';
+  // null → the inbox card shows the fallback in the reader's language.
+  if (!data) return null;
+  return displayNameForOthers(data) ?? null;
 }
 
 /**

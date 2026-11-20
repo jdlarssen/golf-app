@@ -25,8 +25,8 @@ export type GuestClaimNotificationParams = {
   to: string;
   /** Gjestens fornavn (fra users.name) — null → nøytral «Hei!»-salutation. */
   guestFirstName: string | null;
-  /** Arrangøren som sender resultatet. */
-  invitedByName: string;
+  /** Arrangøren som sender resultatet. `null` → «En arrangør» på mottakerens språk. */
+  invitedByName: string | null;
   gameName: string;
   locale?: string | null;
 };
@@ -39,9 +39,10 @@ export async function sendGuestClaimNotification(
     return;
   }
 
-  const { to, guestFirstName, invitedByName, gameName, locale } = params;
+  const { to, guestFirstName, gameName, locale } = params;
   const loc = resolveMailLocale(locale);
   const t = await getMailTranslator(locale);
+  const invitedByName = params.invitedByName ?? t('common.someOrganizerFallback');
 
   const loginUrl = mailUrl(locale, '/login');
 

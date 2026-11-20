@@ -7150,7 +7150,11 @@
       "tagline": "Fire up your golf tournament in a couple of minutes.",
       "footerTagline": "Tørny — fire up your golf tournament in a couple of minutes.",
       "openButton": "Open Tørny",
-      "somePlayerFallback": "A player"
+      "somePlayerFallback": "A player",
+      "someOrganizerFallback": "An organiser",
+      "someFriendFallback": "A friend",
+      "someClubFriendFallback": "A club friend",
+      "someClubFallback": "the club"
     },
     "invite": {
       "subject": "You're invited to Tørny",

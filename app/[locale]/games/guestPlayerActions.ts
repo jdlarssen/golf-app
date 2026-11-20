@@ -247,8 +247,8 @@ export async function sendGuestResult(
     console.error('[sendGuestResult] invitations insert failed (best-effort)', err);
   }
 
-  const invitedByName =
-    ctx.name?.trim() || (ctx.isAdmin ? 'Admin' : 'En arrangør');
+  // null → «En arrangør» in the recipient's language (the mail fills it in).
+  const invitedByName = ctx.name?.trim() || (ctx.isAdmin ? 'Admin' : null);
   try {
     await sendGuestClaimNotification({
       to: email,

@@ -28,7 +28,13 @@ import { escapeHtml } from './escapeHtml';
 
 export type InviteNotificationParams = {
   to: string;
-  invitedByName: string;
+  /**
+   * The inviter's name. `null` → the role fallback in the recipient's language
+   * (`inviterFallback`), never a Norwegian literal from the caller.
+   */
+  invitedByName: string | null;
+  /** Which fallback a `null` name gets: a game organiser (default) or a friend. */
+  inviterFallback?: 'organizer' | 'friend';
   /**
    * Spill-navnet når invitasjonen gjelder en konkret runde (game-scoped
    * invitasjon fra `/admin/games/[id]`). Når satt, bytter mail-en til en
@@ -102,11 +108,14 @@ export async function sendInviteNotification(
     return;
   }
 
-  const { to, invitedByName, gameName, gameMode, locale, inviteToken, expiresAt } =
+  const { to, gameName, gameMode, locale, inviteToken, expiresAt } =
     params;
   const loc = resolveMailLocale(locale);
   const t = await getMailTranslator(locale);
   const messages = await getMailMessages(locale);
+  const invitedByName =
+    params.invitedByName ??
+    t(params.inviterFallback === 'friend' ? 'common.someFriendFallback' : 'common.someOrganizerFallback');
 
   const hasGame = typeof gameName === 'string' && gameName.length > 0;
   const modeHint = resolveModeHint(hasGame, gameMode, messages);

@@ -347,7 +347,9 @@ export function buildNotificationText(
     case 'club_join_request': {
       const p = payload as NotificationPayload<'club_join_request'>;
       return {
-        title: t('kinds.clubJoinRequest.title', { requesterName: p.requester_name }),
+        title: t('kinds.clubJoinRequest.title', {
+          requesterName: p.requester_name ?? t('somePlayerFallback'),
+        }),
         detail: t('kinds.clubJoinRequest.detail', { groupName: p.group_name }),
       };
     }

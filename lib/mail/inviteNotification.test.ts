@@ -349,4 +349,12 @@ describe('sendInviteNotification', () => {
   // Strukturelle Resend-kontrakter (error-propagation, to/from, call-count)
   // dekkes av gameFinishedNotification.test.ts som kanonisk demonstrasjon.
   // Konsolideres til lib/mail/__tests__/resend-contract.test.ts i issue #263.
+
+  it('no inviter name: the fallback comes in the recipient\'s language, as organiser or friend', async () => {
+    const organiser = await send({ ...baseParams, invitedByName: null, locale: 'en' });
+    expect(bodyLineHtml(organiser.html)).toMatchInlineSnapshot(`"<strong>An organiser</strong> has invited you to a golf tournament on Tørny."`);
+    sendMock.mockClear();
+    const friend = await send({ ...baseParams, invitedByName: null, inviterFallback: 'friend', locale: 'en' });
+    expect(bodyLineHtml(friend.html)).toMatchInlineSnapshot(`"<strong>A friend</strong> has invited you to a golf tournament on Tørny."`);
+  });
 });

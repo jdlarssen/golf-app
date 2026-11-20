@@ -178,4 +178,10 @@ describe('sendClubInviteNotification', () => {
       </html>"
     `);
   });
+
+  it('no inviter or club name: the fallbacks come in the recipient\'s language', async () => {
+    const payload = await send({ ...baseParams, invitedByName: null, clubName: null, locale: 'en' });
+    expect(payload.subject).toMatchInlineSnapshot(`"You're invited to the club on Tørny"`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"<strong>A club friend</strong> has invited you to the club <span style="font-weight:600;">the club</span> on Tørny."`);
+  });
 });
