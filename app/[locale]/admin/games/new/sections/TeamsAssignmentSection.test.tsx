@@ -644,68 +644,26 @@ describe('TeamsAssignmentSection — «Jevne lag» (#2478)', () => {
   });
 });
 
-// Type C (#2451): the start times part reads `state.startGroups`, the shared
-// rule. One render per format family, plus the choices and a moved player.
+// Type C (#2451), one render: the start times part shows a row per start
+// group and the three choices, 10 pressed, and a tap moves the choice. The
+// times themselves are the rule's (`flightTeeTimes.test.ts`) and the hook's
+// (`useGameFormState.test.ts`); matchplay and small rounds have no part.
 describe('TeamsAssignmentSection — starttider per flight (#2451)', () => {
-  const times = () =>
-    within(screen.getByTestId('start-times'))
-      .getAllByText(/^\d\d:\d\d$/)
-      .map((el) => el.textContent);
-
-  it('best ball, 12 spillere, 09:00: tre tider med 10 min valgt, 8 min gir 09:00/09:08/09:16', () => {
+  it('best ball med 12: én rad per flight og tre valg; et trykk flytter valget; fourball har ingen del', () => {
     setup('best_ball', 2, 12);
     act(() => latest.drawRandomTeams());
     act(() => latest.setScheduledTeeOffAt('2026-11-21T09:00'));
-    expect(times()).toEqual(['09:00', '09:10', '09:20']);
-    expect(screen.getByTestId('tee-interval-10')).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByText('Første ut 09:00')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByTestId('tee-interval-8'));
-    expect(times()).toEqual(['09:00', '09:08', '09:16']);
-    expect(latest.teeIntervalForSave).toBe(8);
-
-    act(() => latest.setScheduledTeeOffAt('2026-11-21T10:30'));
-    expect(times()).toEqual(['10:30', '10:38', '10:46']);
-  });
-
-  it('en spiller flyttet til en annen flight står under den nye tiden', () => {
-    setup('best_ball', 2, 12);
-    act(() => latest.drawRandomTeams());
-    act(() => latest.setScheduledTeeOffAt('2026-11-21T09:00'));
-    const moved = latest.selectedPlayerIds.find((pid) => latest.teamByPlayer[pid] === 6)!;
-    act(() => latest.setFlightForPlayer(moved, 1));
-    const group1 = latest.startGroups.find((g) => g.group === 1)!;
-    expect(group1.players.map((p) => p.user_id)).toContain(moved);
-  });
-
-  it('patsome med 12 spillere: tre tider, og lag 1 og 2 går sammen', () => {
-    setup('patsome', 2, 12);
-    act(() => {
-      latest.selectedPlayerIds.forEach((pid, i) => latest.assignPlayerToSlot(Math.floor(i / 2) + 1, i % 2, pid));
-    });
-    act(() => latest.setScheduledTeeOffAt('2026-11-21T09:00'));
-    expect(times()).toEqual(['09:00', '09:10', '09:20']);
-    expect(screen.getByText('Lag 1 og 2')).toBeInTheDocument();
-  });
-
-  it('uten tee-off står forskyvningen i stedet for klokkeslett', () => {
-    setup('best_ball', 2, 8);
-    act(() => latest.drawRandomTeams());
     const part = screen.getByTestId('start-times');
-    expect(within(part).getByText('Først')).toBeInTheDocument();
-    expect(within(part).getByText('+10 min')).toBeInTheDocument();
+    expect(within(part).getAllByText(/^Flight \d$/)).toHaveLength(3);
+    expect(screen.getByTestId('tee-interval-10')).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByTestId('tee-interval-8'));
+    expect(screen.getByTestId('tee-interval-8')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('tee-interval-10')).toHaveAttribute('aria-pressed', 'false');
+    expect(latest.teeIntervalForSave).toBe(8);
   });
 
-  it('matchplay og runder med fire eller færre spillere har ingen starttider', () => {
+  it('matchplay har ingen starttider', () => {
     setup('fourball_matchplay', 2, 4);
-    expect(screen.queryByTestId('start-times')).toBeNull();
-    expect(screen.queryByTestId('tee-interval-10')).toBeNull();
-  });
-
-  it('best ball med fire spillere har ingen starttider', () => {
-    setup('best_ball', 2, 4);
-    act(() => latest.drawRandomTeams());
-    act(() => latest.setScheduledTeeOffAt('2026-11-21T09:00'));
     expect(screen.queryByTestId('start-times')).toBeNull();
   });
 });

@@ -80,8 +80,10 @@ import {
   unassignedActivePlayers,
   eligibleForFlightAssignment,
   flightBuckets,
+  flightIsFreeGrouping,
   type FlightPlayer,
 } from '@/lib/games/flightScope';
+import { playerTeeOff } from '@/lib/games/flightTeeTimes';
 import { offeredFlightNumbers } from '@/lib/games/startlist';
 import { expectedTeamSize, unassignedTeamPlayers } from '@/lib/games/teamScope';
 import type { FlightOption } from '../ScheduledWaitingRoom';
@@ -821,6 +823,31 @@ export default async function GameHomePage({
       });
     }
 
+    // #2451: the player's own start time when the round has several start
+    // groups (the shared rule). «i flight 2» where the flight is the start
+    // group (free grouping, best ball), «med lag 2» in the other team formats.
+    // The countdown still counts to the round's start.
+    const ownTeeOff = (() => {
+      const teamSize = expectedTeamSize(game.mode_config);
+      const own = playerTeeOff(
+        {
+          game_mode: game.game_mode,
+          team_size: teamSize,
+          scheduled_tee_off_at: game.scheduled_tee_off_at,
+          tee_interval_minutes: gwp.game.tee_interval_minutes ?? null,
+          players: gwp.players,
+        },
+        me,
+      );
+      if (!own) return null;
+      const byFlight = game.game_mode === 'best_ball' || flightIsFreeGrouping(game.game_mode, teamSize);
+      return {
+        time: formatTeeOffTimeLocale(new Date(own.teeOffAt), locale),
+        flight: byFlight ? own.group : null,
+        team: byFlight ? null : me.team_number,
+      };
+    })();
+
     // Teller ufordelte spillere for banneret (vises bare etter tee-tid).
     const unassignedCount = autoStartBlockedByUnassignedFlights
       ? unassignedActivePlayers(flightPlayers).length
@@ -1129,6 +1156,7 @@ export default async function GameHomePage({
                 teeOffAt={game.scheduled_tee_off_at!}
                 flightOptions={flightOptions}
                 currentFlightNumber={me.flight_number}
+                ownTeeOff={ownTeeOff}
                 blockedReason={structuralBlock?.reason ?? null}
               />
             </div>

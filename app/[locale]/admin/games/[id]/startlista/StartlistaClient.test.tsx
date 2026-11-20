@@ -2,9 +2,13 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { StartlistaClient, type StartlistaPlayer } from './StartlistaClient';
 
-const { setPlayerFlightMock } = vi.hoisted(() => ({ setPlayerFlightMock: vi.fn() }));
+const { setPlayerFlightMock, setTeeIntervalMock } = vi.hoisted(() => ({
+  setPlayerFlightMock: vi.fn(),
+  setTeeIntervalMock: vi.fn(),
+}));
 vi.mock('../flightActions', () => ({
   setPlayerFlight: (...args: unknown[]) => setPlayerFlightMock(...args),
+  setTeeInterval: (...args: unknown[]) => setTeeIntervalMock(...args),
   suggestFlightAssignment: vi.fn(),
 }));
 
@@ -61,5 +65,40 @@ describe('StartlistaClient', () => {
       fireEvent.click(container.querySelector('button[data-target-flight="2"]')!);
     });
     expect(setPlayerFlightMock).toHaveBeenCalledWith('g', 'm', 2);
+
+    // #2451: with start times each card has its time in front of the title,
+    // the interval choice sits over the cards, and a tap on another choice
+    // goes to the server. A round from before #2451 has no choice pressed.
+    const startTimes = {
+      gameMode: 'solo_strokeplay' as const,
+      teamSize: 1,
+      teeOffAt: '2026-11-21T08:00:00.000Z',
+      interval: 12,
+    };
+    const { rerender } = render(
+      <StartlistaClient gameId="g" players={PLAYERS} focus={null} headingId="h2" startTimes={startTimes} />,
+    );
+    const timed = screen.getAllByTestId('tee-interval');
+    expect(timed).toHaveLength(1);
+    expect(screen.getAllByRole('heading', { name: /^\d\d:\d\d Flight \d$/ }).length).toBeGreaterThan(1);
+    expect(screen.getByTestId('tee-interval-12')).toHaveAttribute('aria-pressed', 'true');
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('tee-interval-10'));
+    });
+    expect(setTeeIntervalMock).toHaveBeenCalledWith('g', 10);
+
+    rerender(
+      <StartlistaClient
+        gameId="g"
+        players={PLAYERS}
+        focus={null}
+        headingId="h2"
+        startTimes={{ ...startTimes, interval: null }}
+      />,
+    );
+    expect(screen.queryAllByRole('heading', { name: /^\d\d:\d\d Flight \d$/ })).toHaveLength(0);
+    for (const m of [8, 10, 12]) {
+      expect(screen.getByTestId(`tee-interval-${m}`)).toHaveAttribute('aria-pressed', 'false');
+    }
   });
 });

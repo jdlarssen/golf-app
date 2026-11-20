@@ -88,6 +88,7 @@ export type WeeklyRepeatSource = Pick<
   | 'registration_cap'
   | 'signup_deadline'
   | 'waitlist_enabled'
+  | 'tee_interval_minutes'
 > & {
   /** The organiser. A round without one is never repeated (no one to invite from). */
   created_by: string;
@@ -201,6 +202,8 @@ export function buildWeeklyRepeatInsert(
     registration_cap: source.registration_cap,
     waitlist_enabled: source.waitlist_enabled,
     signup_deadline: shiftedDeadline(source.signup_deadline, source.scheduled_tee_off_at, nextTeeOff),
+    // #2451: the minutes between the flights go with the series, like the flights.
+    tee_interval_minutes: source.tee_interval_minutes,
     repeat_weekly: true,
     repeated_from_game_id: source.id,
   };

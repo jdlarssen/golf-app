@@ -89,6 +89,15 @@ const notifyGameMovedMock = vi.fn<(...args: unknown[]) => Promise<{ notified: un
 vi.mock('@/lib/notifications/notifyGameMoved', () => ({
   notifyGameMoved: (...args: unknown[]) => notifyGameMovedMock(...args),
 }));
+// #2451: the start-time varsel has its own suite; here only when the save
+// reads the round before it and hands the reading on.
+const TEE_TIMES_BEFORE = { name: 'snapshot' };
+const readTeeTimeSnapshotMock = vi.fn(async (..._args: unknown[]) => TEE_TIMES_BEFORE);
+const notifyTeeTimeChangedMock = vi.fn(async (..._args: unknown[]) => ({ notified: [] }));
+vi.mock('@/lib/notifications/notifyTeeTimeChanged', () => ({
+  readTeeTimeSnapshot: (...args: unknown[]) => readTeeTimeSnapshotMock(...args),
+  notifyTeeTimeChanged: (...args: unknown[]) => notifyTeeTimeChangedMock(...args),
+}));
 
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/server', () => ({
@@ -1019,6 +1028,32 @@ describe('«Si fra til gjengen» when tee-off moves in «Rediger» (#2480)', () 
   ] as const)('%s tells nobody', async (_label, stored, form) => {
     await save({ storedTeeOff: stored === 'same' ? 'same' : dayBefore(), form });
     expect(notifyGameMovedMock).not.toHaveBeenCalled();
+  });
+
+  // #2451: a save that keeps the tee-off reads the round before it and tells
+  // the players whose own start time moved; a moved round never adds a
+  // tee_time_changed on top of game_moved (or of the organiser's «no»).
+  it('the same tee-off: the round is read before the save and handed to the start-time varsel', async () => {
+    await save({ storedTeeOff: 'same' });
+    expect(readTeeTimeSnapshotMock).toHaveBeenCalledWith('game-1');
+    expect(notifyTeeTimeChangedMock).toHaveBeenCalledWith({
+      gameId: 'game-1',
+      actorUserId: 'admin-1',
+      before: TEE_TIMES_BEFORE,
+    });
+  });
+
+  it.each([
+    ['switch on', { notify_moved: '1' }],
+    ['switch off', { notify_moved: '0' }],
+  ] as const)('a moved tee-off (%s) sends no start-time varsel', async (_label, form) => {
+    await save({ storedTeeOff: dayBefore(), form });
+    expect(readTeeTimeSnapshotMock).not.toHaveBeenCalled();
+    expect(notifyTeeTimeChangedMock).toHaveBeenCalledWith({
+      gameId: 'game-1',
+      actorUserId: 'admin-1',
+      before: null,
+    });
   });
 
   // #2483: the organiser's evening status comes again the evening before the

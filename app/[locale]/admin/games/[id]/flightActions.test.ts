@@ -89,6 +89,18 @@ vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => adminMock,
 }));
 
+// #2451: the start-time varsel has its own suite (notifyTeeTimeChanged.test.ts);
+// here only that each organiser path reads the round before its write and
+// hands that reading on after a successful one. Mocked so the admin client's
+// FIFO queue stays the action's own.
+const TEE_TIMES_BEFORE = { name: 'snapshot' };
+const readTeeTimeSnapshotMock = vi.fn(async (..._args: unknown[]) => TEE_TIMES_BEFORE);
+const notifyTeeTimeChangedMock = vi.fn(async (..._args: unknown[]) => ({ notified: [] }));
+vi.mock('@/lib/notifications/notifyTeeTimeChanged', () => ({
+  readTeeTimeSnapshot: (...args: unknown[]) => readTeeTimeSnapshotMock(...args),
+  notifyTeeTimeChanged: (...args: unknown[]) => notifyTeeTimeChangedMock(...args),
+}));
+
 const GAME_ID = 'game-1111-1111-1111-111111111111';
 const USER_ID = 'user-2222-2222-2222-222222222222';
 /** Where the flight actions answer (#2289). */
@@ -1020,5 +1032,106 @@ describe('spill-lesingen i flight- og lag-handlingene', () => {
     const mod = await import('./flightActions');
     await expect(ACTIONS[action].run(mod)).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe(`${ACTIONS[action].path}?error=${expected}`);
+  });
+});
+
+// #2451: every organiser path that moves a start group reads the round before
+// its write and hands that reading to the varsel after a successful one.
+describe('starttid per flight — varsel etter flytting (#2451)', () => {
+  it('setPlayerFlight: lest før skrivingen, varsel med arrangøren som avsender etter', async () => {
+    authedAdmin();
+    adminMock = buildSupabaseMock([
+      { data: SOLO_STABLEFORD_GAME, error: null },
+      { data: soloRoster(), error: null },
+      countResult(2),
+      { data: [{ user_id: 'target-user' }], error: null },
+      countResult(3),
+    ]);
+    const { setPlayerFlight } = await import('./flightActions');
+    await expect(setPlayerFlight(GAME_ID, 'target-user', 2)).rejects.toBeInstanceOf(RedirectError);
+    expect(readTeeTimeSnapshotMock).toHaveBeenCalledWith(GAME_ID);
+    expect(notifyTeeTimeChangedMock).toHaveBeenCalledWith({
+      gameId: GAME_ID,
+      actorUserId: USER_ID,
+      before: TEE_TIMES_BEFORE,
+    });
+  });
+
+  it('setPlayerFlight: en tapt kappløp skriver tilbake og varsler ingen', async () => {
+    authedAdmin();
+    silence('error');
+    adminMock = buildSupabaseMock([
+      { data: SOLO_STABLEFORD_GAME, error: null },
+      { data: soloRoster(), error: null },
+      countResult(2),
+      { data: [{ user_id: 'target-user' }], error: null },
+      countResult(5),
+      { data: [{ user_id: 'target-user' }], error: null },
+    ]);
+    const { setPlayerFlight } = await import('./flightActions');
+    await expect(setPlayerFlight(GAME_ID, 'target-user', 2)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`${STARTLISTA}?error=flight_full`);
+    expect(notifyTeeTimeChangedMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('setTeeInterval (#2451)', () => {
+  it('skriver 12 min, varsler og svarer på Startlista', async () => {
+    authedAdmin();
+    adminMock = buildSupabaseMock([
+      { data: { ...SOLO_STABLEFORD_GAME, tournament_id: null, league_round_id: null, source_game_id: null }, error: null },
+      { data: [{ id: GAME_ID }], error: null },
+    ]);
+    const { setTeeInterval } = await import('./flightActions');
+    await expect(setTeeInterval(GAME_ID, 12)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`${STARTLISTA}?status=tee_interval_updated`);
+    const updates = adminMock.__fromCalls.filter((c) => c.method === 'update');
+    expect(updates.map((c) => c.args[0])).toEqual([{ tee_interval_minutes: 12 }]);
+    expect(notifyTeeTimeChangedMock).toHaveBeenCalledWith({
+      gameId: GAME_ID,
+      actorUserId: USER_ID,
+      before: TEE_TIMES_BEFORE,
+    });
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+  });
+
+  it('avviser 9 min før noe leses eller skrives', async () => {
+    authedAdmin();
+    const { setTeeInterval } = await import('./flightActions');
+    await expect(setTeeInterval(GAME_ID, 9)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`${STARTLISTA}?error=bad_interval`);
+    expect(adminMock.__fromCalls).toEqual([]);
+  });
+
+  it('en cupkamp får ingen starttider: tilbake uten skriving', async () => {
+    authedAdmin();
+    adminMock = buildSupabaseMock([
+      { data: { ...SOLO_STABLEFORD_GAME, tournament_id: 'cup-1', league_round_id: null, source_game_id: null }, error: null },
+    ]);
+    const { setTeeInterval } = await import('./flightActions');
+    await expect(setTeeInterval(GAME_ID, 10)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(STARTLISTA);
+    expect(adminMock.__fromCalls.filter((c) => c.method === 'update')).toEqual([]);
+    expect(notifyTeeTimeChangedMock).not.toHaveBeenCalled();
+  });
+
+  it('0 rader er en feil, ikke «oppdatert», og ingen varsler', async () => {
+    authedAdmin();
+    silence('error');
+    adminMock = buildSupabaseMock([
+      { data: { ...SOLO_STABLEFORD_GAME, tournament_id: null, league_round_id: null, source_game_id: null }, error: null },
+      { data: [], error: null },
+    ]);
+    const { setTeeInterval } = await import('./flightActions');
+    await expect(setTeeInterval(GAME_ID, 10)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`${STARTLISTA}?error=db_game`);
+    expect(notifyTeeTimeChangedMock).not.toHaveBeenCalled();
+  });
+
+  it('en som verken er admin eller arrangør stoppes før noe skrives', async () => {
+    authedNonCreator();
+    const { setTeeInterval } = await import('./flightActions');
+    await expect(setTeeInterval(GAME_ID, 10)).rejects.toBeInstanceOf(RedirectError);
+    expect(adminMock.__fromCalls).toEqual([]);
   });
 });

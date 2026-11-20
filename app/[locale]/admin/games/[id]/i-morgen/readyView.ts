@@ -1,7 +1,8 @@
 import { eveningCounts, isTomorrowInOslo, type EveningRosterRow } from '@/lib/games/eveningBeforeRules';
 import { flightBuckets, hasStartlista, isSingleFlightGame } from '@/lib/games/flightScope';
 import { sharesFirstName } from '@/lib/firstName';
-import { formatListLocale, formatRelativeDayLocale } from '@/lib/i18n/format';
+import { formatListLocale, formatRelativeDayLocale, formatTeeOffTimeLocale } from '@/lib/i18n/format';
+import { playerTeeOff } from '@/lib/games/flightTeeTimes';
 import type { AppLocale } from '@/i18n/routing';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { ReadyLink, ReadyRow } from './ReadyList';
@@ -13,6 +14,8 @@ import type { ReadyLink, ReadyRow } from './ReadyList';
 /** One player on the list, with the names the page shows. */
 export type ReadyPerson = EveningRosterRow & {
   flight_number: number | null;
+  /** #2451: the team decides the start group in most team formats. */
+  team_number?: number | null;
   /** «Kari Lund», or a masked address for a nameless player. */
   full: string;
   /** «Kari». */
@@ -32,6 +35,8 @@ export function buildReadyView(input: {
   gameMode: GameMode;
   teamSize: number;
   teeOffIso: string | null;
+  /** #2451: minutes between the start groups, null when everyone goes out together. */
+  teeIntervalMinutes?: number | null;
   courseName: string | null;
   teeName: string | null;
   /** «Planlagt», for the kicker of a round without a tee-off. */
@@ -130,7 +135,14 @@ export function buildReadyView(input: {
  * round has one.
  */
 function flightsRow(
-  input: { gameMode: GameMode; t: Translate },
+  input: {
+    gameMode: GameMode;
+    teamSize: number;
+    teeOffIso: string | null;
+    teeIntervalMinutes?: number | null;
+    locale: AppLocale;
+    t: Translate;
+  },
   people: readonly ReadyPerson[],
   names: (ps: readonly ReadyPerson[]) => string,
   startlista: boolean,
@@ -138,10 +150,29 @@ function flightsRow(
   const { t } = input;
   const { assigned, unassigned } = flightBuckets(people);
   const base = { key: 'flights', testId: 'ready-row-flights' };
+  // #2451: the flight's start time in front, through the shared rule. A flight
+  // is never split across start groups, so its first player's time is its own.
+  const round = {
+    game_mode: input.gameMode,
+    team_size: input.teamSize,
+    scheduled_tee_off_at: input.teeOffIso,
+    tee_interval_minutes: input.teeIntervalMinutes ?? null,
+    players: people.map((p) => ({ ...p, team_number: p.team_number ?? null })),
+  };
+  const flightLine = (n: number, ps: readonly ReadyPerson[]) => {
+    const own = ps[0] ? playerTeeOff(round, { ...ps[0], team_number: ps[0].team_number ?? null }) : null;
+    return own
+      ? t('flightLineTimed', {
+          time: formatTeeOffTimeLocale(new Date(own.teeOffAt), input.locale),
+          n,
+          names: names(ps),
+        })
+      : t('flightLine', { n, names: names(ps) });
+  };
   if (assigned.size > 0) {
     const lines = [...assigned.entries()]
       .sort(([a], [b]) => a - b)
-      .map(([n, ps]) => t('flightLine', { n, names: names(ps) }));
+      .map(([n, ps]) => flightLine(n, ps));
     if (unassigned.length > 0) lines.push(t('unassigned', { count: unassigned.length }));
     return {
       ...base,

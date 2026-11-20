@@ -48,6 +48,7 @@ type GameRow = {
   mode_config: { team_size?: number } | null;
   tournament_id: string | null;
   scheduled_tee_off_at: string | null;
+  tee_interval_minutes: number | null;
   courses: { name: string } | null;
   tee_boxes: { name: string } | null;
 };
@@ -55,6 +56,7 @@ type GameRow = {
 type RosterRow = {
   user_id: string;
   flight_number: number | null;
+  team_number: number | null;
   withdrawn_at: string | null;
   accepted_at: string | null;
   users: { name: string | null; nickname: string | null; email: string | null; is_guest: boolean } | null;
@@ -72,7 +74,7 @@ async function loadPeople(admin: AdminClient, gameId: string, unknown: string): 
   const { data, error } = await admin
     .from('game_players')
     .select(
-      'user_id, flight_number, withdrawn_at, accepted_at, users!game_players_user_id_fkey(name, nickname, email, is_guest)',
+      'user_id, flight_number, team_number, withdrawn_at, accepted_at, users!game_players_user_id_fkey(name, nickname, email, is_guest)',
     )
     .eq('game_id', gameId)
     .returns<RosterRow[]>();
@@ -82,6 +84,7 @@ async function loadPeople(admin: AdminClient, gameId: string, unknown: string): 
     return {
       user_id: r.user_id,
       flight_number: r.flight_number,
+      team_number: r.team_number,
       withdrawn_at: r.withdrawn_at,
       accepted_at: r.accepted_at,
       is_guest: r.users?.is_guest === true,
@@ -140,7 +143,7 @@ export default async function TomorrowPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, game_mode, mode_config, tournament_id, scheduled_tee_off_at, courses(name), tee_boxes(name)',
+      'id, name, status, game_mode, mode_config, tournament_id, scheduled_tee_off_at, tee_interval_minutes, courses(name), tee_boxes(name)',
     )
     .eq('id', id)
     .maybeSingle<GameRow>();
@@ -161,6 +164,7 @@ export default async function TomorrowPage({
     gameMode: game.game_mode,
     teamSize: expectedTeamSize(game.mode_config),
     teeOffIso: game.scheduled_tee_off_at,
+    teeIntervalMinutes: game.tee_interval_minutes,
     courseName: game.courses?.name ?? null,
     teeName: game.tee_boxes?.name ?? null,
     statusLabel: (await getTranslations('gameStatus'))('scheduled'),

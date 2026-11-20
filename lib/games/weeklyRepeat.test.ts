@@ -195,6 +195,7 @@ function source(overrides: Partial<WeeklyRepeatSource> = {}): WeeklyRepeatSource
     registration_cap: null,
     signup_deadline: null,
     waitlist_enabled: false,
+    tee_interval_minutes: 10,
     ...overrides,
   };
 }
@@ -257,6 +258,7 @@ describe('buildWeeklyRepeatInsert', () => {
       registration_cap: null,
       waitlist_enabled: false,
       signup_deadline: null,
+      tee_interval_minutes: 10,
       repeat_weekly: true,
       repeated_from_game_id: 'g-1',
     });

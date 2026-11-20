@@ -51,5 +51,18 @@ describe('ScheduledWaitingRoom', () => {
       afterTick: { countdownBody: true, blocked: false, refreshes: 1 },
       blocked: { countdownBody: false, blocked: true, refreshes: 1 },
     });
+
+    // #2451: the player's own start time is a line of its own, only when the
+    // page has one; the countdown card stays.
+    expect(screen.queryByTestId('waiting-room-own-tee-off')).toBeNull();
+    rerender(
+      <ScheduledWaitingRoom
+        gameId="game-1"
+        teeOffAt={teeOffAt}
+        ownTeeOff={{ time: '09:10', flight: 2, team: null }}
+      />,
+    );
+    expect(screen.getByTestId('waiting-room-own-tee-off').textContent).toContain('09:10');
+    expect(screen.getByTestId('waiting-room-countdown-body')).toBeInTheDocument();
   });
 });

@@ -3,7 +3,7 @@
 import { useEffect, useOptimistic, useRef, useState, useTransition } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useLocale, useTranslations } from 'next-intl';
-import { setPlayerFlight, suggestFlightAssignment } from '../flightActions';
+import { setPlayerFlight, setTeeInterval, suggestFlightAssignment } from '../flightActions';
 import {
   buildStartlist,
   flightSlots,
@@ -12,6 +12,13 @@ import {
   type StartlistPlayer,
 } from '@/lib/games/startlist';
 import { formatHcpDisplay } from '@/lib/handicap/signFormat';
+import {
+  TEE_INTERVAL_CHOICES,
+  startGroupTeeOffAt,
+  startGroupsOf,
+} from '@/lib/games/flightTeeTimes';
+import { formatTeeOffTimeLocale } from '@/lib/i18n/format';
+import type { GameMode } from '@/lib/scoring/modes/types';
 import { useOnline } from '@/hooks/useOnline';
 import type { AppLocale } from '@/i18n/routing';
 
@@ -32,6 +39,18 @@ export function flightSectionId(n: number): string {
 }
 
 type Move = { userId: string; flight: number };
+
+/**
+ * #2451: what the cards need for their start times, or `null` for a round
+ * that has none (a cup match, league round or derived game). `interval` null:
+ * a round from before #2451, everyone out at the tee-off.
+ */
+export type StartlistaStartTimes = {
+  gameMode: GameMode;
+  teamSize: number;
+  teeOffAt: string | null;
+  interval: number | null;
+};
 
 /**
  * «Foreslå inndeling» sits in the page's top, outside this component. Its
@@ -55,11 +74,13 @@ export function StartlistaClient({
   players,
   focus,
   headingId,
+  startTimes = null,
 }: {
   gameId: string;
   players: StartlistaPlayer[];
   focus: StartlistaFocus;
   headingId: string;
+  startTimes?: StartlistaStartTimes | null;
 }) {
   const t = useTranslations('admin.game.flights');
   const locale = useLocale() as AppLocale;
@@ -69,6 +90,12 @@ export function StartlistaClient({
     state.map((p) => (p.user_id === move.userId ? { ...p, flight_number: move.flight } : p)),
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // #2451: the chosen interval lands at once, like a move; the server's answer
+  // (a redirect back here) replaces it.
+  const [interval, applyInterval] = useOptimistic(
+    startTimes?.interval ?? null,
+    (_state, next: number) => next,
+  );
 
   const startlist = buildStartlist(optimisticPlayers);
   const selected = optimisticPlayers.find((p) => p.user_id === selectedId) ?? null;
@@ -121,6 +148,44 @@ export function StartlistaClient({
     });
   }
 
+  function chooseInterval(minutes: number) {
+    if (!online || minutes === interval) return;
+    focusPending.current = true;
+    startTransition(async () => {
+      applyInterval(minutes);
+      await setTeeInterval(gameId, minutes);
+    });
+  }
+
+  // #2451: a card's start time, through the shared rule. Only with an
+  // interval, a tee-off and more than one start group; else no card has one.
+  const teeOffAt = startTimes?.teeOffAt ?? null;
+  const timed =
+    startTimes != null &&
+    interval != null &&
+    teeOffAt != null &&
+    startGroupsOf({
+      game_mode: startTimes.gameMode,
+      team_size: startTimes.teamSize,
+      scheduled_tee_off_at: teeOffAt,
+      tee_interval_minutes: interval,
+      players: optimisticPlayers.map((p) => ({ ...p, team_number: null })),
+    }).length > 0;
+  const clock = (iso: string) => formatTeeOffTimeLocale(new Date(iso), locale);
+  const cardTime = (n: number) =>
+    timed && teeOffAt != null && interval != null ? clock(startGroupTeeOffAt(teeOffAt, n, interval)) : null;
+  const cardTitle = (n: number) => {
+    const time = cardTime(n);
+    return (
+      <>
+        {/* A real space, so a screen reader hears «09:10 Flight 2». */}
+        {time && <span className="mr-1 tabular-nums">{time}</span>}
+        {time && ' '}
+        {t('flightOptionN', { n })}
+      </>
+    );
+  };
+
   const hcp = (value: number) => formatHcpDisplay(value, locale);
   const chip = (p: StartlistaPlayer, unassigned: boolean) => (
     <PlayerChip
@@ -171,6 +236,15 @@ export function StartlistaClient({
         </div>
       )}
 
+      {startTimes && (
+        <TeeIntervalChoice
+          interval={interval}
+          teeOffAt={teeOffAt}
+          online={online}
+          onChoose={chooseInterval}
+        />
+      )}
+
       <div className="mt-3 flex flex-col gap-2.5">
         {slots.map(({ number, flight }) => {
           const titleId = `${flightSectionId(number)}-title`;
@@ -193,7 +267,7 @@ export function StartlistaClient({
                 >
                   <span className="flex items-baseline justify-between">
                     <span id={titleId} className="font-serif text-[17px] font-semibold">
-                      {t('flightOptionN', { n: number })}
+                      {cardTitle(number)}
                     </span>
                     <span id={`${titleId}-meta`} className="text-[12px] text-muted">
                       {meta(flight)}
@@ -216,7 +290,7 @@ export function StartlistaClient({
             >
               <div className="flex items-baseline justify-between">
                 <h2 id={titleId} className="font-serif text-[17px] font-semibold">
-                  {t('flightOptionN', { n: number })}
+                  {cardTitle(number)}
                 </h2>
                 <span className="text-[12px] text-muted">{meta(flight)}</span>
               </div>
@@ -249,6 +323,70 @@ export function StartlistaClient({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * #2451: «Tid mellom flightene» over the cards: 8, 10 and 12 minutes, 44 px
+ * high, as on step 4 of the wizard (`Nyttspill-forslag-starttider`). The line
+ * over them says when the first flight goes out, or «Alle går ut 09:00» for a
+ * round from before #2451, where no choice is pressed until the organiser
+ * taps one. Grey and inert without a connection, like the moves.
+ */
+function TeeIntervalChoice({
+  interval,
+  teeOffAt,
+  online,
+  onChoose,
+}: {
+  interval: number | null;
+  teeOffAt: string | null;
+  online: boolean;
+  onChoose: (minutes: number) => void;
+}) {
+  const t = useTranslations('admin.game.flights');
+  const locale = useLocale() as AppLocale;
+  const time = teeOffAt ? formatTeeOffTimeLocale(new Date(teeOffAt), locale) : null;
+  const status =
+    interval == null
+      ? time
+        ? t('teeAllOut', { time })
+        : t('teeAllOutNoTime')
+      : time
+        ? t('teeFirstOut', { time })
+        : null;
+  return (
+    <section aria-labelledby="startlista-tee-interval" className="mt-4" data-testid="tee-interval">
+      <div className="flex items-baseline justify-between gap-3 px-1 pb-2">
+        <h2 id="startlista-tee-interval" className="text-xs font-semibold text-muted">
+          {t('teeIntervalHeading')}
+        </h2>
+        {status && <span className="text-xs font-medium text-muted">{status}</span>}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {TEE_INTERVAL_CHOICES.map((minutes) => {
+          const selected = interval === minutes;
+          return (
+            <button
+              key={minutes}
+              type="button"
+              aria-pressed={selected}
+              disabled={!online}
+              data-testid={`tee-interval-${minutes}`}
+              onClick={() => onChoose(minutes)}
+              className={`h-11 whitespace-nowrap rounded-full px-3.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                selected
+                  ? 'bg-primary text-white dark:text-bg'
+                  : 'border border-border bg-surface text-text hover:bg-primary-soft'
+              }`}
+            >
+              {t('teeIntervalChoice', { minutes })}
+            </button>
+          );
+        })}
+      </div>
+      {!online && <p className="px-1 pt-2 text-xs text-muted">{t('teeIntervalOffline')}</p>}
+    </section>
   );
 }
 
