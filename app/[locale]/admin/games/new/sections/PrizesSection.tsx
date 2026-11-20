@@ -187,7 +187,11 @@ const LOGO_ERROR_KEY = {
  * pipeline: rasteriser/nedskaler → bucket) — kun object-pathen går inn i
  * prizeDraft og serialiseres via forelderens hidden input (#1011-mønsteret;
  * selve fila kan ikke leve i FormData siden opprett-INSERT-en er atomisk).
- * Bytte av logo rydder forrige object best-effort.
+ * Bytte av logo rydder forrige object best-effort — men bare et object som
+ * ble lastet opp her, i dette besøket (audit 20.11, p11). Logoen spillet alt
+ * har lagret, slettes først når lagringen har gått (sponsorLogoCleanup i
+ * redigerings-actionen); ellers ville en lagring som feilet, eller en
+ * arrangør som gikk uten å lagre, latt spillet peke på en slettet fil.
  */
 function SponsorLogoField({
   slotKey,
@@ -206,6 +210,14 @@ function SponsorLogoField({
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<keyof typeof LOGO_ERROR_KEY | null>(null);
+  // The objects this visit uploaded; no saved game points at them yet.
+  const uploadedHere = useRef(new Set<string>());
+
+  function dropIfOurs(oldPath: string) {
+    if (!oldPath || !uploadedHere.current.has(oldPath)) return;
+    uploadedHere.current.delete(oldPath);
+    void removeSponsorLogo(oldPath);
+  }
 
   async function handleFileChosen(file: File | undefined) {
     if (!file) return;
@@ -217,7 +229,8 @@ function SponsorLogoField({
       setError(result.error);
       return;
     }
-    if (path) void removeSponsorLogo(path);
+    uploadedHere.current.add(result.path);
+    dropIfOurs(path);
     onChange(result.path);
   }
 
@@ -253,7 +266,7 @@ function SponsorLogoField({
             data-testid={`prize-${slotKey}-logo-remove`}
             aria-label={t('logoRemoveAria', { slot: slotLabel })}
             onClick={() => {
-              void removeSponsorLogo(path);
+              dropIfOurs(path);
               onChange('');
               setError(null);
             }}

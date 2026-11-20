@@ -140,6 +140,13 @@ vi.mock('@/lib/games/sendHeldGameInvites', () => ({
   sendHeldGameInvites: (...args: unknown[]) => sendHeldGameInvitesMock(...args),
 }));
 
+// Audit 20.11 (p11): the logo cleanup has its own suite; here only that it
+// runs after games.update stored the prizes, with the stored and saved ones.
+const removeReplacedSponsorLogosMock = vi.fn(async (..._args: unknown[]) => undefined);
+vi.mock('@/lib/games/sponsorLogoCleanup', () => ({
+  removeReplacedSponsorLogos: (...args: unknown[]) => removeReplacedSponsorLogosMock(...args),
+}));
+
 function lastRedirect(): string | undefined {
   return redirectMock.mock.calls.at(-1)?.[0];
 }
@@ -446,6 +453,80 @@ describe('updateScheduledAction — mode-lock', () => {
 
     expect(lastRedirect()).toBe('/admin/games/game-1?status=updated');
     expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
+  });
+});
+
+/**
+ * Audit 20.11 (p11): a replaced sponsor logo used to be deleted by the form the
+ * moment it was replaced. Now the action hands the stored and the saved prizes
+ * to the cleanup, and only once games.update has stored the new ones.
+ */
+describe('updateScheduledAction — sponsor logo after the save (audit 20.11, p11)', () => {
+  const STORED_PRIZES = [
+    {
+      category: 'placement',
+      position: 1,
+      description: 'Gavekort',
+      sponsor: 'Puben',
+      sponsorLogoPath: 'u/old.webp',
+    },
+  ];
+  const formWithNewLogo = () =>
+    fullBestBallFormData({
+      prize_placement_1_desc: 'Gavekort',
+      prize_placement_1_sponsor: 'Puben',
+      prize_placement_1_logo: 'u/new.webp',
+    });
+
+  it('hands the stored and the saved prizes to the cleanup after games.update', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      {
+        data: { status: 'scheduled', game_mode: 'best_ball', prizes: STORED_PRIZES },
+        error: null,
+      }, // games.select
+      { data: [], error: null }, // prior roster
+      { data: { id: 'game-1' }, error: null }, // games.update
+      { data: Array.from({ length: 8 }, (_, i) => ({ user_id: `u${i}` })), error: null }, // insert
+    ]);
+    signIn('admin-1');
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(updateScheduledAction('game-1', formWithNewLogo())).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(removeReplacedSponsorLogosMock).toHaveBeenCalledTimes(1);
+    const arg = removeReplacedSponsorLogosMock.mock.calls[0]![0] as {
+      gameId: string;
+      before: unknown;
+      after: { sponsorLogoPath: string | null }[];
+    };
+    expect(arg.gameId).toBe('game-1');
+    expect(arg.before).toEqual(STORED_PRIZES);
+    expect(arg.after.map((p) => p.sponsorLogoPath)).toEqual(['u/new.webp']);
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=updated');
+  });
+
+  it('leaves every logo alone when games.update matched no row', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      {
+        data: { status: 'scheduled', game_mode: 'best_ball', prizes: STORED_PRIZES },
+        error: null,
+      }, // games.select
+      { data: [], error: null }, // prior roster
+      { data: null, error: null }, // games.update: status flipped in another tab
+    ]);
+    signIn('admin-1');
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(updateScheduledAction('game-1', formWithNewLogo())).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(lastRedirect()).toBe('/admin/games/game-1?error=not_editable');
+    expect(removeReplacedSponsorLogosMock).not.toHaveBeenCalled();
   });
 });
 
@@ -1524,6 +1605,8 @@ describe('updateScheduledAction — roster-kompensasjon (#907 → #2210)', () =>
     expect(lastRedirect()).toBe('/admin/games/game-1/edit?error=db_players');
     // Notify never fires — the failure path redirects before it.
     expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+    // Audit 20.11 (p11): games.update committed, so the cached game expires.
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
   });
 
   it('kompensasjon som også feiler logges, og redirecten er fortsatt db_players', async () => {
