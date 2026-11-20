@@ -1,8 +1,8 @@
 -- supabase/tests/league_cup_read_rules_test.sql
 -- ─────────────────────────────────────────────────────────────────────────────
--- Who reads a league's links and a cup's rows (migration 0250).
+-- Who reads a league and a cup (migration 0250).
 --
--- A league's link columns
+-- A league's link columns: not selectable through a user session
 --   1     a participant reads the league's public columns             → 1 row
 --   2–3   a participant selects join_code / spectate_token             → 42501
 --   4     a player outside the league filters on join_code             → 42501
@@ -17,23 +17,33 @@
 --   13    catalog: join_code and spectate_token are not
 --   14    the server (no JWT) reads the code
 --
--- A cup and its rows. Each case counts [cups, participants, plans, side awards]
--- the caller sees among the three fixture cups.
+-- A cup and its rows: read by the people in the cup. Each case counts
+-- [cups, participants, plans, side awards] the caller reads among the three
+-- fixture cups.
 --   15    a player in none of them                                     → 0 0 0 0
 --   16    the organiser of the personal cup                            → its 1 1 1 1
 --   17    a participant of the personal cup                            → its 1 1 1 1
---   18    a member of the club                                         → the club cup 1 1 1 0
+--   18    a member of the club                                         → the club cup 1 1 1
 --   19    a participant of the club cup who is not in the club         → the club cup 1 1 1 0
---   20    a player in a started match of a cup without a participant list → that cup 1 0 0 1
---   21    a player in a DRAFT match only                               → 0 0 0 0
+--   20    a player in a started match of a cup without a participant list → that cup and its side award
+--   21    a player in a DRAFT match only                               → nothing of that cup
 --   22    a global admin                                               → all 3 2 2 2
 --   23    anon                                                         → 0 0 0 0
 --   24    the organiser creates a cup and gets its id back (RETURNING)
---   25    a participant cannot read another cup by its id
+--   25    a participant reads their own cup only, also when asking by id
 --
--- Red without 0250: 2–6, 8, 9, 13 (the columns were selectable), 15, 17–21
--- (personal cups and every child row were readable by all signed-in users),
--- 25.
+-- A league and its rows: read by the people in the league. Each case counts
+-- [leagues, participants, rounds] the caller reads among the two fixture
+-- leagues.
+--   26    a player in neither league                                   → 0 0 0
+--   27    a participant of the league without a club                   → its 1 2 1
+--   28    a member of the club                                         → the club league 1 1 1
+--   29    a participant of the club league who is not in the club      → the club league 1 1 1
+--   30    a global admin                                               → both 2 3 2
+--   31    anon                                                         → 0 0 0
+--   32    a club admin creates a club league and gets its id back (RETURNING)
+--   33    a participant confirms their own participation               → 1 row
+--
 -- Depends on 0250. Run via: supabase test db (see supabase/tests/README.md)
 -- ─────────────────────────────────────────────────────────────────────────────
 
@@ -41,12 +51,13 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(25);
+select plan(33);
 
 \ir fixtures/rls_helpers.psql
 
 -- ── Scenario-local fixtures (lc_ = league and cup) ───────────────────────────
 create or replace function torny_rls.lc_league()      returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-025000000101'::uuid $$;
+create or replace function torny_rls.lc_league_club() returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-025000000102'::uuid $$;
 create or replace function torny_rls.lc_cup_solo()    returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-025000000201'::uuid $$;
 create or replace function torny_rls.lc_cup_club()    returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-025000000202'::uuid $$;
 create or replace function torny_rls.lc_cup_legacy()  returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-025000000203'::uuid $$;
@@ -76,6 +87,29 @@ create or replace function torny_rls.lc_seen() returns int[]
   ]
 $$;
 
+-- lc_league_seen(): what the current role reads among the two fixture leagues,
+-- as [leagues, participants, rounds].
+create or replace function torny_rls.lc_league_seen() returns int[]
+  language sql as $$
+  select array[
+    (select count(*)::int from public.leagues        where id        in (torny_rls.lc_league(), torny_rls.lc_league_club())),
+    (select count(*)::int from public.league_players where league_id in (torny_rls.lc_league(), torny_rls.lc_league_club())),
+    (select count(*)::int from public.league_rounds  where league_id in (torny_rls.lc_league(), torny_rls.lc_league_club()))
+  ]
+$$;
+
+-- lc_rows(sql): runs one statement as the current role and returns the number
+-- of rows it touched.
+create or replace function torny_rls.lc_rows(p_sql text) returns int
+  language plpgsql as $$
+  declare v_rows int;
+  begin
+    execute p_sql;
+    get diagnostics v_rows = row_count;
+    return v_rows;
+  end;
+$$;
+
 -- lc_cup_ids(): the fixture cups the current role reads.
 create or replace function torny_rls.lc_cup_ids() returns uuid[]
   language sql as $$
@@ -86,21 +120,31 @@ $$;
 grant execute on all functions in schema torny_rls to authenticated, anon, service_role;
 
 -- ── Seed ─────────────────────────────────────────────────────────────────────
--- admin_id      a global admin; organiser of the league and of the legacy cup
--- active_id     in the league; organiser of the personal cup (not an admin)
--- submitted_id  participant of the personal cup
--- flightmate_id owner of the club; in a started match of the legacy cup
--- withdrawn_id  participant of the club cup, not in the club; in a DRAFT match
---               of the legacy cup
+-- admin_id      a global admin; organiser of the league without a club and of
+--               the legacy cup
+-- active_id     in the league without a club; organiser of the personal cup
+--               (not an admin)
+-- submitted_id  in the league without a club, not yet confirmed; participant
+--               of the personal cup
+-- flightmate_id owner of the club and organiser of its league and its cup; in
+--               a started match of the legacy cup
+-- withdrawn_id  in the club league and the club cup, not in the club; in a
+--               DRAFT match of the legacy cup
 -- outsider_id   in nothing
 select torny_rls.as_service();
 select torny_rls.seed_active_game();
 select torny_rls.seed_group_join();
 
 insert into public.leagues (id, name, season_start, season_end, standings_model, course_scope, status, created_by, group_id, join_code, spectate_token) values
-  (torny_rls.lc_league(), 'LC League', current_date, current_date + 30, 'total', 'multi_course', 'draft', torny_rls.admin_id(), null, 'lcrd2345', '00000000-0000-4000-a000-025000000999');
+  (torny_rls.lc_league(),      'LC League',      current_date, current_date + 30, 'total', 'multi_course', 'draft', torny_rls.admin_id(),      null,                 'lcrd2345', '00000000-0000-4000-a000-025000000999'),
+  (torny_rls.lc_league_club(), 'LC Club League', current_date, current_date + 30, 'total', 'multi_course', 'draft', torny_rls.flightmate_id(), torny_rls.group_id(), null,       null);
 insert into public.league_players (league_id, user_id, accepted_at) values
-  (torny_rls.lc_league(), torny_rls.active_id(), now());
+  (torny_rls.lc_league(),      torny_rls.active_id(),    now()),
+  (torny_rls.lc_league(),      torny_rls.submitted_id(), null),
+  (torny_rls.lc_league_club(), torny_rls.withdrawn_id(), now());
+insert into public.league_rounds (league_id, label, sequence, opens_at, closes_at, original_closes_at) values
+  (torny_rls.lc_league(),      'Runde 1', 1, now() - interval '1 day', now() + interval '1 day', now() + interval '1 day'),
+  (torny_rls.lc_league_club(), 'Runde 1', 1, now() - interval '1 day', now() + interval '1 day', now() + interval '1 day');
 
 insert into public.tournaments (id, name, team_1_name, team_2_name, status, created_by, group_id) values
   (torny_rls.lc_cup_solo(),   'LC Personal', 'Europa', 'USA', 'draft',  torny_rls.active_id(),     null),
@@ -318,6 +362,60 @@ rollback to savepoint case_24;
 select torny_rls.as_user(torny_rls.submitted_id());
 select is(torny_rls.lc_cup_ids(), array[torny_rls.lc_cup_solo()],
   'case 25: a participant reads their own cup only, also when asking by id');
+
+-- ═════════════════════════════════════════════════════════════════════════════
+-- A league and its rows: [leagues, participants, rounds]
+-- ═════════════════════════════════════════════════════════════════════════════
+
+-- 26
+select torny_rls.as_user(torny_rls.outsider_id());
+select is(torny_rls.lc_league_seen(), array[0, 0, 0],
+  'case 26: a player in neither league reads nothing');
+
+-- 27
+select torny_rls.as_user(torny_rls.active_id());
+select is(torny_rls.lc_league_seen(), array[1, 2, 1],
+  'case 27: a participant of the league without a club reads it, its participants and its rounds');
+
+-- 28
+select torny_rls.as_user(torny_rls.flightmate_id());
+select is(torny_rls.lc_league_seen(), array[1, 1, 1],
+  'case 28: a member of the club reads the club league and its rows, not the other league');
+
+-- 29
+select torny_rls.as_user(torny_rls.withdrawn_id());
+select is(torny_rls.lc_league_seen(), array[1, 1, 1],
+  'case 29: a participant of the club league who is not in the club reads it and its rows');
+
+-- 30
+select torny_rls.as_user(torny_rls.admin_id());
+select is(torny_rls.lc_league_seen(), array[2, 3, 2],
+  'case 30: a global admin reads both leagues and their rows');
+
+-- 31
+select torny_rls.lc_as_anon();
+select is(torny_rls.lc_league_seen(), array[0, 0, 0],
+  'case 31: anon reads nothing');
+
+-- 32
+savepoint case_32;
+select torny_rls.as_user(torny_rls.flightmate_id());
+select lives_ok(
+  $$ insert into public.leagues (name, season_start, season_end, standings_model, course_scope, status, created_by, group_id)
+       values ('LC New', current_date, current_date + 30, 'total', 'multi_course', 'draft', torny_rls.flightmate_id(), torny_rls.group_id())
+     returning id $$,
+  'case 32: a club admin creates a club league and gets its id back');
+rollback to savepoint case_32;
+
+-- 33
+savepoint case_33;
+select torny_rls.as_user(torny_rls.submitted_id());
+select is(
+  torny_rls.lc_rows($$ update public.league_players set accepted_at = now()
+                        where league_id = torny_rls.lc_league() and user_id = torny_rls.submitted_id() and accepted_at is null $$),
+  1,
+  'case 33: a participant confirms their own participation');
+rollback to savepoint case_33;
 
 select * from finish();
 rollback;

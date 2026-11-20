@@ -13,7 +13,9 @@ export type LeagueViewAccess = {
 /**
  * Who may see a league (#480), one home for the web page and the app route
  * (#2638, AGENTS.md trap 4). Both read the league with the admin client, so
- * this gate, not RLS, is what hides a club league from outsiders:
+ * this gate, not RLS, is what decides who sees the page. RLS (0250) is
+ * narrower: there a league is read only by the people in it, so a league
+ * cannot be listed, and the page is for whoever holds its address:
  *
  *  - a standalone league (`groupId` null): every signed-in user, as before;
  *  - a club league: its participants, the club's members and global admins.
