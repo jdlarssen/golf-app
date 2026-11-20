@@ -45,6 +45,15 @@ function bestFirst(a: BalancePlayer, b: BalancePlayer): number {
   );
 }
 
+/**
+ * Drops floating-point noise: 0.4 + 1.8 + 9.8 is 12.000000000000002, and a
+ * spread of 1.5499999999999998 would show «1,5» beside cards of 5,6 and 4,0.
+ * Indexes have one decimal, so nine places keep every real digit.
+ */
+function tidy(value: number): number {
+  return Math.round(value * 1e9) / 1e9;
+}
+
 function hcpValues(
   rosters: BalancePlayer[][],
   mode: TeamHcp['mode'],
@@ -53,10 +62,10 @@ function hcpValues(
     const counted = roster.filter((p) => p.hcpIndex !== null);
     if (counted.length === 0) return null;
     const sum = counted.reduce((total, p) => total + (p.hcpIndex ?? 0), 0);
-    return mode === 'sum' ? sum : sum / counted.length;
+    return tidy(mode === 'sum' ? sum : sum / counted.length);
   });
   const present = values.filter((v): v is number => v !== null);
-  const spread = present.length === 0 ? null : Math.max(...present) - Math.min(...present);
+  const spread = present.length === 0 ? null : tidy(Math.max(...present) - Math.min(...present));
   return { values, spread };
 }
 
