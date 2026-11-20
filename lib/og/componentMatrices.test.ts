@@ -154,8 +154,10 @@ describe('the renderer the fix is written for (#2625)', () => {
   it('still applies the component matrix transposed', () => {
     const require = createRequire(import.meta.url);
     const bundle = readFileSync(require.resolve('next/dist/compiled/@vercel/og/index.node.js'), 'utf8');
+    // The point's local name is the bundler's choice (`pt` in Next 16.2,
+    // `pt2` in 16.4), so match the formula, not the name.
     expect(
-      bundle.includes('transform.xScale * pt.x + transform.scale01 * pt.y'),
+      /transform\.xScale \* (\w+)\.x \+ transform\.scale01 \* \1\.y/.test(bundle),
       'next/og no longer transposes composite matrices: check fixComponentMatrices (lib/og/componentMatrices.ts) again against a Fraunces «+», or remove it',
     ).toBe(true);
   });
