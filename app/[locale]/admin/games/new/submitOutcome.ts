@@ -9,6 +9,7 @@
  * stay.
  */
 import { routing } from '@/i18n/routing';
+import { safeInternalPath } from '@/lib/url/safeInternalPath';
 
 /**
  * Where the create action sends a saved game (`new/actions.ts`): the receipt,
@@ -36,8 +37,8 @@ function redirectTarget(error: unknown): string | null {
 
 /** A redirect to one of the success targets, with or without a locale prefix. */
 export function isSuccessRedirect(error: unknown): boolean {
-  const target = redirectTarget(error);
-  if (target === null || !target.startsWith('/') || target.startsWith('//')) return false;
+  const target = safeInternalPath(redirectTarget(error));
+  if (target === null) return false;
   let path = target.split(/[?#]/)[0];
   for (const locale of routing.locales) {
     if (locale !== routing.defaultLocale && (path === `/${locale}` || path.startsWith(`/${locale}/`))) {
