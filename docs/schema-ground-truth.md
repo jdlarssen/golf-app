@@ -127,6 +127,12 @@ Do **not** assume one shape across the three. `games.status` is a typed enum; th
   league_round_id, source_game_id all NULL)`; the club rule is TS (`canRepeatWeekly`). Guard
   trigger `guard_games_repeated_from_game_id`: a non-null, new or changed link only from the
   service role or a global admin. Clearing it is never checked.
+- **Starttid per flight** (0243, #2451): `tee_interval_minutes smallint NULL`, no default, CHECK
+  `games_tee_interval_minutes_choices` (8, 10 or 12). NULL = every start group goes out at
+  `scheduled_tee_off_at`. The time per group is never stored: `lib/games/flightTeeTimes.ts`
+  works it out (the cup's 10-minute stagger goes through the same rule). The creator/admin
+  UPDATE policies cover it. The same migration adds `tee_time_changed` to
+  `notifications_kind_check`.
 
 ## `format_intent_mapping` — operational data, drift from the snapshot is expected
 

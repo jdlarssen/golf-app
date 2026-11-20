@@ -245,8 +245,8 @@
         "title": "{gameName} has moved",
         "detail": "New time: {teeOffAt, date, ::EEEEdMMM} at {teeOffAt, time, ::HHmm}. Same course and tees.",
         "detailCourseChanged": "New time: {teeOffAt, date, ::EEEEdMMM} at {teeOffAt, time, ::HHmm}. The course or tees changed too.",
-        "detailOwn": "New time: {teeOffAt, date, ::EEEEdMMM} at {teeOffAt, time, ::HHmm}, and you tee off at {ownTeeOffAt, time, ::HHmm}. Same course and tees.",
-        "detailOwnCourseChanged": "New time: {teeOffAt, date, ::EEEEdMMM} at {teeOffAt, time, ::HHmm}, and you tee off at {ownTeeOffAt, time, ::HHmm}. The course or tees changed too."
+        "detailOwn": "New time: {teeOffAt, date, ::EEEEdMMM} at {teeOffAt, time, ::HHmm}. You tee off at {ownTeeOffAt, time, ::HHmm}. Same course and tees.",
+        "detailOwnCourseChanged": "New time: {teeOffAt, date, ::EEEEdMMM} at {teeOffAt, time, ::HHmm}. You tee off at {ownTeeOffAt, time, ::HHmm}. The course or tees changed too."
       },
       "teeTimeChanged": {
         "title": "Your tee time has changed",
@@ -4807,7 +4807,7 @@
         "noTeeOff": "No tee-off time set",
         "flights": "{count, plural, one {One flight} =2 {Two flights} =3 {Three flights} =4 {Four flights} other {# flights}}",
         "flightLine": "Flight {n}: {names}",
-        "flightLineTimed": "{time} flight {n}: {names}",
+        "flightLineTimed": "{time} Flight {n}: {names}",
         "unassigned": "{count} without a flight",
         "noFlights": "No flights yet",
         "noFlightsHint": "Split the players on the start list",

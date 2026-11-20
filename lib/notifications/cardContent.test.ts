@@ -395,11 +395,11 @@ describe('buildNotificationText — own start time per flight (#2451)', () => {
       own_tee_off_at: '2026-11-21T08:40:00.000Z',
     };
     expect(buildNotificationText('game_moved', moved as NotificationPayload, real('no')).detail).toBe(
-      'Ny tid: lørdag 21. nov. kl. 09:30, og du går ut 09:40. Samme bane og tee.',
+      'Ny tid: lørdag 21. nov. kl. 09:30. Du går ut kl. 09:40. Samme bane og tee.',
     );
     expect(
       buildNotificationText('game_moved', { ...moved, course_changed: true } as NotificationPayload, real('en')).detail,
-    ).toBe('New time: Saturday, Nov 21 at 09:30, and you tee off at 09:40. The course or tees changed too.');
+    ).toBe('New time: Saturday, Nov 21 at 09:30. You tee off at 09:40. The course or tees changed too.');
   });
 
   it('tee_time_changed names the game and the new time', () => {
