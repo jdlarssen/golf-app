@@ -1,6 +1,7 @@
 # Re-gates main after every merge (#1075). CI runs on pull_request only, and
-# without branch protection (free tier) two individually-green rebase-merges
-# can compose a red main that nobody sees. This mirrors ci.yml's verify job
+# branch protection (on since 2026-08-07, see ci.yml) checks each PR on its own
+# base — two individually-green rebase-merges can still compose a red main
+# that nobody sees. This mirrors ci.yml's verify job
 # (including the native port added in #1861 — the two must stay in lockstep, or
 # main can go red on the app without anyone being told) and raises a deduped
 # alert issue if main goes red — a red scheduled/push run must
