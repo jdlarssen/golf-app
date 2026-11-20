@@ -135,6 +135,7 @@ Utløsertabellen står i `core.md` (lastet øverst). Les fila når utløseren in
 - `docs/issue-workflow.md` — milestone, flyt-forankring, closing-kommentar, null-vekst
 - `docs/launch-checklist.md` — admin-sjekkliste
 - `docs/pr-workflow.md` — PR-form, draft-først, auto-merge, produktvalg-markøren
+- `docs/regelbok-gjennomgang.md` — poengmotoren mot handicapreglene, ett F-nummer per funn (#2927)
 - `docs/roadmap.md` — månedsmålene og kapasitetsregelen (tre mot målet, to til drift/bugs/forvaltning); issues lages fra målene
 - `docs/schema-ground-truth.md` — skjema-snapshot (live DB vinner)
 - `docs/staging-testing.md` — staging-oppsett, autonom login, prod-vakt
