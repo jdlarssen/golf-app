@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { useState } from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { PrizesSection } from './PrizesSection';
 import { emptyPrizeDraft, type PrizeDraft } from '@/lib/games/prizes';
 import type { GameFormState } from '../useGameFormState';
@@ -103,5 +104,59 @@ describe('PrizesSection som rad som åpner premiebordet (#2457)', () => {
     fireEvent.change(screen.getByTestId('prize-placement_1-desc'), { target: { value: 'Middag' } });
 
     expect(state.setPrizeField).toHaveBeenCalledWith('placement_1', 'description', 'Middag');
+  });
+});
+
+// Audit 20.11 (p11): «Fjern» or a new upload deleted the saved game's logo
+// file at once, so a save that failed (or leaving without saving) left the
+// game pointing at a deleted file. The form now deletes only a file it
+// uploaded itself in this visit; the saved one goes after the save
+// (lib/games/sponsorLogoCleanup.ts).
+const { uploadMock, removeMock } = vi.hoisted(() => ({
+  uploadMock: vi.fn(),
+  removeMock: vi.fn(async (..._args: unknown[]) => undefined),
+}));
+vi.mock('@/lib/storage/sponsorLogos', () => ({
+  processAndUploadSponsorLogo: (...args: unknown[]) => uploadMock(...args),
+  removeSponsorLogo: (...args: unknown[]) => removeMock(...args),
+}));
+
+describe('PrizesSection — the saved logo stays until the save (audit 20.11, p11)', () => {
+  function Harness({ initialPath }: { initialPath: string }) {
+    const [draft, setDraft] = useState<PrizeDraft>(() => {
+      const d = emptyPrizeDraft();
+      d.placement_1 = { description: 'Gavekort', sponsor: 'Puben', sponsorLogoPath: initialPath };
+      return d;
+    });
+    const state = {
+      ...makeState(draft),
+      setPrizeField: (key: keyof PrizeDraft, field: string, value: string) =>
+        setDraft((prev) => ({ ...prev, [key]: { ...prev[key], [field]: value } })),
+    } as unknown as GameFormState;
+    return <PrizesSection state={state} />;
+  }
+
+  function chooseFile() {
+    fireEvent.change(screen.getByTestId('prize-placement_1-logo-file'), {
+      target: { files: [new File(['x'], 'logo.png', { type: 'image/png' })] },
+    });
+  }
+
+  it('«Fjern» on the saved logo deletes no file', () => {
+    removeMock.mockClear();
+    render(<Harness initialPath="u/saved.webp" />);
+    fireEvent.click(screen.getByTestId('prize-placement_1-logo-remove'));
+    expect(removeMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId('prize-placement_1-logo-upload')).toBeInTheDocument();
+  });
+
+  it('a logo uploaded in this visit and then removed is deleted', async () => {
+    removeMock.mockClear();
+    uploadMock.mockResolvedValue({ ok: true, path: 'u/fresh.webp' });
+    render(<Harness initialPath="" />);
+    chooseFile();
+    await waitFor(() => expect(screen.getByTestId('prize-placement_1-logo-thumb')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('prize-placement_1-logo-remove'));
+    expect(removeMock).toHaveBeenCalledWith('u/fresh.webp');
   });
 });

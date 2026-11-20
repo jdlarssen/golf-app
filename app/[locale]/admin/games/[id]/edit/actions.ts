@@ -43,6 +43,7 @@ import { isClubTournament } from '@/lib/games/registration';
 import { canRepeatWeekly } from '@/lib/games/weeklyRepeat';
 import { isStandaloneRound } from '@/lib/games/flightTeeTimes';
 import { guestOnlyRoster } from '@/lib/games/guestOnlyRoster';
+import { removeReplacedSponsorLogos } from '@/lib/games/sponsorLogoCleanup';
 import { resolveGameClubId } from '@/lib/clubs/gameClubId';
 import { parseInviteEmailList } from '@/lib/games/inviteEmail';
 import { sendPublishInvites } from '@/lib/games/sendPublishInvites';
@@ -131,7 +132,7 @@ async function updateGameInternal(
   const { data: existing, error: existingError } = await supabase
     .from('games')
     .select(
-      'status, game_mode, mode_config, tournament_id, league_round_id, source_game_id, group_id, scheduled_tee_off_at, course_id, tee_box_id',
+      'status, game_mode, mode_config, tournament_id, league_round_id, source_game_id, group_id, scheduled_tee_off_at, course_id, tee_box_id, prizes',
     )
     .eq('id', gameId)
     .maybeSingle();
@@ -461,6 +462,15 @@ async function updateGameInternal(
     redirect({ href: `${detailBase}?error=not_editable`, locale });
   }
 
+  // Audit 20.11 (p11): the sponsor logos this save replaced go now, after the
+  // new prizes are stored, never while the form is open. Best-effort.
+  await removeReplacedSponsorLogos({
+    client: supabase,
+    gameId,
+    before: existing.prizes,
+    after: prizes,
+  });
+
   const rosterWrite = await writeRosterPlan(
     supabase,
     gameId,
@@ -542,6 +552,10 @@ async function updateGameInternal(
   await notifyTeeTimeChanged({ gameId, actorUserId: userId, before: teeTimesBefore });
 
   if (!rosterWrite.ok) {
+    // Audit 20.11 (p11): games.update has already committed (name, time,
+    // format), so the cached game must go here too, or the pages keep showing
+    // the game as it was before this save.
+    expireGameCache(gameId);
     redirect({ href: editHref({ error: 'db_players' }), locale });
   }
 
