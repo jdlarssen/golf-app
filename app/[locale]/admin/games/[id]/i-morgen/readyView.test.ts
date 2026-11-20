@@ -131,7 +131,7 @@ describe('buildReadyView', () => {
   it('each flight line starts with its own start time when the round has an interval', () => {
     const v = view([...confirmedSeven, kari], { teeIntervalMinutes: 10 });
     expect(v.rows.find((r) => r.key === 'flights')?.sub).toBe(
-      '09:00 flight 1: Anders, Ida, Jonas og Marte · 09:10 flight 2: Eirik, Kari, Sondre og Tone',
+      '09:00 Flight 1: Anders, Ida, Jonas og Marte · 09:10 Flight 2: Eirik, Kari, Sondre og Tone',
     );
   });
 });

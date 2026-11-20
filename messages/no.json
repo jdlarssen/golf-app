@@ -245,8 +245,8 @@
         "title": "{gameName} er flyttet",
         "detail": "Ny tid: {teeOffAt, date, ::EEEEdMMM} kl. {teeOffAt, time, ::HHmm}. Samme bane og tee.",
         "detailCourseChanged": "Ny tid: {teeOffAt, date, ::EEEEdMMM} kl. {teeOffAt, time, ::HHmm}. Bane eller tee er også endret.",
-        "detailOwn": "Ny tid: {teeOffAt, date, ::EEEEdMMM} kl. {teeOffAt, time, ::HHmm}, og du går ut {ownTeeOffAt, time, ::HHmm}. Samme bane og tee.",
-        "detailOwnCourseChanged": "Ny tid: {teeOffAt, date, ::EEEEdMMM} kl. {teeOffAt, time, ::HHmm}, og du går ut {ownTeeOffAt, time, ::HHmm}. Bane eller tee er også endret."
+        "detailOwn": "Ny tid: {teeOffAt, date, ::EEEEdMMM} kl. {teeOffAt, time, ::HHmm}. Du går ut kl. {ownTeeOffAt, time, ::HHmm}. Samme bane og tee.",
+        "detailOwnCourseChanged": "Ny tid: {teeOffAt, date, ::EEEEdMMM} kl. {teeOffAt, time, ::HHmm}. Du går ut kl. {ownTeeOffAt, time, ::HHmm}. Bane eller tee er også endret."
       },
       "teeTimeChanged": {
         "title": "Starttiden din er endret",
@@ -4807,7 +4807,7 @@
         "noTeeOff": "Tee-tiden er ikke satt",
         "flights": "{count, plural, one {Én flight} =2 {To flights} =3 {Tre flights} =4 {Fire flights} other {# flights}}",
         "flightLine": "Flight {n}: {names}",
-        "flightLineTimed": "{time} flight {n}: {names}",
+        "flightLineTimed": "{time} Flight {n}: {names}",
         "unassigned": "{count} uten flight",
         "noFlights": "Ingen flighter ennå",
         "noFlightsHint": "Del inn spillerne på startlista",
