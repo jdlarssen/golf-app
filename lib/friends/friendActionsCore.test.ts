@@ -34,6 +34,11 @@ vi.mock('@/lib/invitations/quota', () => ({
   getQuotaState: () => quotaMock(),
 }));
 
+const ownEmailMock = vi.fn(async () => new Map([[ME, { email: 'jorgen@example.com', friendCode: 'kode1234' }]]));
+vi.mock('@/lib/users/privateUserFields', () => ({
+  getPrivateUserFields: () => ownEmailMock(),
+}));
+
 import {
   addByEmail,
   connectByFriendCode,
@@ -101,41 +106,191 @@ describe('sendRequest', () => {
   });
 });
 
-describe('addByEmail', () => {
-  it('sender adressen i små bokstaver og varsler den som fikk forespørselen', async () => {
-    const client = buildSupabaseMock([], {
-      send_friend_request_by_email: { status: 'requested', target_id: OTHER },
-    });
+describe('addByEmail (0252)', () => {
+  const COMPLETED = { data: { name: 'Jørgen', profile_completed_at: '2026-01-01T00:00:00Z' }, error: null };
 
-    expect(await addByEmail(client as never, ME, '  Kari@Example.COM ')).toBe('requested');
-    expect(client.rpc).toHaveBeenCalledWith('send_friend_request_by_email', {
+  /** The caller's own client: profile, own open invitations, the insert. */
+  function callerClient(over: { mine?: unknown[]; invitedElsewhere?: boolean; insertError?: unknown } = {}) {
+    return buildSupabaseMock(
+      [],
+      { email_is_invited: over.invitedElsewhere ?? false },
+      {
+        byTable: {
+          users: [COMPLETED],
+          invitations: [{ data: over.mine ?? [], error: null }, { error: over.insertError ?? null }],
+        },
+      },
+    );
+  }
+
+  /** What the service-role lookup found. It never leaves the server. */
+  function lookupFinds(outcome: string, targetId: string | null) {
+    admin = buildSupabaseMock([ACTOR_ROW], {
+      friend_request_by_email: { outcome, target_id: targetId },
+    });
+  }
+
+  /** Collects what the shell hands to `after`, and runs it on demand. */
+  function deferred() {
+    const tasks: Array<() => Promise<void>> = [];
+    return {
+      defer: (task: () => Promise<void>) => void tasks.push(task),
+      run: async () => {
+        for (const task of tasks) await task();
+      },
+      count: () => tasks.length,
+    };
+  }
+
+  // The rule the migration exists for: the caller gets one answer and writes
+  // one row, whatever the lookup found.
+  it.each([
+    ['unknown', null],
+    ['requested', OTHER],
+    ['already_pending', OTHER],
+    ['already_friends', OTHER],
+    ['accepted', OTHER],
+  ] as const)('answers «requested» and writes one invitation row when the lookup finds «%s»', async (outcome, target) => {
+    lookupFinds(outcome, target);
+    const client = callerClient();
+    const later = deferred();
+
+    expect(await addByEmail(client as never, ME, '  Kari@Example.COM ', later.defer)).toBe('requested');
+    expect(admin.rpc).toHaveBeenCalledWith('friend_request_by_email', {
+      p_requester: ME,
       p_email: 'kari@example.com',
     });
-    expect(notifyMock).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: OTHER, kind: 'friend_request' }),
+    const inserts = client.__fromCalls.filter((c) => c.method === 'insert');
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0].args[0]).toEqual(
+      expect.objectContaining({ email: 'kari@example.com', invited_by: ME, game_id: null }),
     );
+    // Nothing is sent before the answer: the shell runs it afterwards.
+    expect(later.count()).toBe(1);
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(sendInviteNotificationMock).not.toHaveBeenCalled();
   });
 
-  it('svarer «not_found» for en ukjent adresse, uten varsel', async () => {
-    const client = buildSupabaseMock([], {
-      send_friend_request_by_email: { status: 'not_found', target_id: null },
-    });
-    expect(await addByEmail(client as never, ME, 'ukjent@example.com')).toBe('not_found');
+  it('sends the invitation mail to an address without an account, after the answer', async () => {
+    lookupFinds('unknown', null);
+    const later = deferred();
+    await addByEmail(callerClient() as never, ME, 'ny@example.com', later.defer);
+    await later.run();
+
+    expect(sendInviteNotificationMock).toHaveBeenCalledWith(
+      expect.objectContaining({ to: 'ny@example.com', invitedByName: 'Jørgen' }),
+    );
     expect(notifyMock).not.toHaveBeenCalled();
   });
 
-  it('svarer «email_required» uten å spørre når adressen er tom', async () => {
-    const client = buildSupabaseMock([]);
-    expect(await addByEmail(client as never, ME, '   ')).toBe('email_required');
-    expect(client.rpc).not.toHaveBeenCalled();
+  it('sends no second mail to an address someone else has an open invitation to (#348)', async () => {
+    lookupFinds('unknown', null);
+    const later = deferred();
+    const client = callerClient({ invitedElsewhere: true });
+    expect(await addByEmail(client as never, ME, 'ny@example.com', later.defer)).toBe('requested');
+    await later.run();
+
+    expect(sendInviteNotificationMock).not.toHaveBeenCalled();
+    expect(client.__fromCalls.filter((c) => c.method === 'insert')).toHaveLength(1);
   });
 
-  it('gir «error» når RPC-en feiler', async () => {
+  it.each([
+    ['requested', 'friend_request'],
+    ['accepted', 'friend_accepted'],
+  ] as const)('notifies the person when the lookup finds «%s», and sends no mail', async (outcome, kind) => {
+    lookupFinds(outcome, OTHER);
+    const later = deferred();
+    await addByEmail(callerClient() as never, ME, 'kari@example.com', later.defer);
+    await later.run();
+
+    expect(notifyMock).toHaveBeenCalledWith(expect.objectContaining({ userId: OTHER, kind }));
+    expect(sendInviteNotificationMock).not.toHaveBeenCalled();
+  });
+
+  it.each(['already_pending', 'already_friends'] as const)(
+    'sends nothing when the lookup finds «%s»',
+    async (outcome) => {
+      lookupFinds(outcome, OTHER);
+      const later = deferred();
+      await addByEmail(callerClient() as never, ME, 'kari@example.com', later.defer);
+      await later.run();
+      expect(notifyMock).not.toHaveBeenCalled();
+      expect(sendInviteNotificationMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it('answers «requested» and does nothing more when the caller already asked this address', async () => {
+    lookupFinds('requested', OTHER);
+    const client = callerClient({ mine: [{ id: 'inv-1' }] });
+    const later = deferred();
+    expect(await addByEmail(client as never, ME, 'kari@example.com', later.defer)).toBe('requested');
+    expect(admin.rpc).not.toHaveBeenCalled();
+    expect(client.__fromCalls.filter((c) => c.method === 'insert')).toHaveLength(0);
+    expect(later.count()).toBe(0);
+  });
+
+  // What stops the action before the lookup depends on the caller and on the
+  // address as typed, never on who has an account.
+  it.each([
+    ['   ', 'email_required'],
+    ['ikke-en-adresse', 'invalid_email'],
+    ['kast@mailinator.com', 'disposable_email'],
+  ] as const)('stops on %p with «%s» before anything is asked', async (email, status) => {
+    lookupFinds('requested', OTHER);
+    const client = callerClient();
+    expect(await addByEmail(client as never, ME, email, deferred().defer)).toBe(status);
+    expect(client.__fromCalls).toHaveLength(0);
+    expect(admin.rpc).not.toHaveBeenCalled();
+  });
+
+  it('asks for a completed profile first', async () => {
+    lookupFinds('requested', OTHER);
+    const client = buildSupabaseMock([{ data: { name: null, profile_completed_at: null }, error: null }]);
+    expect(await addByEmail(client as never, ME, 'kari@example.com', deferred().defer)).toBe('profile_incomplete');
+    expect(admin.rpc).not.toHaveBeenCalled();
+  });
+
+  it('answers «self» for the caller\'s own address without a lookup', async () => {
+    lookupFinds('self', ME);
+    expect(await addByEmail(callerClient() as never, ME, 'Jorgen@Example.com', deferred().defer)).toBe('self');
+    expect(admin.rpc).not.toHaveBeenCalled();
+  });
+
+  it('stops on the daily limit before the lookup', async () => {
+    lookupFinds('requested', OTHER);
+    quotaMock.mockResolvedValueOnce({ isExhausted: true });
+    const client = callerClient();
+    expect(await addByEmail(client as never, ME, 'kari@example.com', deferred().defer)).toBe('quota');
+    expect(admin.rpc).not.toHaveBeenCalled();
+    expect(client.__fromCalls.filter((c) => c.method === 'insert')).toHaveLength(0);
+  });
+
+  it('answers «error» and sends nothing when the lookup fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    const client = buildSupabaseMock([], {}, {
-      rpcErrors: { send_friend_request_by_email: { message: 'nede' } },
-    });
-    expect(await addByEmail(client as never, ME, 'kari@example.com')).toBe('error');
+    admin = buildSupabaseMock([], {}, { rpcErrors: { friend_request_by_email: { message: 'nede' } } });
+    const client = callerClient();
+    const later = deferred();
+    expect(await addByEmail(client as never, ME, 'kari@example.com', later.defer)).toBe('error');
+    expect(client.__fromCalls.filter((c) => c.method === 'insert')).toHaveLength(0);
+    expect(later.count()).toBe(0);
+  });
+
+  it('answers «error» and sends nothing when the row is not written', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    lookupFinds('unknown', null);
+    const later = deferred();
+    const client = callerClient({ insertError: { message: 'nede' } });
+    expect(await addByEmail(client as never, ME, 'ny@example.com', later.defer)).toBe('error');
+    expect(later.count()).toBe(0);
+  });
+
+  it('keeps the answer when the mail fails afterwards', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    sendInviteNotificationMock.mockRejectedValueOnce(new Error('resend nede'));
+    lookupFinds('unknown', null);
+    const later = deferred();
+    expect(await addByEmail(callerClient() as never, ME, 'ny@example.com', later.defer)).toBe('requested');
+    await expect(later.run()).resolves.toBeUndefined();
   });
 });
 
@@ -247,59 +402,35 @@ describe('inviteEmailProblem', () => {
   });
 });
 
-describe('inviteByEmail', () => {
+// The route older app builds call after a «not on Tørny» answer. That answer
+// is gone; the route now does what «add by e-mail» does, with their codes.
+describe('inviteByEmail (the route for app builds from before 0252)', () => {
   const COMPLETED = { data: { name: 'Jørgen', profile_completed_at: '2026-01-01T00:00:00Z' }, error: null };
-  const NOBODY = { email_is_registered: false, email_is_in_auth_users: false, email_is_invited: false };
+  const noDefer = () => {};
+  const client = () =>
+    buildSupabaseMock([], { email_is_invited: false }, {
+      byTable: { users: [COMPLETED], invitations: [{ data: [], error: null }, { error: null }] },
+    });
 
-  it('lager invitasjonen og sender mailen', async () => {
-    const client = buildSupabaseMock([COMPLETED, { error: null }], NOBODY);
-
-    expect(await inviteByEmail(client as never, ME, 'Ny@Example.com')).toEqual({
+  it.each(['unknown', 'requested'] as const)('answers «invited» whatever the lookup finds (%s)', async (outcome) => {
+    admin = buildSupabaseMock([ACTOR_ROW], {
+      friend_request_by_email: { outcome, target_id: outcome === 'unknown' ? null : OTHER },
+    });
+    expect(await inviteByEmail(client() as never, ME, 'Ny@Example.com', noDefer)).toEqual({
       status: 'invited',
       email: 'ny@example.com',
     });
-    expect(client.__fromCalls.filter((c) => c.method === 'insert')).toHaveLength(1);
-    expect(sendInviteNotificationMock).toHaveBeenCalledWith(
-      expect.objectContaining({ to: 'ny@example.com', invitedByName: 'Jørgen' }),
-    );
   });
 
-  it('stopper på en engangsadresse før basen spørres', async () => {
-    const client = buildSupabaseMock([]);
-    expect((await inviteByEmail(client as never, ME, 'kast@mailinator.com')).status).toBe(
+  it('gives the address problems and the limit their own codes', async () => {
+    expect((await inviteByEmail(client() as never, ME, 'kast@mailinator.com', noDefer)).status).toBe(
       'disposable_email',
     );
-    expect(client.rpc).not.toHaveBeenCalled();
-  });
-
-  it('ber om fullført profil først', async () => {
-    const client = buildSupabaseMock([{ data: { name: null, profile_completed_at: null }, error: null }]);
-    expect((await inviteByEmail(client as never, ME, 'ny@example.com')).status).toBe('profile_incomplete');
-    expect(client.rpc).not.toHaveBeenCalled();
-  });
-
-  it('stopper når kvoten er brukt opp', async () => {
     quotaMock.mockResolvedValueOnce({ isExhausted: true });
-    const client = buildSupabaseMock([COMPLETED], NOBODY);
-    expect((await inviteByEmail(client as never, ME, 'ny@example.com')).status).toBe('quota');
-    expect(sendInviteNotificationMock).not.toHaveBeenCalled();
+    expect((await inviteByEmail(client() as never, ME, 'ny@example.com', noDefer)).status).toBe('quota');
   });
 
-  it.each([
-    [{ ...NOBODY, email_is_registered: true }, 'already_user'],
-    [{ ...NOBODY, email_is_in_auth_users: true }, 'already_user'],
-    [{ ...NOBODY, email_is_invited: true }, 'already_invited'],
-  ] as const)('sender ingen mail når adressen alt er kjent (%o)', async (rpc, status) => {
-    const client = buildSupabaseMock([COMPLETED], rpc);
-    expect((await inviteByEmail(client as never, ME, 'kjent@example.com')).status).toBe(status);
-    expect(client.__fromCalls.filter((c) => c.method === 'insert')).toHaveLength(0);
-    expect(sendInviteNotificationMock).not.toHaveBeenCalled();
-  });
-
-  it('holder invitasjonen når mailen feiler', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    sendInviteNotificationMock.mockRejectedValueOnce(new Error('resend nede'));
-    const client = buildSupabaseMock([COMPLETED, { error: null }], NOBODY);
-    expect((await inviteByEmail(client as never, ME, 'ny@example.com')).status).toBe('invited');
+  it('answers «unknown» for the caller\'s own address', async () => {
+    expect((await inviteByEmail(client() as never, ME, 'jorgen@example.com', noDefer)).status).toBe('unknown');
   });
 });

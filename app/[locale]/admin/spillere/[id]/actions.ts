@@ -35,6 +35,24 @@ async function revertAuthEmail(id: string, previousEmail: string) {
   }
 }
 
+/**
+ * Is the address already in use, in `public.users` or in `auth.users`? The two
+ * helpers are server helpers (0252): the service role calls them, behind
+ * `requireAdmin` in the action.
+ */
+async function emailConflict(email: string): Promise<'free' | 'taken' | 'failed'> {
+  const serviceClient = getAdminClient();
+  const [inPublic, inAuth] = await Promise.all([
+    serviceClient.rpc('email_is_registered', { p_email: email }),
+    serviceClient.rpc('email_is_in_auth_users', { email_to_check: email }),
+  ]);
+  if (inPublic.error || inAuth.error) {
+    console.error('[admin/spillere] email conflict check failed', inPublic.error ?? inAuth.error);
+    return 'failed';
+  }
+  return inPublic.data || inAuth.data ? 'taken' : 'free';
+}
+
 export async function updateUser(formData: FormData) {
   const locale = await getLocale();
   const id = String(formData.get('id') ?? '');
@@ -109,13 +127,13 @@ export async function updateUser(formData: FormData) {
       redirect({ href: `/admin/spillere/${id}?error=email_change_blocked_active_game`, locale });
     }
 
-    // Check both public.users and auth.users for conflicts.
-    const [{ data: inPublic }, { data: inAuth }] = await Promise.all([
-      supabase.rpc('email_is_registered', { p_email: emailRaw }),
-      supabase.rpc('email_is_in_auth_users', { email_to_check: emailRaw }),
-    ]);
-
-    if (inPublic || inAuth) {
+    // Check both public.users and auth.users for conflicts. A failed check
+    // stops the change.
+    const conflict = await emailConflict(emailRaw);
+    if (conflict === 'failed') {
+      redirect({ href: `/admin/spillere/${id}?error=email_update_failed`, locale });
+    }
+    if (conflict === 'taken') {
       redirect({ href: `/admin/spillere/${id}?error=email_in_use`, locale });
     }
 

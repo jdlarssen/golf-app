@@ -8,10 +8,17 @@ import { getQuotaState } from '@/lib/invitations/quota';
 import { sendInviteNotification } from '@/lib/mail/inviteNotification';
 import { notify } from '@/lib/notifications/notify';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 import { displayNameForOthers } from '@/lib/users/displayName';
-import { asFriendStatus as asStatus, type FriendStatus, type InviteStatus } from './friendStatus';
+import { getPrivateUserFields } from '@/lib/users/privateUserFields';
+import {
+  asFriendStatus as asStatus,
+  type AddByEmailStatus,
+  type FriendStatus,
+  type InviteStatus,
+} from './friendStatus';
 
-export type { FriendStatus, InviteStatus };
+export type { AddByEmailStatus, FriendStatus, InviteStatus };
 
 /**
  * Vennehandlingene (#2256): ett hjem for det webbens server-handlinger og
@@ -114,32 +121,6 @@ export async function sendRequest(
 }
 
 /**
- * Legg til venn på e-post. Finnes brukeren → forespørsel. Ukjent e-post →
- * `not_found`, så flaten kan tilby å invitere på samme adresse.
- */
-export async function addByEmail(
-  client: Client,
-  userId: string,
-  rawEmail: string,
-): Promise<FriendStatus> {
-  const email = rawEmail.trim().toLowerCase();
-  if (!email) return 'email_required';
-  const { data, error } = await client.rpc('send_friend_request_by_email', {
-    p_email: email,
-  });
-  if (error) {
-    console.error('[venner] send_friend_request_by_email failed', error);
-    return 'error';
-  }
-  const result = (data ?? {}) as { status?: string; target_id?: string | null };
-  const status = asStatus(result.status);
-  if (status !== 'not_found' && result.target_id) {
-    await notifyForStatus(status, result.target_id, userId);
-  }
-  return status;
-}
-
-/**
  * Godta eller avslå en innkommende forespørsel. Ved godkjenning varsles
  * avsenderen (friend_accepted).
  */
@@ -212,7 +193,7 @@ export async function remove(client: Client, otherId: string): Promise<FriendSta
   return asStatus(data);
 }
 
-// ── Invitasjon til en som ikke er på Tørny ──────────────────────────────────
+// ── Legg til venn på e-post ─────────────────────────────────────────────────
 
 // Lightweight format check. We rely on browser `type="email"` + the
 // fact that Supabase will reject malformed addresses too. Just guard
@@ -222,8 +203,7 @@ function looksLikeEmail(value: string): boolean {
 }
 
 /**
- * Det som er galt med adressen før noen spørres, eller `null`. Webbens skall
- * sjekker dette før innloggingen, slik handlingen alltid har gjort.
+ * Det som er galt med adressen før noen spørres, eller `null`.
  */
 export function inviteEmailProblem(
   email: string,
@@ -240,112 +220,182 @@ export function inviteEmailProblem(
   return null;
 }
 
+/** Runs a task after the answer is on its way (`after` from `next/server`). */
+export type Defer = (task: () => Promise<void>) => void;
+
+type LookupOutcome =
+  | 'unknown'
+  | 'self'
+  | 'already_friends'
+  | 'accepted'
+  | 'requested'
+  | 'already_pending';
+
+const LOOKUP_OUTCOMES: readonly string[] = [
+  'unknown',
+  'self',
+  'already_friends',
+  'accepted',
+  'requested',
+  'already_pending',
+];
+
 /**
- * Inviter en adresse som ikke er på Tørny. Vernet er det samme som webben
- * alltid har hatt: adressesjekkene, fullført profil, invitasjonskvoten og at
- * adressen ikke alt har en konto eller en åpen invitasjon.
+ * Legg til venn på e-post (0252). Én handling, og ett svar for alle adresser:
+ * `requested`. Har adressen en konto, får personen en venneforespørsel. Har
+ * den ikke, får adressen en invitasjon på e-post. Den som spør, får ikke vite
+ * hvilken av de to som skjedde, verken av svaret eller av det hen selv kan
+ * lese etterpå:
+ *
+ * - Hver adresse gir én rad i `invitations` (den teller på dagskvoten), uansett.
+ * - Forespørselen (`friendships.by_email`) leses av mottakeren. Avsenderen ser
+ *   den først når den er godtatt.
+ * - Oppslaget gjøres av tjenesterollen (`friend_request_by_email`), og
+ *   utfallet forlater aldri serveren.
+ * - Varselet og e-posten sendes etter at svaret er gitt (`defer`), så svaret
+ *   tar like lang tid begge veier.
+ *
+ * Det som stopper handlingen før oppslaget, avhenger bare av den som spør og
+ * av adressen slik den er skrevet: tom eller ugyldig adresse, engangsadresse,
+ * ufullført profil, brukt kvote, egen adresse.
+ */
+export async function addByEmail(
+  client: Client,
+  userId: string,
+  rawEmail: string,
+  defer: Defer,
+): Promise<AddByEmailStatus> {
+  const email = rawEmail.trim().toLowerCase();
+  const problem = inviteEmailProblem(email);
+  if (problem) return problem;
+
+  try {
+    // Migration 0014 ensures the row always exists for authenticated users,
+    // so we gate on `profile_completed_at` rather than "row missing" (#1445).
+    const { data: profile, error: profileError } = await client
+      .from('users')
+      .select('name, profile_completed_at')
+      .eq('id', userId)
+      .single<{ name: string | null; profile_completed_at: string | null }>();
+    if (profileError || !profile) {
+      if (profileError) console.error('[venner] own profile lookup failed', profileError);
+      return 'error';
+    }
+    if (!profile.profile_completed_at) return 'profile_incomplete';
+
+    const own = (await getPrivateUserFields([userId])).get(userId);
+    if (own && own.email.trim().toLowerCase() === email) return 'self';
+
+    // The daily limit holds for every address, so the count says nothing
+    // about who has an account.
+    const quota = await getQuotaState(client, userId);
+    if (quota.isExhausted) return 'quota';
+
+    // Asked this address already, and the invitation is still open: the
+    // answer is the same and nothing is sent twice.
+    const { data: mine, error: mineError } = await client
+      .from('invitations')
+      .select('id')
+      .eq('invited_by', userId)
+      .is('game_id', null)
+      .is('accepted_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .filter('email', 'imatch', emailMatchPattern(email))
+      .limit(1)
+      .returns<{ id: string }[]>();
+    if (mineError) {
+      console.error('[venner] own invitation lookup failed', mineError);
+      return 'error';
+    }
+    if (mine && mine.length > 0) return 'requested';
+
+    // Shared cross-door dedup (#348): an address someone else has an open
+    // invitation to gets no second mail. Read before our own row lands.
+    const { data: invitedElsewhere, error: invitedError } = await client.rpc('email_is_invited', {
+      check_email: email,
+    });
+    if (invitedError) {
+      console.error('[venner] email_is_invited failed', invitedError);
+      return 'error';
+    }
+
+    const { data: lookup, error: lookupError } = await getAdminClient().rpc(
+      'friend_request_by_email',
+      { p_requester: userId, p_email: email },
+    );
+    if (lookupError) {
+      console.error('[venner] friend_request_by_email failed', lookupError);
+      return 'error';
+    }
+    const result = (lookup ?? {}) as { outcome?: string; target_id?: string | null };
+    if (!result.outcome || !LOOKUP_OUTCOMES.includes(result.outcome)) {
+      console.error('[venner] friend_request_by_email gave an unknown outcome');
+      return 'error';
+    }
+    const outcome = result.outcome as LookupOutcome;
+    if (outcome === 'self') return 'self';
+
+    // Audit log. Token is required NOT NULL UNIQUE; we generate a uuid here
+    // just to satisfy the column. The actual OTP code is sent by Supabase
+    // when the invitee reaches /login and asks for one.
+    const expiresAt = inviteExpiresAtFromNow();
+    const inviteToken = randomUUID();
+    const { error: insertError } = await client.from('invitations').insert({
+      email,
+      token: inviteToken,
+      invited_by: userId,
+      game_id: null,
+      expires_at: expiresAt,
+    });
+    if (insertError) {
+      console.error('[venner] invitation insert failed', insertError);
+      return 'error';
+    }
+
+    // null → «En venn» in the recipient's language (the mail fills it in).
+    const inviterName = profile.name?.trim() || null;
+    const targetId = result.target_id ?? null;
+    defer(async () => {
+      if (outcome === 'unknown') {
+        if (invitedElsewhere) return;
+        // Best-effort: a mail failure doesn't roll back the invitation.
+        try {
+          await sendInviteNotification({
+            to: email,
+            invitedByName: inviterName,
+            inviterFallback: 'friend',
+            inviteToken,
+            expiresAt,
+          });
+        } catch (err) {
+          console.error('[venner] invitation mail failed', err);
+        }
+      } else if (targetId && (outcome === 'requested' || outcome === 'accepted')) {
+        await notifyForStatus(outcome, targetId, userId);
+      }
+    });
+    return 'requested';
+  } catch (err) {
+    console.error('[venner] addByEmail failed', err);
+    return 'error';
+  }
+}
+
+/**
+ * `POST /api/friends/invite`, kalt av appbygg fra før 0252 etter et
+ * «ikke på Tørny»-svar. Det svaret finnes ikke lenger, og ruta gjør nå det
+ * samme som «Legg til venn på e-post», med invitasjonskodene de byggene
+ * kjenner.
  */
 export async function inviteByEmail(
   client: Client,
   userId: string,
   rawEmail: string,
+  defer: Defer,
 ): Promise<{ status: InviteStatus; email: string }> {
   const email = rawEmail.trim().toLowerCase();
-  const done = (status: InviteStatus) => ({ status, email });
-
-  const problem = inviteEmailProblem(email);
-  if (problem) return done(problem);
-
-  // Look up inviter profile. If the inviter hasn't completed their own
-  // profile, send them there first — same defensive pattern as /profile.
-  // Migration 0014 ensures the row always exists for authenticated users,
-  // so we gate on `profile_completed_at` rather than "row missing".
-  const { data: profile, error: profileError } = await client
-    .from('users')
-    .select('name, profile_completed_at')
-    .eq('id', userId)
-    .single<{ name: string | null; profile_completed_at: string | null }>();
-
-  // Best-effort by design (#1445): migrasjon 0014 garanterer at raden finnes
-  // for en autentisert bruker, så «mangler rad» og «oppslaget feilet» er begge
-  // uventede tilstander med samme svar til brukeren — en generisk beskjed.
-  // Feilen logges så den ikke forsvinner.
-  if (profileError || !profile) {
-    if (profileError) {
-      console.error('[sendFriendInvite] inviter profile lookup failed', profileError);
-    }
-    return done('unknown');
-  }
-  if (!profile.profile_completed_at) return done('profile_incomplete');
-
-  // Defensive quota re-check — the /invite page already gates on this,
-  // but server-side enforcement is what actually protects the rule.
-  const quota = await getQuotaState(client, userId);
-  if (quota.isExhausted) return done('quota');
-
-  // Block invites to addresses that already exist anywhere in Tørny.
-  // We check two sources in parallel:
-  //   1. public.users (email_is_registered) — accounts that completed
-  //      /complete-profile and have a row in the public schema.
-  //   2. auth.users (email_is_in_auth_users) — accounts that exist in
-  //      Supabase Auth but never finished /complete-profile (e.g. leftover
-  //      from the legacy magic-link flow). Without this second check those
-  //      partial accounts would slip through and receive a confusing invite
-  //      mail, and their user_metadata.inviter_name would be overwritten
-  //      by the subsequent signInWithOtp call.
-  // The third check is the shared cross-door dedup (#348): email_is_invited
-  // is the same SECURITY DEFINER RPC the admin door and the login flow use,
-  // so it sees open invitations regardless of who created them — which a
-  // direct `invitations` query couldn't (RLS 0020 hides other users' rows).
-  const [registeredResult, inAuthResult, invitedResult] = await Promise.all([
-    client.rpc('email_is_registered', { p_email: email }),
-    client.rpc('email_is_in_auth_users', { email_to_check: email }),
-    client.rpc('email_is_invited', { check_email: email }),
-  ]);
-
-  if (registeredResult.error || inAuthResult.error || invitedResult.error) {
-    return done('unknown');
-  }
-  if (registeredResult.data || inAuthResult.data) return done('already_user');
-  // An open invitation already exists for this address (from the admin door
-  // or another friend-invite) — don't send a second invite-mail.
-  if (invitedResult.data) return done('already_invited');
-
-  // null → «En venn» in the recipient's language (the mail fills it in).
-  const inviterName = profile.name?.trim() || null;
-
-  // Audit log. Token is required NOT NULL UNIQUE; we generate a uuid here
-  // just to satisfy the column. The actual OTP code is sent by Supabase
-  // when the invitee reaches /login and asks for one.
-  const expiresAt = inviteExpiresAtFromNow();
-  const inviteToken = randomUUID();
-  const { error: insertError } = await client.from('invitations').insert({
-    email,
-    token: inviteToken,
-    invited_by: userId,
-    game_id: null,
-    expires_at: expiresAt,
-  });
-
-  if (insertError) {
-    console.error('[sendFriendInvite] invitation insert failed', insertError);
-    return done('unknown');
-  }
-
-  // Send the "you've been invited" notification. The OTP code itself is
-  // sent later by Supabase when the invitee reaches /login. Best-effort:
-  // a mail failure doesn't roll back the invitation.
-  try {
-    await sendInviteNotification({
-      to: email,
-      invitedByName: inviterName,
-      inviterFallback: 'friend',
-      inviteToken,
-      expiresAt,
-    });
-  } catch (err) {
-    console.error('[invite] notification mail failed', err);
-  }
-
-  return done('invited');
+  const status = await addByEmail(client, userId, email, defer);
+  if (status === 'requested') return { status: 'invited', email };
+  if (status === 'self' || status === 'error') return { status: 'unknown', email };
+  return { status, email };
 }

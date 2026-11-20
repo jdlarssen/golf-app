@@ -6,6 +6,7 @@ import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { distinctInviterIds } from '@/lib/friends/friendGraph';
 import { isRosterLocked } from '@/lib/games/status';
+import { withoutReceiptsForExistingAccount } from './invitationConsume';
 import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
 
 // Det som skjer etter en vellykket innlogging — ett hjem (#2216).
@@ -84,15 +85,17 @@ export async function afterLogin(
     // null-case å bevare.
     const { data: pendingInvites, error: pendingError } = await admin
       .from('invitations')
-      .select('id, game_id, invited_by')
+      .select('id, game_id, invited_by, created_at')
       .filter('email', 'imatch', emailMatchPattern(email))
       .is('accepted_at', null)
       .gt('expires_at', new Date().toISOString())
-      .returns<{ id: string; game_id: string | null; invited_by: string }[]>();
+      .returns<
+        { id: string; game_id: string | null; invited_by: string; created_at: string }[]
+      >();
     if (pendingError) {
       console.error('[afterLogin] pending invitations lookup failed', pendingError);
     }
-    const pending = pendingInvites ?? [];
+    let pending = pendingInvites ?? [];
 
     // Kun `game_id` skiller her: `invited_by` er NOT NULL (0001), så en
     // null-sjekk på den ville aldri kunne treffe.
@@ -161,12 +164,18 @@ export async function afterLogin(
     if (pending.length > 0) {
       const { data: userRow, error: userError } = await admin
         .from('users')
-        .select('id')
+        .select('id, created_at')
         .filter('email', 'imatch', emailMatchPattern(email))
-        .maybeSingle<{ id: string }>();
+        .maybeSingle<{ id: string; created_at: string }>();
       if (userError) {
         console.error('[afterLogin] users lookup failed', userError);
       }
+
+      // 0252: a game-less invitation written after the account existed is the
+      // sender's receipt for «Legg til venn på e-post». The person has a
+      // friend request to answer instead, so the login leaves the invitation
+      // alone: no consume and no friendship.
+      pending = withoutReceiptsForExistingAccount(pending, userRow);
 
       if (userRow?.id) {
         inviteeId = userRow.id;

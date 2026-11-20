@@ -2,7 +2,7 @@ import 'server-only';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { getFormatsForIntent } from '@/lib/formats/getFormatsForIntent';
 import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
-import { getFriendConnectionIds } from '@/lib/friends/getFriendConnectionIds';
+import { getFriendIds } from '@/lib/friends/getFriendIds';
 import { getClubMemberPlayerOptions } from '@/lib/clubs/getClubMemberPlayerOptions';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { orderPickerPlayers, pickerStatsIds } from '@/lib/wizard/pickerOrder';
@@ -56,10 +56,9 @@ export async function getWizardMountData() {
   const [{ courses, players, clubs }, friendPlayerIds, clubMembers, courseAndTime] =
     await Promise.all([
       getNewGameFormData(),
-      // #464: venne-relasjonene til brukeren — picker-kilde for kompis/cup.
-      // Inkluderer pending forespørsler (begge retninger) så folk du nettopp
-      // har sendt forespørsel til kan velges. Best-effort — tom liste ved feil.
-      userId ? getFriendConnectionIds(userId).catch(() => []) : Promise.resolve([]),
+      // #464: vennene til brukeren — picker-kilde for kompis/cup. Bare
+      // godkjente vennskap (0252). Best-effort — tom liste ved feil.
+      userId ? getFriendIds(userId).catch(() => []) : Promise.resolve([]),
       // #464: klubbmedlemmer — picker-kilde for klubb-intent. Admin-rosteren
       // (hele basen) inneholder allerede medlemmene, så vi trenger bare id-mappet.
       userId
