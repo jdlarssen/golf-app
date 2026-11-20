@@ -83,9 +83,14 @@ type Props = {
    * form-ens onSubmit gir på den native stien (utkast-tømming i GameWizard).
    */
   onSubmitStart?: () => void;
+  /**
+   * Audit 20.11 (p11): the attempt came back; `ok` is false when it returned
+   * an error code. GameWizard clears its local draft only on `true`.
+   */
+  onSubmitResult?: (ok: boolean) => void;
 };
 
-export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
+export function ReadyStep({ state, mode, onGoToStep, onSubmitStart, onSubmitResult }: Props) {
   const t = useTranslations('wizard.ready');
   const tWizard = useTranslations('wizard');
   const locale = useLocale() as AppLocale;
@@ -172,6 +177,7 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
       // edit-draft-actionene returnerer void og redirecter selv ved feil —
       // normaliser til «ingen feil» så state-formen er lik for begge modi.
       const result = (await actions?.publish(formData)) ?? NO_ERROR;
+      onSubmitResult?.(!result.error);
       return { ...result, seq: ++resultSeq.current };
     },
     NO_SUBMIT,
@@ -179,6 +185,7 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
   const [draftResult, draftAction, draftPending] = useActionState(
     async (_prev: SubmitState, formData: FormData): Promise<SubmitState> => {
       const result = (await actions?.draft(formData)) ?? NO_ERROR;
+      onSubmitResult?.(!result.error);
       return { ...result, seq: ++resultSeq.current };
     },
     NO_SUBMIT,
