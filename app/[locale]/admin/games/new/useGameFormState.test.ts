@@ -538,6 +538,141 @@ describe('useGameFormState — drawRandomTeams følger valgt lagstørrelse (#201
   });
 });
 
+describe('useGameFormState — drawBalancedTeams, «Jevne lag» (#2478)', () => {
+  // b1 is the best (2.0), b8 the weakest (30.0); b9 and b10 for the odd counts.
+  const BAL_PLAYERS: PlayerOption[] = [2, 6, 10, 14, 18, 22, 26, 30, 34, 38].map((hcp, i) =>
+    makePlayer(`b${i + 1}`, { hcp_index: hcp }),
+  );
+
+  function setupBalance(mode: GameMode, count: number, players = BAL_PLAYERS) {
+    const { result } = renderHook(() => useGameFormState({ players, courses: COURSES }));
+    act(() => {
+      result.current.handleModeChange(mode);
+    });
+    act(() => {
+      result.current.handleTeamSizeChange(2);
+    });
+    act(() => {
+      for (let i = 0; i < count; i++) result.current.togglePlayer(players[i].id);
+    });
+    return result;
+  }
+
+  it('best ball med 8: den beste med den svakeste, og flight 1, 1, 2, 2', () => {
+    const result = setupBalance('best_ball', 8);
+    expect(result.current.canDrawBalancedTeams).toBe(true);
+    act(() => {
+      result.current.drawBalancedTeams();
+    });
+    expect(result.current.teamByPlayer).toEqual({
+      b1: 1, b8: 1, b2: 2, b7: 2, b3: 3, b6: 3, b4: 4, b5: 4,
+    });
+    expect(result.current.flightByPlayer).toEqual({
+      b1: 1, b8: 1, b2: 1, b7: 1, b3: 2, b6: 2, b4: 2, b5: 2,
+    });
+    expect(result.current.isBalancedLayout).toBe(true);
+    expect(result.current.teamHcp.values).toEqual([32, 32, 32, 32]);
+    expect(result.current.teamsComplete).toBe(true);
+    expect(result.current.flightsComplete).toBe(true);
+  });
+
+  it('to trykk gir samme lag', () => {
+    const result = setupBalance('best_ball', 8);
+    act(() => {
+      result.current.drawBalancedTeams();
+    });
+    const first = { ...result.current.teamByPlayer };
+    act(() => {
+      result.current.drawBalancedTeams();
+    });
+    expect(result.current.teamByPlayer).toEqual(first);
+  });
+
+  it('et bytte gjør at oppsettet ikke lenger er det «Jevne lag» ga', () => {
+    const result = setupBalance('best_ball', 8);
+    act(() => {
+      result.current.drawBalancedTeams();
+    });
+    act(() => {
+      result.current.swapPlayerTeams('b1', 'b2');
+    });
+    expect(result.current.isBalancedLayout).toBe(false);
+    // The numbers follow the layout: b2 + b8 = 36, b1 + b7 = 28.
+    expect(result.current.teamHcp.values.slice(0, 2)).toEqual([36, 28]);
+  });
+
+  it('patsome med 6: tre lag à 2 etter slangen, og payloaden har flight = lag', () => {
+    const result = setupBalance('patsome', 6);
+    expect(result.current.canDrawBalancedTeams).toBe(true);
+    expect(result.current.canDrawRandomTeams).toBe(false);
+    act(() => {
+      result.current.drawBalancedTeams();
+    });
+    expect(result.current.teamByPlayer).toEqual({ b1: 1, b6: 1, b2: 2, b5: 2, b3: 3, b4: 3 });
+    expect(result.current.patsomePlayersValid).toBe(true);
+    const rows = result.current.orderedPayload;
+    expect(rows).toHaveLength(6);
+    for (const row of rows) expect(row.flight_number).toBe(row.team_number);
+  });
+
+  it('fourball matchplay med 4: beste og svakeste på side 1, og payloaden har flight = side', () => {
+    const result = setupBalance('fourball_matchplay', 4);
+    expect(result.current.canDrawBalancedTeams).toBe(true);
+    act(() => {
+      result.current.drawBalancedTeams();
+    });
+    expect(result.current.teamByPlayer).toEqual({ b1: 1, b4: 1, b2: 2, b3: 2 });
+    expect(result.current.teamMatchplayPlayersValid).toBe(true);
+    const rows = result.current.orderedPayload;
+    expect(rows).toHaveLength(4);
+    for (const row of rows) expect(row.flight_number).toBe(row.team_number);
+  });
+
+  it.each([
+    ['patsome', 5],
+    ['fourball_matchplay', 3],
+    ['fourball_matchplay', 5],
+    ['singles_matchplay', 2],
+  ] as const)('%s med %i spillere: knappen er av, og et trykk endrer ingenting', (mode, count) => {
+    const result = setupBalance(mode, count);
+    expect(result.current.canDrawBalancedTeams).toBe(false);
+    act(() => {
+      result.current.drawBalancedTeams();
+    });
+    expect(result.current.teamByPlayer).toEqual({});
+  });
+
+  it('Texas à 4 med 9 spillere: av når «Trekk tilfeldig» er av', () => {
+    const result = setupBalance('texas_scramble', 0);
+    act(() => {
+      result.current.handleTeamSizeChange(4);
+    });
+    act(() => {
+      for (let i = 0; i < 9; i++) result.current.togglePlayer(BAL_PLAYERS[i].id);
+    });
+    expect(result.current.canDrawRandomTeams).toBe(false);
+    expect(result.current.canDrawBalancedTeams).toBe(false);
+  });
+
+  it('en spiller uten fullført profil regnes ikke med; alle ventende gjør knappen av', () => {
+    const pending = [1, 2, 3, 4].map((i) =>
+      makePlayer(`v${i}`, { pending: true, name: null, hcp_index: 54 }),
+    );
+    const mixed = setupBalance('fourball_matchplay', 4, [...BAL_PLAYERS.slice(0, 3), pending[0]]);
+    expect(mixed.current.canDrawBalancedTeams).toBe(true);
+    act(() => {
+      mixed.current.drawBalancedTeams();
+    });
+    // 2 → 1, 6 → 2, 10 → 2; the pending player takes side 1's free seat.
+    expect(mixed.current.teamByPlayer).toEqual({ b1: 1, v1: 1, b2: 2, b3: 2 });
+    expect(mixed.current.teamHcp.uncounted).toEqual(['v1']);
+    expect(mixed.current.teamHcp.values).toEqual([2, 16]);
+
+    const allPending = setupBalance('fourball_matchplay', 4, pending);
+    expect(allPending.current.canDrawBalancedTeams).toBe(false);
+  });
+});
+
 describe('useGameFormState — initialValues pre-fyll for setup-step-formater (#322)', () => {
   it('wolf_scoring fra initialValues restorer state korrekt', () => {
     const { result } = renderHook(() =>

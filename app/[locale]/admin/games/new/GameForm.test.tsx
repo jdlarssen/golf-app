@@ -2365,3 +2365,60 @@ describe('GameForm — «Bane» and «Navn og tid» keep what the game has (#244
     expect([data.get('course_id'), data.get('tee_box_id')]).toEqual(['course-2', 'tee-2a']);
   });
 });
+
+// #2478: «Rediger spill» uses the same team screen, so «Jevne lag» is there
+// too. A scheduled game whose teams are saved: one press deals them again by
+// handicap index, the best with the weakest.
+describe('GameForm — «Jevne lag» i «Rediger spill» (#2478)', () => {
+  const NO_OP_UPDATE = async () => {};
+  const PLAYERS = [
+    makePlayer('a', 'Ida Moen', 4.2),
+    makePlayer('b', 'Jonas Berg', 9.4),
+    makePlayer('c', 'Sondre Aas', 12.1),
+    makePlayer('d', 'Anders Moe', 26.0),
+  ];
+
+  function renderEdit(gameMode: 'best_ball' | 'fourball_matchplay') {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={PLAYERS}
+        initialValues={{
+          game_mode: gameMode,
+          team_size: 2,
+          // Saved as a, b on team 1 and c, d on team 2.
+          players: PLAYERS.map((p, i) => ({
+            user_id: p.id,
+            team_number: i < 2 ? 1 : 2,
+            flight_number: 1,
+          })),
+        }}
+        mode={{ kind: 'edit-scheduled', gameId: 'game-1', updateAction: NO_OP_UPDATE }}
+      />,
+    );
+  }
+
+  it('best ball: «Jevne lag» setter Ida med Anders og Jonas med Sondre', () => {
+    renderEdit('best_ball');
+    fireEvent.click(screen.getByRole('button', { name: 'Jevne lag' }));
+    const card1 = within(screen.getByTestId('team-card-1'));
+    expect(card1.getByRole('button', { name: 'Ida Moen' })).toBeInTheDocument();
+    expect(card1.getByRole('button', { name: 'Anders Moe' })).toBeInTheDocument();
+    expect(card1.getByTestId('team-hcp')).toHaveTextContent('Sum HCP30,2');
+    expect(within(screen.getByTestId('team-card-2')).getByTestId('team-hcp')).toHaveTextContent(
+      'Sum HCP21,5',
+    );
+  });
+
+  it('fourball matchplay: knappen står uten «Trekk tilfeldig», og linja sier «mellom sidene»', () => {
+    renderEdit('fourball_matchplay');
+    expect(screen.queryByTestId('draw-random-teams')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Jevne lag' }));
+    expect(
+      within(screen.getByTestId('team-card-1')).getByRole('button', { name: 'Anders Moe' }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('balance-line')).toHaveTextContent(
+      'Det skiller 8,7 i samlet handicap mellom sidene.',
+    );
+  });
+});
