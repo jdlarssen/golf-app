@@ -1461,7 +1461,8 @@ export default async function GameHomePage({
                     {playerRating
                       ? ` · Slope ${playerRating.slope} · CR ${formatCourseRating(playerRating.courseRating, locale)} · Par ${playerRating.par}`
                       : ''}
-                    {` · ${handicapLabel} ${courseHandicapText}`}
+                    {` · ${handicapLabel} `}
+                    <span data-testid="game-home-handicap-value">{courseHandicapText}</span>
                   </p>
                 )}
                 {isMatchplay ? (
@@ -1586,7 +1587,7 @@ export default async function GameHomePage({
                     </p>
                     <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm mt-2">
                       <dt className="text-muted">{handicapLabel}</dt>
-                      <dd className="score-num text-text text-right">
+                      <dd className="score-num text-text text-right" data-testid="game-home-handicap-value">
                         {courseHandicapText}
                       </dd>
                     </dl>
@@ -1615,7 +1616,7 @@ export default async function GameHomePage({
                       </>
                     )}
                     <dt className="text-muted">{handicapLabel}</dt>
-                    <dd className="score-num text-text text-right">
+                    <dd className="score-num text-text text-right" data-testid="game-home-handicap-value">
                       {courseHandicapText}
                     </dd>
                   </dl>
