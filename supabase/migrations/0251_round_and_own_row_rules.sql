@@ -388,7 +388,8 @@ update public.users u
    and u.guest_created_by is null;
 
 -- May p_actor put the guest p_guest on a roster? The one home of the rule: the
--- insert guard below and the server (usable_guest_ids) both ask here.
+-- insert guard below and the server (foreign_guest_ids) both ask here. A
+-- global admin may use any guest (the curator model, as in the invite gate).
 create or replace function public.guest_usable_by(p_actor uuid, p_guest uuid)
   returns boolean
   language sql
@@ -397,6 +398,11 @@ create or replace function public.guest_usable_by(p_actor uuid, p_guest uuid)
   set search_path = ''
 as $$
   select exists (
+      select 1 from public.users a
+       where a.id = p_actor
+         and a.is_admin
+    )
+    or exists (
       select 1 from public.users u
        where u.id = p_guest
          and u.is_guest
@@ -500,11 +506,12 @@ comment on function public.purge_admin_action_rate_limit() is
 revoke all on function public.purge_admin_action_rate_limit() from public, anon, authenticated;
 grant execute on function public.purge_admin_action_rate_limit() to service_role;
 
--- Plain SQL, no HTTP call and no secret, so it runs wherever pg_cron is
--- installed (the local test stack has none).
+-- Scheduled like purge-cron-run-history (0207): only where cron_secret is in
+-- Vault, which is prod. Staging keeps an empty cron.job (0188, #2246) and the
+-- local test stack has no pg_cron; both can call the function by hand.
 do $do$
 begin
-  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+  if exists (select 1 from vault.secrets where name = 'cron_secret') then
     perform cron.schedule(
       'purge-rate-limit-buckets',
       '23 3 * * *',
