@@ -9,8 +9,8 @@ import type { LeagueCardResponse } from '@/lib/league/appLeagueView';
 //
 // En ligakamerat står som regel ikke i flighten, og RLS viser et ferdig spill
 // bare til spillerne (#1542). Kortet leses derfor med service role bak
-// `leagueCardAccess`: kalleren må få se ligaen (`canViewLeague`, medlemskapet
-// lest som kalleren), og kortet må telle i tabellen. Alt annet er 404, som om
+// `leagueCardAccess`: kalleren må være deltaker eller styre ligaen
+// (`canOpenLeagueCards`, lest som kalleren), og kortet må telle i tabellen. Alt annet er 404, som om
 // kortet ikke fantes. Kortet regnes ferdig på serveren; appen tegner det bare.
 //
 // WIRE (appen speiler den, `native/app/src/data/leagueCard.ts`):

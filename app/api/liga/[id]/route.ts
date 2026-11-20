@@ -2,7 +2,7 @@ import { after, NextResponse, type NextRequest } from 'next/server';
 import { authenticatedUserId, callerScopedClient } from '@/lib/api/appAuth';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getLigaSnapshot } from '@/lib/league/getLigaSnapshot';
-import { canViewLeague } from '@/lib/league/canViewLeague';
+import { canOpenLeagueCards, canViewLeague } from '@/lib/league/canViewLeague';
 import { maybeAutoConfirmLeagueParticipation } from '@/lib/league/confirmLeagueParticipation';
 import { buildAppLeagueView } from '@/lib/league/buildAppLeagueView';
 import type { AppLeagueParticipantDetails } from '@/lib/league/appLeagueView';
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
 
     const admin = getAdminClient();
     const [leagueRes, meRes] = await Promise.all([
-      admin.from('leagues').select('group_id').eq('id', id).maybeSingle(),
+      admin.from('leagues').select('group_id, created_by').eq('id', id).maybeSingle(),
       admin
         .from('league_players')
         .select('accepted_at')
@@ -86,7 +86,16 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     if (meRes.data && meRes.data.accepted_at == null) {
       after(() => maybeAutoConfirmLeagueParticipation({ leagueId: id, userId }));
     }
-    return NextResponse.json(buildAppLeagueView(snapshot, userId, details, isClubMember));
+    // A cell carries its flight only for a caller who may open the card.
+    const canOpenCards = await canOpenLeagueCards(caller, {
+      groupId: leagueRes.data.group_id,
+      createdBy: leagueRes.data.created_by,
+      userId,
+      isParticipant: meRes.data !== null,
+    });
+    return NextResponse.json(
+      buildAppLeagueView(snapshot, userId, details, isClubMember, canOpenCards),
+    );
   } catch (err) {
     console.error('[api/liga/[id]] load failed', err);
     return NextResponse.json({ error: 'load_failed' }, { status: 500 });

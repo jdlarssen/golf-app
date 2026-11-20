@@ -92,7 +92,7 @@ function snapshot(scoring: string): LeagueSnapshot {
 
 describe('buildAppLeagueView — the wire shape the app reads (#2638)', () => {
   it('locks the whole view for a simulator league', () => {
-    expect(buildAppLeagueView(snapshot('net'), 'B')).toEqual({
+    expect(buildAppLeagueView(snapshot('net'), 'B', null, false, true)).toEqual({
       league: {
         id: 'l1',
         name: 'Vinterliga på Trackman',
@@ -149,8 +149,17 @@ describe('buildAppLeagueView — the wire shape the app reads (#2638)', () => {
   });
 
   it('a gross league sends the gross table', () => {
-    const row = buildAppLeagueView(snapshot('gross'), 'A').standings[0];
+    const row = buildAppLeagueView(snapshot('gross'), 'A', null, false, true).standings[0];
     expect({ value: row.value, gameId: row.perRound[0].gameId }).toEqual({ value: 30, gameId: 'g1' });
+  });
+
+  it('a cell carries its flight only for a caller who may open the card', () => {
+    const cell = (canOpenCards?: boolean) =>
+      buildAppLeagueView(snapshot('net'), 'Z', null, false, canOpenCards).standings[0].perRound[0];
+    expect(cell(true)).toMatchObject({ value: 36, gameId: 'g1' });
+    expect(cell(false)).toMatchObject({ value: 36, gameId: null });
+    // Left out, the answer is no: a caller nobody vouched for gets no link.
+    expect(cell()).toMatchObject({ value: 36, gameId: null });
   });
 
   it('the full name and HCP come only from the details a participant gets', () => {

@@ -14,7 +14,7 @@ import { getLigaSnapshot } from '@/lib/league/getLigaSnapshot';
 import { playerName } from '@/lib/names/playerName';
 import { maybeAutoConfirmLeagueParticipation } from '@/lib/league/confirmLeagueParticipation';
 import { leagueSelfServiceState } from '@/lib/league/selfService';
-import { canViewLeague } from '@/lib/league/canViewLeague';
+import { canOpenLeagueCards, canViewLeague } from '@/lib/league/canViewLeague';
 import { joinClubLeague } from '@/lib/league/actions';
 import type { LeagueStatus } from '@/lib/league/types';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
@@ -156,6 +156,24 @@ function ShareLeagueSection({
 }
 
 /**
+ * The league id the season table links its cells by, or null: a cell links its
+ * card only for a caller the card's gate lets through (`canOpenLeagueCards`).
+ */
+async function cardLinkLeagueId(
+  league: { id: string; group_id: string | null; created_by: string },
+  userId: string | null,
+  isParticipant: boolean,
+): Promise<string | null> {
+  const canOpen = await canOpenLeagueCards(await getServerClient(), {
+    groupId: league.group_id,
+    createdBy: league.created_by,
+    userId,
+    isParticipant,
+  });
+  return canOpen ? league.id : null;
+}
+
+/**
  * #2638: the league round's two messages (open, closing) link here. #2759: they
  * wait until the round is played or closed, so the visit only checks that.
  */
@@ -222,6 +240,7 @@ export default async function LigaPublicPage({
       ? participants.find((p) => p.userId === currentUserId)
       : undefined;
   const isParticipant = me !== undefined;
+  const cardLeagueId = await cardLinkLeagueId(league, currentUserId, isParticipant);
 
   // #463: å åpne liga-siden er en aktivitet = implisitt bekreftelse. Rydder
   // «Ikke bekreftet»-badgen for aktive deltakere. Deferert via after().
@@ -406,7 +425,7 @@ export default async function LigaPublicPage({
             bestNCount={league.best_n_count}
             pointsBased={isPointsBasedFormat(league.format as LeagueFormat)}
             openRoundId={table.openRoundId}
-            leagueId={league.id}
+            leagueId={cardLeagueId}
           />
         </Card>
       </section>

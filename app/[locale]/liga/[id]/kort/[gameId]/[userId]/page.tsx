@@ -21,8 +21,8 @@ type Params = Promise<{ id: string; gameId: string; userId: string }>;
  * The card behind a cell in the season table (#2815): a tap on a player's
  * result for a round opens their card for it, read-only. A league mate is
  * usually not in the flight, so the card is read with the service role
- * behind `leagueCardAccess`: whoever may see the league sees a card the table
- * counts; anyone else gets a 404, as if it did not exist.
+ * behind `leagueCardAccess`: a participant, or one who runs the league, sees
+ * a card the table counts; anyone else gets a 404, as if it did not exist.
  *
  * The card is on the table's axis (net, or gross in a gross league): the
  * strokes, the net strokes or the points per hole, and the playing handicap

@@ -2,8 +2,8 @@
 //
 // En ligakamerat står som regel ikke i flighten, så kortet kan ikke leses fra
 // Supabase (RLS viser et ferdig spill bare til spillerne, #1542). Det kommer
-// fra serveren (`data/leagueCard.ts`), bak porten `leagueCardAccess`: den som
-// får se ligaen, får se et kort som teller i tabellen.
+// fra serveren (`data/leagueCard.ts`), bak porten `leagueCardAccess`: en
+// deltaker, eller den som styrer ligaen, får se et kort som teller i tabellen.
 //
 // Bare til lesing. Kortet er det klassiske scorekortet fra markørens skjerm,
 // UT og INN med PAR og SLAG, og i tillegg NETTO (slagspill) eller POENG

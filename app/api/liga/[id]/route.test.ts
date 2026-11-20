@@ -19,7 +19,7 @@ const OUTSIDER = '99999999-9999-4999-8999-999999999999';
 const OTHER = '22222222-2222-4222-8222-222222222222';
 
 /** Portens to lesinger med admin-klienten: ligaens klubb og kallerens egen deltakerrad. */
-let leagueRow: { group_id: string | null } | null = null;
+let leagueRow: { group_id: string | null; created_by?: string } | null = null;
 let leagueError: { message: string } | null = null;
 let myRow: { accepted_at: string | null } | null = null;
 
@@ -216,6 +216,43 @@ describe('GET /api/liga/[id]', () => {
       status: 200,
       confirms: [],
     });
+  });
+
+  it('a cell carries its flight for a participant, never for a signed-in user outside the league', async () => {
+    const withCell = (): LeagueSnapshot => {
+      const snap = clubSnapshot(null);
+      snap.standings = {
+        net: {
+          rows: [
+            {
+              userId: OTHER,
+              rank: 1,
+              value: 36,
+              ranked: true,
+              roundsPlayed: 1,
+              perRound: [
+                { roundId: 'r1', value: 36, points: null, penalised: false, deliveredOutsideWindow: false, gameId: 'g1' },
+              ],
+            },
+          ],
+        },
+        gross: null,
+      } as LeagueSnapshot['standings'];
+      return snap;
+    };
+    const cell = (res: Awaited<ReturnType<typeof call>>) => res.body.standings[0].perRound[0];
+    // The league's creator is someone else, so only the participation counts.
+    leagueRow = { group_id: null, created_by: OTHER };
+
+    snapshot = withCell();
+    asParticipant();
+    expect(cell(await call('token-meg'))).toMatchObject({ value: 36, gameId: 'g1' });
+
+    snapshot = withCell();
+    myRow = null;
+    const outsider = await call('token-fremmed');
+    expect(outsider.status).toBe(200);
+    expect(cell(outsider)).toMatchObject({ value: 36, gameId: null });
   });
 
   it('404 for a league that does not exist, or an id that is no uuid', async () => {
