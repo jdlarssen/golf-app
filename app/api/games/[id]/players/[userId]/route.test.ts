@@ -129,6 +129,14 @@ vi.mock('@/lib/games/inviteEligibility', () => ({
     eligibleMock(inviter, groupId),
 }));
 
+// 0251: whose guest it is. Default: the recipient is no one else's guest.
+const foreignGuestsMock = vi.fn<(actor: string, ids: readonly string[]) => Promise<Set<string>>>(
+  async () => new Set<string>(),
+);
+vi.mock('@/lib/games/guestOwnership', () => ({
+  findForeignGuestIds: (actor: string, ids: readonly string[]) => foreignGuestsMock(actor, ids),
+}));
+
 import { NextRequest } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { notify } from '@/lib/notifications/notify';
@@ -229,6 +237,21 @@ describe('venne-porten — den eneste sjekken under service-role', () => {
     expect(eligibleMock).toHaveBeenCalledWith(ORGANISER, null);
     expect(db.inserted).toEqual([]);
     expect(rosterOps().some((op) => op.kind === 'insert')).toBe(false);
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('en annen arrangørs gjest: 409 invite_not_allowed, ingen rad (0251)', async () => {
+    // The route writes with the service role, so the database guard never
+    // sees the row: sharing a round with the guest is not enough.
+    eligibleMock.mockResolvedValue(new Set([RECIPIENT]));
+    foreignGuestsMock.mockResolvedValueOnce(new Set([RECIPIENT]));
+
+    const res = await POST(request({ token: `Bearer ${ORGANISER_TOKEN}` }), ctx());
+
+    expect(res.status).toBe(409);
+    await expect(res.json()).resolves.toEqual({ error: 'invite_not_allowed' });
+    expect(foreignGuestsMock).toHaveBeenLastCalledWith(ORGANISER, [RECIPIENT]);
+    expect(db.inserted).toEqual([]);
     expect(notifyMock).not.toHaveBeenCalled();
   });
 
