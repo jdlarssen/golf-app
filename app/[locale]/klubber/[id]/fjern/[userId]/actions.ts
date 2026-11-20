@@ -5,18 +5,21 @@ import { getLocale } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { canRemoveClubMember, type ClubRole } from '@/lib/clubs/memberRemoval';
 
 /**
  * removeMember — server action for the /klubber/[id]/fjern/[userId] confirm page.
  *
  * Deletes the target user's group_members row. Requires the caller to be an
- * owner/admin of the club.
+ * owner/admin of the club. An owner is removed by an owner only
+ * (`canRemoveClubMember`; the database holds the same rule, migration 0248).
  *
  * Last-owner guard: if the target is the sole owner, block and redirect back
  * with an error. Ownership transfer is issue #50.
  *
- * The delete uses the request-scoped client so the RLS `is_group_admin(group_id)`
- * policy validates the caller's permission server-side (double-checked in code).
+ * The delete uses the request-scoped client so the RLS delete policy validates
+ * the caller's permission server-side (double-checked in code). A delete that
+ * removes no row is a failure, not a success.
  *
  * Part of #442 (Opprett klubb — eierskap + klubb-scoped oppdagbarhet).
  */
@@ -55,6 +58,10 @@ export async function removeMember(formData: FormData) {
     .eq('user_id', targetUserId)
     .maybeSingle();
 
+  if (targetRow && !canRemoveClubMember(callerRole, targetRow.role as ClubRole)) {
+    redirect({ href: `/klubber/${groupId}/medlemmer`, locale });
+  }
+
   if (targetRow?.role === 'owner') {
     const { count: ownerCount } = await admin
       .from('group_members')
@@ -70,15 +77,16 @@ export async function removeMember(formData: FormData) {
     }
   }
 
-  // Delete via request-scoped client (RLS: is_group_admin(group_id)).
-  const { error } = await supabase
+  // Delete via request-scoped client (RLS: "group_members delete admin or self").
+  const { data: removed, error } = await supabase
     .from('group_members')
     .delete()
     .eq('group_id', groupId)
-    .eq('user_id', targetUserId);
+    .eq('user_id', targetUserId)
+    .select('user_id');
 
-  if (error) {
-    console.error('[removeMember]', error);
+  if (error || !removed || removed.length === 0) {
+    console.error('[removeMember]', error ?? 'delete removed 0 rows');
     redirect({
       href: `/klubber/${groupId}/fjern/${targetUserId}?error=remove_failed`,
       locale,

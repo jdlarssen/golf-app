@@ -4,6 +4,7 @@ import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getClubDetail } from '@/lib/clubs/getClubDetail';
+import { canRemoveClubMember } from '@/lib/clubs/memberRemoval';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -18,7 +19,8 @@ type SearchParams = Promise<{ role_changed?: string | string[] }>;
  * /klubber/[id]/medlemmer — the club's whole member list (#2326), moved here
  * from /klubber/[id], which shows the first five. Every member may open it.
  * The owner gets «Endre rolle» (/rolle/[userId]); owner and admin get
- * «Fjern» (/fjern/[userId]); both confirm pages land back here, the role
+ * «Fjern» (/fjern/[userId]), an admin never on an owner
+ * (`canRemoveClubMember`); both confirm pages land back here, the role
  * change with ?role_changed=.
  *
  * Members sorted owner → admin → member, then by name (`getClubDetail`).
@@ -44,7 +46,6 @@ export default async function KlubbMedlemmerPage({
   if (!detail) notFound();
 
   const { club, members, myRole } = detail;
-  const isAdmin = myRole === 'owner' || myRole === 'admin';
   const roleChanged = first(sp.role_changed);
 
   const [t, tRoles] = await Promise.all([
@@ -96,7 +97,7 @@ export default async function KlubbMedlemmerPage({
                         {t('changeRoleLink')}
                       </SmartLink>
                     )}
-                    {isAdmin && member.userId !== user.id && (
+                    {canRemoveClubMember(myRole, member.role) && member.userId !== user.id && (
                       <SmartLink
                         href={`/klubber/${club.id}/fjern/${member.userId}`}
                         aria-label={t('removeLabel', { name: member.name })}

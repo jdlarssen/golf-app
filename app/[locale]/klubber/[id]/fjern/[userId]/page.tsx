@@ -5,6 +5,7 @@ import { getLocale } from 'next-intl/server';
 import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getClubDetail } from '@/lib/clubs/getClubDetail';
+import { canRemoveClubMember } from '@/lib/clubs/memberRemoval';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
@@ -18,7 +19,8 @@ type SearchParams = Promise<{ error?: string | string[] }>;
 /**
  * /klubber/[id]/fjern/[userId] — dedicated remove-member confirm page.
  *
- * Owner/admin only. Shows the target member's name and a confirm button.
+ * Owner/admin only; an owner is removed by an owner only. Shows the target
+ * member's name and a confirm button.
  * The removeMember action blocks if the target is the sole owner.
  *
  * Destructive action → dedicated route (repo rule: never inline toggle /
@@ -60,6 +62,11 @@ export default async function FjernMedlemPage({
 
   const target = members.find((m) => m.userId === targetUserId);
   if (!target) notFound();
+
+  // An owner is removed by an owner only.
+  if (!canRemoveClubMember(myRole, target.role)) {
+    redirect({ href: `/klubber/${id}/medlemmer`, locale });
+  }
 
   const errorCode = first(sp.error);
 
