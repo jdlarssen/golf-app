@@ -75,6 +75,8 @@ export const NOTIFICATION_ICON: Record<NotificationKind, NotificationIconName> =
   game_started: 'flagg',
   // #2480: the round has a new day or time.
   game_moved: 'flagg',
+  // #2451: the player's own start time moved.
+  tee_time_changed: 'flagg',
   auto_start_blocked: 'flagg',
   achievement_unlocked: 'pokal',
   idea_built: 'konvolutt',

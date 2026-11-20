@@ -998,6 +998,7 @@ export type Database = {
           started_at: string | null
           status: Database["public"]["Enums"]["game_status"]
           tee_box_id: string | null
+          tee_interval_minutes: number | null
           tournament_id: string | null
           tournament_match_label: string | null
           waitlist_enabled: boolean
@@ -1053,6 +1054,7 @@ export type Database = {
           started_at?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           tee_box_id?: string | null
+          tee_interval_minutes?: number | null
           tournament_id?: string | null
           tournament_match_label?: string | null
           waitlist_enabled?: boolean
@@ -1108,6 +1110,7 @@ export type Database = {
           started_at?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           tee_box_id?: string | null
+          tee_interval_minutes?: number | null
           tournament_id?: string | null
           tournament_match_label?: string | null
           waitlist_enabled?: boolean

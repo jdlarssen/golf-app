@@ -48,7 +48,8 @@ export type NotificationKind =
   | 'payment_reminder'
   | 'game_cancelled'
   | 'friend_achievement'
-  | 'organizer_evening_status';
+  | 'organizer_evening_status'
+  | 'tee_time_changed';
 
 // `z.guid()` aksepterer enhver UUID-shaped string (8-4-4-4-12 hex), inkludert
 // nil-UUID og ikke-versjonerte kanoniske test-sentinels som "11111111-...".
@@ -58,10 +59,15 @@ export type NotificationKind =
 // kjente DB-rader.
 const uuid = z.guid();
 
+// #2451: `tee_off_at` is the player's own start time (ISO) when the round has
+// more than one start group (`playerTeeOff`). Optional: a round with one
+// group, and rows written before #2451, have none, and the card reads as
+// before. The card formats it in the recipient's locale and Oslo time (#583).
 const inviteSchema = z.object({
   game_id: uuid,
   game_name: z.string().min(1),
   invited_by_name: z.string().min(1),
+  tee_off_at: z.string().refine((v) => !Number.isNaN(Date.parse(v))).optional(),
 });
 
 // submitter_name / player_name / approver_name / game_name nullable: the card
@@ -443,12 +449,29 @@ const gameStartedSchema = z.object({
 // `course_changed` sier om bane eller tee også ble endret (bare fra
 // «Rediger»); uten den står «Samme bane og tee». `moved_by_name` er nullable
 // som de andre navnefeltene. Deeplinker til /games/[game_id].
+// #2451: `own_tee_off_at` is the player's own start time when it is not the
+// round's tee-off (a later flight), so a moved round sends one varsel, not a
+// `tee_time_changed` as well. Optional, like the invite's.
 const gameMovedSchema = z.object({
   game_id: uuid,
   game_name: z.string().min(1),
   tee_off_at: z.string().refine((v) => !Number.isNaN(Date.parse(v))),
   course_changed: z.boolean(),
   moved_by_name: z.string().min(1).nullable(),
+  own_tee_off_at: z.string().refine((v) => !Number.isNaN(Date.parse(v))).optional(),
+});
+
+// tee_time_changed (#2451): the player's own start time in a scheduled round
+// moved because the organiser changed the flights, the teams or the minutes
+// between the flights (`teeTimeChanges`). To each player whose time changed,
+// not the one who made the change, not guests, not withdrawn players; never
+// mail, as `game_moved`. Older unread rows for the same game are marked read
+// when a new one is written (`notifyTeeTimeChanged`). `tee_off_at` is the new
+// time, ISO; the card formats it (#583). Deeplinks to /games/[game_id].
+const teeTimeChangedSchema = z.object({
+  game_id: uuid,
+  game_name: z.string().min(1),
+  tee_off_at: z.string().refine((v) => !Number.isNaN(Date.parse(v))),
 });
 
 // auto_start_blocked: cron-sweepen fikk ikke startet spillet på tee-tid
@@ -612,6 +635,7 @@ const schemas = {
   game_cancelled: gameCancelledSchema,
   friend_achievement: friendAchievementSchema,
   organizer_evening_status: organizerEveningStatusSchema,
+  tee_time_changed: teeTimeChangedSchema,
 } as const;
 
 /**

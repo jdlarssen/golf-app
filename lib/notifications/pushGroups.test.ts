@@ -20,6 +20,7 @@ const EXPECTED: Record<NotificationKind, PushGroupId> = {
   registration_expired: 'rounds',
   game_started: 'rounds',
   game_moved: 'rounds',
+  tee_time_changed: 'rounds',
   game_cancelled: 'rounds',
   auto_start_blocked: 'rounds',
   game_finished: 'rounds',
