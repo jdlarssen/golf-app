@@ -34,10 +34,13 @@ if [ -n "$dexie_removed" ]; then
 fi
 
 # Plukk ut staget .tsx/.ts-filer (komponent-kode), ekskluder tester.
+# `core.quotepath=off` på alle fil-listene i denne hooken: uten den skriver git
+# stier med æ/ø/å som "P\303\245melding….tsx" i anførselstegn, og da treffer
+# ingen av filtrene under — fila ble hoppet over uten varsel.
 # Markdown-filer (CHANGELOG, email-templates, etc.) skannes IKKE — de håndteres
 # via den manuelle humanizer-policyen i CLAUDE.md fordi prosjekt-dokumentasjon
 # legitimt inneholder eksempler på mønstrene hooken ser etter.
-files=$(git diff --cached --name-only --diff-filter=AM 2>/dev/null \
+files=$(git -c core.quotepath=off diff --cached --name-only --diff-filter=AM 2>/dev/null \
   | grep -E '\.(tsx|ts)$' \
   | grep -vE '\.test\.|/__tests__/|/test/' \
   || true)
@@ -80,7 +83,7 @@ done
 # Test-disiplin (Type B/D-signaler) — referanse: docs/test-discipline.md
 # ─────────────────────────────────────────────────────────────────────
 
-test_files=$(git diff --cached --name-only --diff-filter=AM 2>/dev/null \
+test_files=$(git -c core.quotepath=off diff --cached --name-only --diff-filter=AM 2>/dev/null \
   | grep -E '\.(test|spec)\.(tsx?|jsx?)$' \
   || true)
 
@@ -133,7 +136,7 @@ done
 # JSX-tekst, etter at kommentarer er strippet (norske kode-kommentarer er
 # legitime og vanlige).
 # ─────────────────────────────────────────────────────────────────────
-i18n_files=$(git diff --cached --name-only --diff-filter=AM 2>/dev/null \
+i18n_files=$(git -c core.quotepath=off diff --cached --name-only --diff-filter=AM 2>/dev/null \
   | grep -E '^(app|components)/.*\.(tsx|ts)$' \
   | grep -vE '\.test\.|/__tests__/|/test/' \
   || true)
@@ -164,7 +167,7 @@ done
 # `· #N` / `· bug`. De ~71 historiske ut-taggede oppføringene rører vi ikke —
 # de er ikke «added» med mindre du faktisk redigerer dem.
 # ─────────────────────────────────────────────────────────────────────
-if git diff --cached --name-only --diff-filter=AM 2>/dev/null | grep -qx 'CHANGELOG.md'; then
+if git -c core.quotepath=off diff --cached --name-only --diff-filter=AM 2>/dev/null | grep -qx 'CHANGELOG.md'; then
   cl_missing=$(git diff --cached -U0 -- CHANGELOG.md 2>/dev/null \
     | grep -E '^\+#{3,4} \[[0-9]' \
     | grep -vE '·' || true)
