@@ -3,7 +3,7 @@
 import { useEffect, useState, type CSSProperties, type JSX } from 'react';
 import { useTranslations } from 'next-intl';
 import { useModalFocus } from '@/hooks/useModalFocus';
-import { setWolfChoice } from '@/lib/wolf/setWolfChoice';
+import { setWolfChoice, type SetWolfChoiceError } from '@/lib/wolf/setWolfChoice';
 import type { WolfChoice } from '@/lib/scoring/modes/types';
 import type { WolfPayout } from '@/lib/wolf/wolfPayout';
 
@@ -41,20 +41,23 @@ export interface WolfChoiceModalProps {
   onChoiceSaved: (choice: WolfChoice, partnerUserId: string | null) => void;
 }
 
-const WOLF_ERROR_KEYS = new Set([
-  'not_authenticated',
-  'invalid_choice',
-  'partner_required',
-  'partner_must_be_null',
-  'partner_cannot_be_wolf',
-  'invalid_hole',
-  'not_wolf_on_hole',
-  'game_not_active',
-  'partner_not_in_game',
-  'hole_taken',
-  'rls_denied',
-  'save_failed',
-]);
+// Every code `setWolfChoice` can answer with, and its message key. `satisfies`
+// makes the compiler ask for a line here when the action gets a new code, so
+// no refusal can fall through to «Noe gikk galt».
+const WOLF_ERROR_KEYS = {
+  not_authenticated: 'errors.not_authenticated',
+  invalid_choice: 'errors.invalid_choice',
+  partner_required: 'errors.partner_required',
+  partner_must_be_null: 'errors.partner_must_be_null',
+  partner_cannot_be_wolf: 'errors.partner_cannot_be_wolf',
+  invalid_hole: 'errors.invalid_hole',
+  not_wolf_on_hole: 'errors.not_wolf_on_hole',
+  game_not_active: 'errors.game_not_active',
+  partner_not_in_game: 'errors.partner_not_in_game',
+  hole_taken: 'errors.hole_taken',
+  rls_denied: 'errors.rls_denied',
+  save_failed: 'errors.save_failed',
+} as const satisfies Record<SetWolfChoiceError, `errors.${string}`>;
 
 const backdropStyle: CSSProperties = {
   position: 'fixed',
@@ -263,8 +266,9 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
         onChoiceSaved(choice, partnerUserId);
         onClose();
       } else {
-        const key = WOLF_ERROR_KEYS.has(result.error) ? result.error : 'unknown';
-        setError(t(`errors.${key}` as Parameters<typeof t>[0]));
+        // The fallback is for a code this bundle does not know: an older tab
+        // talking to a newer server.
+        setError(t(WOLF_ERROR_KEYS[result.error] ?? 'errors.unknown'));
       }
     } catch (e) {
       console.error('[WolfChoiceModal] setWolfChoice threw', e);
