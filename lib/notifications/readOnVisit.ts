@@ -64,6 +64,8 @@ export const READ_ON_VISIT: Record<VisitSurface, VisitRule> = {
       'scorecard_submitted',
       // #2480: the game page shows the new tee-off.
       'game_moved',
+      // #2451: the game page shows the player's own start time.
+      'tee_time_changed',
     ],
     key: 'game_id',
   },

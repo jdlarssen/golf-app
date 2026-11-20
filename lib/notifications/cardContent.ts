@@ -31,7 +31,13 @@ export function buildNotificationText(
       const p = payload as NotificationPayload<'invite'>;
       return {
         title: t('kinds.invite.title', { invitedByName: p.invited_by_name }),
-        detail: t('kinds.invite.detail', { gameName: p.game_name }),
+        // #2451: the player's own start time when the round has several.
+        detail: p.tee_off_at
+          ? t('kinds.invite.detailTeeOff', {
+              gameName: p.game_name,
+              teeOffAt: Date.parse(p.tee_off_at),
+            })
+          : t('kinds.invite.detail', { gameName: p.game_name }),
       };
     }
     case 'peer_approval_request': {
@@ -398,11 +404,32 @@ export function buildNotificationText(
     case 'game_moved': {
       const p = payload as NotificationPayload<'game_moved'>;
       const teeOffAt = Date.parse(p.tee_off_at);
+      // #2451: a later flight hears its own time in the same varsel.
+      if (p.own_tee_off_at) {
+        const ownTeeOffAt = Date.parse(p.own_tee_off_at);
+        return {
+          title: t('kinds.gameMoved.title', { gameName: p.game_name }),
+          detail: p.course_changed
+            ? t('kinds.gameMoved.detailOwnCourseChanged', { teeOffAt, ownTeeOffAt })
+            : t('kinds.gameMoved.detailOwn', { teeOffAt, ownTeeOffAt }),
+        };
+      }
       return {
         title: t('kinds.gameMoved.title', { gameName: p.game_name }),
         detail: p.course_changed
           ? t('kinds.gameMoved.detailCourseChanged', { teeOffAt })
           : t('kinds.gameMoved.detail', { teeOffAt }),
+      };
+    }
+    // #2451: the player's own start time moved; formatted like game_moved.
+    case 'tee_time_changed': {
+      const p = payload as NotificationPayload<'tee_time_changed'>;
+      return {
+        title: t('kinds.teeTimeChanged.title'),
+        detail: t('kinds.teeTimeChanged.detail', {
+          gameName: p.game_name,
+          teeOffAt: Date.parse(p.tee_off_at),
+        }),
       };
     }
     case 'auto_start_blocked': {

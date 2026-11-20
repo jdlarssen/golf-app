@@ -362,6 +362,89 @@ describe('buildNotificationText — a moved round (#2480)', () => {
   });
 });
 
+// #2451: the player's own start time, in the invitation, a moved round and
+// the new tee_time_changed, through the real catalog in Oslo time.
+describe('buildNotificationText — own start time per flight (#2451)', () => {
+  const real = (locale: 'no' | 'en') =>
+    createTranslator({
+      locale,
+      messages: locale === 'no' ? noMessages : enMessages,
+      namespace: 'inbox',
+      timeZone: 'Europe/Oslo',
+    }) as unknown as NotificationTranslator;
+  const game = { game_id: '00000000-0000-4000-a000-000000000001', game_name: 'Lørdagsrunden' };
+
+  it('the invitation says when the player goes out, and reads as before without a time', () => {
+    const invite = { ...game, invited_by_name: 'Jørgen' };
+    const timed = { ...invite, tee_off_at: '2026-11-21T08:10:00.000Z' };
+    expect(buildNotificationText('invite', timed as NotificationPayload, real('no')).detail).toBe(
+      'Lørdagsrunden · du går ut 09:10',
+    );
+    expect(buildNotificationText('invite', timed as NotificationPayload, real('en')).detail).toBe(
+      'Lørdagsrunden · you tee off at 09:10',
+    );
+    expect(buildNotificationText('invite', invite as NotificationPayload, real('no')).detail).toBe('Lørdagsrunden');
+  });
+
+  it('a moved round tells a later flight its own time in the same varsel', () => {
+    const moved = {
+      ...game,
+      tee_off_at: '2026-11-21T08:30:00.000Z',
+      course_changed: false,
+      moved_by_name: 'Jørgen',
+      own_tee_off_at: '2026-11-21T08:40:00.000Z',
+    };
+    expect(buildNotificationText('game_moved', moved as NotificationPayload, real('no')).detail).toBe(
+      'Ny tid: lørdag 21. nov. kl. 09:30, og du går ut 09:40. Samme bane og tee.',
+    );
+    expect(
+      buildNotificationText('game_moved', { ...moved, course_changed: true } as NotificationPayload, real('en')).detail,
+    ).toBe('New time: Saturday, Nov 21 at 09:30, and you tee off at 09:40. The course or tees changed too.');
+  });
+
+  it('tee_time_changed names the game and the new time', () => {
+    const changed = { ...game, tee_off_at: '2026-11-21T08:12:00.000Z' };
+    expect(buildNotificationText('tee_time_changed', changed as NotificationPayload, real('no'))).toEqual({
+      title: 'Starttiden din er endret',
+      detail: 'Lørdagsrunden · du går ut 09:12',
+    });
+    expect(buildNotificationText('tee_time_changed', changed as NotificationPayload, real('en'))).toEqual({
+      title: 'Your tee time has changed',
+      detail: 'Lørdagsrunden · you tee off at 09:12',
+    });
+  });
+
+  it('fits the push caps with the longest game name on staging (51 characters)', () => {
+    const long = { game_id: game.game_id, game_name: 'TEST-Mode-singles_matchplay-1786714894544-matchplay' };
+    const texts = [
+      buildNotificationText(
+        'invite',
+        { ...long, invited_by_name: 'Jørgen', tee_off_at: '2026-11-21T08:10:00.000Z' } as NotificationPayload,
+        real('no'),
+      ),
+      buildNotificationText(
+        'game_moved',
+        {
+          ...long,
+          tee_off_at: '2026-11-21T08:30:00.000Z',
+          course_changed: true,
+          moved_by_name: 'Jørgen',
+          own_tee_off_at: '2026-11-21T08:40:00.000Z',
+        } as NotificationPayload,
+        real('no'),
+      ),
+      buildNotificationText(
+        'tee_time_changed',
+        { ...long, tee_off_at: '2026-11-21T08:12:00.000Z' } as NotificationPayload,
+        real('no'),
+      ),
+    ];
+    for (const text of texts) {
+      expect([text.title.length <= TITLE_MAX, text.detail.length <= BODY_MAX]).toEqual([true, true]);
+    }
+  });
+});
+
 // #2481: the cancellation notice in both languages, through the real catalog.
 // The push text: the greeting when there is one, else who cancelled and when.
 describe('buildNotificationText — game_cancelled (#2481)', () => {

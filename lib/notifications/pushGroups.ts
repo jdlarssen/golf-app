@@ -62,6 +62,8 @@ const PUSH_GROUP_OF_KIND: Record<NotificationKind, PushGroupId> = {
   registration_expired: 'rounds',
   game_started: 'rounds',
   game_moved: 'rounds',
+  // #2451: the player's own start time moved.
+  tee_time_changed: 'rounds',
   game_cancelled: 'rounds',
   // #2483: the organiser's own round, the evening before it.
   organizer_evening_status: 'rounds',

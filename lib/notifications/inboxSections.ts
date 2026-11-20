@@ -158,6 +158,7 @@ export function inboxActionKey(row: Pick<InboxRow, 'kind' | 'payload'>): ActionK
     case 'friend_accepted':
     case 'game_started':
     case 'game_moved':
+    case 'tee_time_changed':
     case 'achievement_unlocked':
     case 'idea_built':
     case 'game_cancelled':
@@ -733,6 +734,9 @@ const DETAIL_KINDS: ReadonlySet<NotificationKind> = new Set([
   'league_round_closing',
   // #2480: the title names the game; the detail gives the new tee-off.
   'game_moved',
+  // #2451: the title says the start time moved; the detail names the game and
+  // the new time.
+  'tee_time_changed',
   // #2800: the title names who and what; the detail gives the holes and course.
   'friend_achievement',
   // #2483: the title names the game; the detail says who has confirmed.
@@ -748,7 +752,10 @@ function showsDetail(row: InboxRow): boolean {
   return (
     DETAIL_KINDS.has(row.kind) ||
     (row.kind === 'registration_approved' &&
-      (row.payload as { fromWaitlist?: boolean }).fromWaitlist === true)
+      (row.payload as { fromWaitlist?: boolean }).fromWaitlist === true) ||
+    // #2451: «Lørdagsrunden · du går ut 09:10» when the round has several
+    // start groups. Without a time the detail is the game name, as before.
+    (row.kind === 'invite' && Boolean((row.payload as { tee_off_at?: string }).tee_off_at))
   );
 }
 

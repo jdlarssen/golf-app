@@ -14,6 +14,7 @@
 -- albatross or hole-in-one told to friends or the league writes
 -- 'friend_achievement' (0234, #2800). The organiser's status the evening
 -- before a scheduled round writes 'organizer_evening_status' (0241, #2483).
+-- A player whose own start time moved writes 'tee_time_changed' (0243, #2451).
 -- Before their
 -- migration the CHECK refused them, and `notify` only logged the failure: no
 -- inbox row, no push, no mail.
@@ -31,8 +32,9 @@
 --    10. kind = 'game_cancelled'           → lives
 --    11. kind = 'friend_achievement'       → lives
 --    12. kind = 'organizer_evening_status' → lives
+--    13. kind = 'tee_time_changed'         → lives
 --   FORBIDDEN:
---    13. kind = 'not_a_kind'               → 23514 (check_violation)
+--    14. kind = 'not_a_kind'               → 23514 (check_violation)
 --
 -- Inserts run as the service role, the only role that writes notifications
 -- (there is no insert policy). The insert and the check are separate
@@ -43,7 +45,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(13);
+select plan(14);
 
 \ir fixtures/rls_helpers.psql
 
@@ -145,6 +147,14 @@ select lives_ok(
                                 'tee_off_at', '2026-10-03T07:00:00Z', 'confirmed', 7, 'total', 8,
                                 'unanswered_names', jsonb_build_array('Kari'), 'unanswered_more', 0)) $$,
   'an organizer_evening_status notification can be inserted'
+);
+
+select lives_ok(
+  $$ insert into public.notifications (user_id, kind, payload)
+     values (torny_rls.active_id(), 'tee_time_changed',
+             jsonb_build_object('game_id', torny_rls.game_id(), 'game_name', 'Lørdagsrunden',
+                                'tee_off_at', '2026-10-03T07:10:00.000Z')) $$,
+  'a tee_time_changed notification can be inserted'
 );
 
 select throws_ok(
