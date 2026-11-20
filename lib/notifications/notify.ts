@@ -90,7 +90,13 @@ export async function notify<K extends NotificationKind>(opts: {
 
   // Invalider innboks-cache for brukeren. Next.js 16 krever to-arg-form;
   // 'max' = aggressiv invalidering på tvers av alle pågående requests.
-  revalidateTag(`notifications-${userId}`, 'max');
+  // The row has landed: a failed refresh must not throw, or a caller that
+  // releases its once-only stamp on a throw would send the reminder twice.
+  try {
+    revalidateTag(`notifications-${userId}`, 'max');
+  } catch (err) {
+    console.error('[notifications] cache refresh failed after insert', err);
+  }
 
   // #1009: gjester (skygge-brukere) er per definisjon «off-app» for alltid
   // (last_seen_at null) og ville fått mail fra HVER notify-drevet utsendelse —

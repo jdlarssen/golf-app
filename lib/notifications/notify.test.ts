@@ -123,6 +123,29 @@ describe('notify (validation-rekkefølge)', () => {
     expect(result.shouldAlsoSendMail).toBe(false); // aktiv bruker
   });
 
+  it('the row landed but the cache refresh threw: still inserted, never a throw', async () => {
+    revalidateTagMock.mockImplementation(() => {
+      throw new Error('static generation store missing');
+    });
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { notify } = await import('./notify');
+
+    const result = await notify({
+      userId: '00000000-0000-0000-0000-000000000001',
+      kind: 'invite',
+      payload: {
+        game_id: '00000000-0000-0000-0000-000000000002',
+        game_name: 'Vinter-cup',
+        invited_by_name: 'Jørgen',
+      },
+    });
+
+    // Callers release their once-only stamp on a throw or inserted:false; a
+    // landed row must answer true, or the reminder would go out twice.
+    expect(result.inserted).toBe(true);
+    err.mockRestore();
+  });
+
   it('malformed payload (manglende felt) → kaster FØR insert kalles', async () => {
     const { notify } = await import('./notify');
 
