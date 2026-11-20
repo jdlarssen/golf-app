@@ -29,7 +29,7 @@ import type { StartType } from './startType';
  * `editGameInitialValues.test.ts` checks it against the update's columns.
  */
 export const EDIT_FORM_COLUMNS =
-  'id, name, status, course_id, courses(name), tee_box_id, scheduled_tee_off_at, start_type, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_ld_holes, side_ctp_holes, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type, let_friends_skip_gate, entry_fee_kr, payment_link, prizes, repeat_weekly, registration_cap, signup_deadline, waitlist_enabled';
+  'id, name, status, course_id, courses(name), tee_box_id, scheduled_tee_off_at, start_type, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_ld_holes, side_ctp_holes, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type, let_friends_skip_gate, entry_fee_kr, payment_link, prizes, repeat_weekly, tee_interval_minutes, registration_cap, signup_deadline, waitlist_enabled';
 
 /**
  * What both edit pages select: the form's columns plus the club, cup and league
@@ -98,6 +98,9 @@ export type EditGameRow = {
   // #2460 — «Gjenta hver uke». Optional: the edit pages select it; the rematch
   // row may carry it, and buildRevansjeInitialValues drops it.
   repeat_weekly?: boolean;
+  // #2451 — minutes between the flights. Optional like repeat_weekly: the
+  // rematch row does not carry it, and a new round starts on the default.
+  tee_interval_minutes?: number | null;
   // #1385 — koblings-kolonnene. Begge redigeringsrutene selekterer
   // `group_id` og `tournament_id` (admin-edit-ruta også `league_round_id`,
   // for veiviser-intent og fail-closed på cup/liga, se
@@ -193,6 +196,21 @@ function repeatWeeklyValues(
   };
 }
 
+/**
+ * #2451: the minutes between the flights as stored, and whether the round may
+ * have start times at all. A row without the column (the rematch) leaves the
+ * value out, so the new round starts on the default; null stays null, so a
+ * round from before #2451 opens with no interval chosen.
+ */
+function teeIntervalValues(
+  game: EditGameRow,
+): Pick<InitialValues, 'tee_interval_minutes' | 'tee_interval_linked'> {
+  return {
+    tee_interval_minutes: game.tee_interval_minutes,
+    tee_interval_linked: Boolean(game.tournament_id || game.league_round_id) || undefined,
+  };
+}
+
 export function buildEditInitialValues(
   game: EditGameRow,
   playerRows: EditGamePlayerRow[],
@@ -226,6 +244,7 @@ export function buildEditInitialValues(
     // (the wizard checks the intent too). A rematch row is never a draft.
     tee_off_now: teeOffNowDraft(game),
     ...repeatWeeklyValues(game),
+    ...teeIntervalValues(game),
     hcp_allowance_pct: String(game.hcp_allowance_pct),
     require_peer_approval: game.require_peer_approval,
     score_visibility: game.score_visibility,

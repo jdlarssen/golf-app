@@ -5099,3 +5099,54 @@ describe('buildGameInsertPayload — repeat_weekly (#2460)', () => {
     ).toBe(false);
   });
 });
+
+// #2451: the minutes between the flights are fail-closed too. They count only
+// for a standalone round (the caller's `teeIntervalAllowed`) in a format that
+// can go out in more than one group, and only as 8, 10 or 12.
+describe('buildGameInsertPayload — tee_interval_minutes (#2451)', () => {
+  const solo = { name: 'Lørdagsrunden', game_mode: 'stableford', stableford_team_size: '1' };
+
+  it('keeps 8, 10 or 12 when the caller allows start times', () => {
+    for (const minutes of ['8', '10', '12']) {
+      const result = buildGameInsertPayload(fd({ ...solo, tee_interval_minutes: minutes }), 'draft', {
+        teeIntervalAllowed: true,
+      });
+      expect(result.tee_interval_minutes).toBe(Number(minutes));
+    }
+  });
+
+  it('is null for a cup match (the caller does not allow it), whatever the form says', () => {
+    expect(
+      buildGameInsertPayload(fd({ ...solo, tee_interval_minutes: '10' }), 'draft', {
+        teeIntervalAllowed: false,
+      }).tee_interval_minutes,
+    ).toBeNull();
+    expect(
+      buildGameInsertPayload(fd({ ...solo, tee_interval_minutes: '10' }), 'draft').tee_interval_minutes,
+    ).toBeNull();
+  });
+
+  it('is null for an empty field or a value that is not a choice', () => {
+    for (const raw of ['', '9', '15', 'ti', '10.5']) {
+      expect(
+        buildGameInsertPayload(fd({ ...solo, tee_interval_minutes: raw }), 'draft', {
+          teeIntervalAllowed: true,
+        }).tee_interval_minutes,
+      ).toBeNull();
+    }
+  });
+
+  it('is null for a format that always goes out as one group', () => {
+    const wolf = { name: 'Wolf', game_mode: 'wolf', tee_interval_minutes: '10' };
+    const result = buildGameInsertPayload(fd(wolf), 'draft', { teeIntervalAllowed: true });
+    expect(result.errorCode).toBeUndefined();
+    expect(result.tee_interval_minutes).toBeNull();
+  });
+
+  it('is null on an error payload', () => {
+    expect(
+      buildGameInsertPayload(fd({ tee_interval_minutes: '10' }), 'draft', { teeIntervalAllowed: true })
+        .tee_interval_minutes,
+    ).toBeNull();
+  });
+});

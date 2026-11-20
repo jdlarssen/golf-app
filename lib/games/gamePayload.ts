@@ -23,6 +23,7 @@ import {
 } from './teamFormatLimits';
 import { isValidTeamHandicapSumPct } from './teamHandicapUnit';
 import { MIN_TEE_SHOTS_FIELD, minTeeShotsFeasible, type MinTeeShots } from './teeShots';
+import { hasStartGroups, isTeeInterval } from './flightTeeTimes';
 import { START_COUNT_RANGES, type StartCountMode } from './startPlayerCount';
 import {
   gameModeSupportsTeams,
@@ -331,6 +332,15 @@ export type ParsedPayload = {
    */
   repeat_weekly: boolean;
   /**
+   * #2451: minutes between two start groups (8, 10 or 12), or null when
+   * everyone goes out at the tee-off. Set only when the caller says the round
+   * may have start times (`opts.teeIntervalAllowed`: a standalone round, not a
+   * cup match or league round) and the format can have more than one group
+   * (`hasStartGroups`). The form posts it from step 4; an empty or unknown
+   * value is null.
+   */
+  tee_interval_minutes: number | null;
+  /**
    * #2482: the organiser's cap on self-registration, deadline (ISO) and
    * waiting list. null/null/false outside open and manual approval; no cap and
    * no list on matchplay (U11); the list only on open rounds with a cap.
@@ -351,6 +361,7 @@ type ParsedBase = Omit<
   | 'registration_type'
   | 'let_friends_skip_gate'
   | 'repeat_weekly'
+  | 'tee_interval_minutes'
   | 'registration_cap'
   | 'signup_deadline'
   | 'waitlist_enabled'
@@ -488,6 +499,22 @@ export function parsePrizesFromFormData(
 /** #2460: the switch counts only where the caller allows it (fail-closed). */
 function parseRepeatWeekly(formData: FormData, allowed: boolean | undefined): boolean {
   return allowed === true && formData.get('repeat_weekly') === '1';
+}
+
+/**
+ * #2451: `tee_interval_minutes` from the form, or null. Fail-closed like
+ * `parseRepeatWeekly`: a caller that does not allow start times, a format that
+ * always goes out as one group, an empty field or a value that is not 8, 10 or
+ * 12 all give null (everyone out together, as before).
+ */
+function parseTeeInterval(
+  formData: FormData,
+  gameMode: GameMode,
+  allowed: boolean | undefined,
+): number | null {
+  if (allowed !== true || !hasStartGroups(gameMode)) return null;
+  const raw = Number(String(formData.get('tee_interval_minutes') ?? '').trim());
+  return isTeeInterval(raw) ? raw : null;
 }
 
 function parseRegistrationMode(formData: FormData): RegistrationMode | null {
@@ -2385,6 +2412,10 @@ function validatorMode(
  * (lib/games/weeklyRepeat.ts, the rule's one home) that this round may repeat.
  * Without it `repeat_weekly` is always false, whatever the form posted.
  *
+ * `opts.teeIntervalAllowed` (#2451): the round is standalone (no cup match, no
+ * league round), so it may have start times per flight. Without it
+ * `tee_interval_minutes` is always null.
+ *
  * `opts.clubScoped` (#2433): the caller's verdict that the game is a club
  * tournament (`isClubTournament`), from DB-checked data, never raw form input.
  * With individual signup the roster is then optional at publish, like open
@@ -2398,7 +2429,7 @@ function validatorMode(
 export function buildGameInsertPayload(
   formData: FormData,
   mode: PayloadMode,
-  opts: { clubScoped?: boolean; repeatAllowed?: boolean } = {},
+  opts: { clubScoped?: boolean; repeatAllowed?: boolean; teeIntervalAllowed?: boolean } = {},
 ): ParsedPayload {
   const base = parseBase(formData);
 
@@ -2416,6 +2447,7 @@ export function buildGameInsertPayload(
     registration_type: 'solo',
     let_friends_skip_gate: false,
     repeat_weekly: false,
+    tee_interval_minutes: null,
     registration_cap: null,
     signup_deadline: null,
     waitlist_enabled: false,
@@ -2546,6 +2578,7 @@ export function buildGameInsertPayload(
     registration_type: registrationType,
     let_friends_skip_gate: letFriendsSkipGate,
     repeat_weekly: parseRepeatWeekly(formData, opts.repeatAllowed),
+    tee_interval_minutes: parseTeeInterval(formData, gameMode, opts.teeIntervalAllowed),
     ...signup,
   };
 }

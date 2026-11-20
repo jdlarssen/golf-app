@@ -206,3 +206,25 @@ describe('buildEditInitialValues — «Gjenta hver uke»', () => {
     expect(values.repeat_weekly_linked).toBe(linked);
   });
 });
+
+/**
+ * Type A (#2451). «Rediger spill» opens with the minutes between the flights
+ * as stored, null for a round from before #2451. A row without the column (the
+ * rematch) leaves it out, so the new round starts on the default. A cup match
+ * or league round is linked: no start times there.
+ */
+describe('buildEditInitialValues — tid mellom flightene', () => {
+  const stableford: GameModeConfig = { kind: 'stableford', team_size: 1, points_table: 'standard' };
+
+  it.each<[string, Partial<EditGameRow>, number | null | undefined, boolean | undefined]>([
+    ['12 min lagret', { tee_interval_minutes: 12 }, 12, undefined],
+    ['gammel runde (null)', { tee_interval_minutes: null }, null, undefined],
+    ['uten kolonnen (revansje)', {}, undefined, undefined],
+    ['cupkamp', { tournament_id: 'cup-1', tee_interval_minutes: null }, null, true],
+    ['ligarunde', { league_round_id: 'round-1' }, undefined, true],
+  ])('%s → %s, linked %s', (_label, overrides, minutes, linked) => {
+    const values = buildEditInitialValues(row(stableford, overrides), []);
+    expect(values.tee_interval_minutes).toBe(minutes);
+    expect(values.tee_interval_linked).toBe(linked);
+  });
+});
