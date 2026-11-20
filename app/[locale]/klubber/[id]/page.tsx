@@ -86,8 +86,8 @@ export default async function KlubbDetailPage({
   // #524: klubbens cuper — samme mønster («tournaments select scoped»).
   // #1491: mine egne roster-rader, så en kladd-cup kan vise «Meld deg på» eller
   // «Påmeldt» rett i lista. Filtrert på meg selv og lest med request-klienten
-  // (policyen `tournament_participants_select_authenticated`, 0155, er
-  // `using (true)`). Alle tre kjører parallelt: roster-raden trenger ikke
+  // (policyen `tournament_participants_select_scoped`, 0250, viser meg mine
+  // egne rader). Alle tre kjører parallelt: roster-raden trenger ikke
   // cup-id-ene, bare mitt bruker-id.
   const [leaguesRes, cupsRes, rosterRes] =
     await Promise.all([

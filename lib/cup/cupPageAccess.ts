@@ -14,7 +14,8 @@ type RosterLike = {
  * synlig for klubbens medlemmer, deltakerne og global admin. Snapshot-en bruker
  * admin-client (RLS-bypass), så DENNE gaten — ikke RLS — er det som skjuler
  * klubb-cuper på den lenke-delbare siden. Personlige cuper (`group_id` null) er
- * world-read → alltid tillatt.
+ * åpne for den som har lenka → alltid tillatt. I databasen leses en cup bare av
+ * dem som er med i den (0250), så lenka kan ikke slås opp.
  *
  * «Deltaker» betyr det samme her som i cup-lista (`lib/cup/myCups.ts`): rosteret
  * ELLER en `tournament_participants`-rad (#1547). En utkast-cup har ingen
@@ -103,8 +104,8 @@ async function readCupPageAccess(
     client.from('users').select('is_admin').eq('id', userId).maybeSingle(),
     // Utkast-deltakeren (#1547): rosteret er tomt før spillene finnes, så
     // planens deltakerliste er den eneste sporen av at hen er med.
-    // RLS-policyen `tournament_participants_select_authenticated` er
-    // `using (true)`, så request-klienten leser den fint.
+    // RLS-policyen `tournament_participants_select_scoped` (0250) viser
+    // kalleren sin egen rad, så request-klienten leser den fint.
     client
       .from('tournament_participants')
       .select('user_id')
