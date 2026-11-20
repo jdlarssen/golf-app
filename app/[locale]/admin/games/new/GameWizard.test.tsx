@@ -1814,6 +1814,71 @@ describe('GameWizard — #1999 utkastet flushes før siden kan forsvinne', () =>
     expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
   });
 
+  // Audit 20.11 (p11): the draft was cleared when the form was sent. A save
+  // the server refused, followed by a reload, lost everything.
+  it('B7c: en lagring som feiler, beholder utkastet, også etter en remount', async () => {
+    const first = renderWizard({
+      currentUserId: USER_ID,
+      players: EIGHT_PLAYERS.slice(0, 2),
+      createDraftAction: async () => ({ error: 'db_game' }),
+    });
+    walkToReadyStep();
+
+    fireEvent.change(screen.getByLabelText(/^navn på runden$/i), {
+      target: { value: 'Fredagsrunden' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /lagre som utkast/i }));
+
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+    expect(readDraft()?.values.name).toBe('Fredagsrunden');
+
+    // The reload: the page goes away and comes back.
+    fireEvent(window, new Event('pagehide'));
+    first.unmount();
+    expect(readDraft()?.values.name).toBe('Fredagsrunden');
+  });
+
+  it('B7d: utkastet ryddes når veiviseren forlates etter en innsending som ikke svarte', async () => {
+    // A redirect from the server action unmounts the wizard without a result.
+    // The promise is settled at the end: React 19 ties later transitions to a
+    // pending async action, so one left hanging would stall every later test.
+    let settle: (r: CreateGameResult) => void = () => {};
+    const first = renderWizard({
+      currentUserId: USER_ID,
+      players: EIGHT_PLAYERS.slice(0, 2),
+      createDraftAction: () => new Promise<CreateGameResult>((resolve) => (settle = resolve)),
+    });
+    walkToReadyStep();
+    fireEvent.click(screen.getByRole('button', { name: /lagre som utkast/i }));
+    expect(readDraft()).not.toBeNull();
+
+    first.unmount();
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
+    await act(async () => settle({ error: '' }));
+  });
+
+  // Audit 20.11 (p11): «Gjenta hver uke» was not in the draft, so «Fortsett»
+  // came back with it off.
+  it('B7e: «Gjenta hver uke» overlever en remount', () => {
+    const first = renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
+    walkToReadyStep();
+    const toggle = () => screen.getByRole('switch', { name: /gjenta hver uke/i });
+    fireEvent.click(toggle());
+    expect(toggle()).toBeChecked();
+    fireEvent(window, new Event('pagehide'));
+    first.unmount();
+
+    expect(readDraft()?.values.repeat_weekly).toBe(true);
+
+    renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
+    clickNext();
+    clickNext();
+    clickNext();
+    clickNext();
+    expectStep(5);
+    expect(toggle()).toBeChecked();
+  });
+
   it('B7b: et stegbytte flusher, så ingenting ligger igjen i debounce-vinduet', () => {
     renderWizard({ currentUserId: USER_ID, players: EIGHT_PLAYERS.slice(0, 2) });
     walkToReadyStep();

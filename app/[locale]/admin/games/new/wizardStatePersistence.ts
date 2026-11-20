@@ -65,6 +65,7 @@ export type PersistedInitialValues = Pick<
   | 'tee_box_id'
   | 'scheduled_tee_off_at'
   | 'tee_off_now'
+  | 'repeat_weekly'
   | 'start_type'
   | 'tee_interval_minutes'
   | 'hcp_allowance_pct'
@@ -247,6 +248,10 @@ export function wizardDraftFromState({
       // #2463: optional, so an older draft without it reads as a time, and
       // WIZARD_DRAFT_VERSION stays.
       tee_off_now: state.teeOffNow || undefined,
+      // Audit 20.11 (p11): «Gjenta hver uke». Optional like tee_off_now, so
+      // WIZARD_DRAFT_VERSION stays. The effective value: the hook checks
+      // `repeatWeeklyAllowed` again on restore.
+      repeat_weekly: state.repeatWeekly || undefined,
       start_type: state.startType,
       // #2451: optional, so an older draft without it starts on the default
       // (10), and WIZARD_DRAFT_VERSION stays.

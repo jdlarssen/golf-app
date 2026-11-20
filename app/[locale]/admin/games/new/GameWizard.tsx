@@ -1011,24 +1011,51 @@ function WizardBody({
   }, [draftJson, storageKey, draftContext, isNewCupFlow, persists]);
 
   /**
-   * Publiser/Lagre utkast → utkastet i localStorage skal bort. Suksess
-   * redirecter (actionen kaster NEXT_REDIRECT), så det finnes ingen
-   * «det gikk bra»-tilstand å henge slettingen på — vi rydder derfor når
-   * skjemaet sendes.
+   * Publiser/Lagre utkast. Audit 20.11 (p11): the draft in localStorage stays
+   * until the save has succeeded. It used to be cleared when the form was
+   * sent, so a save the server refused, followed by a reload, lost everything.
    *
-   * Feiler server-actionen (#1379) står veiviseren fortsatt montert med alt
-   * arrangøren fylte ut; `lastWrittenRef` nullstilles slik at neste endring
-   * skriver utkastet på nytt.
+   * At the start the latest state is written at once (the debounce may still
+   * hold it), and further writes are blocked: the redirect after a success IS
+   * a `pagehide`. The draft goes when the save succeeded:
+   *  - `handleSubmitResult(true)`: the action came back without an error;
+   *  - the wizard unmounts while the submission is open: a success redirects
+   *    (NEXT_REDIRECT) and the action may never come back.
+   * A refused save (#1379) leaves the wizard mounted with the draft stored,
+   * and the next change writes it again.
    */
   function handleSubmitStart() {
-    if (writeTimerRef.current) clearTimeout(writeTimerRef.current);
-    // #1999: sperr flushen. En `pagehide` rett etter publisering (redirecten
-    // ER en pagehide) ville ellers skrevet utkastet tilbake på vei ut.
+    if (writeTimerRef.current) {
+      clearTimeout(writeTimerRef.current);
+      writeTimerRef.current = null;
+    }
+    if (persists && !isNewCupFlow && draftJson !== lastWrittenRef.current) {
+      lastWrittenRef.current = draftJson;
+      saveWizardDraft(storageKey, draftSnapshot, draftContext, Date.now(), resume);
+    }
+    // #1999: sperr flushen mens innsendingen står åpen.
     submittedRef.current = true;
+  }
+
+  function handleSubmitResult(ok: boolean) {
+    if (!ok) {
+      // The draft is still stored; let the next change write it again.
+      submittedRef.current = false;
+      return;
+    }
     if (storageKey) clearWizardDraft(storageKey);
     lastWrittenRef.current = null;
     setSavedOk(false);
   }
+
+  // Audit 20.11 (p11): leaving while a submission is open means it succeeded
+  // (the redirect unmounts the wizard). A full reload runs no cleanup, so the
+  // draft survives exactly the case it is there for.
+  useEffect(() => {
+    return () => {
+      if (submittedRef.current && storageKey) clearWizardDraft(storageKey);
+    };
+  }, [storageKey]);
 
   // Neste-knappen gates per steg. Mangel-tekst under knappen henter første
   // element fra missingForPublish (mode-aware).
@@ -1518,6 +1545,7 @@ function WizardBody({
             mode={mode}
             onGoToStep={goToStep}
             onSubmitStart={handleSubmitStart}
+            onSubmitResult={handleSubmitResult}
           />
         </div>
       )}
