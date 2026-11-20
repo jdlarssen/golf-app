@@ -1,11 +1,96 @@
-import { describe, it, expect, vi } from 'vitest';
-import { buildSupabaseMock } from '@/tests/serverActionMocks';
-import { previousMonthPeriod, sendDigestForPeriod } from './digest';
+// @vitest-environment node
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import {
+  createAdminClientMock,
+  type QueryOp,
+  type QueryResponse,
+} from '@/lib/supabase/testing/adminClientMock';
 
-let adminMock: ReturnType<typeof buildSupabaseMock>;
-vi.mock('@/lib/supabase/admin', () => ({
-  getAdminClient: () => adminMock,
-}));
+/**
+ * Type A: the monthly newsletter (0246). The month is claimed before anything
+ * is sent, each recipient is claimed before their one send, a failed send gives
+ * the recipient back, and every read error throws. The mail itself has its own
+ * suite (`lib/mail/productUpdateDigest.test.ts`).
+ */
+
+type Db = {
+  updates: Record<string, unknown>[];
+  updatesError: boolean;
+  /** The month's row when it is already there, else the insert wins. */
+  existingDigest: { id: string; sent_at: string; completed_at: string | null } | null;
+  existingReadError: boolean;
+  users: Record<string, unknown>[];
+  usersError: boolean;
+};
+let db: Db;
+const reached = new Set<string>();
+
+const DIGEST = { id: 'digest-1', sent_at: '2026-11-01T07:00:00.000Z', completed_at: null };
+
+function respond(op: QueryOp): QueryResponse {
+  if (op.table === 'product_updates') {
+    return db.updatesError ? { error: { message: 'boom' } } : { data: db.updates };
+  }
+  if (op.table === 'product_update_digests' && op.kind === 'insert') {
+    return db.existingDigest
+      ? { error: { message: 'duplicate key value violates unique constraint', code: '23505' } as never }
+      : { data: DIGEST };
+  }
+  if (op.table === 'product_update_digests' && op.kind === 'select') {
+    return db.existingReadError ? { error: { message: 'timeout' } } : { data: db.existingDigest };
+  }
+  if (op.table === 'product_update_digests' && op.kind === 'update') return { data: null };
+  if (op.table === 'users') {
+    if (db.usersError) return { error: { message: 'boom' } };
+    return { data: op.range?.[0] === 0 ? db.users : [] };
+  }
+  if (op.table === 'product_update_digest_recipients') {
+    const userId = op.payload?.user_id as string | undefined;
+    if (op.kind === 'insert') {
+      if (reached.has(userId!)) {
+        return { error: { message: 'duplicate key value', code: '23505' } as never };
+      }
+      reached.add(userId!);
+      return { data: null };
+    }
+    if (op.kind === 'delete') {
+      reached.delete(op.filters.find((f) => f.column === 'user_id')!.value as string);
+      return { data: null };
+    }
+    return { data: null, count: reached.size };
+  }
+  throw new Error(`unexpected query: ${op.kind} ${op.table}`);
+}
+
+const fake = createAdminClientMock({ respond: (op) => respond(op) });
+vi.mock('@/lib/supabase/admin', () => ({ getAdminClient: () => fake.client }));
+vi.mock('@/lib/mail/productUpdateDigest', () => ({ sendProductUpdateDigest: vi.fn(async () => {}) }));
+vi.mock('./unsubscribeToken', () => ({ signUnsubToken: (id: string) => `token-${id}` }));
+
+import { sendProductUpdateDigest } from '@/lib/mail/productUpdateDigest';
+import { osloMonthStartIso, previousMonthPeriod, sendDigestForPeriod } from './digest';
+
+const mailMock = vi.mocked(sendProductUpdateDigest);
+const NOV_1 = Date.UTC(2026, 10, 1, 8);
+const user = (id: string) => ({ id, name: `${id} Nordmann`, email: `${id}@example.test`, locale: 'no' });
+const run = () => sendDigestForPeriod({ sentByUserId: null, nowMs: NOV_1 });
+const writes = (table: string, kind: QueryOp['kind']) =>
+  fake.ops.filter((op) => op.table === table && op.kind === kind);
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mailMock.mockReset();
+  fake.reset();
+  reached.clear();
+  db = {
+    updates: [{ id: 'pu1', title: 'Nytt', body: 'Tekst', link: null, cta_label: null }],
+    updatesError: false,
+    existingDigest: null,
+    existingReadError: false,
+    users: [user('ada'), user('bo')],
+    usersError: false,
+  };
+});
 
 describe('previousMonthPeriod', () => {
   it('mai-1 → forrige måned er april', () => {
@@ -50,21 +135,109 @@ describe('previousMonthPeriod', () => {
   });
 });
 
-describe('sendDigestForPeriod — feilet brukerlesing (#2227)', () => {
-  it('avviser og skriver ingen revisjonsrad når mottakerlista ikke kan leses', async () => {
-    adminMock = buildSupabaseMock([
-      { data: null }, // ingen tidligere utsendelse for perioden
-      { data: [{ id: 'pu1', title: 'Nytt', body: 'Tekst', link: null, cta_label: null }] },
-      { data: null, error: { message: 'boom' } }, // users
+describe('osloMonthStartIso', () => {
+  it('a winter month starts at 23:00 UTC the day before, a summer month at 22:00', () => {
+    expect(osloMonthStartIso(2026, 11)).toBe('2026-10-31T23:00:00.000Z');
+    expect(osloMonthStartIso(2026, 10)).toBe('2026-09-30T22:00:00.000Z');
+    expect(osloMonthStartIso(2026, 4)).toBe('2026-03-31T22:00:00.000Z');
+    expect(osloMonthStartIso(2026, 3)).toBe('2026-02-28T23:00:00.000Z');
+  });
+});
+
+describe('sendDigestForPeriod', () => {
+  it('reads the updates of the Oslo month, not the UTC month', async () => {
+    await run();
+    const read = fake.ops.find((op) => op.table === 'product_updates')!;
+    expect(read.filters).toEqual([
+      { op: 'gte', column: 'created_at', value: '2026-09-30T22:00:00.000Z' },
+      { op: 'lt', column: 'created_at', value: '2026-10-31T23:00:00.000Z' },
     ]);
+  });
 
-    await expect(
-      sendDigestForPeriod({ sentByUserId: null, nowMs: Date.UTC(2026, 9, 1, 8) }),
-    ).rejects.toThrow(/boom/);
+  it('claims the month before the first send, then marks it finished', async () => {
+    const claimedBeforeSend: boolean[] = [];
+    mailMock.mockImplementation(async () => {
+      claimedBeforeSend.push(writes('product_update_digests', 'insert').length === 1);
+    });
 
-    const auditInsert = adminMock.__fromCalls.find(
-      (c) => c.table === 'product_update_digests' && c.method === 'insert',
-    );
-    expect(auditInsert).toBeUndefined();
+    await expect(run()).resolves.toMatchObject({ kind: 'sent', recipientCount: 2, failedCount: 0 });
+
+    expect(claimedBeforeSend).toEqual([true, true]);
+    expect(writes('product_update_digests', 'insert')[0]!.payload).toMatchObject({
+      period_start: '2026-10-01',
+      period_end: '2026-10-31',
+      recipient_count: 0,
+      update_ids: ['pu1'],
+    });
+    const [close] = writes('product_update_digests', 'update');
+    expect(close!.payload).toMatchObject({ recipient_count: 2, completed_at: expect.any(String) });
+  });
+
+  it('a finished month is not sent again', async () => {
+    db.existingDigest = { ...DIGEST, completed_at: '2026-11-01T07:05:00.000Z' };
+    await expect(run()).resolves.toMatchObject({ kind: 'already_sent' });
+    expect(mailMock).not.toHaveBeenCalled();
+  });
+
+  it('a failed lookup of the month throws and sends nothing', async () => {
+    db.existingDigest = DIGEST;
+    db.existingReadError = true;
+    await expect(run()).rejects.toThrow(/timeout/);
+    expect(mailMock).not.toHaveBeenCalled();
+  });
+
+  it('a failed read of the updates throws, and nothing is claimed', async () => {
+    db.updatesError = true;
+    await expect(run()).rejects.toThrow(/boom/);
+    expect(writes('product_update_digests', 'insert')).toEqual([]);
+  });
+
+  it('two runs at once: a recipient the other run has is skipped, so nobody gets it twice', async () => {
+    db.existingDigest = DIGEST;
+    reached.add('ada');
+    await run();
+    expect(mailMock.mock.calls.map((c) => c[0].to)).toEqual(['bo@example.test']);
+  });
+
+  it('a failed send gives the recipient back, leaves the month open, and the next run sends only to them', async () => {
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mailMock.mockImplementation(async (p) => {
+      if (p.to === 'bo@example.test') throw new Error('rate limited');
+    });
+
+    await expect(run()).resolves.toMatchObject({ kind: 'sent', recipientCount: 1, failedCount: 1 });
+    const [close] = writes('product_update_digests', 'update');
+    expect(close!.payload).toEqual({ recipient_count: 1 });
+
+    // Day 2: the month is there and still open.
+    mailMock.mockReset();
+    fake.reset();
+    db.existingDigest = DIGEST;
+    await expect(run()).resolves.toMatchObject({ kind: 'sent', recipientCount: 2, failedCount: 0 });
+    expect(mailMock.mock.calls.map((c) => c[0].to)).toEqual(['bo@example.test']);
+    err.mockRestore();
+  });
+
+  it('a later run reaches only users who existed when the month was claimed', async () => {
+    db.existingDigest = DIGEST;
+    await run();
+    const read = fake.ops.find((op) => op.table === 'users')!;
+    expect(read.filters).toContainEqual({ op: 'lte', column: 'created_at', value: DIGEST.sent_at });
+  });
+
+  it('no updates in the month: nothing is claimed or sent', async () => {
+    db.updates = [];
+    await expect(run()).resolves.toMatchObject({ kind: 'no_updates' });
+    expect(writes('product_update_digests', 'insert')).toEqual([]);
+  });
+});
+
+describe('sendDigestForPeriod — feilet brukerlesing (#2227)', () => {
+  it('avviser og sender ingenting når mottakerlista ikke kan leses', async () => {
+    db.usersError = true;
+    await expect(run()).rejects.toThrow(/boom/);
+    expect(mailMock).not.toHaveBeenCalled();
+    // The month stays open, so the next day's run sends it.
+    expect(writes('product_update_digests', 'update')).toEqual([]);
   });
 });
