@@ -3,6 +3,7 @@ import { buildSupabaseMock } from '@/tests/serverActionMocks';
 import { createAdminClientMock } from '@/lib/supabase/testing/adminClientMock';
 import { buildGameFinishedRecipients } from './gameFinishedRecipients';
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
+import { computeLeaderboard } from '@/lib/scoring';
 
 // #2207: users.email is read with the admin client (getPrivateUserFields), for
 // the rows the caller's client returned. The fixtures below keep the address
@@ -239,6 +240,61 @@ describe('buildGameFinishedRecipients', () => {
       totalPoints: 3,
       totalPlayers: 2,
     });
+  });
+
+  it('modified stableford: mail rank and points match the leaderboard, not plain stableford', async () => {
+    // Two players, 2 holes, par 4, CH 0. The tables rank them opposite ways:
+    //   u1: gross 1, 6 → albatross + double → plain 5 + 0 = 5, modified 8 − 3 = 5
+    //   u2: gross 3, 3 → birdie + birdie    → plain 3 + 3 = 6, modified 2 + 2 = 4
+    const players = [
+      { user_id: 'u1', team_number: null, course_handicap: 0, users: { email: 'a@example.com', name: 'Ada' } },
+      { user_id: 'u2', team_number: null, course_handicap: 0, users: { email: 'b@example.com', name: 'Bjørn' } },
+    ];
+    const scores = [
+      { user_id: 'u1', hole_number: 1, strokes: 1 },
+      { user_id: 'u1', hole_number: 2, strokes: 6 },
+      { user_id: 'u2', hole_number: 1, strokes: 3 },
+      { user_id: 'u2', hole_number: 2, strokes: 3 },
+    ];
+    const holes = [
+      { hole_number: 1, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 1 },
+      { hole_number: 2, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 2 },
+    ];
+    const config: GameModeConfig = { kind: 'modified_stableford', team_size: 1, points_table: 'modified' };
+    const supabase = rosterClient([
+      { data: players, error: null },
+      { data: scores, error: null },
+      { data: holes, error: null },
+    ]);
+
+    const recipients = await buildGameFinishedRecipients(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      supabase as any,
+      'game-1',
+      { course_id: 'c1', game_mode: 'modified_stableford', mode_config: config },
+    );
+
+    // The results page runs the same mode router with the game's own mode.
+    const board = computeLeaderboard({
+      game: { id: 'game-1', game_mode: 'modified_stableford', mode_config: config },
+      players: players.map((p) => ({
+        userId: p.user_id, teamNumber: null, flightNumber: null, courseHandicap: 0,
+      })),
+      holes: holes.map((h) => ({
+        number: h.hole_number,
+        par: h.par_mens,
+        parByGender: { mens: h.par_mens, ladies: h.par_ladies, juniors: h.par_juniors },
+        strokeIndex: h.stroke_index,
+      })),
+      scores: scores.map((s) => ({ userId: s.user_id, holeNumber: s.hole_number, gross: s.strokes })),
+    });
+    if (board.kind !== 'stableford' || board.variant !== 'solo') throw new Error('unexpected board');
+    for (const line of board.players) {
+      const mail = recipients.find((r) => r.userId === line.userId)?.mode;
+      expect(mail).toMatchObject({ rank: line.rank, totalPoints: line.totalPoints });
+    }
+    expect(recipients.find((r) => r.userId === 'u1')?.mode).toMatchObject({ rank: 1, totalPoints: 5 });
+    expect(recipients.find((r) => r.userId === 'u2')?.mode).toMatchObject({ rank: 2, totalPoints: 4 });
   });
 
   it('stableford: dropper spillere uten email (mode-info gjelder kun rendret resultat)', async () => {

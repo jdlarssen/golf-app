@@ -340,7 +340,7 @@ export async function buildGameFinishedRecipients(
   if (!data) return [];
 
   const result = computeLeaderboard(
-    rankedLeaderboardInput(gameId, 'stableford', game.mode_config, playerRows, data),
+    rankedLeaderboardInput(gameId, game.game_mode, game.mode_config, playerRows, data),
   );
 
   if (result.kind !== 'stableford') {
