@@ -348,9 +348,7 @@ describe('POST /api/friends/by-email', () => {
   const COMPLETED = { data: { name: 'Jørgen', profile_completed_at: '2026-01-01T00:00:00Z' }, error: null };
   const body = { email: 'Kari@Example.com' };
   const callerClient = () =>
-    buildSupabaseMock([], { email_is_invited: false }, {
-      byTable: { users: [COMPLETED], invitations: [{ data: [], error: null }, { error: null }] },
-    });
+    buildSupabaseMock([], { email_is_invited: false }, { byTable: { users: [COMPLETED] } });
 
   beforeEach(() => {
     privateFieldsMock.mockResolvedValue(new Map([[ME, { email: 'jorgen@example.com', friendCode: 'kode1234' }]]));
@@ -385,6 +383,8 @@ describe('POST /api/friends/by-email', () => {
     expect(lookupMock).toHaveBeenCalledWith('friend_request_by_email', {
       p_requester: ME,
       p_email: 'kari@example.com',
+      p_token: expect.any(String),
+      p_expires_at: expect.any(String),
     });
     for (const task of afterTasks) await task();
     expect(notifyMock).toHaveBeenCalledWith(

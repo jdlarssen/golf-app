@@ -109,17 +109,12 @@ describe('sendRequest', () => {
 describe('addByEmail (0252)', () => {
   const COMPLETED = { data: { name: 'Jørgen', profile_completed_at: '2026-01-01T00:00:00Z' }, error: null };
 
-  /** The caller's own client: profile, own open invitations, the insert. */
-  function callerClient(over: { mine?: unknown[]; invitedElsewhere?: boolean; insertError?: unknown } = {}) {
+  /** The caller's own client: the profile and the cross-door dedup. It writes nothing. */
+  function callerClient(over: { invitedElsewhere?: boolean } = {}) {
     return buildSupabaseMock(
       [],
       { email_is_invited: over.invitedElsewhere ?? false },
-      {
-        byTable: {
-          users: [COMPLETED],
-          invitations: [{ data: over.mine ?? [], error: null }, { error: over.insertError ?? null }],
-        },
-      },
+      { byTable: { users: [COMPLETED] } },
     );
   }
 
@@ -142,29 +137,29 @@ describe('addByEmail (0252)', () => {
     };
   }
 
-  // The rule the migration exists for: the caller gets one answer and writes
-  // one row, whatever the lookup found.
+  // The rule the migration exists for: the caller gets one answer, whatever
+  // the lookup found. The request and the receipt row are one call to the
+  // database (one transaction), so the caller's own client writes nothing.
   it.each([
     ['unknown', null],
     ['requested', OTHER],
     ['already_pending', OTHER],
     ['already_friends', OTHER],
     ['accepted', OTHER],
-  ] as const)('answers «requested» and writes one invitation row when the lookup finds «%s»', async (outcome, target) => {
+  ] as const)('answers «requested» when the lookup finds «%s»', async (outcome, target) => {
     lookupFinds(outcome, target);
     const client = callerClient();
     const later = deferred();
 
     expect(await addByEmail(client as never, ME, '  Kari@Example.COM ', later.defer)).toBe('requested');
+    expect(admin.rpc).toHaveBeenCalledTimes(1);
     expect(admin.rpc).toHaveBeenCalledWith('friend_request_by_email', {
       p_requester: ME,
       p_email: 'kari@example.com',
+      p_token: expect.any(String),
+      p_expires_at: expect.any(String),
     });
-    const inserts = client.__fromCalls.filter((c) => c.method === 'insert');
-    expect(inserts).toHaveLength(1);
-    expect(inserts[0].args[0]).toEqual(
-      expect.objectContaining({ email: 'kari@example.com', invited_by: ME, game_id: null }),
-    );
+    expect(client.__fromCalls.filter((c) => c.method === 'insert')).toHaveLength(0);
     // Nothing is sent before the answer: the shell runs it afterwards.
     expect(later.count()).toBe(1);
     expect(notifyMock).not.toHaveBeenCalled();
@@ -191,7 +186,20 @@ describe('addByEmail (0252)', () => {
     await later.run();
 
     expect(sendInviteNotificationMock).not.toHaveBeenCalled();
-    expect(client.__fromCalls.filter((c) => c.method === 'insert')).toHaveLength(1);
+  });
+
+  it('the mail carries the token and the deadline of the receipt row', async () => {
+    lookupFinds('unknown', null);
+    const later = deferred();
+    await addByEmail(callerClient() as never, ME, 'ny@example.com', later.defer);
+    await later.run();
+    const sent = (admin.rpc as ReturnType<typeof vi.fn>).mock.calls[0][1] as {
+      p_token: string;
+      p_expires_at: string;
+    };
+    expect(sendInviteNotificationMock).toHaveBeenCalledWith(
+      expect.objectContaining({ inviteToken: sent.p_token, expiresAt: sent.p_expires_at }),
+    );
   });
 
   it.each([
@@ -219,13 +227,10 @@ describe('addByEmail (0252)', () => {
     },
   );
 
-  it('answers «requested» and does nothing more when the caller already asked this address', async () => {
-    lookupFinds('requested', OTHER);
-    const client = callerClient({ mine: [{ id: 'inv-1' }] });
+  it('answers «requested» and sends nothing when the caller already asked this address', async () => {
+    lookupFinds('already_sent', null);
     const later = deferred();
-    expect(await addByEmail(client as never, ME, 'kari@example.com', later.defer)).toBe('requested');
-    expect(admin.rpc).not.toHaveBeenCalled();
-    expect(client.__fromCalls.filter((c) => c.method === 'insert')).toHaveLength(0);
+    expect(await addByEmail(callerClient() as never, ME, 'kari@example.com', later.defer)).toBe('requested');
     expect(later.count()).toBe(0);
   });
 
@@ -262,25 +267,16 @@ describe('addByEmail (0252)', () => {
     const client = callerClient();
     expect(await addByEmail(client as never, ME, 'kari@example.com', deferred().defer)).toBe('quota');
     expect(admin.rpc).not.toHaveBeenCalled();
-    expect(client.__fromCalls.filter((c) => c.method === 'insert')).toHaveLength(0);
   });
 
-  it('answers «error» and sends nothing when the lookup fails', async () => {
+  // The request and the receipt are one transaction in the database
+  // (supabase/tests/friend_requests_by_email_test.sql proves that a failed
+  // receipt leaves no request). Here: a failed call sends nothing.
+  it('answers «error» and sends nothing when the one call fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     admin = buildSupabaseMock([], {}, { rpcErrors: { friend_request_by_email: { message: 'nede' } } });
-    const client = callerClient();
     const later = deferred();
-    expect(await addByEmail(client as never, ME, 'kari@example.com', later.defer)).toBe('error');
-    expect(client.__fromCalls.filter((c) => c.method === 'insert')).toHaveLength(0);
-    expect(later.count()).toBe(0);
-  });
-
-  it('answers «error» and sends nothing when the row is not written', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    lookupFinds('unknown', null);
-    const later = deferred();
-    const client = callerClient({ insertError: { message: 'nede' } });
-    expect(await addByEmail(client as never, ME, 'ny@example.com', later.defer)).toBe('error');
+    expect(await addByEmail(callerClient() as never, ME, 'kari@example.com', later.defer)).toBe('error');
     expect(later.count()).toBe(0);
   });
 
@@ -408,9 +404,7 @@ describe('inviteByEmail (the route for app builds from before 0252)', () => {
   const COMPLETED = { data: { name: 'Jørgen', profile_completed_at: '2026-01-01T00:00:00Z' }, error: null };
   const noDefer = () => {};
   const client = () =>
-    buildSupabaseMock([], { email_is_invited: false }, {
-      byTable: { users: [COMPLETED], invitations: [{ data: [], error: null }, { error: null }] },
-    });
+    buildSupabaseMock([], { email_is_invited: false }, { byTable: { users: [COMPLETED] } });
 
   it.each(['unknown', 'requested'] as const)('answers «invited» whatever the lookup finds (%s)', async (outcome) => {
     admin = buildSupabaseMock([ACTOR_ROW], {

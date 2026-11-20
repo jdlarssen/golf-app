@@ -6,6 +6,7 @@ import { consumeLoginRateLimit } from '@/lib/auth/loginRateLimit';
 import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 import type { SendLoginCodeError } from '@/lib/auth/loginCodeErrors';
+import { withoutReceiptsForExistingAccount } from './invitationConsume';
 
 // «Send meg kode» — ett hjem for sperrene (#2216).
 //
@@ -149,29 +150,63 @@ export async function sendLoginCode({
     return { ok: false, code };
   }
 
-  // Best-effort: stamp opened_at on the matching pending invitation row so
-  // admins can see "has requested a code" vs "mail never acted on".
-  // Uses the service-role client because the user has no session yet at this
-  // point — RLS cannot grant write access to a pre-auth visitor.
-  // We only set it once (is null guard), so repeated OTP requests don't
-  // overwrite the first-open timestamp.
-  // postgrest-js returns a DB error instead of throwing it, so the error is
-  // read here; the catch only sees synchronous throws (missing env). 0 rows is
-  // normal: no invitation, or opened_at is already set.
+  await stampOpenedInvitations(email);
+
+  return { ok: true };
+}
+
+/**
+ * Best-effort: stamp opened_at on the matching pending invitation row so
+ * admins can see "has requested a code" vs "mail never acted on".
+ * Uses the service-role client because the user has no session yet at this
+ * point — RLS cannot grant write access to a pre-auth visitor.
+ * We only set it once (is null guard), so repeated OTP requests don't
+ * overwrite the first-open timestamp.
+ * postgrest-js returns a DB error instead of throwing it, so the error is
+ * read here; the catch only sees synchronous throws (missing env). 0 rows is
+ * normal: no invitation, or opened_at is already set.
+ *
+ * 0252: a game-less invitation written after the account existed is the
+ * sender's receipt for «Legg til venn på e-post», and a login leaves it
+ * alone (`afterLogin`). The stamp follows the same rule, so the receipt
+ * stays as it was written. An invitation the person is joining on is older
+ * than the account (or there is no account row yet) and gets its stamp.
+ */
+async function stampOpenedInvitations(email: string): Promise<void> {
   try {
     const adminClient = getAdminClient();
-    const { error: stampError } = await adminClient
-      .from('invitations')
-      .update({ opened_at: new Date().toISOString() })
-      .filter('email', 'imatch', emailMatchPattern(email))
-      .is('accepted_at', null)
-      .is('opened_at', null);
-    if (stampError) {
-      console.error('[sendLoginCode] opened_at stamp failed', stampError);
+    const [{ data: open, error: openError }, { data: account, error: accountError }] =
+      await Promise.all([
+        adminClient
+          .from('invitations')
+          .select('id, game_id, created_at')
+          .filter('email', 'imatch', emailMatchPattern(email))
+          .is('accepted_at', null)
+          .is('opened_at', null)
+          .returns<{ id: string; game_id: string | null; created_at: string }[]>(),
+        adminClient
+          .from('users')
+          .select('created_at')
+          .filter('email', 'imatch', emailMatchPattern(email))
+          .maybeSingle<{ created_at: string }>(),
+      ]);
+    if (openError || accountError) {
+      // Without the account's age a receipt cannot be told apart: no stamp.
+      console.error('[sendLoginCode] opened_at stamp failed', openError ?? accountError);
+    } else {
+      const ids = withoutReceiptsForExistingAccount(open ?? [], account).map((inv) => inv.id);
+      if (ids.length > 0) {
+        const { error: stampError } = await adminClient
+          .from('invitations')
+          .update({ opened_at: new Date().toISOString() })
+          .in('id', ids)
+          .is('opened_at', null);
+        if (stampError) {
+          console.error('[sendLoginCode] opened_at stamp failed', stampError);
+        }
+      }
     }
   } catch (err) {
     console.error('[sendLoginCode] opened_at stamp failed', err);
   }
-
-  return { ok: true };
 }

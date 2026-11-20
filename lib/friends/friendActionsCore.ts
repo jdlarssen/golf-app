@@ -8,7 +8,6 @@ import { getQuotaState } from '@/lib/invitations/quota';
 import { sendInviteNotification } from '@/lib/mail/inviteNotification';
 import { notify } from '@/lib/notifications/notify';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 import { displayNameForOthers } from '@/lib/users/displayName';
 import { getPrivateUserFields } from '@/lib/users/privateUserFields';
 import {
@@ -226,6 +225,7 @@ export type Defer = (task: () => Promise<void>) => void;
 type LookupOutcome =
   | 'unknown'
   | 'self'
+  | 'already_sent'
   | 'already_friends'
   | 'accepted'
   | 'requested'
@@ -234,6 +234,7 @@ type LookupOutcome =
 const LOOKUP_OUTCOMES: readonly string[] = [
   'unknown',
   'self',
+  'already_sent',
   'already_friends',
   'accepted',
   'requested',
@@ -248,6 +249,7 @@ const LOOKUP_OUTCOMES: readonly string[] = [
  * lese etterpå:
  *
  * - Hver adresse gir én rad i `invitations` (den teller på dagskvoten), uansett.
+ *   Raden skrives i samme transaksjon som forespørselen.
  * - Forespørselen (`friendships.by_email`) leses av mottakeren. Avsenderen ser
  *   den først når den er godtatt.
  * - Oppslaget gjøres av tjenesterollen (`friend_request_by_email`), og
@@ -291,24 +293,6 @@ export async function addByEmail(
     const quota = await getQuotaState(client, userId);
     if (quota.isExhausted) return 'quota';
 
-    // Asked this address already, and the invitation is still open: the
-    // answer is the same and nothing is sent twice.
-    const { data: mine, error: mineError } = await client
-      .from('invitations')
-      .select('id')
-      .eq('invited_by', userId)
-      .is('game_id', null)
-      .is('accepted_at', null)
-      .gt('expires_at', new Date().toISOString())
-      .filter('email', 'imatch', emailMatchPattern(email))
-      .limit(1)
-      .returns<{ id: string }[]>();
-    if (mineError) {
-      console.error('[venner] own invitation lookup failed', mineError);
-      return 'error';
-    }
-    if (mine && mine.length > 0) return 'requested';
-
     // Shared cross-door dedup (#348): an address someone else has an open
     // invitation to gets no second mail. Read before our own row lands.
     const { data: invitedElsewhere, error: invitedError } = await client.rpc('email_is_invited', {
@@ -319,9 +303,15 @@ export async function addByEmail(
       return 'error';
     }
 
+    // The lookup and the sender's receipt are one call and one transaction
+    // (0252): the request and the receipt row both land, or neither does.
+    // Token is required NOT NULL UNIQUE; the actual OTP code is sent by
+    // Supabase when the invitee reaches /login and asks for one.
+    const expiresAt = inviteExpiresAtFromNow();
+    const inviteToken = randomUUID();
     const { data: lookup, error: lookupError } = await getAdminClient().rpc(
       'friend_request_by_email',
-      { p_requester: userId, p_email: email },
+      { p_requester: userId, p_email: email, p_token: inviteToken, p_expires_at: expiresAt },
     );
     if (lookupError) {
       console.error('[venner] friend_request_by_email failed', lookupError);
@@ -334,23 +324,9 @@ export async function addByEmail(
     }
     const outcome = result.outcome as LookupOutcome;
     if (outcome === 'self') return 'self';
-
-    // Audit log. Token is required NOT NULL UNIQUE; we generate a uuid here
-    // just to satisfy the column. The actual OTP code is sent by Supabase
-    // when the invitee reaches /login and asks for one.
-    const expiresAt = inviteExpiresAtFromNow();
-    const inviteToken = randomUUID();
-    const { error: insertError } = await client.from('invitations').insert({
-      email,
-      token: inviteToken,
-      invited_by: userId,
-      game_id: null,
-      expires_at: expiresAt,
-    });
-    if (insertError) {
-      console.error('[venner] invitation insert failed', insertError);
-      return 'error';
-    }
+    // Asked this address already, and the receipt is still open: the answer
+    // is the same and nothing is sent twice.
+    if (outcome === 'already_sent') return 'requested';
 
     // null → «En venn» in the recipient's language (the mail fills it in).
     const inviterName = profile.name?.trim() || null;

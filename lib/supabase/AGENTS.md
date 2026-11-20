@@ -132,7 +132,8 @@ Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
 
 - «Legg til venn på e-post» svarer likt for alle adresser. Oppslaget er `friend_request_by_email`, som bare tjenesterollen kaller, og utfallet forlater aldri serveren: `addByEmail` i `lib/friends/friendActionsCore.ts` svarer `requested` uansett, skriver én rad i `invitations` per adresse og sender varselet eller invitasjonen etter at svaret er gitt. Ikke gi en innlogget klient en funksjon som svarer på om en adresse har konto.
 - En forespørsel sendt på e-post (`friendships.by_email`) leses av mottakeren. Avsenderen leser den først når den er godtatt (RLS). Serverlesinger med tjenesterollen ser raden, så lister som bygges for avsenderen, spør `isUnansweredEmailRequestFrom` (`lib/friends/friendGraph.ts`).
-- Invitasjonsraden til en adresse som alt hadde konto, er bare avsenderens kvittering. Innloggingen lar den ligge (`isReceiptForExistingAccount` i `lib/auth/invitationConsume.ts`).
+- Forespørselen og kvitteringsraden i `invitations` skrives i samme kall og samme transaksjon (`friend_request_by_email`): begge lander, eller ingen.
+- Invitasjonsraden til en adresse som alt hadde konto, er bare avsenderens kvittering. Verken kodeforespørselen (`opened_at`-stempelet i `sendLoginCode`) eller innloggingen (`afterLogin`) rører den; begge spør `lib/auth/invitationConsume.ts`. Når forespørselen godtas, merkes kvitteringen godtatt, som når en invitert blir med.
 - Bare et godkjent vennskap gjør to personer til venner når et roster fylles. Regelen har to hjem som endres sammen: `is_invite_eligible` i databasen og `getInviteEligibleIds` (`getFriendIds`) i app-koden. `lib/friends/inviteEligibilityRule.test.ts` holder dem like.
 - `email_is_registered` og `email_is_in_auth_users` kalles bare av tjenesterollen.
 - Fasit: `supabase/tests/friend_requests_by_email_test.sql`.

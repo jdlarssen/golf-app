@@ -73,7 +73,8 @@ export async function sendInvitation(formData: FormData) {
   }
 
   // Shared cross-door dedup (#348): email_is_invited is the SECURITY DEFINER
-  // RPC the friend door (app/invite/actions.ts) and the login flow also use,
+  // RPC the friend door (`addByEmail` in lib/friends/friendActionsCore.ts) and
+  // the login flow also use,
   // so all three agree on what "already invited" means (open = not-accepted
   // AND not-expired). Stops a second invite-mail when a friend-invite already
   // exists, without needing a UNIQUE constraint on invitations.email. An

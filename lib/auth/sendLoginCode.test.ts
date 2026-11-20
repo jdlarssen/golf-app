@@ -29,10 +29,21 @@ vi.mock('@/lib/auth/loginRateLimit', () => ({
 
 /** Svaret på oppslaget etter en utløpt invitasjon (`null` = ingen). */
 let expiredInvite: { id: string } | null = null;
+/** 0252: de åpne, ustemplede invitasjonene på adressen, og kontoen bak den. */
+let openInvites: { id: string; game_id: string | null; created_at: string }[] = [];
+let account: { created_at: string } | null = null;
+let accountError: { message: string } | null = null;
 
 function respond(op: QueryOp): QueryResponse {
-  if (op.table === 'invitations' && op.kind === 'select') return { data: expiredInvite };
+  // Stempelet leser de åpne radene (filter på `opened_at`); det andre
+  // oppslaget er letingen etter en utløpt invitasjon.
+  if (op.table === 'invitations' && op.kind === 'select') {
+    return op.filters.some((f) => f.column === 'opened_at')
+      ? { data: openInvites }
+      : { data: expiredInvite };
+  }
   if (op.table === 'invitations' && op.kind === 'update') return { data: null };
+  if (op.table === 'users' && op.kind === 'select') return { data: account, error: accountError };
   throw new Error(`uventet spørring: ${op.kind} ${op.table}`);
 }
 
@@ -63,6 +74,9 @@ beforeEach(() => {
   vi.unstubAllEnvs();
   admin.reset();
   expiredInvite = null;
+  openInvites = [];
+  account = null;
+  accountError = null;
   consumeLoginRateLimitMock.mockResolvedValue({ ok: true });
   rpcMock.mockResolvedValue({ data: false, error: null });
   signInWithOtpMock.mockResolvedValue({ error: null });
@@ -90,6 +104,8 @@ describe('sendLoginCode', () => {
   it('bryter av, invitert → ny konto tillatt, og invitasjonen stemples opened_at', async () => {
     vi.stubEnv('NEXT_PUBLIC_ALLOW_SELF_REGISTRATION', 'false');
     rpcMock.mockResolvedValue({ data: true, error: null });
+    openInvites = [{ id: 'inv-1', game_id: null, created_at: '2026-02-20T10:00:00.000Z' }];
+    account = { created_at: '2026-03-01T10:00:00.000Z' };
 
     expect(await send('invitert@example.com')).toEqual({ ok: true });
     expect(rpcMock).toHaveBeenCalledWith('email_is_invited', {
@@ -98,6 +114,46 @@ describe('sendLoginCode', () => {
     expect(shouldCreateUser()).toBe(true);
     const stamp = admin.ops.find((op) => op.table === 'invitations' && op.kind === 'update');
     expect(stamp?.payload).toHaveProperty('opened_at');
+    expect(stamp?.filters.find((f) => f.op === 'in')?.value).toEqual(['inv-1']);
+  });
+
+  // 0252: «Legg til venn på e-post» writes one game-less invitation for every
+  // address. For a person who already had an account it is the sender's
+  // receipt, and a code request must leave it as it was written.
+  it('stempler ikke en kvittering til en adresse som alt hadde konto', async () => {
+    vi.stubEnv('NEXT_PUBLIC_ALLOW_SELF_REGISTRATION', 'true');
+    rpcMock.mockResolvedValue({ data: true, error: null });
+    account = { created_at: '2026-03-01T10:00:00.000Z' };
+    openInvites = [{ id: 'kvittering', game_id: null, created_at: '2026-03-05T10:00:00.000Z' }];
+
+    expect(await send('kari@example.com')).toEqual({ ok: true });
+    expect(admin.ops.filter((op) => op.kind === 'update')).toEqual([]);
+  });
+
+  it('stempler spillinvitasjonen og den personen ble med på, og lar kvitteringen ligge', async () => {
+    vi.stubEnv('NEXT_PUBLIC_ALLOW_SELF_REGISTRATION', 'true');
+    rpcMock.mockResolvedValue({ data: true, error: null });
+    account = { created_at: '2026-03-01T10:00:00.000Z' };
+    openInvites = [
+      { id: 'kvittering', game_id: null, created_at: '2026-03-05T10:00:00.000Z' },
+      { id: 'spill', game_id: 'g-1', created_at: '2026-03-05T10:00:00.000Z' },
+      { id: 'ble-med', game_id: null, created_at: '2026-02-20T10:00:00.000Z' },
+    ];
+
+    await send('kari@example.com');
+    const stamp = admin.ops.find((op) => op.table === 'invitations' && op.kind === 'update');
+    expect(stamp?.filters.find((f) => f.op === 'in')?.value).toEqual(['spill', 'ble-med']);
+  });
+
+  it('stempler ingenting når kontoens alder ikke kan leses', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubEnv('NEXT_PUBLIC_ALLOW_SELF_REGISTRATION', 'true');
+    rpcMock.mockResolvedValue({ data: true, error: null });
+    openInvites = [{ id: 'kvittering', game_id: null, created_at: '2026-03-05T10:00:00.000Z' }];
+    accountError = { message: 'nede' };
+
+    expect(await send('kari@example.com')).toEqual({ ok: true });
+    expect(admin.ops.filter((op) => op.kind === 'update')).toEqual([]);
   });
 
   it('bryter på, ikke invitert → ny konto tillatt', async () => {
