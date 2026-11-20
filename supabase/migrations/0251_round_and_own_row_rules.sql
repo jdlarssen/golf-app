@@ -27,8 +27,8 @@
 --       no handicap result, not delivered, not withdrawn, not paid
 --     - on their own row a player does not change tee_gender after the start
 --       (the twin of course_handicap, 0103), does not write a rejection
---       reason (clearing it on re-delivery stays), and does not take back or
---       re-stamp accepted_at
+--       reason (clearing it on re-delivery stays), and does not take back
+--       accepted_at (writing it again stays: the app's publish retry does)
 --
 --   scores
 --     - a new row never carries a client_updated_at more than 5 minutes ahead
@@ -204,11 +204,13 @@ as $$
           using errcode = 'insufficient_privilege';
       end if;
 
-      -- Confirmed once. Taking it back or re-stamping it is not a player move.
-      if new.accepted_at is distinct from old.accepted_at
+      -- A confirmation is not taken back. Writing it again is fine: the
+      -- app's publish retry upserts the organiser's own confirmed row with a
+      -- fresh stamp (replacePlayers, #1954).
+      if new.accepted_at is null
          and old.accepted_at is not null then
         raise exception
-          'A player cannot take back or change their own accepted_at (game_players.accepted_at)'
+          'A player cannot take back their own accepted_at (game_players.accepted_at)'
           using errcode = 'insufficient_privilege';
       end if;
     end if;
@@ -223,7 +225,7 @@ comment on function public.guard_game_players_system_columns() is
   'or payment columns). UPDATE on any row: result_summary, signup_source and '
   'deliver_reminder_sent_at are system-written. UPDATE on the own row: no '
   'tee_gender change after the start, no rejection reason written, accepted_at '
-  'set once. Works next to guard_game_players_self_update (0191) and '
+  'never cleared. Works next to guard_game_players_self_update (0191) and '
   'guard_game_players_score_differential (0117); it does not replace them.';
 
 revoke execute on function public.guard_game_players_system_columns() from public, anon, authenticated;
@@ -360,8 +362,45 @@ alter table public.users
   add column if not exists guest_created_by uuid references public.users(id) on delete set null;
 
 comment on column public.users.guest_created_by is
-  'Audit 20.11: the user who made this guest (createGuestUser). Read and '
-  'written by the service role only; no client has SELECT on it (0186).';
+  'Audit 20.11: the user who made this guest (createGuestUser). No client has '
+  'SELECT on it (0186), and only the service role and global admins write it '
+  '(guard_users_guest_created_by).';
+
+-- The table grant lets a signed-in user update their own users row, so the
+-- column gets the same kind of lock as is_guest (guard_users_self_update).
+-- Its own trigger, so that guard's body is not copied here.
+create or replace function public.guard_users_guest_created_by()
+  returns trigger
+  language plpgsql
+  security definer
+  set search_path = ''
+as $$
+  begin
+    if auth.uid() is null or public.is_admin() then
+      return new;
+    end if;
+
+    if (tg_op = 'INSERT' and new.guest_created_by is not null)
+       or (tg_op = 'UPDATE' and new.guest_created_by is distinct from old.guest_created_by) then
+      raise exception
+        'guest_created_by is written by the server when a guest is made (public.users.guest_created_by)'
+        using errcode = 'insufficient_privilege';  -- SQLSTATE 42501
+    end if;
+
+    return new;
+  end;
+$$;
+
+comment on function public.guard_users_guest_created_by() is
+  'Audit 20.11: BEFORE INSERT OR UPDATE OF guest_created_by on users. A '
+  'signed-in non-admin never sets or changes who made a guest.';
+
+revoke execute on function public.guard_users_guest_created_by() from public, anon, authenticated;
+
+drop trigger if exists guard_users_guest_created_by on public.users;
+create trigger guard_users_guest_created_by
+  before insert or update of guest_created_by on public.users
+  for each row execute function public.guard_users_guest_created_by();
 
 create index if not exists users_guest_created_by_idx
   on public.users (guest_created_by)

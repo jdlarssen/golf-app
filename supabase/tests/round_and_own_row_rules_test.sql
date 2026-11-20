@@ -29,6 +29,7 @@
 --   21  a player clears the rejection reason (re-delivery)
 --   22  a player confirms (accepted_at null → set)
 --   23  a player does not take the confirmation back            → 42501
+--       (writing it again is allowed: case 44)
 --   24  a player does not stamp deliver_reminder_sent_at        → 42501
 --   25  the service role writes result_summary
 --
@@ -60,6 +61,12 @@
 --   42  the purge deletes a bucket older than 2 days and keeps a fresh one
 --   43  a client cannot call the purge                        → 42501
 --
+-- added after review
+--   44  the organiser's publish retry writes their own confirmed row again
+--       (accepted_at set → set, the app's replacePlayers upsert)
+--   45  a player cannot write users.guest_created_by on their own row → 42501
+--   46  the service role writes it
+--
 -- Run via:  supabase test db   (see supabase/tests/README.md)
 -- ─────────────────────────────────────────────────────────────────────────────
 
@@ -67,7 +74,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(43);
+select plan(46);
 
 \ir fixtures/rls_helpers.psql
 
@@ -123,6 +130,22 @@ create or replace function torny_rls.rows_of(p_sql text) returns int
     when insufficient_privilege then return -1;
   end;
   $$;
+
+-- rr_retry_upsert(): the roster upsert of the app's publish retry
+-- (replacePlayers), for the caller's own row in the scheduled round.
+create or replace function torny_rls.rr_retry_upsert() returns int
+  language sql as $f$
+  select torny_rls.rows_of(format(
+    $q$insert into public.game_players (game_id, user_id, team_number, flight_number, tee_gender, course_handicap, accepted_at)
+       values (%L, %L, 1, 1, 'ladies', null, clock_timestamp())
+       on conflict (game_id, user_id) do update
+         set team_number = excluded.team_number,
+             flight_number = excluded.flight_number,
+             tee_gender = excluded.tee_gender,
+             course_handicap = excluded.course_handicap,
+             accepted_at = excluded.accepted_at$q$,
+    torny_rls.rr_scheduled(), torny_rls.active_id()));
+$f$;
 
 grant execute on all functions in schema torny_rls to authenticated, anon, service_role;
 
@@ -440,6 +463,31 @@ select throws_ok(
   $q$select public.purge_admin_action_rate_limit()$q$,
   '42501', null,
   'a client cannot call the purge'
+);
+
+-- ── added after review ───────────────────────────────────────────────────────
+-- The app's publish retry (replacePlayers) upserts every roster row again,
+-- the organiser's own confirmed row included, with a fresh accepted_at.
+select torny_rls.as_user(torny_rls.active_id());
+-- First run: the row is confirmed (null → set). Second run: set → set.
+do $$ begin perform torny_rls.rr_retry_upsert(); end $$;
+select is(
+  torny_rls.rr_retry_upsert(),
+  1, 'the organiser''s publish retry writes their own confirmed row again'
+);
+
+select throws_ok(
+  format($q$update public.users set guest_created_by = %L where id = %L$q$,
+         torny_rls.flightmate_id(), torny_rls.active_id()),
+  '42501', null,
+  'a player cannot write users.guest_created_by on their own row'
+);
+
+select torny_rls.as_service();
+select is(
+  torny_rls.rows_of(format($q$update public.users set guest_created_by = %L where id = %L$q$,
+                           torny_rls.active_id(), torny_rls.rr_guest())),
+  1, 'the service role writes users.guest_created_by'
 );
 
 select * from finish();
