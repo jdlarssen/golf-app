@@ -91,7 +91,13 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
 }
 
 // Re-eksporter eksisterende helpers for bakoverkompatibilitet og enklere bruk.
-export { calculateCourseHandicap, applyAllowance } from './courseHandicap';
+export {
+  calculateCourseHandicap,
+  rawCourseHandicap,
+  applyAllowance,
+  playingHandicapFromRaw,
+  playingHandicap,
+} from './courseHandicap';
 export { strokesForHole, allStrokeAllocations } from './strokeAllocation';
 export { rankTeams, ranksByNetToPar } from './tiebreaker';
 export { holesForSegment } from './holeSegment';

@@ -1,8 +1,8 @@
 import { expireGameCache } from './expireGameCache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import {
-  calculateCourseHandicap,
-  applyAllowance,
+  rawCourseHandicap,
+  playingHandicapFromRaw,
 } from '@/lib/scoring/courseHandicap';
 import { greensomeTeamHandicap } from '@/lib/scoring/modes/greensomeMatchplay';
 import {
@@ -59,7 +59,7 @@ export interface RecomputeUpdate {
  *   - the tee rating-set for the player's gender must resolve — otherwise there
  *     is no formula input, and we leave the existing value rather than null it.
  *
- * Composes the exact freeze pipeline (`calculateCourseHandicap` → `applyAllowance`)
+ * Composes the exact freeze pipeline (`rawCourseHandicap` → `playingHandicapFromRaw`)
  * so a recomputed value is identical to what `startScheduledGame` would have
  * frozen — no formula fork, no drift.
  */
@@ -77,7 +77,7 @@ export function planHandicapRecompute(
     const rating = getRatingForGender(row.teeRatings, row.teeGender);
     if (!rating) continue;
 
-    const raw = calculateCourseHandicap({
+    const raw = rawCourseHandicap({
       hcpIndex: newHcpIndex,
       slope: rating.slope,
       courseRating: rating.courseRating,
@@ -85,7 +85,7 @@ export function planHandicapRecompute(
     });
     updates.push({
       gameId: row.gameId,
-      courseHandicap: applyAllowance(raw, row.allowancePct, row.maxStrokes),
+      courseHandicap: playingHandicapFromRaw(raw, row.allowancePct, row.maxStrokes),
     });
   }
   return updates;
@@ -181,7 +181,7 @@ export function planGreensomeOverrideRecompute(
     // this comparison come from different pipelines. The STORED value was
     // computed by cup generation from *raw* course handicaps (no allowance
     // applied), while `previous`/`teammate` are the *frozen*
-    // `game_players.course_handicap` — i.e. after `applyAllowance`. They can
+    // `game_players.course_handicap` — i.e. after the game allowance. They can
     // only ever be equal when `games.hcp_allowance_pct` is 100, which every
     // cup greensome has: `cupMatchAllowance` puts the greensome allowance in
     // `mode_config.allowance_pct` and pins the games-row column at 100

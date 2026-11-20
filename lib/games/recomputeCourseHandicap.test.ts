@@ -79,6 +79,23 @@ describe('planHandicapRecompute (#1176)', () => {
     ).toEqual([{ gameId: 'g-active', courseHandicap: 32 }]);
   });
 
+  it('#2924: takes the share of the unrounded course handicap, as the freeze does', () => {
+    // A league tee: 12.1 × 125 / 113 + (70 − 72) = 11.385; 75 % = 8.539 → 9.
+    // Rounding the course handicap first (11 × 75 % = 8.25) would give 8.
+    const leagueTee: TeeBoxRatings = {
+      ...TEE,
+      slope_mens: 125,
+      course_rating_mens: 70,
+      par_total_mens: 72,
+    };
+    expect(
+      planHandicapRecompute(
+        [activeRow({ teeRatings: leagueTee, allowancePct: 75, maxStrokes: 32 })],
+        12.1,
+      ),
+    ).toEqual([{ gameId: 'g-active', courseHandicap: 9 }]);
+  });
+
   it.each([
     ['finished', 'finished' as const],
     ['scheduled', 'scheduled' as const],

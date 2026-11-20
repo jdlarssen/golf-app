@@ -1,8 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Json } from '@/lib/database.types';
 import {
-  calculateCourseHandicap,
-  applyAllowance,
+  rawCourseHandicap,
+  playingHandicapFromRaw,
 } from '@/lib/scoring/courseHandicap';
 import { expectAffected, expectOne } from '@/lib/supabase/affectedRows';
 import type { GameStatus } from './status';
@@ -382,7 +382,7 @@ export async function startScheduledGameCore(
     // Defensive: `startBlockReason` already refused a missing tee or rating.
     const rating = game.tee_boxes && getRatingForGender(game.tee_boxes, row.tee_gender);
     if (!rating) return { ok: false, reason: 'tee_missing_rating' };
-    const raw = calculateCourseHandicap({
+    const raw = rawCourseHandicap({
       hcpIndex: Number(row.users.hcp_index),
       slope: rating.slope,
       courseRating: rating.courseRating,
@@ -391,12 +391,14 @@ export async function startScheduledGameCore(
     frozenPlayers.push({
       teamNumber: row.team_number,
       withdrawnAt: row.withdrawn_at,
-      rawCourseHandicap: raw,
+      // The greensome plan wants the course handicap before any allowance.
+      rawCourseHandicap: Math.round(raw),
     });
     // #2210: formats with their own percentage in mode_config freeze the full
     // course handicap, also when the row was stored with a stale value.
     // #2660: a league flight's cap on the strokes comes after the percentage.
-    const allowed = applyAllowance(
+    // #2924: the percentage is taken of the unrounded value (WHS 6.2a).
+    const allowed = playingHandicapFromRaw(
       raw,
       effectiveHcpAllowancePct(game.game_mode, game.hcp_allowance_pct),
       effectiveHcpMaxStrokes(game.game_mode, game.hcp_max_strokes ?? null),

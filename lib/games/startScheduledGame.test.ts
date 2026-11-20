@@ -1763,6 +1763,59 @@ describe('startScheduledGame — ligaens andel og tak på slag (#2660)', () => {
   });
 });
 
+// ─── #2924: the share is taken of the unrounded course handicap ──────────────
+
+/**
+ * WHS rule 6.2a: the percentage is applied to the UNROUNDED course handicap
+ * and rounded once. The rulebook's own example on 125 / 71.0 / 71 at 85 %:
+ * HI 8.6 → 9.513 × 0.85 = 8.086 → 8 (rounding first gave 10 → 8.5 → 9), and
+ * HI 10.3 → 11.394 × 0.85 = 9.685 → 10 (rounding first gave 11 → 9.35 → 9).
+ */
+describe('startScheduledGame — andelen av urundet banehandicap (#2924)', () => {
+  const RULEBOOK_TEE = {
+    ...VALID_TEE,
+    slope_mens: 125,
+    course_rating_mens: 71.0,
+    par_total_mens: 71,
+  };
+
+  it('stableford 85 %: HI 8.6 fryses til 8 og HI 10.3 til 10', async () => {
+    const roster = [
+      { ...soloPlayer('u1', null), users: { hcp_index: 8.6 } },
+      { ...soloPlayer('u2', null), users: { hcp_index: '10.3' } },
+    ];
+    const supabase = buildSupabaseMock([
+      {
+        data: {
+          ...makeGameRow2('stableford'),
+          hcp_allowance_pct: 85,
+          tee_boxes: RULEBOOK_TEE,
+        },
+        error: null,
+      },
+      { data: roster, error: null },
+      ...passThroughQueue(roster),
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+
+    expect(result).toEqual({ ok: true, started: false });
+    const frozen = (
+      supabase as unknown as {
+        __fromCalls: Array<{ table: string; method: string; args: unknown[] }>;
+      }
+    ).__fromCalls
+      .filter(
+        (c) =>
+          c.table === 'game_players' &&
+          c.method === 'update' &&
+          'course_handicap' in (c.args[0] as Record<string, unknown>),
+      )
+      .map((c) => (c.args[0] as { course_handicap: number }).course_handicap);
+    expect(frozen).toEqual([8, 10]);
+  });
+});
+
 // ─── #2204: readStartBlock reads the reason without starting ─────────────────
 
 /**
@@ -1814,7 +1867,7 @@ describe('readStartBlock (#2204)', () => {
 
 /**
  * #2570: shamble and champagne scramble use `games.hcp_allowance_pct`. The
- * start freezes `applyAllowance(raw, pct)` on each row. VALID_TEE is the
+ * start freezes the percentage of the raw value on each row. VALID_TEE is the
  * neutral tee (slope 113, CR = par), so the raw course handicap equals the
  * index: 20 → 16 at 80 %. A gross round is stored with 100 (gamePayload), so
  * it freezes the full 20.

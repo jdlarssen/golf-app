@@ -182,7 +182,7 @@ describe('ticketStrokes — DINE SLAG', () => {
   });
 
   it('før start: regnet fra hcp-indeksen med spillets andel, samme vei som frysingen', () => {
-    // 12,4 × 125/113 + (71,5 − 72) = 13,22 → 13; 85 % av 13 = 11,05 → 11.
+    // 12,4 × 125/113 + (71,5 − 72) = 13,22; 85 % = 11,24 → 11.
     const bundle = bundleWith({ ...stableford, status: 'scheduled', hcpAllowancePct: 85 }, [
       homePlayer({ userId: 'me', courseHandicap: null }),
     ]);
@@ -191,8 +191,19 @@ describe('ticketStrokes — DINE SLAG', () => {
     ).toBe('11');
   });
 
+  it('før start: andelen tas av urundet banehandicap, én avrunding (#2924)', () => {
+    // 10,7 × 125/113 + (71,5 − 72) = 11,34; 85 % = 9,64 → 10.
+    // Avrundet først (11 × 85 % = 9,35) ville det blitt 9.
+    const bundle = bundleWith({ ...stableford, status: 'scheduled', hcpAllowancePct: 85 }, [
+      homePlayer({ userId: 'me', courseHandicap: null }),
+    ]);
+    expect(
+      ticketStrokes({ bundle, me: bundle.players[0], profileHcpIndex: 10.7, teamMode: false, teamHandicap: null }),
+    ).toBe('10');
+  });
+
   it('før start i en ligaflight med tak: taket kommer etter prosenten, som ved frysingen (#2660)', () => {
-    // 54 × 125/113 + (71,5 − 72) = 59,23 → 59; 75 % = 44,25 → 44; taket gir 32.
+    // 54 × 125/113 + (71,5 − 72) = 59,23; 75 % = 44,42 → 44; taket gir 32.
     const bundle = bundleWith({ ...stableford, status: 'scheduled', hcpAllowancePct: 75, hcpMaxStrokes: 32 }, [
       homePlayer({ userId: 'me', courseHandicap: null }),
     ]);

@@ -7,7 +7,7 @@
 //    og flight står bare når runden faktisk er delt i flere flighter.
 //  - **DINE SLAG** er tallet hodet på scorekortet viser (`scorecardHandicapPart`,
 //    #2262). Før start er ikke banehandicapen frosset ennå, og da regnes den
-//    samme vei som frysingen gjør (`displayCourseHandicap`, webbens reserve på
+//    samme vei som frysingen gjør (`playingHandicap`, webbens reserve på
 //    spillets side), før den går gjennom samme regel som etter start.
 //  - **Stubben** velger mellom de samme grenene, i samme rekkefølge, som
 //    `PrimarySection` gjorde før billetten: stengt format, ikke spiller,
@@ -28,7 +28,7 @@ import { expectedTeamSize, modeRequiresTeamNumber } from '../../../../lib/games/
 import { getRatingForGender, type Rating, type TeeGender } from '../../../../lib/games/teeRating';
 import { revealState, shouldHideNetto, type ScoreVisibility } from '../../../../lib/games/visibility';
 import { fromSignedHcp } from '../../../../lib/handicap/sign';
-import { displayCourseHandicap } from '../../../../lib/scoring/courseHandicap';
+import { playingHandicap } from '../../../../lib/scoring/courseHandicap';
 import { isMatchplayFamily, MODE_LABELS, type GameMode } from '../../../../lib/scoring/modes/types';
 import type { BundlePlayer, BundleTeeRatings, GameBundle } from '../data/gameBundle';
 import { MAX_AVATARS } from './flightRoster';
@@ -203,7 +203,7 @@ function preStartCourseHandicap(opts: {
   const rating = ratingFor(opts.bundle.teeRatings, opts.me);
   if (!rating || opts.profileHcpIndex == null) return null;
   const { gameMode, hcpAllowancePct, hcpMaxStrokes } = opts.bundle.game;
-  return displayCourseHandicap({
+  return playingHandicap({
     hcpIndex: Number(opts.profileHcpIndex),
     slope: rating.slope,
     courseRating: rating.courseRating,

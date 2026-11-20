@@ -4,7 +4,7 @@
  *
  * Shows the player with the highest and the player with the lowest handicap
  * index, highest first (as `Nyttspill-forslag-hcp-eksempel` draws it). Each
- * number is `displayCourseHandicap`, the same pipeline `startScheduledGame`
+ * number is `playingHandicap`, the same pipeline `startScheduledGame`
  * freezes into `game_players.course_handicap`, on the rating set of the
  * player's own tee category. The wizard never sets a stroke cap, so none is
  * applied.
@@ -12,7 +12,7 @@
  * Pure, no server imports: the wizard calls it on every render of the
  * «Handicap» sheet.
  */
-import { displayCourseHandicap } from '@/lib/scoring/courseHandicap';
+import { playingHandicap } from '@/lib/scoring/courseHandicap';
 import { getRatingForGender, type TeeBoxRatings, type TeeGender } from './teeRating';
 
 export type AllowanceExamplePlayer = {
@@ -64,7 +64,7 @@ export function allowanceExample({
     const rating = getRatingForGender(ratings, p.gender);
     if (!rating) continue;
     const at = (allowancePct: number) =>
-      displayCourseHandicap({ hcpIndex: p.hcpIndex, ...rating, allowancePct });
+      playingHandicap({ hcpIndex: p.hcpIndex, ...rating, allowancePct });
     const strokes = at(pct);
     const strokesAtFull = at(100);
     if (strokes === null || strokesAtFull === null) continue;
