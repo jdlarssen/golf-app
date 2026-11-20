@@ -12,7 +12,8 @@
  *    for texas/ambrose, 3–4 for florida/shamble, jf. TEAM_FORMAT_TEAM_SIZES;
  *    antall lagkort vokser med valgte spillere, jf. `teamGridShape`, #2148, #2079)
  *    + «Trekk tilfeldig»/«Tøm lag» + per-spiller-tee (#2012)
- *  - patsome / lag-matchplay → lag-grid + «Tøm lag», ingen trekning
+ *  - patsome / lag-matchplay → lag-grid + «Jevne lag»/«Tøm lag», ingen
+ *    tilfeldig trekning (#2478)
  *  - every other format (stableford, solo strokeplay, Wolf, Nassau, Skins,
  *    Bingo Bango Bongo, Nines, Round Robin, Acey Deucey) → only tee per player
  *
@@ -38,10 +39,21 @@
  * team swaps the two, and players without a team stand under «Uten lag». The
  * state is the same: `assignPlayerToSlot`, `assignPlayerToSide` and the new
  * `swapPlayerTeams` write `teamByPlayer`/`flightByPlayer` as the lists did.
+ *
+ * #2478: «Jevne lag» comes first in the button row (`Nyttspill-forslag-jevne-lag`):
+ * it deals the players by handicap index, the best with the weakest
+ * (`drawBalancedTeams`). Patsome and team matchplay get it too, without the
+ * random draw. Each tile on a team card shows the player's index, each card
+ * with a counted player the team's sum, or average when the teams differ in
+ * size, and a line under the buttons says how far apart the teams are. The
+ * numbers follow whatever the layout is, so they stay true after a random draw
+ * or moves by tap; the line explains the deal only while the teams are what it
+ * gave. The button is a secondary chip like the others, not a filled toggle.
  */
 
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import type { AppLocale } from '@/i18n/routing';
 import type { PlayerOption } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
 import { Button } from '@/components/ui/Button';
@@ -56,6 +68,8 @@ import {
   teamGridShape,
   teamNumberRange,
 } from '@/lib/games/teamFormatLimits';
+import { formatHcpDisplay } from '@/lib/handicap/signFormat';
+import { formatNumber } from '@/lib/i18n/format';
 import { playerName, playerShortName } from '@/lib/names/playerName';
 import { PlayerTile } from './PlayerTile';
 import { playerOptionShortName } from './playerLabels';
@@ -213,6 +227,61 @@ export function teamsAssignmentHasContent(state: GameFormState): boolean {
   return sides || teams || flights || tee;
 }
 
+/**
+ * #2478: the line under the buttons, once two teams (sides) have a counted
+ * player: why the teams look as they do (only while they are what «Jevne lag»
+ * gave), how far apart the strongest and the weakest are, and how many players
+ * were left out. Team matchplay is two sides of two: while one side is short
+ * its cards show averages, and «samlet handicap mellom sidene» would not fit,
+ * so the line waits for 2 + 2. Mounted at all times so a screen reader hears
+ * it appear; empty, it has no height.
+ */
+function BalanceLine({
+  teamHcp,
+  sides,
+  explain,
+  uncountedCount,
+}: {
+  teamHcp: GameFormState['teamHcp'];
+  sides: boolean;
+  explain: boolean;
+  uncountedCount: number;
+}) {
+  const t = useTranslations('wizard.sections.teams');
+  const locale = useLocale() as AppLocale;
+  const countedTeams = teamHcp.values.filter((v) => v !== null).length;
+  const show =
+    countedTeams >= 2 && teamHcp.spread !== null && (!sides || teamHcp.mode === 'sum');
+  const spreadKey = sides
+    ? 'balanceSpreadSides'
+    : teamHcp.mode === 'sum'
+      ? 'balanceSpreadSum'
+      : 'balanceSpreadAverage';
+  const text = show
+    ? [
+        explain ? t(sides ? 'balanceExplainSides' : 'balanceExplain') : null,
+        t(spreadKey, {
+          spread: formatNumber(teamHcp.spread ?? 0, locale, {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          }),
+        }),
+        uncountedCount > 0 ? t('balanceUncounted', { count: uncountedCount }) : null,
+      ]
+        .filter(Boolean)
+        .join(' ')
+    : null;
+  return (
+    <p
+      data-testid="balance-line"
+      aria-live="polite"
+      className="px-1 pb-2.5 font-sans text-xs leading-[1.45] text-muted empty:pb-0"
+    >
+      {text}
+    </p>
+  );
+}
+
 /** A part's kicker: the `<h2>` sits inside the legend so it stays a heading. */
 function PartLegend({ children }: { children: ReactNode }) {
   return <h2>{children}</h2>;
@@ -226,6 +295,7 @@ export function TeamsAssignmentSection({
 }: Props) {
   const t = useTranslations('wizard.sections.teams');
   const tPlayers = useTranslations('wizard.sections.players');
+  const locale = useLocale() as AppLocale;
   const pendingLabel = tPlayers('pendingLabel');
   const idPrefix = useId();
 
@@ -251,6 +321,10 @@ export function TeamsAssignmentSection({
     teamSize,
     canDrawRandomTeams,
     drawRandomTeams,
+    canDrawBalancedTeams,
+    drawBalancedTeams,
+    isBalancedLayout,
+    teamHcp,
     clearTeams,
     assignPlayerToSlot,
     assignPlayerToSide,
@@ -383,14 +457,19 @@ export function TeamsAssignmentSection({
    * the dashed «Flytt hit» row while a player from elsewhere is picked, and
    * quiet empty rows for the rest. A card with no room, or the picked player's
    * own, has the ordinary frame and no «Flytt hit».
+   *
+   * #2478: a team card (`withHcp`) shows each player's index and, with at least
+   * one counted player, the team's sum or average under a divider. Singles
+   * matchplay's one-player sides do not.
    */
-  const renderCard = (team: number, slots: number) => {
+  const renderCard = (team: number, slots: number, withHcp = false) => {
     const members = playersByTeam[team]
       .map(playerById)
       .filter((p): p is PlayerOption => p !== undefined);
     const hasRoom = members.length < slots;
     const isTarget = selectedPlayer !== undefined && selectedTeam !== team && hasRoom;
     const label = cardsAreSides ? t('sideTeamLabel', { team }) : t('teamLabel', { team });
+    const hcpValue = withHcp ? (teamHcp.values[team - 1] ?? null) : null;
     return (
       <SlotCard
         key={team}
@@ -419,6 +498,8 @@ export function TeamsAssignmentSection({
                 : undefined
             }
             onPress={() => pressTeamPlayer(p.id, team)}
+            // An invitee still carries the 54.0 default, not a real index.
+            meta={withHcp ? (p.pending ? '–' : formatHcpDisplay(p.hcp_index, locale)) : undefined}
           />
         ))}
         {Array.from({ length: slots - members.length }, (_, i) =>
@@ -442,6 +523,17 @@ export function TeamsAssignmentSection({
               className="min-h-[44px] rounded-xl border border-dashed border-border"
             />
           ),
+        )}
+        {hcpValue !== null && (
+          <div
+            data-testid="team-hcp"
+            className="flex justify-between gap-2 border-t border-row-divider-warm pt-1.5 font-sans text-xs leading-[normal] text-muted"
+          >
+            <span>{t(teamHcp.mode === 'sum' ? 'teamHcpSum' : 'teamHcpAverage')}</span>
+            <span className="font-semibold tabular-nums text-text">
+              {formatHcpDisplay(hcpValue, locale)}
+            </span>
+          </div>
         )}
       </SlotCard>
     );
@@ -550,11 +642,10 @@ export function TeamsAssignmentSection({
 
   const showDrawButtons =
     isBestBall || isParStableford || isTexas || isAmbrose || isFlorida || isShamble;
-  // Patsome and team matchplay have no draw: clearing only, once someone is
-  // assigned.
-  const showClearOnly =
-    (isPatsome || isTeamMatchplay) &&
-    selectedPlayerIds.some((pid) => teamByPlayer[pid] !== undefined);
+  // #2478: patsome and team matchplay have «Jevne lag» but no random draw, and
+  // «Tøm lag» once someone is assigned.
+  const showBalanceOnly = isPatsome || isTeamMatchplay;
+  const anyAssigned = selectedPlayerIds.some((pid) => teamByPlayer[pid] !== undefined);
 
   return (
     <>
@@ -598,12 +689,25 @@ export function TeamsAssignmentSection({
             aside={asideFor('teams')}
             description={teamsDescription()}
           >
-            {/* «Trekk tilfeldig»/«Tøm lag» for best ball, par-stableford and the
-                scramble family (#2012). The draw deals teams of the chosen size;
-                the button is disabled while the count leaves a leftover or needs
-                more teams than the player cap allows (`canDrawRandomTeams`). */}
-            {(showDrawButtons || showClearOnly) && (
+            {/* «Jevne lag» first (#2478), then «Trekk tilfeldig»/«Tøm lag» for best
+                ball, par-stableford and the scramble family (#2012). The draw
+                deals teams of the chosen size; the button is disabled while the
+                count leaves a leftover or needs more teams than the player cap
+                allows (`canDrawRandomTeams`). «Jevne lag» follows the same rule,
+                and for patsome and team matchplay its own (`canDrawBalancedTeams`). */}
+            {(showDrawButtons || showBalanceOnly) && (
               <div className="flex flex-wrap gap-2 pb-2.5">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="chip"
+                  className="leading-[normal]"
+                  onClick={drawBalancedTeams}
+                  disabled={!canDrawBalancedTeams}
+                  data-testid="balance-teams"
+                >
+                  {t('balanceButton')}
+                </Button>
                 {showDrawButtons && (
                   <Button
                     type="button"
@@ -618,15 +722,25 @@ export function TeamsAssignmentSection({
                     {t('drawRandomButton')}
                   </Button>
                 )}
-                <Button type="button" variant="secondary" size="chip" className="leading-[normal]" onClick={clearTeams}>
-                  {t('clearTeamsButton')}
-                </Button>
+                {(showDrawButtons || anyAssigned) && (
+                  <Button type="button" variant="secondary" size="chip" className="leading-[normal]" onClick={clearTeams}>
+                    {t('clearTeamsButton')}
+                  </Button>
+                )}
               </div>
             )}
+            <BalanceLine
+              teamHcp={teamHcp}
+              sides={isTeamMatchplay}
+              explain={isBalancedLayout}
+              uncountedCount={
+                teamHcp.uncounted.filter((pid) => playerById(pid)?.pending).length
+              }
+            />
 
             {renderPickStrip()}
             <div className="grid grid-cols-2 gap-2">
-              {teamNumberRange(gridTeamCount).map((team) => renderCard(team, slotCount))}
+              {teamNumberRange(gridTeamCount).map((team) => renderCard(team, slotCount, true))}
             </div>
           </FormSection>
           {renderUnassigned()}

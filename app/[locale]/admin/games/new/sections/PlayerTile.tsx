@@ -7,6 +7,8 @@ import { nameInitials } from '@/lib/names/initials';
  * a 44 px row with the initials in a 28 px disc and the first name. A tap picks
  * the player (`aria-pressed`); with someone else picked, a tap on a player on a
  * team swaps the two, and `swapLabel` names that for screen readers.
+ *
+ * #2478: on a team card, `meta` (the handicap index) sits at the row's end.
  */
 export function PlayerTile({
   name,
@@ -15,6 +17,7 @@ export function PlayerTile({
   swapLabel,
   onPress,
   inline = false,
+  meta,
 }: {
   name: string;
   fullName: string;
@@ -24,6 +27,8 @@ export function PlayerTile({
   onPress: () => void;
   /** In «Uten lag» the tiles wrap side by side instead of filling the card's width. */
   inline?: boolean;
+  /** «12,4», or «–» for an invitee with no real index yet (#2478). */
+  meta?: string;
 }) {
   // The picked disc is white with forest initials, and the page's dark with
   // sage initials at night, as `Nyttspill-forslag-lag-tapp` draws it.
@@ -47,6 +52,16 @@ export function PlayerTile({
       <span aria-hidden className="min-w-0 truncate">
         {name}
       </span>
+      {meta !== undefined && (
+        // The index in the muted tone, white (or the page's dark at night) like
+        // the name once the player is picked.
+        <span
+          aria-hidden
+          className={`ml-auto shrink-0 font-normal tabular-nums ${pressed ? '' : 'text-muted'}`}
+        >
+          {meta}
+        </span>
+      )}
     </button>
   );
 }

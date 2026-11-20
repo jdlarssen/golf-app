@@ -49,6 +49,7 @@ import {
   teamNumberRange,
   teamRosterBalance,
 } from '@/lib/games/teamFormatLimits';
+import { balancedTeams, teamHcpValues, type BalancePlayer } from '@/lib/games/balancedTeams';
 import { playerTarget } from '@/lib/wizard/playerTarget';
 import { isDatetimeLocalInPast } from '@/lib/games/gamePayload';
 import { canRepeatWeekly } from '@/lib/games/weeklyRepeat';
@@ -1502,6 +1503,63 @@ export function useGameFormState({
     setFlightByPlayer({});
   }
 
+  // «Jevne lag» (#2478): the same formats as the draw, plus patsome and team
+  // matchplay, dealt by handicap index (`balancedTeams`). An invitee who has
+  // not finished the profile carries the 54.0 default, not a real index, so
+  // the deal places them last and the numbers leave them out.
+  const balancePlayers = useMemo<BalancePlayer[]>(
+    () =>
+      selectedPlayerIds.map((pid) => {
+        const p = allPlayers.find((x) => x.id === pid);
+        return {
+          id: pid,
+          name: p?.name ?? p?.email ?? '',
+          hcpIndex: p && !p.pending ? p.hcp_index : null,
+        };
+      }),
+    [selectedPlayerIds, allPlayers],
+  );
+  // The team sizes the deal fills: the draw's split for the six draw formats,
+  // pairs for patsome, and two sides of two for team matchplay. `null` while
+  // the count does not split, so the button and the deal agree.
+  const balanceSizes: number[] | null = canDrawRandomTeams
+    ? splitIntoTeams(selectedPlayerIds.length, teamSize, teamSizesAllowed)
+    : isPatsome &&
+        selectedPlayerIds.length >= 4 &&
+        pairCountSplits &&
+        randomDrawTeamCount(2, selectedPlayerIds.length) !== null
+      ? splitIntoTeams(selectedPlayerIds.length, 2, allowedTeamSizes('patsome', 2))
+      : isTeamMatchplay && selectedPlayerIds.length === 4
+        ? [2, 2]
+        : null;
+  const canDrawBalancedTeams =
+    balanceSizes !== null && balancePlayers.some((p) => p.hcpIndex !== null);
+  // At most 40 players: cheap enough to deal on every render.
+  const balancedLayout =
+    canDrawBalancedTeams && balanceSizes ? balancedTeams(balancePlayers, balanceSizes) : null;
+  // The line under the buttons explains the deal only while the teams are what
+  // it gave; a move or a swap turns it off, without any extra state.
+  const isBalancedLayout =
+    balancedLayout !== null &&
+    selectedPlayerIds.every((pid) => teamByPlayer[pid] === balancedLayout.teamOf[pid]);
+  // Sum or average per team and the spread, for whatever the layout is now.
+  const teamHcp = useMemo(
+    () => teamHcpValues(teamByPlayer, balancePlayers),
+    [teamByPlayer, balancePlayers],
+  );
+
+  function drawBalancedTeams() {
+    if (!balancedLayout) return;
+    const nextFlights: Record<string, number> = {};
+    for (const [pid, team] of Object.entries(balancedLayout.teamOf)) {
+      // As in `drawRandomTeams`: only best ball reads these; the rest publish
+      // flight = team.
+      nextFlights[pid] = teamDefaultFlight(team);
+    }
+    setTeamByPlayer(balancedLayout.teamOf);
+    setFlightByPlayer(nextFlights);
+  }
+
   /**
    * Tilordner en spiller til et lag-slot. `slotIndex` er den positionelle
    * indexen i `playersByTeam[team]` — best-ball og par-stableford bruker
@@ -2449,6 +2507,10 @@ export function useGameFormState({
     pairCountSplits,
     teamSizesAllowed,
     drawRandomTeams,
+    canDrawBalancedTeams,
+    drawBalancedTeams,
+    isBalancedLayout,
+    teamHcp,
     clearTeams,
     assignPlayerToSlot,
     assignPlayerToSide,
