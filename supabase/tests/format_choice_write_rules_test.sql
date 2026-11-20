@@ -23,7 +23,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(54);
+select plan(56);
 
 \ir fixtures/rls_helpers.psql
 
@@ -221,17 +221,23 @@ select lives_ok(
 select torny_rls.as_user(torny_rls.admin_id());
 
 select lives_ok(
-  $q$ insert into public.wolf_hole_choices (game_id, hole_number, wolf_user_id, choice, partner_user_id, entered_by) values (torny_rls.fc_game(1), 3, torny_rls.fc_w4(), 'lone', null, torny_rls.admin_id()) $q$,
-  'wolf: an admin can set another wolf (the override)');
+  $q$ insert into public.wolf_hole_choices (game_id, hole_number, wolf_user_id, choice, partner_user_id, entered_by) values (torny_rls.fc_game(1), 3, torny_rls.fc_w4(), 'lone', null, torny_rls.admin_id()) on conflict (game_id, hole_number) do update set choice = excluded.choice, partner_user_id = excluded.partner_user_id, wolf_user_id = excluded.wolf_user_id, entered_by = excluded.entered_by $q$,
+  'wolf: an admin outside the game can set another wolf, with the upsert the clients send');
 
 select lives_ok(
-  $q$ insert into public.wolf_hole_choices (game_id, hole_number, wolf_user_id, choice, partner_user_id, entered_by) values (torny_rls.fc_game(2), 2, torny_rls.fc_w2(), 'lone', null, torny_rls.admin_id()) $q$,
+  $q$ insert into public.wolf_hole_choices (game_id, hole_number, wolf_user_id, choice, partner_user_id, entered_by) values (torny_rls.fc_game(2), 2, torny_rls.fc_w2(), 'lone', null, torny_rls.admin_id()) on conflict (game_id, hole_number) do update set choice = excluded.choice, partner_user_id = excluded.partner_user_id, wolf_user_id = excluded.wolf_user_id, entered_by = excluded.entered_by $q$,
   'wolf: an admin can correct a finished round');
 
 select throws_ok(
   $q$ insert into public.wolf_hole_choices (game_id, hole_number, wolf_user_id, choice, partner_user_id, entered_by) values (torny_rls.fc_game(1), 4, torny_rls.fc_out(), 'lone', null, torny_rls.admin_id()) $q$,
   '42501', 'wolf_choice_not_in_game',
   'wolf: not even an admin can name a wolf outside the game');
+
+select torny_rls.as_user(torny_rls.fc_out());
+
+select is((select count(*) from public.wolf_hole_choices where game_id = torny_rls.fc_game(1)),
+  0::bigint,
+  'wolf: a user outside the game still reads no choices');
 
 -- ══ Bingo Bango Bongo ══
 
@@ -297,6 +303,12 @@ delete from public.bingo_bango_bongo_holes
 select is((select count(*) from public.bingo_bango_bongo_holes where game_id = torny_rls.fc_game(4) and hole_number = 1),
   1::bigint,
   'bbb: a player cannot delete a hole row');
+
+select torny_rls.as_user(torny_rls.fc_out());
+
+select is((select count(*) from public.bingo_bango_bongo_holes where game_id = torny_rls.fc_game(4)),
+  0::bigint,
+  'bbb: a user outside the game reads no hole rows');
 
 select torny_rls.as_user(torny_rls.admin_id());
 

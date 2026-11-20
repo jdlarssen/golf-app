@@ -263,6 +263,22 @@ create policy wolf_choices_delete on public.wolf_hole_choices
     )
   );
 
+-- An admin outside the game can read the choices. Without it the admin's
+-- override fails on the upsert both clients send, which must be able to read
+-- the row it writes. patsome_tee_starters_read already has the same branch.
+drop policy if exists wolf_choices_read on public.wolf_hole_choices;
+create policy wolf_choices_read on public.wolf_hole_choices
+  for select
+  using (
+    public.is_admin()
+    or exists (
+      select 1
+        from public.game_players gp
+       where gp.game_id = wolf_hole_choices.game_id
+         and gp.user_id = (select auth.uid())
+    )
+  );
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- bingo_bango_bongo_holes
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -399,6 +415,22 @@ create policy bbb_holes_update on public.bingo_bango_bongo_holes
 create policy bbb_holes_delete on public.bingo_bango_bongo_holes
   for delete
   using (public.is_admin());
+
+-- The old FOR ALL policy also gave an admin outside the game read access. The
+-- read policy now carries it, because an upsert must be able to read the row
+-- it writes.
+drop policy if exists bbb_holes_read on public.bingo_bango_bongo_holes;
+create policy bbb_holes_read on public.bingo_bango_bongo_holes
+  for select
+  using (
+    public.is_admin()
+    or exists (
+      select 1
+        from public.game_players gp
+       where gp.game_id = bingo_bango_bongo_holes.game_id
+         and gp.user_id = (select auth.uid())
+    )
+  );
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- patsome_tee_starters
