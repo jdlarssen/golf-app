@@ -101,7 +101,7 @@ const ENABLED_COMBOS: Record<Exclude<GameMode, FamilyMode>, ReadonlySet<TeamSize
   // Skins: solo-format, 2-16 spillere (#460). TeamSizeSelector vises ikke for skins
   // i veiviseren (SkinsSetup tar over); GameForm viser linja «Solo».
   skins: new Set<TeamSize>([1]),
-  // Bingo Bango Bongo: individuelt format, 2–16 spillere (#460), team_size=1. En
+  // Bingo Bango Bongo: individuelt format, 2–4 spillere (én flight), team_size=1. En
   // dedikert BBB-setup-steg vil ta over som for Wolf/Nassau/Skins, så
   // TeamSizeSelector vises ikke i veiviseren; GameForm viser linja «Solo».
   bingo_bango_bongo: new Set<TeamSize>([1]),

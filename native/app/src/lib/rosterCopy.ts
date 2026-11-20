@@ -443,7 +443,7 @@ export function describeStartRefusal(refusal: StartRoundRefusal): string {
         return `Skins trenger 2–16 spillere for å starte. Nå er ${count} påmeldt.`;
       }
       if (refusal.rotationMode === 'bingo_bango_bongo') {
-        return `Bingo Bango Bongo trenger 2–16 spillere for å starte. Nå er ${count} påmeldt.`;
+        return `Bingo Bango Bongo trenger 2–4 spillere for å starte. Nå er ${count} påmeldt.`;
       }
       return `Formatet krever et annet antall spillere for å starte. Nå er ${count} påmeldt.`;
     }

@@ -790,7 +790,7 @@
       },
       "bingo_bango_bongo": {
         "line": "Three points up for grabs on every hole",
-        "pitch": "First on the green, closest to the pin and first in the hole earn a point each. Long hitters don't win it all. For 2–16 players.",
+        "pitch": "First on the green, closest to the pin and first in the hole earn a point each. Long hitters don't win it all. For 2–4 players.",
         "choose": "Choose Bingo Bango Bongo"
       },
       "nines": {
@@ -1477,7 +1477,7 @@
         "nassauMin": "{remaining, plural, one {at least 1 more player} other {at least 2 players}}",
         "nassauTooMany": "too many players — Nassau takes a maximum of 16",
         "skinsTooMany": "too many players — Skins takes a maximum of 16",
-        "bbbTooMany": "too many players — Bingo Bango Bongo takes a maximum of 16",
+        "bbbTooMany": "too many players — Bingo Bango Bongo takes a maximum of 4",
         "ninesUnderMin": "{remaining, plural, one {1 more player} other {{remaining} more players}}",
         "ninesTooMany": "too many players — Nines requires exactly 3",
         "rrUnderMin": "{remaining} {remaining, plural, one {more player} other {more players}}",
@@ -2213,7 +2213,7 @@
           },
           {
             "heading": "Stakes and group size",
-            "body": "Anywhere from two to sixteen players can play, and four is best, because that is when the fight for bango really means something. The usual settlement is a fixed amount per point, or the pot to whoever finishes with most. Some add a fourth category for the longest drive on the fairway. The round moves fast, because nobody is standing around counting strokes on a hole they have already lost. Run it alongside an ordinary Stableford round and you have two competitions going at once for no extra work."
+            "body": "Two to four players can play, as one group on the course, and four is best, because that is when the fight for bango really means something. The usual settlement is a fixed amount per point, or the pot to whoever finishes with most. Some add a fourth category for the longest drive on the fairway. The round moves fast, because nobody is standing around counting strokes on a hole they have already lost. Run it alongside an ordinary Stableford round and you have two competitions going at once for no extra work."
           }
         ],
         "example": "Hole 5, par 4: A chips onto the green with the second shot (bingo). B and C are in the rough and D is in the bunker — none of them are on the green yet. Everyone reaches the green eventually. C is 60 cm from the hole, B 1.5 m, D 2 m, A 3 m. C takes bango. Putting order: A putts first (farthest away), then D and B. C putts last and holes it straight away — bongo to C.",
@@ -2232,7 +2232,7 @@
           },
           {
             "q": "How many people should play?",
-            "a": "Four is best: that is when the fight for bango is sharpest, and the round still moves quickly. Anything from two to sixteen works, though."
+            "a": "Four is best: that is when the fight for bango is sharpest, and the round still moves quickly. Two to four works, as one group."
           }
         ]
       },
@@ -4446,7 +4446,7 @@
         "rotation_player_count_nines": "Nines needs exactly 3 players to start. {count} signed up so far.",
         "rotation_player_count_nassau": "Nassau needs 2–16 players to start. {count} signed up so far.",
         "rotation_player_count_skins": "Skins needs 2–16 players to start. {count} signed up so far.",
-        "rotation_player_count_bingo_bango_bongo": "Bingo Bango Bongo needs 2–16 players to start. {count} signed up so far.",
+        "rotation_player_count_bingo_bango_bongo": "Bingo Bango Bongo needs 2–4 players to start. {count} signed up so far.",
         "guest_invalid_name": "The guest needs a name (max 80 characters).",
         "guest_invalid_hcp": "The handicap must be a number between 0 and 54. Enter plus handicaps with a leading +.",
         "guest_invalid_tee": "Pick a tee category for the guest.",

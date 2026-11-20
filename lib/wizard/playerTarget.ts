@@ -44,7 +44,7 @@ export function playerTarget({
 
 /**
  * Where the picker greys out the rest of the cards: the fixed count, else the
- * fixed-count formats' ceiling (Wolf 5, Nassau/Skins/BBB 16), else the team
+ * fixed-count formats' ceiling (Wolf 5, Nassau/Skins 16, BBB 4), else the team
  * grid's cap, else the solo cap. `null` = no ceiling.
  */
 export function pickerCap({

@@ -13,6 +13,10 @@
  *    validated as a draft, so its count is first checked at start), and
  *    `rotationSlotRange` for Wolf / Round Robin
  *  - the app: `MAX_PLAYERS_BY_MODE` in `native/app/src/lib/rosterLimits.ts`
+ *  - the database, for Bingo Bango Bongo only: `bbb_max_players()` (0249). The
+ *    points are one row per hole and game, so the format is one flight, and a
+ *    round in progress cannot hold more. `bbbMaxPlayersDbCheck.test.ts` fails
+ *    when the two numbers differ.
  *
  * `startPlayerCount.test.ts` runs the publish validator at each bound and locks
  * the numbers in the wizard and start-guard copy, which cannot read them.
@@ -38,7 +42,7 @@ export const START_COUNT_RANGES = {
   nines: { min: 3, max: 3 },
   nassau: { min: 2, max: 16 },
   skins: { min: 2, max: 16 },
-  bingo_bango_bongo: { min: 2, max: 16 },
+  bingo_bango_bongo: { min: 2, max: 4 },
 } as const satisfies Record<StartCountMode, { min: number; max: number }>;
 
 export function isStartCountMode(gameMode: string): gameMode is StartCountMode {

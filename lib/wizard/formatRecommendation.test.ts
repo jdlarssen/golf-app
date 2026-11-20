@@ -77,16 +77,16 @@ describe('splitFormatsForCount — anbefalt, tre andre og resten (#2260)', () =>
     [
       5,
       'stableford',
-      ['wolf', 'skins', 'bingo_bango_bongo'],
+      // Bingo Bango Bongo is one flight (2–4), so Ambrose moves up.
+      ['wolf', 'skins', 'ambrose'],
       // #2569: Ambrose and Texas fit 5 as 3/2.
-      ['ambrose', 'texas_scramble', 'nassau', 'modified_stableford', 'solo_strokeplay'],
+      ['texas_scramble', 'nassau', 'modified_stableford', 'solo_strokeplay'],
     ],
     [
       8,
       'best_ball',
-      ['stableford', 'skins', 'bingo_bango_bongo'],
+      ['stableford', 'skins', 'ambrose'],
       [
-        'ambrose',
         'florida_scramble',
         'texas_scramble',
         'nassau',

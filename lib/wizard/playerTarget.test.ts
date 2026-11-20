@@ -45,7 +45,7 @@ describe('pickerCap', () => {
     ['wolf', { gameMode: 'wolf', requiresTeams: false, isSolo: false, teamSize: 1 }, 5],
     ['nassau', { gameMode: 'nassau', requiresTeams: false, isSolo: false, teamSize: 1 }, 16],
     ['skins', { gameMode: 'skins', requiresTeams: false, isSolo: false, teamSize: 1 }, 16],
-    ['bbb', { gameMode: 'bingo_bango_bongo', requiresTeams: false, isSolo: false, teamSize: 1 }, 16],
+    ['bbb', { gameMode: 'bingo_bango_bongo', requiresTeams: false, isSolo: false, teamSize: 1 }, 4],
     ['nines', { gameMode: 'nines', requiresTeams: false, isSolo: false, teamSize: 1 }, 3],
   ])('%s → %s', (_label, input, expected) => {
     expect(pickerCap(input)).toBe(expected);

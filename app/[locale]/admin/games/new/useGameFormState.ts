@@ -1274,7 +1274,7 @@ export function useGameFormState({
   // - isSkins: solo-format med carryover, 2-16 spillere (#460). Hvert hull er verdt
   //   1 skin; delte hull ruller skinnet videre. Egen SkinsSetup-step i step 2.
   const isSkins = gameMode === 'skins';
-  // - isBingoBangoBongo: solo-format, 2-16 spillere (#277, #460). Poeng for bingo
+  // - isBingoBangoBongo: solo-format, 2-4 spillere, én flight (#277). Poeng for bingo
   //   (først på green), bango (nærmest når alle er på) og bongo (først i hull).
   //   Ingen gross/net-toggle, ingen lag — speiler Nassau/Skins-gatingen.
   const isBingoBangoBongo = gameMode === 'bingo_bango_bongo';
