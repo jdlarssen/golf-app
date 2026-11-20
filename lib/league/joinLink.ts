@@ -2,6 +2,7 @@
 
 import 'server-only';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrClubAdminOfLeague } from '@/lib/admin/auth';
 import { expectAffected } from '@/lib/supabase/affectedRows';
@@ -27,6 +28,10 @@ export type LeagueJoinLinkResult =
  * `requireAdminOrClubAdminOfLeague`, the write runs on the caller's client under
  * «leagues admin or club-admin update» (0092), and `expectAffected` turns a
  * silent 0-row write into a failure (AGENTS.md trap 2).
+ *
+ * `join_code` is not selectable through a user session (migration 0250), so
+ * the code already set is read with the service role, behind the gate above,
+ * and a write asks back `id`: the code it returns is the one it wrote.
  */
 export async function setLeagueJoinLink(
   leagueId: string,
@@ -40,7 +45,7 @@ export async function setLeagueJoinLink(
 
   try {
     if (mode === 'on') {
-      const { data: current, error } = await supabase
+      const { data: current, error } = await getAdminClient()
         .from('leagues')
         .select('join_code')
         .eq('id', leagueId)
@@ -56,13 +61,15 @@ export async function setLeagueJoinLink(
         'setLeagueJoinLink:off',
       );
     } else {
-      const [row] = expectAffected(
-        await writeWithFreshJoinCode((code) =>
-          supabase.from('leagues').update({ join_code: code }).eq('id', leagueId).select('join_code'),
-        ),
+      let written: string | null = null;
+      expectAffected(
+        await writeWithFreshJoinCode((code) => {
+          written = code;
+          return supabase.from('leagues').update({ join_code: code }).eq('id', leagueId).select('id');
+        }),
         `setLeagueJoinLink:${mode}`,
       );
-      joinCode = row.join_code;
+      joinCode = written;
     }
 
     revalidatePath(`/admin/liga/${leagueId}`);

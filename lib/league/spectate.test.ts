@@ -76,36 +76,60 @@ describe('getLeagueBySpectateToken', () => {
 // ─── setLeagueEmbed ──────────────────────────────────────────────────────
 
 describe('setLeagueEmbed', () => {
+  /** The token already set: read with the service role (0250 hides the column from a user session). */
+  function current(token: string | null, error: { message: string } | null = null) {
+    const admin = buildSupabaseMock([{ data: error ? null : { spectate_token: token }, error }]);
+    mockAdminClient.mockReturnValue(admin as never);
+    return admin;
+  }
+
   it('gates on requireAdminOrClubAdminOfLeague before writing', async () => {
-    const client = buildSupabaseMock([
-      { data: { spectate_token: 'existing' }, error: null },
-    ]);
-    mockServerClient.mockResolvedValue(client as never);
+    current('existing');
+    mockServerClient.mockResolvedValue(buildSupabaseMock([]) as never);
 
     await setLeagueEmbed('league-1', true);
     expect(mockGuard).toHaveBeenCalledWith(expect.anything(), 'league-1');
   });
 
   it('generates and saves a new token when spectate_token is null', async () => {
-    const client = buildSupabaseMock([
-      { data: { spectate_token: null }, error: null },
-      { data: [{ spectate_token: VALID_UUID }], error: null },
-    ]);
+    current(null);
+    const client = buildSupabaseMock([{ data: [{ id: 'league-1' }], error: null }]);
     mockServerClient.mockResolvedValue(client as never);
 
-    expect(await setLeagueEmbed('league-1', true)).toBe(VALID_UUID);
-    expect(
-      client.__fromCalls.filter((c) => c.method === 'update').length,
-    ).toBeGreaterThan(0);
+    const token = await setLeagueEmbed('league-1', true);
+    const updates = client.__fromCalls.filter((c) => c.method === 'update').map((c) => c.args[0]);
+    // The token returned is the one written: the write asks back `id` only.
+    expect(updates).toEqual([{ spectate_token: token }]);
+    expect(token).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
   });
 
   it('returns existing token without rotating when already enabled', async () => {
-    const client = buildSupabaseMock([
-      { data: { spectate_token: 'existing-token' }, error: null },
-    ]);
+    current('existing-token');
+    const client = buildSupabaseMock([]);
     mockServerClient.mockResolvedValue(client as never);
 
     expect(await setLeagueEmbed('league-1', true)).toBe('existing-token');
+    expect(client.__fromCalls.filter((c) => c.method === 'update')).toHaveLength(0);
+  });
+
+  it('never selects the token through the caller\'s session', async () => {
+    const admin = current(null);
+    const client = buildSupabaseMock([{ data: [{ id: 'league-1' }], error: null }]);
+    mockServerClient.mockResolvedValue(client as never);
+
+    await setLeagueEmbed('league-1', true);
+    const selects = (c: ReturnType<typeof buildSupabaseMock>) =>
+      c.__fromCalls.filter((call) => call.method === 'select').map((call) => call.args[0]);
+    expect(selects(client)).toEqual(['id']);
+    expect(selects(admin)).toEqual(['spectate_token']);
+  });
+
+  it('a failed read of the current token throws and writes nothing', async () => {
+    current(null, { message: 'boom' });
+    const client = buildSupabaseMock([]);
+    mockServerClient.mockResolvedValue(client as never);
+
+    await expect(setLeagueEmbed('league-1', true)).rejects.toThrow('setLeagueEmbed:read');
     expect(client.__fromCalls.filter((c) => c.method === 'update')).toHaveLength(0);
   });
 
@@ -119,10 +143,8 @@ describe('setLeagueEmbed', () => {
   });
 
   it('throws NoRowsAffectedError on 0-row write (AGENTS.md trap #2)', async () => {
-    const client = buildSupabaseMock([
-      { data: { spectate_token: null }, error: null },
-      { data: [], error: null },
-    ]);
+    current(null);
+    const client = buildSupabaseMock([{ data: [], error: null }]);
     mockServerClient.mockResolvedValue(client as never);
 
     await expect(setLeagueEmbed('league-1', true)).rejects.toBeInstanceOf(

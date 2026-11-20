@@ -53,6 +53,12 @@ export async function getLeagueBySpectateToken(
  * Gates on `requireAdminOrClubAdminOfLeague` (same guard as the other league
  * management actions); the authed update + `expectAffected` catches silent
  * 0-row writes on top of the RLS write policies.
+ *
+ * `spectate_token` is not selectable through a user session (migration 0250),
+ * so the token already set is read with the service role, behind the gate
+ * above, and a write asks back `id`: the token it returns is the one it wrote.
+ * A failed read throws: answering «no token» would draw a new one and kill
+ * the embeds already pasted.
  */
 export async function setLeagueEmbed(
   leagueId: string,
@@ -62,11 +68,12 @@ export async function setLeagueEmbed(
   await requireAdminOrClubAdminOfLeague(supabase, leagueId);
 
   if (enabled) {
-    const { data: current } = await supabase
+    const { data: current, error } = await getAdminClient()
       .from('leagues')
       .select('spectate_token')
       .eq('id', leagueId)
       .maybeSingle();
+    if (error) throw new Error(`setLeagueEmbed:read: ${error.message}`);
 
     if (current?.spectate_token) {
       // Already enabled — return the existing token without rotating.
@@ -74,17 +81,17 @@ export async function setLeagueEmbed(
     }
 
     const newToken = crypto.randomUUID();
-    const rows = expectAffected(
+    expectAffected(
       await supabase
         .from('leagues')
         .update({ spectate_token: newToken })
         .eq('id', leagueId)
-        .select('spectate_token'),
+        .select('id'),
       'setLeagueEmbed:enable',
     );
 
     revalidatePath(`/admin/liga/${leagueId}`);
-    return rows[0].spectate_token;
+    return newToken;
   }
 
   expectAffected(
