@@ -2499,6 +2499,9 @@
         "body": "The round starts on its own once what's missing is in place."
       },
       "joinFlightLabel": "Choose your flight",
+      "ownTeeOff": "You tee off at <b>{time}</b>.",
+      "ownTeeOffFlight": "You tee off at <b>{time}</b> in flight {flight}.",
+      "ownTeeOffTeam": "You tee off at <b>{time}</b> with team {team}.",
       "flightLabel": "Flight {number}",
       "flightYours": "Yours",
       "flightFull": "Full",
@@ -4434,6 +4437,7 @@
         "flight_full": "The selected flight is full (maximum 4 players). Choose a different flight.",
         "signups_not_scheduled": "Only scheduled games can have signups closed or reopened.",
         "bad_flight": "Invalid flight number. Choose a positive flight from the list.",
+        "bad_interval": "Choose 8, 10 or 12 minutes between the flights.",
         "team_full": "That team is full. Choose a different team.",
         "bad_team": "Invalid team number. Choose a team from the list.",
         "rotation_player_count_wolf": "Wolf needs 3–5 players to start. {count} signed up so far.",
@@ -4506,6 +4510,7 @@
         "player_reinstated": "Player reinstated in the ranking.",
         "flight_suggested": "Flight assignment proposed and saved.",
         "flight_updated": "Player's flight updated.",
+        "tee_interval_updated": "The start times are updated.",
         "team_suggested": "Teams set up and saved.",
         "team_updated": "Player's team updated.",
         "player_removed_team_short": "Player removed. Team {team} now plays with {count}, and the team handicap is worked out for {count, plural, one {# player} other {# players}}.",
@@ -4654,7 +4659,13 @@
         "moveHere": "Move {name} here",
         "moveHereLabel": "Move {name} to flight {n}",
         "chipLabel": "{name}, HCP {hcp}",
-        "unassignedShort": "{count} without a flight"
+        "unassignedShort": "{count} without a flight",
+        "teeIntervalHeading": "Time between flights",
+        "teeIntervalChoice": "{minutes} min",
+        "teeFirstOut": "First out {time}",
+        "teeAllOut": "Everyone out at {time}",
+        "teeAllOutNoTime": "Everyone goes out together",
+        "teeIntervalOffline": "Changes need a connection"
       },
       "teams": {
         "sectionLabel": "Teams",
@@ -4796,6 +4807,7 @@
         "noTeeOff": "No tee-off time set",
         "flights": "{count, plural, one {One flight} =2 {Two flights} =3 {Three flights} =4 {Four flights} other {# flights}}",
         "flightLine": "Flight {n}: {names}",
+        "flightLineTimed": "{time} flight {n}: {names}",
         "unassigned": "{count} without a flight",
         "noFlights": "No flights yet",
         "noFlightsHint": "Split the players on the start list",

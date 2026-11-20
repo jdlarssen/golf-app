@@ -6,6 +6,9 @@ import { firstName } from '@/lib/firstName';
 import { displayNameForOthers } from '@/lib/users/displayName';
 import { getPrivateUserFields } from '@/lib/users/privateUserFields';
 import { sendGameMovedNotification } from '@/lib/mail/gameMovedNotification';
+import { playerTeeOff, type TeeTimePlayer, type TeeTimeRound } from '@/lib/games/flightTeeTimes';
+import { expectedTeamSize } from '@/lib/games/teamScope';
+import type { GameMode } from '@/lib/scoring/modes/types';
 import { inboxPerson } from './inboxSections';
 import { notify } from './notify';
 
@@ -29,6 +32,16 @@ export type GameMovedRecipient = { userId: string; shortName: string | null };
 
 type UserNameRow = { id: string; name: string | null; nickname: string | null; email: string | null };
 
+type MovedGameRow = {
+  name: string;
+  created_by: string | null;
+  game_mode: GameMode;
+  mode_config: { team_size?: number } | null;
+  tee_interval_minutes: number | null;
+};
+
+type MovedRosterRow = GameMovedRosterRow & Omit<TeeTimePlayer, 'user_id' | 'withdrawn_at'>;
+
 /**
  * The game's name and who would be told if it moved now, with the short name
  * each one has in the inbox («Marte», or a masked address). The page shows
@@ -39,19 +52,24 @@ export async function loadGameMovedRecipients(params: {
   gameId: string;
   actorUserId: string;
   excludeUserIds?: readonly string[];
-}): Promise<{ gameName: string; recipients: GameMovedRecipient[] } | null> {
+}): Promise<{
+  gameName: string;
+  recipients: GameMovedRecipient[];
+  /** #2451: the round without its tee-off, for each player's own start time. */
+  round: Omit<TeeTimeRound<MovedRosterRow>, 'scheduled_tee_off_at'>;
+} | null> {
   const admin = getAdminClient();
   const [gameRes, rosterRes] = await Promise.all([
     admin
       .from('games')
-      .select('name, created_by')
+      .select('name, created_by, game_mode, mode_config, tee_interval_minutes')
       .eq('id', params.gameId)
-      .maybeSingle<{ name: string; created_by: string | null }>(),
+      .maybeSingle<MovedGameRow>(),
     admin
       .from('game_players')
-      .select('user_id, withdrawn_at')
+      .select('user_id, withdrawn_at, flight_number, team_number')
       .eq('game_id', params.gameId)
-      .returns<GameMovedRosterRow[]>(),
+      .returns<MovedRosterRow[]>(),
   ]);
   if (gameRes.error) throw gameRes.error;
   if (rosterRes.error) throw rosterRes.error;
@@ -75,7 +93,30 @@ export async function loadGameMovedRecipients(params: {
       userId,
       shortName: inboxPerson(displayNameForOthers(names.get(userId) ?? noName))?.short ?? null,
     })),
+    round: {
+      game_mode: gameRes.data.game_mode,
+      team_size: expectedTeamSize(gameRes.data.mode_config),
+      tee_interval_minutes: gameRes.data.tee_interval_minutes,
+      players: roster,
+    },
   };
+}
+
+/**
+ * #2451: the player's own start time at the new tee-off, when it is not the
+ * tee-off itself (a later flight), else `undefined`. One varsel then says both,
+ * and no `tee_time_changed` goes out on top.
+ */
+function ownTeeOffAt(
+  round: Omit<TeeTimeRound<MovedRosterRow>, 'scheduled_tee_off_at'>,
+  userId: string,
+  teeOffAt: string,
+): string | undefined {
+  const row = round.players.find((p) => p.user_id === userId);
+  if (!row) return undefined;
+  const own = playerTeeOff({ ...round, scheduled_tee_off_at: teeOffAt }, row);
+  if (!own || new Date(own.teeOffAt).getTime() === new Date(teeOffAt).getTime()) return undefined;
+  return own.teeOffAt;
 }
 
 /**
@@ -102,7 +143,7 @@ export async function notifyGameMoved(params: {
   try {
     const loaded = await loadGameMovedRecipients(params);
     if (!loaded || loaded.recipients.length === 0) return { notified: [] };
-    const { gameName, recipients } = loaded;
+    const { gameName, recipients, round } = loaded;
     const ids = recipients.map((r) => r.userId);
 
     const admin = getAdminClient();
@@ -121,8 +162,9 @@ export async function notifyGameMoved(params: {
     }
 
     const results = await Promise.allSettled(
-      ids.map((userId) =>
-        notify({
+      ids.map((userId) => {
+        const own = ownTeeOffAt(round, userId, teeOffAt);
+        return notify({
           userId,
           kind: 'game_moved',
           payload: {
@@ -131,9 +173,10 @@ export async function notifyGameMoved(params: {
             tee_off_at: teeOffAt,
             course_changed: courseChanged,
             moved_by_name: movedByName,
+            ...(own ? { own_tee_off_at: own } : {}),
           },
-        }),
-      ),
+        });
+      }),
     );
     const mailIds: string[] = [];
     const notified: GameMovedRecipient[] = [];

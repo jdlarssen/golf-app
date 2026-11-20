@@ -2,6 +2,55 @@ import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from './notify';
 import { displayNameForOthers } from '@/lib/users/displayName';
+import { playerTeeOff, type TeeTimePlayer } from '@/lib/games/flightTeeTimes';
+import { expectedTeamSize } from '@/lib/games/teamScope';
+import type { GameMode } from '@/lib/scoring/modes/types';
+
+type InviteGameRow = {
+  id: string;
+  name: string;
+  status: string;
+  game_mode: GameMode;
+  mode_config: { team_size?: number } | null;
+  scheduled_tee_off_at: string | null;
+  tee_interval_minutes: number | null;
+};
+
+/**
+ * #2451: the recipient's own start time when the round has several start
+ * groups, else `undefined`. The roster is read only when the round has a
+ * tee-off and an interval; a failed read is logged and the invitation goes
+ * out without the time, as before.
+ */
+async function ownTeeOffAt(
+  admin: ReturnType<typeof getAdminClient>,
+  game: InviteGameRow,
+  recipientUserId: string,
+): Promise<string | undefined> {
+  if (game.scheduled_tee_off_at == null || game.tee_interval_minutes == null) return undefined;
+  const { data, error } = await admin
+    .from('game_players')
+    .select('user_id, flight_number, team_number, withdrawn_at')
+    .eq('game_id', game.id)
+    .returns<TeeTimePlayer[]>();
+  if (error) {
+    console.error('[notifyInvitedToGame] roster lookup failed', error);
+    return undefined;
+  }
+  const players = data ?? [];
+  const me = players.find((p) => p.user_id === recipientUserId);
+  if (!me) return undefined;
+  return playerTeeOff(
+    {
+      game_mode: game.game_mode,
+      team_size: expectedTeamSize(game.mode_config),
+      scheduled_tee_off_at: game.scheduled_tee_off_at,
+      tee_interval_minutes: game.tee_interval_minutes,
+      players,
+    },
+    me,
+  )?.teeOffAt;
+}
 
 /**
  * Best-effort `invite`-varsel til en spiller som er lagt til i et game.
@@ -20,6 +69,10 @@ import { displayNameForOthers } from '@/lib/users/displayName';
  * `draft` (#2445: varselet kommer ved publisering) eller `finished` — å
  * varsle om et avsluttet spill ville bare være forvirrende.
  *
+ * #2451: when the round has several start groups the payload carries the
+ * player's own start time (`tee_off_at`), and the card says «Lørdagsrunden ·
+ * du går ut 09:10». No new kind, no migration: the field is optional.
+ *
  * Feiler stille: all DB-feil eller notify-rejection blir loggført med
  * `[notifyInvitedToGame]`-prefix og swallow-et. Caller skal alltid kunne
  * commit-e game_players-insertet uansett hva som skjer her.
@@ -34,9 +87,9 @@ export async function notifyInvitedToGame(opts: {
 
   const { data: game, error: gameError } = await admin
     .from('games')
-    .select('id, name, status')
+    .select('id, name, status, game_mode, mode_config, scheduled_tee_off_at, tee_interval_minutes')
     .eq('id', gameId)
-    .single<{ id: string; name: string; status: string }>();
+    .single<InviteGameRow>();
 
   if (gameError || !game) {
     console.error('[notifyInvitedToGame] game lookup failed', gameError);
@@ -65,6 +118,7 @@ export async function notifyInvitedToGame(opts: {
   }
 
   const invitedByName = displayNameForOthers(inviter) ?? 'Tørny';
+  const teeOffAt = await ownTeeOffAt(admin, game, recipientUserId);
 
   try {
     await notify({
@@ -74,6 +128,7 @@ export async function notifyInvitedToGame(opts: {
         game_id: game.id,
         game_name: game.name,
         invited_by_name: invitedByName,
+        ...(teeOffAt ? { tee_off_at: teeOffAt } : {}),
       },
     });
   } catch (err) {

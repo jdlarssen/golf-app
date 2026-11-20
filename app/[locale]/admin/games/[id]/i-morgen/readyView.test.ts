@@ -126,4 +126,12 @@ describe('buildReadyView', () => {
     const v = view([person('Kari Lund'), person('Kari Berg'), person('Ola Nordmann')]);
     expect(v.rows[0].sub).toBe('Kari Berg, Kari Lund og Ola');
   });
+
+  // #2451: with an interval each flight has its start time in front.
+  it('each flight line starts with its own start time when the round has an interval', () => {
+    const v = view([...confirmedSeven, kari], { teeIntervalMinutes: 10 });
+    expect(v.rows.find((r) => r.key === 'flights')?.sub).toBe(
+      '09:00 flight 1: Anders, Ida, Jonas og Marte · 09:10 flight 2: Eirik, Kari, Sondre og Tone',
+    );
+  });
 });

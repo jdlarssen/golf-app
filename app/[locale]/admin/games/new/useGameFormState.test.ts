@@ -3050,3 +3050,88 @@ describe('useGameFormState — swapPlayerTeams (#2456)', () => {
     expect(result.current.teamByPlayer).toEqual(before);
   });
 });
+
+// Type A (#2451): the wizard's start groups come from the rows the form sends
+// and the shared rule, and follow the tee-off, the flights and the choice.
+describe('useGameFormState — starttider per flight (#2451)', () => {
+  const TWELVE: PlayerOption[] = Array.from({ length: 12 }, (_, i) => makePlayer(`s${i + 1}`));
+  const times = (state: { startGroups: { teeOffAt: string | null }[] }) =>
+    state.startGroups.map((g) => g.teeOffAt);
+
+  function bestBallTwelve(initialValues?: Parameters<typeof useGameFormState>[0]['initialValues']) {
+    const hook = renderHook(() =>
+      useGameFormState({ players: TWELVE, courses: COURSES, initialValues }),
+    );
+    act(() => hook.result.current.handleModeChange('best_ball'));
+    act(() => {
+      for (const p of TWELVE) hook.result.current.togglePlayer(p.id);
+    });
+    act(() => {
+      TWELVE.forEach((p, i) => hook.result.current.assignPlayerToSlot(Math.floor(i / 2) + 1, i % 2, p.id));
+    });
+    act(() => hook.result.current.setScheduledTeeOffAt('2026-11-21T09:00'));
+    return hook;
+  }
+
+  it('best ball, 12 spillere, 09:00 Oslo: 09:00, 09:10, 09:20 med 10 min som standard', () => {
+    const { result } = bestBallTwelve();
+    expect(result.current.teeIntervalForSave).toBe(10);
+    expect(times(result.current)).toEqual([
+      '2026-11-21T08:00:00.000Z',
+      '2026-11-21T08:10:00.000Z',
+      '2026-11-21T08:20:00.000Z',
+    ]);
+  });
+
+  it('8 min, ny tee-off og en spiller flyttet gir nye tider uten omlasting', () => {
+    const { result } = bestBallTwelve();
+    act(() => result.current.setTeeIntervalMinutes(8));
+    expect(times(result.current)).toEqual([
+      '2026-11-21T08:00:00.000Z',
+      '2026-11-21T08:08:00.000Z',
+      '2026-11-21T08:16:00.000Z',
+    ]);
+    act(() => result.current.setScheduledTeeOffAt('2026-11-21T10:30'));
+    expect(times(result.current)[0]).toBe('2026-11-21T09:30:00.000Z');
+    act(() => result.current.setFlightForPlayer('s12', 1));
+    expect(result.current.startGroups[0].players.map((p) => p.user_id)).toContain('s12');
+  });
+
+  it('uten tee-off har gruppene bare forskyvning', () => {
+    const { result } = bestBallTwelve();
+    act(() => result.current.setScheduledTeeOffAt(''));
+    expect(result.current.startGroups.map((g) => [g.offsetMinutes, g.teeOffAt])).toEqual([
+      [0, null],
+      [10, null],
+      [20, null],
+    ]);
+  });
+
+  it('en cupkamp får ingen starttider, og intervallet lagres som null', () => {
+    const { result } = bestBallTwelve({ tournament_id: 'cup-1' });
+    expect(result.current.startGroups).toEqual([]);
+    expect(result.current.teeIntervalForSave).toBeNull();
+  });
+
+  it('«Rediger spill» på en runde fra før #2451 åpner uten valg (null)', () => {
+    const { result } = bestBallTwelve({ tee_interval_minutes: null });
+    expect(result.current.teeIntervalMinutes).toBeNull();
+    expect(times(result.current)).toEqual([
+      '2026-11-21T08:00:00.000Z',
+      '2026-11-21T08:00:00.000Z',
+      '2026-11-21T08:00:00.000Z',
+    ]);
+  });
+
+  it('patsome med 12: lag 1 og 2 går ut sammen', () => {
+    const { result } = renderHook(() => useGameFormState({ players: TWELVE, courses: COURSES }));
+    act(() => result.current.handleModeChange('patsome'));
+    act(() => {
+      for (const p of TWELVE) result.current.togglePlayer(p.id);
+    });
+    act(() => {
+      TWELVE.forEach((p, i) => result.current.assignPlayerToSlot(Math.floor(i / 2) + 1, i % 2, p.id));
+    });
+    expect(result.current.startGroups.map((g) => g.players.length)).toEqual([4, 4, 4]);
+  });
+});

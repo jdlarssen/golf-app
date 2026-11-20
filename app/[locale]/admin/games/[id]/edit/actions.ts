@@ -34,6 +34,10 @@ import { isEditSection } from '@/lib/games/editSections';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { notifyRosterInvites } from '@/lib/games/notifyRosterInvites';
 import { notifyGameMoved } from '@/lib/notifications/notifyGameMoved';
+import {
+  notifyTeeTimeChanged,
+  readTeeTimeSnapshot,
+} from '@/lib/notifications/notifyTeeTimeChanged';
 import { isTeeOffMove } from '@/lib/games/moveGameChoices';
 import { isClubTournament } from '@/lib/games/registration';
 import { canRepeatWeekly } from '@/lib/games/weeklyRepeat';
@@ -337,6 +341,13 @@ async function updateGameInternal(
   // mode's allowed starting state. Prevents accidental status transitions
   // when admin has another tab open (e.g. draft was already published).
   const allowedFromStatus = mode === 'update_scheduled' ? 'scheduled' : 'draft';
+  // #2451: the start times as they stand, read before the save so a player
+  // whose time the new teams, flights or interval move hears it. Only for a
+  // scheduled round that keeps its tee-off: a moved round tells the group
+  // through game_moved (with each player's own time), never twice.
+  const teeOffMoved = isTeeOffMove(existing.scheduled_tee_off_at, scheduledTeeOffAt);
+  const teeTimesBefore =
+    mode === 'update_scheduled' && !teeOffMoved ? await readTeeTimeSnapshot(gameId) : null;
   const nextStatus = mode === 'publish' ? 'scheduled' : allowedFromStatus;
 
   const { data: updated, error: updateError } = await supabase
@@ -519,6 +530,12 @@ async function updateGameInternal(
       excludeUserIds: plan.inserts.map((r) => r.user_id),
     });
   }
+
+  // #2451: the players whose own start time moved in this save. Read after
+  // the roster write, also a failed one, so it compares what is stored; the
+  // players added in this save get their invite instead (`teeTimeChanges`
+  // only counts players who were there before). Best-effort.
+  await notifyTeeTimeChanged({ gameId, actorUserId: userId, before: teeTimesBefore });
 
   if (!rosterWrite.ok) {
     redirect({ href: editHref({ error: 'db_players' }), locale });

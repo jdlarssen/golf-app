@@ -14,10 +14,12 @@ import {
   SuggestFlightsForm,
   type StartlistaFocus,
   type StartlistaPlayer,
+  type StartlistaStartTimes,
 } from './StartlistaClient';
 import { hasStartlista } from '@/lib/games/flightScope';
 import { expectedTeamSize } from '@/lib/games/teamScope';
 import { buildStartlist } from '@/lib/games/startlist';
+import { hasStartGroups } from '@/lib/games/flightTeeTimes';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { playerName } from '@/lib/names/playerName';
 import { firstName, sharesFirstName } from '@/lib/firstName';
@@ -38,6 +40,12 @@ type GameRow = {
   status: 'draft' | 'scheduled' | 'active' | 'finished';
   game_mode: GameMode;
   mode_config: { team_size?: number } | null;
+  // #2451 — the start times per flight, and the links that rule them out.
+  scheduled_tee_off_at: string | null;
+  tee_interval_minutes: number | null;
+  tournament_id: string | null;
+  league_round_id: string | null;
+  source_game_id: string | null;
   // #624 — banenavn for re-lokalisering av auto-genererte spillnavn.
   courses: { name: string } | null;
 };
@@ -56,10 +64,11 @@ const ROSTER_COLUMNS =
   'user_id, flight_number, withdrawn_at, accepted_at, users!game_players_user_id_fkey(name, nickname, hcp_index)';
 
 /** The banners the flight actions redirect here with (`flightActions.ts`). */
-const STATUS_CODES = ['flight_updated', 'flight_suggested'] as const;
+const STATUS_CODES = ['flight_updated', 'flight_suggested', 'tee_interval_updated'] as const;
 const ERROR_CODES = [
   'flight_full',
   'bad_flight',
+  'bad_interval',
   'not_active',
   'db_roster',
   'db_players',
@@ -79,6 +88,10 @@ const HEADING_ID = 'startlista-heading';
  * Only for a game that takes a free flight split (`hasStartlista`: a solo
  * format, not wolf, more than four active, while it is scheduled or in
  * progress). Anything else is sent on to the game.
+ *
+ * #2451: each flight card has its start time, and «Tid mellom flightene» over
+ * the cards writes the interval (`setTeeInterval`). A round from before #2451
+ * has no interval: no choice is pressed and it says «Alle går ut 09:00».
  */
 export default async function StartlistaPage({
   params,
@@ -98,7 +111,9 @@ export default async function StartlistaPage({
 
   const { data: game, error: gameError } = await supabase
     .from('games')
-    .select('id, name, status, game_mode, mode_config, courses(name)')
+    .select(
+      'id, name, status, game_mode, mode_config, scheduled_tee_off_at, tee_interval_minutes, tournament_id, league_round_id, source_game_id, courses(name)',
+    )
     .eq('id', id)
     .maybeSingle<GameRow>();
   // Error ≠ absence (#1441): throw on query failure (error boundary), 404
@@ -141,9 +156,10 @@ export default async function StartlistaPage({
   const focus: StartlistaFocus =
     statusCode === 'flight_updated' && Number.isInteger(movedTo) && movedTo > 0
       ? { kind: 'flight', flight: movedTo }
-      : statusCode === 'flight_suggested' || errorMessage
+      : statusCode === 'flight_suggested' || statusCode === 'tee_interval_updated' || errorMessage
         ? { kind: 'heading' }
         : null;
+
 
   return (
     <AdminShell tone="app">
@@ -167,9 +183,30 @@ export default async function StartlistaPage({
         </div>
       )}
 
-      <StartlistaClient gameId={id} players={players} focus={focus} headingId={HEADING_ID} />
+      <StartlistaClient
+        gameId={id}
+        players={players}
+        focus={focus}
+        headingId={HEADING_ID}
+        startTimes={startlistaStartTimes(game)}
+      />
     </AdminShell>
   );
+}
+
+/**
+ * #2451: the cards' start times, or `null` for a round that has none: the same
+ * rule as `setTeeInterval`, a standalone round in a format with start groups.
+ */
+function startlistaStartTimes(game: GameRow): StartlistaStartTimes | null {
+  if (game.tournament_id || game.league_round_id || game.source_game_id) return null;
+  if (!hasStartGroups(game.game_mode)) return null;
+  return {
+    gameMode: game.game_mode,
+    teamSize: expectedTeamSize(game.mode_config),
+    teeOffAt: game.scheduled_tee_off_at,
+    interval: game.tee_interval_minutes,
+  };
 }
 
 /**
