@@ -5,17 +5,47 @@
  * A server action that succeeds redirects. On the client, Next rejects the
  * action's promise with the redirect error and navigates (server-action
  * reducer). A refused save returns `{ error }`. Anything else thrown (a crash,
- * no network) is a failure, and the draft must stay.
+ * no network, a redirect to the login page) is a failure, and the draft must
+ * stay.
  */
+import { routing } from '@/i18n/routing';
 
 /**
- * The error `redirect()` throws. Next has no public check for it, so this
- * reads the digest it sets: `NEXT_REDIRECT;<type>;<url>;<status>;`.
+ * Where the create action sends a saved game (`new/actions.ts`): the receipt,
+ * game-home, the players page, the admin game page, or the cup. Each is one
+ * id segment and an optional page. Re-review: an expired session redirects to
+ * `/login`, which is no success, so only these count.
  */
-export function isNextRedirect(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null || !('digest' in error)) return false;
+const SUCCESS_PATHS = [
+  /^\/games\/[^/]+(\/(klar|spillere))?$/,
+  /^\/admin\/games\/[^/]+$/,
+  /^\/admin\/cup\/[^/]+$/,
+];
+
+/**
+ * The target of the error `redirect()` throws, or null for any other error.
+ * Next has no public check for it, so this reads the digest it sets:
+ * `NEXT_REDIRECT;<type>;<url>;<status>;` (the url may hold `;`).
+ */
+function redirectTarget(error: unknown): string | null {
+  if (typeof error !== 'object' || error === null || !('digest' in error)) return null;
   const digest = (error as { digest: unknown }).digest;
-  return typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT;');
+  if (typeof digest !== 'string' || !digest.startsWith('NEXT_REDIRECT;')) return null;
+  return digest.split(';').slice(2, -2).join(';');
+}
+
+/** A redirect to one of the success targets, with or without a locale prefix. */
+export function isSuccessRedirect(error: unknown): boolean {
+  const target = redirectTarget(error);
+  if (target === null || !target.startsWith('/') || target.startsWith('//')) return false;
+  let path = target.split(/[?#]/)[0];
+  for (const locale of routing.locales) {
+    if (locale !== routing.defaultLocale && (path === `/${locale}` || path.startsWith(`/${locale}/`))) {
+      path = path.slice(locale.length + 1) || '/';
+      break;
+    }
+  }
+  return SUCCESS_PATHS.some((re) => re.test(path));
 }
 
 /**
@@ -31,7 +61,7 @@ export async function settleSubmit<T extends { error?: string }>(
   try {
     result = await run();
   } catch (error) {
-    onResult(isNextRedirect(error));
+    onResult(isSuccessRedirect(error));
     throw error;
   }
   onResult(!result.error);

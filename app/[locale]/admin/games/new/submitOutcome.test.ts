@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { isNextRedirect, settleSubmit } from './submitOutcome';
+import { isSuccessRedirect, settleSubmit } from './submitOutcome';
 
 // vitest.setup.ts stubs next/navigation without redirect; the real one is
 // what the action's redirect error comes from.
@@ -19,16 +19,36 @@ function thrownBy(fn: () => void): unknown {
   throw new Error('did not throw');
 }
 
-describe('isNextRedirect', () => {
-  it('knows the error redirect() throws', () => {
-    expect(isNextRedirect(thrownBy(() => redirect('/games/g1/klar')))).toBe(true);
+const GAME = '0b7c1a2e-1111-4222-8333-444455556666';
+
+describe('isSuccessRedirect', () => {
+  // The success targets of the create action (new/actions.ts), with and
+  // without the locale prefix next-intl adds for a non-default locale.
+  it.each([
+    `/games/${GAME}/klar`,
+    `/games/${GAME}`,
+    `/games/${GAME}/spillere?error=invites_failed`,
+    `/admin/games/${GAME}?status=scheduled`,
+    `/admin/cup/${GAME}?status=match_added`,
+    `/en/games/${GAME}/klar`,
+  ])('%s is a success', (href) => {
+    expect(isSuccessRedirect(thrownBy(() => redirect(href)))).toBe(true);
   });
 
-  it('is false for anything else', () => {
-    expect(isNextRedirect(new Error('Failed to fetch'))).toBe(false);
-    expect(isNextRedirect({ digest: 'NEXT_HTTP_ERROR_FALLBACK;404' })).toBe(false);
-    expect(isNextRedirect(null)).toBe(false);
-    expect(isNextRedirect('NEXT_REDIRECT')).toBe(false);
+  // Re-review: an expired session redirects to /login. That is no success,
+  // and the draft must stay.
+  it.each(['/login', '/en/login', '/', `/games/${GAME}/slett`, 'https://example.com/games/x'])(
+    '%s is not a success',
+    (href) => {
+      expect(isSuccessRedirect(thrownBy(() => redirect(href)))).toBe(false);
+    },
+  );
+
+  it('is false for anything that is not a redirect', () => {
+    expect(isSuccessRedirect(new Error('Failed to fetch'))).toBe(false);
+    expect(isSuccessRedirect({ digest: 'NEXT_HTTP_ERROR_FALLBACK;404' })).toBe(false);
+    expect(isSuccessRedirect(null)).toBe(false);
+    expect(isSuccessRedirect('NEXT_REDIRECT')).toBe(false);
   });
 });
 
@@ -54,6 +74,17 @@ describe('settleSubmit', () => {
       }, onResult),
     ).rejects.toBe(redirectError);
     expect(onResult).toHaveBeenCalledExactlyOnceWith(true);
+  });
+
+  it('a redirect to /login (session expired) is a failure, and is thrown on', async () => {
+    const onResult = vi.fn();
+    const toLogin = thrownBy(() => redirect('/login'));
+    await expect(
+      settleSubmit(async () => {
+        throw toLogin;
+      }, onResult),
+    ).rejects.toBe(toLogin);
+    expect(onResult).toHaveBeenCalledExactlyOnceWith(false);
   });
 
   it('any other thrown error is a failure, and is thrown on', async () => {
