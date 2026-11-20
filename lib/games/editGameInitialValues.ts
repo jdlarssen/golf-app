@@ -10,6 +10,7 @@ import { safeParsePrizes } from '@/lib/games/prizes';
 import { readMinTeeShots } from '@/lib/games/teeShots';
 import { isClubTournament } from './registration';
 import { canRepeatWeekly } from './weeklyRepeat';
+import { isStandaloneRound } from './flightTeeTimes';
 import type { StartType } from './startType';
 
 /**
@@ -38,7 +39,7 @@ export const EDIT_FORM_COLUMNS =
  * three: a missing `league_round_id` would open a league-linked draft in the
  * wizard. One home for both routes.
  */
-export const EDIT_GAME_SELECT = `${EDIT_FORM_COLUMNS}, group_id, tournament_id, league_round_id`;
+export const EDIT_GAME_SELECT = `${EDIT_FORM_COLUMNS}, group_id, tournament_id, league_round_id, source_game_id`;
 
 export type EditGameRow = {
   id: string;
@@ -116,6 +117,8 @@ export type EditGameRow = {
   group_id?: string | null;
   tournament_id?: string | null;
   league_round_id?: string | null;
+  // #2451: a derived game has no start times of its own (`isStandaloneRound`).
+  source_game_id?: string | null;
 };
 
 export type EditGamePlayerRow = {
@@ -207,7 +210,12 @@ function teeIntervalValues(
 ): Pick<InitialValues, 'tee_interval_minutes' | 'tee_interval_linked'> {
   return {
     tee_interval_minutes: game.tee_interval_minutes,
-    tee_interval_linked: Boolean(game.tournament_id || game.league_round_id) || undefined,
+    tee_interval_linked:
+      !isStandaloneRound({
+        tournamentId: game.tournament_id,
+        leagueRoundId: game.league_round_id,
+        sourceGameId: game.source_game_id,
+      }) || undefined,
   };
 }
 

@@ -54,8 +54,8 @@ import { playerTarget } from '@/lib/wizard/playerTarget';
 import { isDatetimeLocalInPast, parseOsloDateTimeLocal } from '@/lib/games/gamePayload';
 import {
   DEFAULT_TEE_INTERVAL_MINUTES,
-  hasStartGroups,
   startGroupsOf,
+  startTimesAllowed as startTimesAllowedFor,
 } from '@/lib/games/flightTeeTimes';
 import { canRepeatWeekly } from '@/lib/games/weeklyRepeat';
 import { START_COUNT_RANGES, fitsStartCount } from '@/lib/games/startPlayerCount';
@@ -1808,7 +1808,8 @@ export function useGameFormState({
   // what the players will see. Without a tee-off yet («Nå» or none) the groups
   // keep their offsets and have no clock time.
   const startTimesAllowed =
-    !initialValues?.tournament_id && !initialValues?.tee_interval_linked && hasStartGroups(gameMode);
+    !initialValues?.tee_interval_linked &&
+    startTimesAllowedFor(gameMode, { tournamentId: initialValues?.tournament_id });
   const teeIntervalForSave = startTimesAllowed ? teeIntervalMinutes : null;
   const startGroups = useMemo(() => {
     if (!startTimesAllowed) return [];
