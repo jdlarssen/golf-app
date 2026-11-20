@@ -31,11 +31,13 @@ Alt vi gjør skal kunne spores nedenfra og opp: et issue hører til en måned, m
 | Kvartal | Milepæl | Ferdig når |
 |---|---|---|
 | Q3 2026 (31.10) | Selvkjørende loops | fire mandager på rad har ukeplan, retro, arkiv og versjon gått uten at Jørgen trykket på noe, og orkestratoren har tatt issues fra tavla på egen hånd med fast kapasitet i hver av de fire ukene |
-| Q4 2026 (31.12) | Runde 3 — sesongslutt | prøvespill og penger i potten er levert, og Kavalkaden er sluppet før nyttår og delt av minst tre spillere som ikke er Jørgen |
+| Q4 2026 (31.12) | Runde 3 — sesongslutt | prøvespill er levert, og Kavalkaden er sluppet før nyttår og delt av minst tre spillere som ikke er Jørgen |
 | Q1 2027 (31.03) | Native app (iOS + Android) | Tørny ligger i App Store og Google Play som ekte native app, og minst fire navngitte venner har installert den fra butikken og spilt én runde i appen |
 | Q2 2027 (30.06) | Liv laga — sesongstart 2027 | ti fullførte spill helt uten Jørgen (han verken arrangerte eller spilte), fra minst tre ulike arrangører |
 
 Selvkjørende loops går én måned inn i Q4; datoen i tabellen er milepælens. Spriker tabellen og GitHub, er milepælene fasit.
+
+**Endret 2026-11-20 (eierens beslutning):** «penger i potten» er tatt ut av målet for Q4. Pengeoppgjøret mellom spillere står fryst til etter lanseringen ([`hva-er-nok.md`](hva-er-nok.md)), og desemberplanen har det ikke med.
 
 Månedsmålene står i [`roadmap.md`](roadmap.md).
 
