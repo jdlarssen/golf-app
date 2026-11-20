@@ -21,12 +21,17 @@ const STATUSES: readonly LeagueStatus[] = ['draft', 'active', 'finished'];
  * `isClubMember` comes from `canViewLeague`, which answers false for a caller
  * who is already a participant. That is harmless here: `canJoin` needs
  * `!isParticipant` and `canLeave` does not read membership (#2839).
+ *
+ * `canOpenCards` comes from `canOpenLeagueCards`. Without it a cell carries no
+ * flight (`gameId: null`), so the app links no card the gate would refuse.
+ * The wire is unchanged, so every app build follows it.
  */
 export function buildAppLeagueView(
   snapshot: LeagueSnapshot,
   userId: string,
   details: ReadonlyMap<string, AppLeagueParticipantDetails> | null = null,
   isClubMember = false,
+  canOpenCards = false,
 ): AppLeagueView {
   const { league, rounds, participants, standings } = snapshot;
   const scoring = SCORINGS.find((s) => s === league.scoring) ?? 'net';
@@ -96,7 +101,7 @@ export function buildAppLeagueView(
         value: c.value,
         points: c.points,
         penalised: c.penalised,
-        gameId: c.gameId,
+        gameId: canOpenCards ? c.gameId : null,
       })),
     })),
     me: {

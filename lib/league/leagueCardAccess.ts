@@ -6,7 +6,7 @@ import { COURSE_HOLES_SELECT } from '@/lib/supabase/queryFragments';
 import type { TeeGender } from '@/lib/games/teeRating';
 import type { ScorecardHole } from '@/lib/games/scorecardReviewData';
 import { playerName } from '@/lib/names/playerName';
-import { canViewLeague } from './canViewLeague';
+import { canOpenLeagueCards } from './canViewLeague';
 import { countingCards } from './countingCards';
 import { readLeagueFlight, type LeagueFlight } from './leagueFlight';
 import { computeFlightCard } from './roundScoring';
@@ -23,8 +23,9 @@ import type { LeagueFormat, StandingsMetric } from './types';
 //
 // The gate lets a caller through when all of this holds:
 //  - the game is a flight in the league named in the address;
-//  - the caller may see the league (`canViewLeague`, the rule the league page
-//    and the app's league route read; the membership is read as the caller);
+//  - the caller may open the league's cards (`canOpenLeagueCards`: a
+//    participant, or one who runs the league; the rule the league page and
+//    the app's league route link a cell by, read as the caller);
 //  - the card counts in the table (`countingCards`, the rule `getLigaSnapshot`
 //    scores with), so a card the table did not count is never shown.
 // Everything else is `not_found`, as if the card did not exist. The web page
@@ -85,14 +86,15 @@ export async function leagueCardAccess(
   const league = leagueRes.data;
   if (!league) return NOT_FOUND;
 
-  const { allowed } = await canViewLeague(caller, {
+  const allowed = await canOpenLeagueCards(caller, {
     groupId: league.group_id,
+    createdBy: flight.leagueCreatorId,
     userId: callerId,
     isParticipant: meRes.data !== null,
   });
   if (!allowed) return NOT_FOUND;
 
-  // The flight's cards are read only for a caller who may see the league.
+  // The flight's cards are read only for a caller who may open them.
   const [gameRes, playersRes] = await Promise.all([
     admin
       .from('games')

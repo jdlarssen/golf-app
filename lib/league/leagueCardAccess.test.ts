@@ -8,8 +8,9 @@ import type { LeagueFlight } from './leagueFlight';
  * #2815: the door to a card behind a cell in the season table. A league
  * mate is usually not in the flight, and RLS shows a finished game only to
  * its players (#1542), so the card is read past RLS behind this gate: the
- * caller must see the league (`canViewLeague`, run for real here as the
- * caller), and the card must be one the table counts (`countingCards`).
+ * caller must be one who may open the league's cards (`canOpenLeagueCards`,
+ * run for real here as the caller: a participant, or one who runs the
+ * league), and the card must be one the table counts (`countingCards`).
  * Everything else is «not found»; a failed read throws.
  */
 
@@ -42,7 +43,8 @@ const card = (userId: string, over: Record<string, unknown> = {}) => ({
 
 /**
  * The service-role reads: the league, the caller's own participant row, the
- * flight and its cards. `groupId` makes it a club league.
+ * flight and its cards. `groupId` makes it a club league. The caller is a
+ * participant unless `participant: false` says otherwise.
  */
 function reads(opts: {
   groupId?: string | null;
@@ -57,18 +59,18 @@ function reads(opts: {
         ? { data: null, error: { message: 'boom' } }
         : { data: { group_id: opts.groupId ?? null, format: 'stroke', scoring: 'net' } },
     ],
-    league_players: [{ data: opts.participant ? { user_id: 'caller' } : null }],
+    league_players: [{ data: (opts.participant ?? true) ? { user_id: 'caller' } : null }],
     games: [{ data: { status: opts.status ?? 'finished', course_id: 'c1', tee_box_id: 't1' } }],
     game_players: [{ data: [card('anders', opts.anders), card('mia')] }],
   };
   admin = buildSupabaseMock([], {}, { byTable });
 }
 
-/** The caller's own reads in `canViewLeague`: club membership and is_admin. */
-function caller(opts: { member?: boolean; isAdmin?: boolean } = {}) {
+/** The caller's own reads in `canOpenLeagueCards`: is_admin and the club role. */
+function caller(opts: { role?: 'owner' | 'admin' | 'member'; isAdmin?: boolean } = {}) {
   return buildSupabaseMock([], {}, {
     byTable: {
-      group_members: [{ data: opts.member ? { user_id: 'caller' } : null }],
+      group_members: [{ data: opts.role ? { role: opts.role } : null }],
       users: [{ data: { is_admin: opts.isAdmin ?? false } }],
     },
   }) as unknown as SupabaseClient<Database>;
@@ -89,10 +91,11 @@ beforeEach(() => {
 
 describe('leagueCardAccess — who may see the card', () => {
   it.each([
-    ['a participant of a club league', { groupId: 'club', participant: true }, {}],
-    ['a club member who is not a participant', { groupId: 'club' }, { member: true }],
-    ['a global admin outside the club', { groupId: 'club' }, { isAdmin: true }],
-    ['any signed-in user in a league without a club', { groupId: null }, {}],
+    ['a participant of a club league', { groupId: 'club' }, {}],
+    ['a participant of a league without a club', { groupId: null }, {}],
+    ['a club admin who is not a participant', { groupId: 'club', participant: false }, { role: 'admin' as const }],
+    ['a club owner who is not a participant', { groupId: 'club', participant: false }, { role: 'owner' as const }],
+    ['a global admin who is not a participant', { groupId: null, participant: false }, { isAdmin: true }],
   ])('%s sees a counted card', async (_label, league, who) => {
     reads(league);
     const access = await ask(caller(who));
@@ -105,9 +108,19 @@ describe('leagueCardAccess — who may see the card', () => {
     });
   });
 
-  it('someone outside the club of a club league gets «not found»', async () => {
-    reads({ groupId: 'club' });
-    expect(await ask(caller())).toEqual({ ok: false, reason: 'not_found' });
+  it('the league\'s creator sees a counted card without being a participant', async () => {
+    vi.mocked(readLeagueFlight).mockResolvedValue({ ...FLIGHT, leagueCreatorId: 'caller' });
+    reads({ participant: false });
+    expect(await ask(caller())).toMatchObject({ ok: true, card: { user_id: 'anders' } });
+  });
+
+  it.each([
+    ['a signed-in user outside a league without a club', { groupId: null, participant: false }, {}],
+    ['a club member who is not a participant', { groupId: 'club', participant: false }, { role: 'member' as const }],
+    ['someone outside the club of a club league', { groupId: 'club', participant: false }, {}],
+  ])('%s gets «not found»', async (_label, league, who) => {
+    reads(league);
+    expect(await ask(caller(who))).toEqual({ ok: false, reason: 'not_found' });
   });
 
   it('a card from another league than the one in the address is «not found»', async () => {
