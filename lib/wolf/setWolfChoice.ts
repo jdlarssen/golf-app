@@ -4,6 +4,7 @@ import { updateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import type { WolfChoice } from '@/lib/scoring/modes/types';
 import { validateWolfChoice, type WolfChoiceValidationError } from '@/lib/wolf/validateWolfChoice';
+import { wolfChoiceRefusal, type WolfChoiceRefusal } from '@/lib/wolf/wolfChoiceRefusal';
 
 export type SetWolfChoiceResult =
   | { ok: true }
@@ -12,7 +13,7 @@ export type SetWolfChoiceResult =
 export type SetWolfChoiceError =
   | 'not_authenticated'
   | WolfChoiceValidationError
-  | 'rls_denied';
+  | WolfChoiceRefusal;
 
 export interface SetWolfChoiceInput {
   gameId: string;
@@ -25,9 +26,12 @@ export interface SetWolfChoiceInput {
 /**
  * Server-action for å lagre Wolf-spillerens valg for ett hull.
  *
- * Authz: RLS-policy `wolf_choices_insert/update` håndhever at `wolf_user_id`
- * matcher `auth.uid()` (eller admin override). Vi sjekker også klient-side
- * her for å gi en tydelig feilkode istedenfor en cryptic Postgres-RLS-feil.
+ * Authz: databasen. Vakta på `wolf_hole_choices` (migrasjon 0249) krever at
+ * runden pågår, at `wolf_user_id` er den som spør (eller at den som spør er
+ * admin), at ulven har hullet i rundgangen, og at partneren er med i spillet.
+ * En avvisning kommer med grunnen, og `wolfChoiceRefusal` gjør den om til en
+ * kode skjermen har tekst for. Alt som ikke er en avvisning (nettbrudd,
+ * serverfeil), blir `save_failed`: «prøv igjen», ikke «du er ikke Wolf».
  *
  * Forretningsreglene (hull 1..18, gyldig valg, partner bare ved 'partner',
  * ikke seg selv) bor i `validateWolfChoice`, delt med appen (#2228). De
@@ -57,8 +61,7 @@ export async function setWolfChoice(
   }
 
   // Upsert på (game_id, hole_number) — primary key på tabellen, så
-  // Wolf-spilleren kan endre valget sitt så lenge hullet ikke er lukket
-  // (locking på finished-state håndteres separat, ikke i v1).
+  // Wolf-spilleren kan endre valget sitt så lenge runden pågår.
   const { error } = await supabase.from('wolf_hole_choices').upsert(
     {
       game_id: gameId,
@@ -73,9 +76,7 @@ export async function setWolfChoice(
 
   if (error) {
     console.error('[setWolfChoice] upsert failed', { input, error });
-    // RLS-feil og constraint-violations rapporteres alle som rls_denied
-    // til UI — fra brukerens perspektiv er det "du har ikke lov til dette".
-    return { ok: false, error: 'rls_denied' };
+    return { ok: false, error: wolfChoiceRefusal(error) };
   }
 
   updateTag(`game-${gameId}`);

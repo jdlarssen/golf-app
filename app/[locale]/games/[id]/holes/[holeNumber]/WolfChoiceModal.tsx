@@ -48,7 +48,11 @@ const WOLF_ERROR_KEYS = new Set([
   'partner_must_be_null',
   'partner_cannot_be_wolf',
   'invalid_hole',
+  'not_wolf_on_hole',
+  'game_not_active',
+  'partner_not_in_game',
   'rls_denied',
+  'save_failed',
 ]);
 
 const backdropStyle: CSSProperties = {

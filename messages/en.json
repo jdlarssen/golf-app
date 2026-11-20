@@ -3149,7 +3149,11 @@
         "partner_must_be_null": "Partner must not be set for Lone/Blind Wolf.",
         "partner_cannot_be_wolf": "You cannot pick yourself as a partner.",
         "invalid_hole": "Invalid hole number.",
+        "not_wolf_on_hole": "You are not the Wolf on this hole, so you cannot pick.",
+        "game_not_active": "Wolf picks can only be saved while the round is in progress.",
+        "partner_not_in_game": "That partner is not in this game. Pick someone else.",
         "rls_denied": "You must be the Wolf on this hole to make a pick.",
+        "save_failed": "Your pick was not saved. Check your connection and try again.",
         "unknown": "Something went wrong. Please try again."
       }
     },

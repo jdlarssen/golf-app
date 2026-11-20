@@ -285,6 +285,28 @@ describe('choices', () => {
       ['koden mangler helt → db_error', undefined, 'db_error'],
     ];
 
+    // Vakta i 0249 sier hvorfor. Grunnen blir en egen kode med egen tekst.
+    const REFUSALS: [string, string][] = [
+      ['wolf_choice_not_your_hole', 'not_wolf_on_hole'],
+      ['wolf_choice_not_in_game', 'not_wolf_on_hole'],
+      ['wolf_choice_game_not_active', 'game_not_active'],
+      ['wolf_choice_partner_not_in_game', 'partner_not_in_game'],
+    ];
+
+    it.each(REFUSALS)('databasen avviser med %s → %s', async (message, error) => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        wolf_hole_choices: [
+          queryStub({ data: null, error: { message, code: '42501' } }),
+        ],
+      });
+
+      expect(await choices().setWolfChoice(wolfWrite())).toEqual({
+        ok: false,
+        error,
+      });
+    });
+
     it.each(DB_ERRORS)('%s', async (_label, code, error) => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
