@@ -3,6 +3,10 @@ import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { expectOne } from '@/lib/supabase/affectedRows';
 import { isKavalkadeCardKind } from './cardModel';
+import { KAVALKADE_YEAR } from './release';
+
+/** Postgres unique violation: this player already shared this card this year. */
+const UNIQUE_VIOLATION = '23505';
 
 export type LogShareResult = { ok: true } | { ok: false; error: LogShareError };
 
@@ -44,18 +48,23 @@ export async function logKavalkadeShareFor(
   year: number,
   cardKind: string,
 ): Promise<LogShareResult> {
-  if (!Number.isInteger(year) || !isKavalkadeCardKind(cardKind)) {
+  // Only the Kavalkade's own year is counted (audit 20.11). A client that
+  // sends another year gets the same answer as for an unknown card.
+  if (year !== KAVALKADE_YEAR || !isKavalkadeCardKind(cardKind)) {
     return { ok: false, error: 'unknown_card' };
   }
 
   try {
-    expectOne(
-      await getAdminClient()
-        .from('kavalkade_shares')
-        .insert({ user_id: userId, year, card_kind: cardKind })
-        .select('id'),
-      'logKavalkadeShare',
-    );
+    const result = await getAdminClient()
+      .from('kavalkade_shares')
+      .insert({ user_id: userId, year, card_kind: cardKind })
+      .select('id');
+    // One row per player, year and card (migration 0244), so the counter
+    // cannot be blown up by repeated calls. A repeat is already counted.
+    if ((result.error as { code?: string } | null)?.code === UNIQUE_VIOLATION) {
+      return { ok: true };
+    }
+    expectOne(result, 'logKavalkadeShare');
     return { ok: true };
   } catch (err) {
     console.error('[logKavalkadeShare] could not record the share', {

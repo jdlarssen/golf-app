@@ -58,6 +58,10 @@ describe('logKavalkadeShareFor', () => {
     ['en tom kort-slug', 2026, ''],
     ['et år som ikke er et helt tall', 2026.5, 'team'],
     ['et år som ikke er et tall', Number.NaN, 'team'],
+    // Audit 20.11: only the Kavalkade's own year is counted.
+    ['et tidligere år', 2025, 'team'],
+    ['et senere år', 2027, 'team'],
+    ['et år langt fram', 2100, 'year'],
   ])('%s: unknown_card, ingenting skrives', async (_navn, year, cardKind) => {
     await expect(logKavalkadeShareFor(USER_ID, year, cardKind)).resolves.toEqual({
       ok: false,
@@ -73,6 +77,17 @@ describe('logKavalkadeShareFor', () => {
       error: 'db_error',
     });
     expect(console.error).toHaveBeenCalled();
+  });
+
+  it('a second share of the same card is already counted: ok, no error', async () => {
+    // Audit 20.11: one row per player, year and card (migration 0244). The
+    // unique index answers the repeat with 23505, which means «counted».
+    const duplicate = { message: 'duplicate key value', code: '23505' };
+    insertResponse = { data: null, error: duplicate };
+    await expect(logKavalkadeShareFor(USER_ID, 2026, 'rival')).resolves.toEqual({
+      ok: true,
+    });
+    expect(console.error).not.toHaveBeenCalled();
   });
 
   it('svelger en databasefeil, men logger den', async () => {
