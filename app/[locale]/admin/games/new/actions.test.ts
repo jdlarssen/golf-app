@@ -92,6 +92,12 @@ vi.mock('@/lib/games/createGuestPlayer', () => ({
   findGuestIds: vi.fn(async () => new Set<string>()),
 }));
 
+// 0251: whose guest it is. No fixture has another organiser's guest unless
+// the test says so.
+vi.mock('@/lib/games/guestOwnership', () => ({
+  findForeignGuestIds: vi.fn(async () => new Set<string>()),
+}));
+
 // #2570: the guest-only tests insert guest rows through the service role.
 // Only they reach it; every other fixture has no guests.
 vi.mock('@/lib/supabase/admin', () => ({
@@ -1207,6 +1213,70 @@ describe('klubb-turnering uten spillere (#2433)', () => {
 // #2570: a published round with only guests has nobody who can log in and
 // enter scores. The action reads the same rule as the wizard (guestOnlyRoster)
 // from the stored guest flag (findGuestIds).
+// Audit 20.11 (0251): guest rows are written with the service role, past the
+// database guard, so the action asks whose guest it is before anything is
+// written.
+describe('another organiser\'s guest on the roster (0251)', () => {
+  async function guestsAre(ids: Set<string>) {
+    const { findGuestIds } = await import('@/lib/games/createGuestPlayer');
+    vi.mocked(findGuestIds).mockResolvedValueOnce(ids);
+  }
+
+  function writes() {
+    return supabaseMock.__fromCalls.filter((c) =>
+      ['insert', 'update', 'delete', 'upsert'].includes(c.method),
+    );
+  }
+
+  it('a non-admin with a guest that is not theirs gets db_players, nothing is written', async () => {
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: false }, error: null }]);
+    signIn('org-1');
+    await guestsAre(new Set(['u3']));
+    const { findForeignGuestIds } = await import('@/lib/games/guestOwnership');
+    vi.mocked(findForeignGuestIds).mockResolvedValueOnce(new Set(['u3']));
+
+    const { createAndPublishGame } = await import('./actions');
+    await expect(createAndPublishGame(fullPublishFormData())).resolves.toEqual({
+      error: 'db_players',
+    });
+    expect(findForeignGuestIds).toHaveBeenLastCalledWith('org-1', ['u3']);
+    expect(writes()).toEqual([]);
+  });
+
+  it('a failed lookup refuses too', async () => {
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: false }, error: null }]);
+    signIn('org-1');
+    await guestsAre(new Set(['u3']));
+    const { findForeignGuestIds } = await import('@/lib/games/guestOwnership');
+    vi.mocked(findForeignGuestIds).mockRejectedValueOnce(new Error('boom'));
+
+    const { createAndPublishGame } = await import('./actions');
+    await expect(createAndPublishGame(fullPublishFormData())).resolves.toEqual({
+      error: 'db_players',
+    });
+    expect(writes()).toEqual([]);
+  });
+
+  it('an admin is not asked', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: { id: 'g-admin' }, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+    ]);
+    signIn('admin-1');
+    await guestsAre(new Set(['u3']));
+    const { findForeignGuestIds } = await import('@/lib/games/guestOwnership');
+    vi.mocked(findForeignGuestIds).mockClear();
+
+    const { createAndPublishGame } = await import('./actions');
+    await expect(createAndPublishGame(fullPublishFormData())).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(findForeignGuestIds).not.toHaveBeenCalled();
+  });
+});
+
 describe('bare gjester ved publisering (#2570)', () => {
   const ALL_EIGHT = new Set(['u0', 'u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7']);
 

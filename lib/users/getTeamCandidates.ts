@@ -1,4 +1,5 @@
 import 'server-only';
+import { withoutForeignGuests } from '@/lib/games/guestOwnership';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
 import { maskEmail } from '@/lib/users/maskEmail';
@@ -43,7 +44,9 @@ type CandidateRow = {
 export async function getTeamCandidates(
   userId: string,
 ): Promise<TeamCandidate[]> {
-  return shapeCandidates(await loadCandidateRows(userId));
+  // Audit 20.11 (0251): a guest is offered only to the one who made it or
+  // already has it in a round of their own. The add action checks it again.
+  return withoutForeignGuests(userId, shapeCandidates(await loadCandidateRows(userId)));
 }
 
 /**

@@ -5,6 +5,7 @@ import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { findGuestIds } from '@/lib/games/createGuestPlayer';
+import { findForeignGuestIds } from '@/lib/games/guestOwnership';
 import { asTeeChoice, teeChoiceToDb } from '@/lib/games/teeChoice';
 import {
   buildGameInsertPayload,
@@ -138,6 +139,20 @@ async function createGameInternal(
   // inn via service-role, se game_players-insertene under. Slått opp her så
   // #2570-sperren under kan lese samme sett.
   const guestIds = await findGuestIds(payload.players.map((p) => p.user_id));
+
+  // Audit 20.11 (0251): the guest rows below go in with the service role, so
+  // the database guard does not see them. A non-admin brings only guests they
+  // made, or already have in a round of their own. The pickers offer no
+  // others; this stops a posted id. A failed lookup refuses.
+  if (!isAdmin && guestIds.size > 0) {
+    try {
+      const foreign = await findForeignGuestIds(userId, [...guestIds]);
+      if (foreign.size > 0) return { error: 'db_players' };
+    } catch (lookupError) {
+      console.error('[createGameInternal] guest lookup failed', lookupError);
+      return { error: 'db_players' };
+    }
+  }
 
   // #2570: a published round with only guests has nobody who can log in and
   // enter scores. Same rule as the wizard's gate (guestOnlyRoster); a failed

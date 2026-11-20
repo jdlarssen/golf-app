@@ -99,7 +99,11 @@ export async function addGuestToGame(
     parsed.profile.tee,
     teeAvailabilityOf(game.tee_boxes ?? null),
   );
-  const created = await createGuestPlayer(gameId, { ...parsed.profile, tee });
+  const created = await createGuestPlayer(
+    gameId,
+    { ...parsed.profile, tee },
+    { createdBy: ctx.userId },
+  );
   if (!created.ok) {
     redirect({ href: `${detailPath}?error=${created.error}`, locale });
   }
@@ -152,7 +156,7 @@ export async function createGuestForWizard(
   });
   if (!parsed.ok) return { ok: false, error: parsed.error };
 
-  const created = await createGuestUser(parsed.profile);
+  const created = await createGuestUser(parsed.profile, { createdBy: user.id });
   if (!created.ok) return { ok: false, error: created.error };
 
   return {

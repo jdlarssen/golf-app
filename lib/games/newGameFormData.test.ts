@@ -78,6 +78,18 @@ vi.mock('@/lib/supabase/admin', () => ({
   }),
 }));
 
+// 0251: whose guest it is. The lookup is the test's; the filter is the rule's.
+const foreignGuestIds = vi.fn<() => Promise<Set<string>>>(async () => new Set());
+vi.mock('@/lib/games/guestOwnership', () => ({
+  withoutForeignGuests: async <T extends { id: string; isGuest?: boolean }>(
+    _actor: string,
+    rows: T[],
+  ) => {
+    const foreign = await foreignGuestIds();
+    return rows.filter((r) => !foreign.has(r.id));
+  },
+}));
+
 import { getNewGameFormData } from './newGameFormData';
 
 beforeEach(() => {
@@ -164,6 +176,21 @@ describe('getNewGameFormData — e-post-scoping (#435)', () => {
     for (const p of players) {
       expect('email' in p).toBe(false);
     }
+  });
+});
+
+describe('getNewGameFormData — guests (0251)', () => {
+  it('the picker leaves out another organiser\'s guest and keeps your own', async () => {
+    usersData = [
+      ...usersData,
+      { id: 'g-mine', name: 'Gjest A', nickname: null, hcp_index: 20, profile_completed_at: '2026-01-01T00:00:00Z', gender: null, level: 'normal', is_guest: true },
+      { id: 'g-theirs', name: 'Gjest B', nickname: null, hcp_index: 20, profile_completed_at: '2026-01-01T00:00:00Z', gender: null, level: 'normal', is_guest: true },
+    ] as typeof usersData;
+    foreignGuestIds.mockResolvedValueOnce(new Set(['g-theirs']));
+
+    const { players } = await getNewGameFormData(false);
+
+    expect(players.map((p) => p.id)).toEqual(['u1', 'u2', 'g-mine']);
   });
 });
 

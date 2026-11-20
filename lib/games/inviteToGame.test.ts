@@ -41,6 +41,14 @@ vi.mock('@/lib/games/inviteEligibility', () => ({
   getInviteEligibleIds: (...args: unknown[]) => inviteEligibleIdsMock(...args),
 }));
 
+// 0251: whose guest it is. Default: the recipient is no one else's guest.
+const foreignGuestIdsMock = vi.fn<(...args: unknown[]) => Promise<Set<string>>>(
+  async () => new Set<string>(),
+);
+vi.mock('@/lib/games/guestOwnership', () => ({
+  findForeignGuestIds: (...args: unknown[]) => foreignGuestIdsMock(...args),
+}));
+
 // Frist-forlengelsen på en åpen invitasjon går gjennom admin-klienten uansett
 // hvilken klient kalleren sendte inn — egen kø, så skrivingen kan skilles fra
 // lesingene.
@@ -287,6 +295,32 @@ describe('adressen tilhører en registrert bruker', () => {
 
     expect(result).toEqual({ ok: false, reason: 'db_players' });
     expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+  });
+
+  it('another organiser\'s guest → invite_not_allowed, no write (0251)', async () => {
+    // Sharing a round makes the guest eligible; whose guest it is decides.
+    foreignGuestIdsMock.mockResolvedValueOnce(new Set<string>([RECIPIENT_ID]));
+
+    const { result, client } = await invite([
+      gameRow(),
+      { data: { id: RECIPIENT_ID }, error: null },
+    ]);
+
+    expect(foreignGuestIdsMock).toHaveBeenLastCalledWith(INVITER_ID, [RECIPIENT_ID]);
+    expect(result).toEqual({ ok: false, reason: 'invite_not_allowed' });
+    expect(client.__fromCalls.some((c) => c.method === 'insert')).toBe(false);
+  });
+
+  it('a failed guest lookup refuses (0251)', async () => {
+    foreignGuestIdsMock.mockRejectedValueOnce(new Error('boom'));
+
+    const { result, client } = await invite([
+      gameRow(),
+      { data: { id: RECIPIENT_ID }, error: null },
+    ]);
+
+    expect(result).toEqual({ ok: false, reason: 'invite_not_allowed' });
+    expect(client.__fromCalls.some((c) => c.method === 'insert')).toBe(false);
   });
 
   it('utenfor venne-/klubb-scopet → invite_not_allowed, ingen skriving', async () => {

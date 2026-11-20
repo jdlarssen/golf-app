@@ -13,6 +13,7 @@ import {
   createGameDraft,
   createAndPublishGame,
 } from '@/app/[locale]/admin/games/new/actions';
+import { findForeignGuestIds } from '@/lib/games/guestOwnership';
 import { getCreateGamePlayerRoster } from '@/lib/games/getCreateGamePlayerRoster';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -169,7 +170,22 @@ async function loadRevansjeContext(
     registration_type: extra.registration_type,
     let_friends_skip_gate: extra.let_friends_skip_gate,
   };
-  const playerRows: RevansjePlayerRow[] = gwp.players.map((p) => ({
+  // Audit 20.11 (0251): another organiser's guest does not follow into your
+  // round. The roster picker leaves the same guests out, and the save refuses
+  // them. A failed lookup leaves every guest out.
+  const sourceGuestIds = gwp.players.filter((p) => p.users?.is_guest).map((p) => p.user_id);
+  let leftOutGuests = new Set<string>();
+  if (sourceGuestIds.length > 0) {
+    try {
+      leftOutGuests = await findForeignGuestIds(currentUserId, sourceGuestIds);
+    } catch (lookupError) {
+      console.error('[loadRevansjeContext] guest lookup failed', lookupError);
+      leftOutGuests = new Set(sourceGuestIds);
+    }
+  }
+  const playerRows: RevansjePlayerRow[] = gwp.players
+    .filter((p) => !leftOutGuests.has(p.user_id))
+    .map((p) => ({
     user_id: p.user_id,
     team_number: p.team_number,
     flight_number: p.flight_number,
