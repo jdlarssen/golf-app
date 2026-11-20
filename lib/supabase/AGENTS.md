@@ -145,3 +145,14 @@ Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
 - En cup (`tournaments`) leses av dem som er med i den: deltakerne, spillerne i en startet kamp, arrangøren, cupens klubb og global admin. `tournament_participants`, `tournament_plans` og `tournament_side_awards` følger cupen (`can_view_tournament`). De lenke-delte sidene (`/cup/[id]`, `/cup/bli-med/[shortId]`) leser med tjenesteklienten bak sin egen port, som før.
 - Kortet bak en celle i ligatabellen åpnes av deltakerne og dem som styrer ligaen (`canOpenLeagueCards` i `lib/league/canViewLeague.ts`). Porten, lenkene på nettsiden og appens liga-rute leser den ene regelen.
 - Fasit: `supabase/tests/league_cup_read_rules_test.sql`.
+
+## Runder, egne rader og gjester — hvem skriver hva (0251)
+
+- `games`: arrangøren sletter sin egen runde bare før start (`draft`, `scheduled`). En runde som pågår eller er ferdig, slettes av global admin. Statusen går aldri bakover for en innlogget ikke-admin (`guard_games_status_transition`); gjenåpning er adminens (`reopenGame`).
+- `game_players`: arrangøren fjerner en rad bare før start. Etter start trekkes spilleren. Kolonnene systemet skriver (`result_summary`, `signup_source`, `deliver_reminder_sent_at`, og `score_differential` fra 0117) skrives bare med tjenesteklienten. En rad en innlogget klient setter inn, er en ren plass: ingen resultat-, leverings-, trekk- eller betalingskolonner. På egen rad: `tee_gender` er låst etter start, `rejection_reason` kan bare tømmes, `accepted_at` settes én gang. Triggeren heter `guard_game_players_system_columns` og står ved siden av `guard_game_players_self_update`.
+- `scores`: en ny rad med `client_updated_at` mer enn 5 minutter fram i tid lagres med serverens klokke (`guard_scores_insert_timestamp`). En oppdatering med samme stempel avvises som før (0109).
+- `green_pins`: en pinne kommer fra en spiller i en runde som pågår på banen, og hver spiller gir én per hull i vinduet. `saveGreenPin` svarer «takk» på en gjentatt pinne (`23505`).
+- `idea_submissions`: en ny idé har tom `status` og `built_at`.
+- Gjester: `users.guest_created_by` sier hvem som la inn gjesten (`createGuestUser` krever det). En ikke-admin setter en gjest på en spillerliste bare når hun la inn gjesten selv, eller gjesten alt står i en runde hun har opprettet. Regelen har ett hjem, SQL-funksjonen `guest_usable_by`. Triggeren `guard_game_players_guest_owner` spør den for innloggede klienter. Serverstiene som skriver gjesterader med tjenesteklienten (`createGameInternal`, `updateGameInternal`, `mayAddExistingUser`) og spillervelgerne spør den gjennom `lib/games/guestOwnership.ts`. En ny sti som tar imot en bruker-id og skriver med tjenesteklienten, må spørre den selv.
+- `users.guest_created_by` er ikke lesbar for klienter (ingen kolonnerettighet, som `email`).
+- Fasit: `supabase/tests/round_and_own_row_rules_test.sql`.
