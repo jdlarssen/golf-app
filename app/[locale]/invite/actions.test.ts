@@ -143,6 +143,8 @@ describe('sendFriendInvite — shared dedup (#348)', () => {
     expect(sendInviteNotificationMock).toHaveBeenCalledWith({
       to: 'new@example.com',
       invitedByName: 'Tester',
+      // A nameless friend gets «En venn» in the recipient's language.
+      inviterFallback: 'friend',
       inviteToken: insertedRow.token,
       expiresAt: insertedRow.expires_at,
     });
