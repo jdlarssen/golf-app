@@ -132,7 +132,7 @@ async function updateGameInternal(
   const { data: existing, error: existingError } = await supabase
     .from('games')
     .select(
-      'status, game_mode, mode_config, tournament_id, league_round_id, source_game_id, group_id, scheduled_tee_off_at, course_id, tee_box_id, prizes',
+      'status, game_mode, mode_config, tournament_id, league_round_id, source_game_id, group_id, scheduled_tee_off_at, course_id, tee_box_id, prizes, created_by',
     )
     .eq('id', gameId)
     .maybeSingle();
@@ -468,6 +468,7 @@ async function updateGameInternal(
     gameId,
     before: existing.prizes,
     after: prizes,
+    ownerIds: [existing.created_by, userId],
   });
 
   const rosterWrite = await writeRosterPlan(

@@ -482,7 +482,12 @@ describe('updateScheduledAction — sponsor logo after the save (audit 20.11, p1
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null }, // loadRole
       {
-        data: { status: 'scheduled', game_mode: 'best_ball', prizes: STORED_PRIZES },
+        data: {
+          status: 'scheduled',
+          game_mode: 'best_ball',
+          prizes: STORED_PRIZES,
+          created_by: 'creator-9',
+        },
         error: null,
       }, // games.select
       { data: [], error: null }, // prior roster
@@ -503,6 +508,8 @@ describe('updateScheduledAction — sponsor logo after the save (audit 20.11, p1
       after: { sponsorLogoPath: string | null }[];
     };
     expect(arg.gameId).toBe('game-1');
+    // Re-review: only the game's own folders (creator, and the one saving).
+    expect((arg as unknown as { ownerIds: string[] }).ownerIds).toEqual(['creator-9', 'admin-1']);
     expect(arg.before).toEqual(STORED_PRIZES);
     expect(arg.after.map((p) => p.sponsorLogoPath)).toEqual(['u/new.webp']);
     expect(lastRedirect()).toBe('/admin/games/game-1?status=updated');

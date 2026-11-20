@@ -39,13 +39,14 @@ export async function deleteGame(formData: FormData) {
   // #2481: tee-off, course and cup/league ties for the cancellation notice.
   const { data: game } = await supabase
     .from('games')
-    .select('id, name, status, prizes, scheduled_tee_off_at, tournament_id, league_round_id, courses(name)')
+    .select('id, name, status, prizes, created_by, scheduled_tee_off_at, tournament_id, league_round_id, courses(name)')
     .eq('id', gameId)
     .maybeSingle<{
       id: string;
       name: string;
       status: GameStatus;
       prizes: unknown;
+      created_by: string;
       scheduled_tee_off_at: string | null;
       tournament_id: string | null;
       league_round_id: string | null;
@@ -121,7 +122,11 @@ export async function deleteGame(formData: FormData) {
     .map((p) => p.sponsorLogoPath)
     .filter((p): p is string => p != null);
   if (logoPaths.length > 0) {
-    await removeUnusedSponsorLogos({ gameId, paths: logoPaths });
+    await removeUnusedSponsorLogos({
+      gameId,
+      paths: logoPaths,
+      ownerIds: [game.created_by, ctx.userId],
+    });
   }
 
   expireGameCache(gameId);

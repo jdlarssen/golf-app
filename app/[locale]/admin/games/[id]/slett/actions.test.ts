@@ -167,6 +167,7 @@ describe('deleteGame — admin', () => {
           id: 'game-1',
           name: 'Vinter-cup',
           status: 'finished',
+          created_by: 'creator-9',
           prizes: [
             {
               category: 'placement',
@@ -208,6 +209,7 @@ describe('deleteGame — admin', () => {
     expect(removeUnusedSponsorLogosMock).toHaveBeenCalledExactlyOnceWith({
       gameId: 'game-1',
       paths: ['uid/a.webp', 'uid/b.webp'],
+      ownerIds: ['creator-9', 'admin-1'],
     });
     expect(lastRedirect()).toBe('/admin/games?status=deleted&name=Vinter-cup');
   });
