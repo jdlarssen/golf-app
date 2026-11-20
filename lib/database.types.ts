@@ -562,6 +562,7 @@ export type Database = {
       friendships: {
         Row: {
           addressee_id: string
+          by_email: boolean
           created_at: string
           id: string
           requester_id: string
@@ -570,6 +571,7 @@ export type Database = {
         }
         Insert: {
           addressee_id: string
+          by_email?: boolean
           created_at?: string
           id?: string
           requester_id: string
@@ -578,6 +580,7 @@ export type Database = {
         }
         Update: {
           addressee_id?: string
+          by_email?: boolean
           created_at?: string
           id?: string
           requester_id?: string
@@ -2740,6 +2743,10 @@ export type Database = {
       }
       email_is_invited: { Args: { check_email: string }; Returns: boolean }
       email_is_registered: { Args: { p_email: string }; Returns: boolean }
+      friend_request_by_email: {
+        Args: { p_email: string; p_requester: string }
+        Returns: Json
+      }
       generate_friend_code: { Args: never; Returns: string }
       generate_game_short_id: { Args: never; Returns: string }
       generate_group_short_id: { Args: never; Returns: string }
@@ -2854,7 +2861,6 @@ export type Database = {
         Returns: boolean
       }
       send_friend_request: { Args: { p_addressee: string }; Returns: string }
-      send_friend_request_by_email: { Args: { p_email: string }; Returns: Json }
       set_club_member_role: {
         Args: {
           p_group_id: string
