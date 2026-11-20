@@ -33,6 +33,7 @@ const CODE_MAP = {
   not_wolf_on_hole: true,
   game_not_active: true,
   partner_not_in_game: true,
+  hole_taken: true,
   rls_denied: true,
   no_rows: true,
   db_error: true,

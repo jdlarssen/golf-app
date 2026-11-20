@@ -3152,6 +3152,7 @@
         "not_wolf_on_hole": "You are not the Wolf on this hole, so you cannot pick.",
         "game_not_active": "Wolf picks can only be saved while the round is in progress.",
         "partner_not_in_game": "That partner is not in this game. Pick someone else.",
+        "hole_taken": "Another player has already saved the Wolf pick on this hole. Reload the page to see it.",
         "rls_denied": "You must be the Wolf on this hole to make a pick.",
         "save_failed": "Your pick was not saved. Check your connection and try again.",
         "unknown": "Something went wrong. Please try again."

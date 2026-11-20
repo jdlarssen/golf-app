@@ -23,7 +23,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(56);
+select plan(61);
 
 \ir fixtures/rls_helpers.psql
 
@@ -217,6 +217,34 @@ select torny_rls.as_user(torny_rls.fc_w3());
 select lives_ok(
   $q$ insert into public.wolf_hole_choices (game_id, hole_number, wolf_user_id, choice, partner_user_id, entered_by) values (torny_rls.fc_game(1), 17, torny_rls.fc_w3(), 'blind', null, torny_rls.fc_w3()) $q$,
   'wolf: on a closing hole any player with a slot can save (the standings decide, and only the app knows them)');
+
+select torny_rls.as_user(torny_rls.fc_w4());
+
+select throws_ok(
+  $q$ insert into public.wolf_hole_choices (game_id, hole_number, wolf_user_id, choice, partner_user_id, entered_by) values (torny_rls.fc_game(1), 17, torny_rls.fc_w4(), 'lone', null, torny_rls.fc_w4()) on conflict (game_id, hole_number) do update set choice = excluded.choice, partner_user_id = excluded.partner_user_id, wolf_user_id = excluded.wolf_user_id, entered_by = excluded.entered_by $q$,
+  '42501', 'wolf_choice_hole_taken',
+  'wolf: a closing hole another player saved first is refused with its own reason');
+
+select is((select wolf_user_id from public.wolf_hole_choices where game_id = torny_rls.fc_game(1) and hole_number = 17),
+  torny_rls.fc_w3(),
+  'wolf: and the first choice stands');
+
+select torny_rls.as_user(torny_rls.admin_id());
+
+select lives_ok(
+  $q$ insert into public.wolf_hole_choices (game_id, hole_number, wolf_user_id, choice, partner_user_id, entered_by) values (torny_rls.fc_game(1), 17, torny_rls.fc_w4(), 'lone', null, torny_rls.admin_id()) on conflict (game_id, hole_number) do update set choice = excluded.choice, partner_user_id = excluded.partner_user_id, wolf_user_id = excluded.wolf_user_id, entered_by = excluded.entered_by $q$,
+  'wolf: an admin corrects an existing row to another wolf');
+
+select is((select wolf_user_id from public.wolf_hole_choices where game_id = torny_rls.fc_game(1) and hole_number = 17),
+  torny_rls.fc_w4(),
+  'wolf: the corrected row holds the admin''s wolf');
+
+select torny_rls.as_user(torny_rls.fc_w3());
+
+select throws_ok(
+  $q$ insert into public.wolf_hole_choices (game_id, hole_number, wolf_user_id, choice, partner_user_id, entered_by) values (torny_rls.fc_game(1), 17, torny_rls.fc_w3(), 'blind', null, torny_rls.fc_w3()) on conflict (game_id, hole_number) do update set choice = excluded.choice, partner_user_id = excluded.partner_user_id, wolf_user_id = excluded.wolf_user_id, entered_by = excluded.entered_by $q$,
+  '42501', 'wolf_choice_hole_taken',
+  'wolf: after the correction the first player cannot take the hole back');
 
 select torny_rls.as_user(torny_rls.admin_id());
 

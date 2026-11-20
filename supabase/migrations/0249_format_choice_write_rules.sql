@@ -14,7 +14,9 @@
 --       lib/scoring/modes/wolfTurn.ts; wolfRotationDbCheck.test.ts and the
 --       pgTAP suite hold the two to the same table)
 --     - on a hole the standings decide (the closing holes), the database
---       cannot know who trails, so there it asks only for a player with a slot
+--       cannot know who trails, so there it asks only for a player with a slot,
+--       and the first choice saved stands (a later one from another player is
+--       refused with its own reason; an admin can correct the row)
 --     - a partner plays in the game and is not the wolf
 --     - entered_by is the caller
 --     - a player writes only their own row; an admin may write any wolf, in any
@@ -185,6 +187,20 @@ begin
 
     if v_expected is not null and v_slot <> v_expected then
       raise exception 'wolf_choice_not_your_hole' using errcode = '42501';
+    end if;
+
+    -- The hole already has a choice for another wolf: a closing hole someone
+    -- else saved first, or an admin's override. The update policy would refuse
+    -- the upsert without a reason, so the guard says it here.
+    if tg_op = 'INSERT'
+       and exists (
+         select 1
+           from public.wolf_hole_choices c
+          where c.game_id = new.game_id
+            and c.hole_number = new.hole_number
+            and c.wolf_user_id <> new.wolf_user_id
+       ) then
+      raise exception 'wolf_choice_hole_taken' using errcode = '42501';
     end if;
   end if;
 
