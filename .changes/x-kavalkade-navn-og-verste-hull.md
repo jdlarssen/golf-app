@@ -1,4 +1,4 @@
 ---
 type: fix
 ---
-Årskavalkaden kaller medspillerne ved kallenavn eller fornavn. Verste hull regnes per bane, så hull 7 på to baner ikke blandes.
+Årskavalkaden viser bare fornavnet til medspillerne. Verste hull regnes per bane, så hull 7 på to baner ikke blandes.

@@ -1186,10 +1186,11 @@ describe('gjengen', () => {
   });
 });
 
-describe('navn på kortene — kallenavn, ellers fornavn', () => {
+describe('navn på kortene — fornavn, ellers kallenavn', () => {
   // Audit 20.11: the share cards printed other players' full names. Every
   // name a card can show is set here, once, so the web image, the in-app deck
   // and the app's share card all get the short form from the stored facts.
+  // The order (name before nickname) is the house rule, lib/names (#2813).
   const KARI = player('user-kari', {
     name: 'Kari Nordmann',
     nickname: 'Kikki',
@@ -1198,7 +1199,7 @@ describe('navn på kortene — kallenavn, ellers fornavn', () => {
   });
   const OLA = player('user-ola', {
     name: '  Ola Normann  ',
-    nickname: '   ',
+    nickname: null,
     resultSummary: placement(2),
     holes: holes({ 1: 8, 2: 8, 3: 8 }),
   });
@@ -1214,28 +1215,32 @@ describe('navn på kortene — kallenavn, ellers fornavn', () => {
     expect(json).not.toContain('Normann');
   });
 
-  it('uses the nickname when there is one', () => {
+  it('shows the first name on the gang cards, also when there is a nickname', () => {
     const facts = build(rounds());
-    expect(facts.gang?.topWinner).toMatchObject({ userId: 'user-kari', name: 'Kikki' });
-    expect(facts.gang?.mostBirdies).toMatchObject({ userId: 'user-kari', name: 'Kikki' });
-    expect(facts.gang?.tightestFinish?.leader).toMatchObject({ name: 'Kikki' });
+    expect(facts.gang?.topWinner).toMatchObject({ userId: 'user-kari', name: 'Kari' });
+    expect(facts.gang?.mostBirdies).toMatchObject({ userId: 'user-kari', name: 'Kari' });
+    expect(facts.gang?.tightestFinish?.leader).toMatchObject({ name: 'Kari' });
+    expect(facts.gang?.mostSnowmen).toMatchObject({ userId: 'user-ola', name: 'Ola' });
   });
 
-  it('falls back to the first name when the nickname is empty', () => {
-    const facts = build(rounds());
-    expect(facts.gang?.mostSnowmen).toMatchObject({ userId: 'user-ola', name: 'Ola' });
+  it('falls back to the nickname for a player without a name', () => {
+    const noName = player('user-x', { name: null, nickname: 'Kikki', resultSummary: placement(1) });
+    const facts = build([
+      game({ players: [player(ME, { resultSummary: placement(2) }), noName] }),
+    ]);
+    expect(facts.gang?.topWinner).toMatchObject({ userId: 'user-x', name: 'Kikki' });
   });
 
   it('shortens the rival and the teammates too', () => {
     const facts = build(rounds());
-    expect(facts.personal?.rival?.name).toMatch(/^(Kikki|Ola)$/);
+    expect(facts.personal?.rival?.name).toMatch(/^(Kari|Ola)$/);
 
     const teamRound = () =>
       game({
         gameMode: 'texas_scramble',
         players: [
           player(ME, { teamNumber: 1 }),
-          player('user-kari', { teamNumber: 1, name: 'Kari Nordmann', nickname: null, holes: [] }),
+          player('user-kari', { teamNumber: 1, name: 'Kari Nordmann', nickname: 'Kikki', holes: [] }),
         ],
       });
     const team = build([teamRound(), teamRound()]).team;
