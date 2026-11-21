@@ -562,7 +562,6 @@ export type Database = {
       friendships: {
         Row: {
           addressee_id: string
-          by_email: boolean
           created_at: string
           id: string
           requester_id: string
@@ -571,7 +570,6 @@ export type Database = {
         }
         Insert: {
           addressee_id: string
-          by_email?: boolean
           created_at?: string
           id?: string
           requester_id: string
@@ -580,7 +578,6 @@ export type Database = {
         }
         Update: {
           addressee_id?: string
-          by_email?: boolean
           created_at?: string
           id?: string
           requester_id?: string
@@ -1428,29 +1425,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      invitation_receipts: {
-        Row: {
-          created_at: string
-          invitation_id: string
-        }
-        Insert: {
-          created_at?: string
-          invitation_id: string
-        }
-        Update: {
-          created_at?: string
-          invitation_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invitation_receipts_invitation_id_fkey"
-            columns: ["invitation_id"]
-            isOneToOne: true
-            referencedRelation: "invitations"
             referencedColumns: ["id"]
           },
         ]
@@ -2781,15 +2755,6 @@ export type Database = {
         Args: { p_actor: string; p_ids: string[] }
         Returns: string[]
       }
-      friend_request_by_email: {
-        Args: {
-          p_email: string
-          p_expires_at: string
-          p_requester: string
-          p_token: string
-        }
-        Returns: Json
-      }
       generate_friend_code: { Args: never; Returns: string }
       generate_game_short_id: { Args: never; Returns: string }
       generate_group_short_id: { Args: never; Returns: string }
@@ -2841,10 +2806,6 @@ export type Database = {
       join_club_league: { Args: { p_league_id: string }; Returns: string }
       league_group_id: { Args: { p_league_id: string }; Returns: string }
       leave_club_league: { Args: { p_league_id: string }; Returns: string }
-      mark_email_receipt_accepted: {
-        Args: { p_recipient: string; p_sender: string }
-        Returns: undefined
-      }
       promote_waitlist_seat: {
         Args: {
           p_cap: number
@@ -2913,6 +2874,7 @@ export type Database = {
         Returns: boolean
       }
       send_friend_request: { Args: { p_addressee: string }; Returns: string }
+      send_friend_request_by_email: { Args: { p_email: string }; Returns: Json }
       set_club_member_role: {
         Args: {
           p_group_id: string
