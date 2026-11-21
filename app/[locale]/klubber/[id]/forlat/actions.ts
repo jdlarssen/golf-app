@@ -7,6 +7,21 @@ import { getServerClient } from '@/lib/supabase/server';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { getAdminClient } from '@/lib/supabase/admin';
 
+/** After a delete that removed nothing: is the caller's membership gone? */
+async function membershipIsGone(groupId: string, userId: string): Promise<boolean> {
+  const { data, error } = await getAdminClient()
+    .from('group_members')
+    .select('user_id')
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) {
+    console.error('[leaveClub] membership re-read failed', error);
+    return false;
+  }
+  return data === null;
+}
+
 /**
  * leaveClub — server action for the /klubber/[id]/forlat confirm page.
  *
@@ -31,31 +46,38 @@ export async function leaveClub(formData: FormData) {
   const groupId = String(formData.get('groupId') ?? '').trim();
   if (!groupId) redirect({ href: '/klubber', locale });
 
-  // Last-owner guard: count owners via admin client.
+  // Last-owner guard: count owners via admin client. A failed read must not
+  // read as «not the sole owner» and skip the guard (audit 2026-11-20).
   const admin = getAdminClient();
-  const { count: ownerCount } = await admin
-    .from('group_members')
-    .select('user_id', { count: 'exact', head: true })
-    .eq('group_id', groupId)
-    .eq('role', 'owner');
+  const [owners, mine] = await Promise.all([
+    admin
+      .from('group_members')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('group_id', groupId)
+      .eq('role', 'owner'),
+    admin
+      .from('group_members')
+      .select('role')
+      .eq('group_id', groupId)
+      .eq('user_id', user.id)
+      .maybeSingle(),
+  ]);
+  if (owners.error || mine.error) {
+    console.error('[leaveClub] guard read failed', owners.error ?? mine.error);
+    redirect({ href: `/klubber/${groupId}/forlat?error=leave_failed`, locale });
+  }
 
-  // Check if the caller is an owner.
-  const { data: myRow } = await admin
-    .from('group_members')
-    .select('role')
-    .eq('group_id', groupId)
-    .eq('user_id', user.id)
-    .maybeSingle();
+  const isOwner = mine.data?.role === 'owner';
 
-  const isOwner = myRow?.role === 'owner';
-
-  if (isOwner && (ownerCount ?? 0) <= 1) {
+  if (isOwner && (owners.count ?? 0) <= 1) {
     redirect({ href: `/klubber/${groupId}/forlat?error=sole_owner`, locale });
   }
 
   // Self-delete via request-scoped client (RLS: user_id = auth.uid()).
-  // 0 rows (not a member any more, or RLS refused) is a failure, not «left»
-  // (trap 2, audit 2026-11-20).
+  // 0 rows is not «left» on trust (trap 2, audit 2026-11-20): the membership
+  // is read again, and only a row that is gone counts as a leave (a double
+  // tap, or a removal in between). A row still there, or a failed read, is
+  // the error.
   let left = true;
   try {
     expectAffected(
@@ -69,7 +91,7 @@ export async function leaveClub(formData: FormData) {
     );
   } catch (err) {
     console.error('[leaveClub]', err);
-    left = false;
+    left = await membershipIsGone(groupId, user.id);
   }
   if (!left) {
     redirect({ href: `/klubber/${groupId}/forlat?error=leave_failed`, locale });
