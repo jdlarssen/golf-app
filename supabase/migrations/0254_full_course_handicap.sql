@@ -24,6 +24,10 @@
 -- null until scripts/backfillFullCourseHandicap.ts fills them; the code reads
 -- null as «unknown» and freezes no differential from it.
 --
+-- App builds from before #2215 start rounds with their bundled code and leave
+-- the column null: those rounds get no differential until the backfill script
+-- runs again (it is safe to re-run at any time).
+--
 -- Order against prod: BEFORE the app code that reads and writes the column.
 -- The new start writes it and the history pages select it, so code running
 -- without the column would fail the start.
@@ -34,7 +38,7 @@
 -- revoked execute grant.
 
 alter table public.game_players
-  add column full_course_handicap integer;
+  add column if not exists full_course_handicap integer;
 
 comment on column public.game_players.full_course_handicap is
   'Audit 20.11 (F1): the full course handicap (100 %, before the game share '

@@ -10,8 +10,13 @@
 --    3  a creator does not change it in a finished round             → 42501
 --    4  a player does not clear their own value in progress          → 42501
 --    5  a creator does not insert a roster row with a value          → 42501
---    6  the start freezes it with the player's client while scheduled
---    7  the service role writes it in a finished round (the backfill)
+--    6  the start freezes it with the creator's client while scheduled
+--       (a league flight's starter creates the flight game)
+--    7  a player writes their own value while scheduled (allowed: the start
+--       overwrites every roster row)
+--    8  another rostered player does not write someone else's row, also
+--       while scheduled (the peer guard, 0191)                      → 42501
+--    9  the service role writes it in a finished round (the backfill)
 --
 -- Run via:  supabase test db   (see supabase/tests/README.md)
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -20,7 +25,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(7);
+select plan(9);
 
 \ir fixtures/rls_helpers.psql
 
@@ -102,12 +107,27 @@ select throws_ok(
   'a creator does not insert a roster row with a full course handicap'
 );
 
--- ── The start: a league flight freezes with the player's own client ──────────
+-- ── While scheduled: the start (creator's client) and the own row ───────────
+-- active_id created the round, as a league flight's starter creates the flight.
 select is(
   torny_rls.fch_rows_of(format(
     'update public.game_players set course_handicap = 23, full_course_handicap = 31 where game_id = %L and user_id = %L',
     torny_rls.fch_scheduled(), torny_rls.flightmate_id())),
-  1, 'the start freezes the full course handicap with the player''s client while the round is scheduled'
+  1, 'the start freezes the full course handicap with the creator''s client while the round is scheduled'
+);
+
+select torny_rls.as_user(torny_rls.flightmate_id());
+select is(
+  torny_rls.fch_rows_of(format(
+    'update public.game_players set full_course_handicap = 40 where game_id = %L and user_id = %L',
+    torny_rls.fch_scheduled(), torny_rls.flightmate_id())),
+  1, 'a player writes their own full course handicap while the round is scheduled (the start overwrites it)'
+);
+select is(
+  torny_rls.fch_rows_of(format(
+    'update public.game_players set full_course_handicap = 40 where game_id = %L and user_id = %L',
+    torny_rls.fch_scheduled(), torny_rls.active_id())),
+  -1, 'another rostered player does not write someone else''s full course handicap, also while scheduled'
 );
 
 -- ── The service role: the backfill ───────────────────────────────────────────
