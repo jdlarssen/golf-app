@@ -20,6 +20,11 @@
 --   kept_history           game history, shown as «Slettet bruker» (#1012)
 --   kept_no_pii            points at the scrubbed row, no PII in the column
 --
+-- An FK column is only half of it: a name can also sit as TEXT in a row that
+-- points at nobody (a notification payload, a round report). Those are
+-- scrub_user_mentions' job (0253), tested in users_anonymize_mentions_test.sql.
+-- A new table that stores a person's name as text belongs there.
+--
 --   1. the list equals the FK columns in pg_constraint — a new FK column not in
 --      the list (Extra records) or a listed column that no longer exists
 --      (Missing records) is RED
@@ -61,6 +66,9 @@ insert into fk_coverage (tbl, col, handling) values
   ('group_members',              'user_id',                             'deleted'),
   ('handicap_history',           'user_id',                             'deleted'),
   ('idea_submissions',           'user_id',                             'deleted'),
+  -- 0253: the invitations the account sent. Each row ties another person's
+  -- address to the account. club_invitations.invited_by stays (the club's row).
+  ('invitations',                'invited_by',                          'deleted'),
   ('kavalkade_shares',           'user_id',                             'deleted'),
   ('kavalkades',                 'user_id',                             'deleted'),
   ('notification_preferences',   'user_id',                             'deleted'),
@@ -103,6 +111,8 @@ insert into fk_coverage (tbl, col, handling) values
   ('wolf_hole_choices',          'partner_user_id',                     'kept_history'),
   ('wolf_hole_choices',          'wolf_user_id',                        'kept_history'),
   -- Authorship/audit pointers to the scrubbed row
+  -- 0253: the pointer stays; the `actor_name` snapshot next to it is replaced
+  -- by scrub_user_mentions (users_anonymize_mentions_test.sql).
   ('admin_audit_log',            'actor_user_id',                       'kept_no_pii'),
   ('club_invitations',           'invited_by',                          'kept_no_pii'),
   ('courses',                    'created_by',                          'kept_no_pii'),
@@ -118,7 +128,6 @@ insert into fk_coverage (tbl, col, handling) values
   ('games',                      'created_by',                          'kept_no_pii'),
   ('group_join_requests',        'decided_by_user_id',                  'kept_no_pii'),
   ('groups',                     'created_by',                          'kept_no_pii'),
-  ('invitations',                'invited_by',                          'kept_no_pii'),
   ('league_rounds',              'window_overridden_by',                'kept_no_pii'),
   ('leagues',                    'created_by',                          'kept_no_pii'),
   ('product_update_digests',     'sent_by',                             'kept_no_pii'),

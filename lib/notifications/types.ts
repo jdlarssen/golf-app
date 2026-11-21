@@ -7,6 +7,14 @@ import { CANCEL_MESSAGE_MAX } from '@/lib/games/cancelMessage';
  * In-app notification-kindene som støttes. Polymorf `notifications`-tabell
  * (migrasjon 0032, utvidet 0035) bruker dette som CHECK-discriminator, og
  * payload-shape per kind valideres her i TypeScript-laget før insert.
+ *
+ * A key that holds a PERSON's name (`player_name`, `invited_by_name`, …) is
+ * replaced with «Slettet bruker» in other people's rows when that person
+ * deletes the account (`scrub_user_mentions`, migration 0253). The database
+ * has its own list of those keys; `personKeysDbScrub.test.ts` fails when a
+ * new `*_name` key here is in neither that list nor the test's «not a person»
+ * list. Put the person's id next to the name where you can (`player_id`): the
+ * scrub then matches on the id instead of the text.
  */
 export type NotificationKind =
   | 'invite'

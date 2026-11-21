@@ -2845,6 +2845,15 @@ export type Database = {
         Args: { p_recipient: string; p_sender: string }
         Returns: undefined
       }
+      mention_in_prose: {
+        Args: { p_text: string; p_tokens: string[] }
+        Returns: boolean
+      }
+      mention_is_person: {
+        Args: { p_forms: string[]; p_full: string; p_value: string }
+        Returns: boolean
+      }
+      mention_norm: { Args: { p_text: string }; Returns: string }
       promote_waitlist_seat: {
         Args: {
           p_cap: number
@@ -2911,6 +2920,15 @@ export type Database = {
       same_flight_or_solo: {
         Args: { p_game_id: string; p_other_user: string }
         Returns: boolean
+      }
+      scrub_user_mentions: {
+        Args: {
+          p_email: string
+          p_name: string
+          p_nickname: string
+          p_user_id: string
+        }
+        Returns: undefined
       }
       send_friend_request: { Args: { p_addressee: string }; Returns: string }
       set_club_member_role: {

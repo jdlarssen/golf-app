@@ -167,3 +167,13 @@ Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
 - Gjester: `users.guest_created_by` sier hvem som la inn gjesten (`createGuestUser` krever det). En ikke-admin setter en gjest på en spillerliste bare når hun la inn gjesten selv, eller gjesten alt står i en runde hun har opprettet. Regelen har ett hjem, SQL-funksjonen `guest_usable_by`. Triggeren `guard_game_players_guest_owner` spør den for innloggede klienter. Serverstiene som skriver gjesterader med tjenesteklienten (`createGameInternal`, `updateGameInternal`, `mayAddExistingUser`) og spillervelgerne spør den gjennom `lib/games/guestOwnership.ts`. En ny sti som tar imot en bruker-id og skriver med tjenesteklienten, må spørre den selv.
 - `users.guest_created_by` er ikke lesbar for klienter (ingen kolonnerettighet, som `email`), og skrives bare av tjenesteklienten og global admin (`guard_users_guest_created_by`).
 - Fasit: `supabase/tests/round_and_own_row_rules_test.sql`.
+
+## Sletting av konto — navnet i andres rader (0253)
+
+- `anonymize_user` vasker `users`-raden og sletter personens egne rader. Navnet står også som tekst i rader som tilhører andre: `notifications.payload` (navnenøklene, påmeldingsmeldingen, fornavnene i arrangørens kveldsstatus), `games.round_report`, `admin_audit_log.actor_name` og andres `kavalkades`. Dem tar `scrub_user_mentions`, som `anonymize_user` kaller før den endrer noe. En `BEFORE DELETE`-trigger på `users` kaller den samme funksjonen, så hard sletting (en konto som aldri har spilt, en gjest) rydder likt.
+- En navnenøkkel med id-en ved siden av (`player_id`, `submitter_id`, `actor_id`, påmeldingens `request_id`) matches på id-en. En nøkkel uten id matches på teksten. Legg derfor id-en ved siden av navnet i en ny payload.
+- Verdien som skrives er «Slettet bruker», den samme som `users.name` får. Flere navnenøkler er ikke nullbare i skjemaene, og apper som alt er installert leser dem.
+- Lista over navnenøkler har to hjem: skjemaene i `lib/notifications/types.ts` og `c_person_keys` i funksjonen. `lib/notifications/personKeysDbScrub.test.ts` blir rød for en ny `*_name`-nøkkel som ikke står i ett av dem. En ny tabell som lagrer et personnavn som tekst, legges til i funksjonen i en ny migrasjon.
+- Invitasjonene kontoen sendte (`invitations.invited_by`) slettes. Klubbinvitasjoner blir stående: de er klubbens.
+- «Last ned dataene dine» (`lib/profile/exportCore.ts`) leser med tjenesteklienten bare det RLS skjuler for eieren selv (`SERVICE_ROLE_READS`); filteret på bruker-id-en er da den eneste tilgangskontrollen.
+- Fasit: `supabase/tests/users_anonymize_mentions_test.sql` og `users_anonymize_fk_coverage_test.sql`.
