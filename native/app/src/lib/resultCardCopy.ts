@@ -79,4 +79,6 @@ export const RESULT_APP_TEXT = {
   net: '{n} netto',
   gross: '{n} brutto',
   shareFailed: 'Fikk ikke delt resultatet. Prøv igjen.',
+  /** `leaderboard.common.noWinner`: alle endte på null, ingen vant noe. */
+  noWinner: 'Ingen vinner',
 } as const;

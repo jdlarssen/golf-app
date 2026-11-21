@@ -574,7 +574,7 @@ export async function renderLeaderboardContent({
   // keep RevealBruttoView). Blind cup-day requires "ingenting avsløres" —
   // stricter than RevealBruttoView's brutto-totals preview.
   if (view === 'reveal-active') {
-    return <RevealHiddenView gameName={game.name} backHref={backHref} />;
+    return <RevealHiddenView gameId={gameId} gameName={game.name} backHref={backHref} />;
   }
 
   // #2625: the game's ranking rule (net to par for a new game), one source for

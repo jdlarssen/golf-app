@@ -17,6 +17,10 @@ describe('paritet med messages/no.json', () => {
     expect(SHARE_RESULT_LABEL).toBe(source.leaderboard.common.shareResult);
   });
 
+  it('«Ingen vinner» er `leaderboard.common.noWinner`, som pallene på nett', () => {
+    expect(RESULT_APP_TEXT.noWinner).toBe(source.leaderboard.common.noWinner);
+  });
+
   it('appens egne er ikke en av webbens', () => {
     const web = new Set(Object.values(source.leaderboard.shareCard));
     for (const value of Object.values(RESULT_APP_TEXT)) expect(web.has(value)).toBe(false);

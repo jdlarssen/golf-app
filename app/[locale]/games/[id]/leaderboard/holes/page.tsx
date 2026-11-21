@@ -256,6 +256,7 @@ export default async function LeaderboardHolesPage({
   if (shouldHideNetto(state)) {
     return (
       <RevealHiddenView
+        gameId={id}
         gameName={game.name}
         backHref={navContext.from ?? `/games/${id}`}
       />

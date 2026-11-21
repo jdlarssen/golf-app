@@ -2,8 +2,11 @@ import { useTranslations } from 'next-intl';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Kicker } from '@/components/ui/Kicker';
+import { PreRoundLeaderboardRealtime } from './PreRoundLeaderboard';
 
 type Props = {
+  /** The game the view listens to: the reveal comes when it finishes. */
+  gameId: string;
   /** Game's tournament name — surfaced as the TopBar kicker, same as every
    *  sibling leaderboard view. */
   gameName: string;
@@ -27,12 +30,16 @@ type Props = {
  * gate on `shouldHideNetto(revealState(...))` before rendering it, same
  * gate `RevealBruttoView` already uses.
  */
-export function RevealHiddenView({ gameName, backHref }: Props) {
+export function RevealHiddenView({ gameId, gameName, backHref }: Props) {
   const tc = useTranslations('leaderboard.common');
   const t = useTranslations('leaderboard.revealHidden');
   return (
     <AppShell>
       <TopBar backHref={backHref} backLabel={tc('back')} kicker={gameName} />
+      {/* Audit 2026-11-20: listens for the organiser finishing the game
+          (games UPDATE), so the reveal comes without a reload — the same
+          listener `RevealBruttoView` mounts. */}
+      <PreRoundLeaderboardRealtime gameId={gameId} />
 
       <section
         data-testid="reveal-hidden-view"

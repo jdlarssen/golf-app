@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { headToHeadSummary, type HeadToHeadSummary } from './headToHead';
+import { duelNobodyWon, headToHeadSummary, type HeadToHeadSummary } from './headToHead';
 
 // Type A for the duel card's math (#2226): winner, the tug-of-war bar
 // (baseline shift for negative totals, inverted when lowest wins) and the
@@ -103,5 +103,24 @@ describe('headToHeadSummary', () => {
       loserScore: '+2',
     });
     expect(summary({ score: 0, scoreLabel: 'E' })).toMatchObject({ loserScore: 'E' });
+  });
+});
+
+describe('duelNobodyWon (audit 2026-11-20): no confetti when nobody won', () => {
+  const side = (userId: string, score: number, scoreLabel?: string) => ({
+    userId,
+    name: userId,
+    nickname: null,
+    score,
+    ...(scoreLabel ? { scoreLabel } : {}),
+  });
+  it.each([
+    { label: '0–0 skins, no winner', a: side('u1', 0), b: side('u2', 0), winner: null, lowerWins: false, expected: true },
+    { label: '3–3, a real tie', a: side('u1', 3), b: side('u2', 3), winner: null, lowerWins: false, expected: false },
+    { label: '0–0 decided on a tiebreak', a: side('u1', 0), b: side('u2', 0), winner: 'u1', lowerWins: false, expected: false },
+    { label: 'E–E to par, a real tie', a: side('u1', 0, 'E'), b: side('u2', 0, 'E'), winner: null, lowerWins: true, expected: false },
+    { label: '0–0 where lowest wins', a: side('u1', 0), b: side('u2', 0), winner: null, lowerWins: true, expected: false },
+  ])('$label → $expected', ({ a, b, winner, lowerWins, expected }) => {
+    expect(duelNobodyWon({ sideA: a, sideB: b, winnerUserId: winner, lowerWins })).toBe(expected);
   });
 });

@@ -52,7 +52,7 @@ export async function renderFourballMatchplay(opts: {
   // Reveal-modus (issue #801, tightened for #1441 D12): se matchplay.tsx.
   const revSt = revealState(game.score_visibility, game.status);
   if (shouldHideNetto(revSt)) {
-    return <RevealHiddenView gameName={game.name} backHref={backHref} />;
+    return <RevealHiddenView gameId={gameId} gameName={game.name} backHref={backHref} />;
   }
 
   // #1958: the shared builder drops withdrawn players and their scores, the
