@@ -1,5 +1,6 @@
 'use server';
 
+import { after } from 'next/server';
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
@@ -45,8 +46,10 @@ export async function sendFriendRequest(formData: FormData) {
 }
 
 /**
- * Legg til venn på e-post. Finnes brukeren → forespørsel. Ukjent e-post →
- * redirect med invite_email så siden tilbyr å invitere på samme adresse.
+ * Legg til venn på e-post (0252). Svaret er det samme for alle adresser:
+ * `sent_by_email`. Har adressen en konto, får personen en venneforespørsel.
+ * Har den ikke, får adressen en invitasjon. Varselet og e-posten går ut etter
+ * at svaret er gitt (`after`).
  */
 export async function addFriendByEmail(formData: FormData) {
   const locale = await getLocale();
@@ -58,12 +61,14 @@ export async function addFriendByEmail(formData: FormData) {
   }
 
   const { supabase, user } = await requireUser();
-  const status = await addByEmail(supabase, user.id, email);
-  if (status === 'not_found') {
-    // Personen er ikke på Tørny — tilby invitasjon på samme e-post.
-    redirect({ href: `${VENNER}?invite_email=${encodeURIComponent(email)}`, locale });
+  const status = await addByEmail(supabase, user.id, email, after);
+  if (status === 'profile_incomplete') {
+    redirect({ href: '/complete-profile', locale });
   }
-  redirect({ href: `${VENNER}?status=${status}`, locale });
+  redirect({
+    href: `${VENNER}?status=${status === 'requested' ? 'sent_by_email' : status}`,
+    locale,
+  });
 }
 
 /**

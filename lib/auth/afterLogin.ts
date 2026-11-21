@@ -6,6 +6,7 @@ import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { distinctInviterIds } from '@/lib/friends/friendGraph';
 import { isRosterLocked } from '@/lib/games/status';
+import { withoutReceiptInvitations } from './invitationConsume';
 import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
 
 // Det som skjer etter en vellykket innlogging — ett hjem (#2216).
@@ -92,7 +93,11 @@ export async function afterLogin(
     if (pendingError) {
       console.error('[afterLogin] pending invitations lookup failed', pendingError);
     }
-    const pending = pendingInvites ?? [];
+    // 0252: a game-less invitation with a receipt mark is the sender's
+    // receipt for «Legg til venn på e-post» to a person who already had an
+    // account. That person has a friend request to answer instead, so the
+    // login leaves the invitation alone: no consume and no friendship.
+    const pending = await withoutReceiptInvitations(admin, pendingInvites ?? [], 'afterLogin');
 
     // Kun `game_id` skiller her: `invited_by` er NOT NULL (0001), så en
     // null-sjekk på den ville aldri kunne treffe.
