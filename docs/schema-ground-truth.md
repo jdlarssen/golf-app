@@ -45,6 +45,16 @@ Typed clients (#672) make wrong column names a compile error — treat a red squ
 
 - **`course_handicap`**: nullable `int`. **`tee_gender`**: `NOT NULL` enum (`player_tee_gender`).
 
+- **`course_handicap` is the PLAYING handicap**: the course handicap after the game's share
+  (`effectiveHcpAllowancePct`) and a league flight's cap, frozen at start. **`full_course_handicap`**
+  (nullable `int`, migration 0254, audit 20.11 F1) is the full course handicap (100 %), frozen
+  next to it by `startScheduledGameCore` and `recomputeCourseHandicapForUser`. The score
+  differential's net double bogey reads `full_course_handicap` (WHS 3.1b); null = not frozen
+  (rows from before 0254 until `scripts/backfillFullCourseHandicap.ts` has run) → no
+  differential. Guard: `guard_game_players_system_columns` refuses a signed-in non-admin a
+  non-null value on INSERT and any change unless the round is `scheduled` (a league flight
+  starts with the player's own client).
+
 - **Guard trigger `guard_game_players_self_update`** (migrations 0103/0106, #670/#704):
   - A player cannot self-approve their own scorecard or change their own `course_handicap` post-start.
   - A peer may only touch approval columns on another player's row. Since 0191 the peer allowlist

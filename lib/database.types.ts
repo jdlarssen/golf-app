@@ -664,6 +664,7 @@ export type Database = {
           course_handicap: number | null
           deliver_reminder_sent_at: string | null
           flight_number: number | null
+          full_course_handicap: number | null
           game_id: string
           handed_over_at: string | null
           marker_user_id: string | null
@@ -687,6 +688,7 @@ export type Database = {
           course_handicap?: number | null
           deliver_reminder_sent_at?: string | null
           flight_number?: number | null
+          full_course_handicap?: number | null
           game_id: string
           handed_over_at?: string | null
           marker_user_id?: string | null
@@ -710,6 +712,7 @@ export type Database = {
           course_handicap?: number | null
           deliver_reminder_sent_at?: string | null
           flight_number?: number | null
+          full_course_handicap?: number | null
           game_id?: string
           handed_over_at?: string | null
           marker_user_id?: string | null
