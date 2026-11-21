@@ -30,6 +30,7 @@ type Read =
   | 'invitations_inviter'
   | 'friendships'
   | 'group_members'
+  | 'group_join_requests'
   | NewTable;
 
 // #2332: tabellene kjernen leste inn i tillegg. Hver er filtrert på eieren.
@@ -42,6 +43,15 @@ const NEW_TABLES = [
   'kavalkade_shares',
   'reactions',
   'idea_submissions',
+  // Audit 20.11: sign-ups, league and cup rows, devices and the newsletter log.
+  'game_registration_requests',
+  'league_players',
+  'tournament_participants',
+  'cup_lineup_slots',
+  'push_subscriptions',
+  'apns_tokens',
+  'fcm_tokens',
+  'product_update_digest_recipients',
 ] as const;
 type NewTable = (typeof NEW_TABLES)[number];
 const isNewTable = (table: string): table is NewTable => (NEW_TABLES as readonly string[]).includes(table);
@@ -68,6 +78,7 @@ function classify(op: QueryOp): Read {
   if (op.table === 'invitations' && hasEq(op, 'invited_by', USER)) return 'invitations_inviter';
   if (op.table === 'friendships') return 'friendships';
   if (op.table === 'group_members' && hasEq(op, 'user_id', USER)) return 'group_members';
+  if (op.table === 'group_join_requests' && hasEq(op, 'user_id', USER)) return 'group_join_requests';
   if (isNewTable(op.table) && hasEq(op, 'user_id', USER)) return op.table;
   throw new Error(`uventet spørring: ${op.table} ${JSON.stringify(op.filters)}`);
 }
@@ -79,6 +90,7 @@ const ROWS: Record<Exclude<Read, 'users'>, unknown[]> = {
   invitations_inviter: [{ id: 'i2', invited_by: USER }],
   friendships: [{ id: 'f1', requester_id: USER, addressee_id: 'venn', status: 'accepted' }],
   group_members: [{ group_id: 'k1', role: 'member', joined_at: '2026-10-02', groups: { name: 'Klubb' } }],
+  group_join_requests: [{ id: 'r1', group_id: 'k2', user_id: USER, status: 'pending' }],
   ...Object.fromEntries(NEW_TABLES.map((table) => [table, [{ id: `${table}-1`, user_id: USER }]])),
 } as Record<Exclude<Read, 'users'>, unknown[]>;
 
@@ -143,7 +155,10 @@ describe('GET /profile/export', () => {
     'invitations_inviter',
     'friendships',
     'group_members',
+    'group_join_requests',
     'notifications',
+    'league_players',
+    'push_subscriptions',
   ])('lesefeil på %s → 500 og ingen fil', async (read) => {
     state.failing = read;
 
@@ -172,6 +187,7 @@ describe('GET /profile/export', () => {
     const body = await res.json();
     expect(body.friendships).toEqual(ROWS.friendships);
     expect(body.club_memberships).toEqual(ROWS.group_members);
+    expect(body.club_join_requests).toEqual(ROWS.group_join_requests);
     // #2332: samme fil som appen får, med de nye tabellene.
     for (const table of NEW_TABLES) expect(body[table]).toEqual(ROWS[table]);
 
