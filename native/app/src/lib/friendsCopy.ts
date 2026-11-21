@@ -8,17 +8,15 @@
 //
 // App-egent er merket under: spørsmålet før «Fjern» (webben har en egen
 // bekreftelsesside med «Fjern som venn», appen et ark med «Fjern venn» og så en
-// dialog), linjene for nett og lasting (webben kan ikke være offline), og
-// feilene fra invitasjonen, som webben i dag ikke viser noe sted
-// (`?invite_error=` på `/profile` leses ikke, se PR-en). Det samme gjelder
-// vennesiden (#2381). Heltekortet «Få med gjengen» og
+// dialog), linjene for nett og lasting (webben kan ikke være offline), linja om
+// ufullført profil (webben sender deg til profilen) og vennesiden (#2381). Heltekortet «Få med gjengen» og
 // underlinjene med tallene har webben også fått (#2267): de faste tekstene
 // speiles under, og funksjonene med tall har samme ordlyd som webbens
 // ICU-meldinger (`friends.roundsTogether`, `friends.lastPlayed*` …).
 //
 // **Datoene er enhetens lokaltid**, som runde-lista (`roundHistory.ts`):
 // Hermes mangler tidssonene, og for en spiller i Norge gir det samme dag.
-import type { FriendStatus, InviteStatus } from '../../../../lib/friends/friendStatus';
+import type { AddByEmailStatus, FriendStatus } from '../../../../lib/friends/friendStatus';
 import {
   formatShortDateNb,
   formatShortDateNbWithYear,
@@ -37,7 +35,7 @@ export const FRIENDS_TEXT = {
   outgoingSection: 'Venter på svar',
   suggestionsSection: 'Folk du har spilt med',
   addByEmailSubtitle:
-    'Send en venneforespørsel til e-posten. Er de ikke på Tørny, kan du invitere dem.',
+    'Er de på Tørny, får de en venneforespørsel. Hvis ikke, får de en invitasjon på e-post.',
   shareLinkSubtitle: 'Den som åpner lenken din, blir venn med deg med en gang.',
   declineLabel: 'Avslå',
   declinePending: 'Avslår …',
@@ -51,7 +49,6 @@ export const FRIENDS_TEXT = {
   addEmailLabel: 'E-post',
   addEmailPending: 'Sender …',
   addEmailButton: 'Legg til',
-  invitePending: 'Inviterer …',
   someoneFallback: 'En venn',
   noFriendsYet: 'Du har ingen venner på Tørny ennå. Del lenken din øverst eller legg til noen du har spilt med.',
   /** Heltekortet øverst (designet). Linja under tittelen er `shareLinkSubtitle`. */
@@ -154,45 +151,26 @@ export function friendStatusLine(status: FriendStatus): StatusLine | null {
   return { text, tone: ERROR_STATUSES.has(status) ? 'error' : 'ok' };
 }
 
-/** «Invitasjon sendt til {email}.» — webbens `friends.status.invited`. */
-export function invitedLine(email: string): string {
-  return `Invitasjon sendt til ${email}.`;
-}
-
-/** «{email} er ikke på Tørny ennå. Vil du invitere dem?» — `friends.invitePrompt`. */
-export function invitePrompt(email: string): string {
-  return `${email} er ikke på Tørny ennå. Vil du invitere dem?`;
-}
-
-/** «Inviter {email}» — `friends.inviteButton`. */
-export function inviteButton(email: string): string {
-  return `Inviter ${email}`;
-}
-
 /**
- * Hvorfor invitasjonen ikke ble sendt. App-egent: webben leser ikke disse
- * kodene i dag. `email_required` og `unknown` bruker webbens ordlyd for
- * samme utfall.
+ * Linja etter «Legg til venn på e-post». Webbens `friends.status.*` for samme
+ * kode (`requested` er webbens `sent_by_email`). Svaret er det samme for alle
+ * adresser: serveren sender en venneforespørsel eller en invitasjon, og sier
+ * ikke hvilken. `profile_incomplete` er app-egen: webben sender deg til
+ * profilen i stedet.
  */
-export function inviteFailureLine(status: Exclude<InviteStatus, 'invited'>): string {
-  switch (status) {
-    case 'email_required':
-      return STATUS_LINES.email_required as string;
-    case 'invalid_email':
-      return 'Det ser ikke ut som en e-postadresse. Sjekk den og prøv igjen.';
-    case 'disposable_email':
-      return 'Engangs-e-post går ikke. Be om en vanlig e-postadresse.';
-    case 'profile_incomplete':
-      return 'Fullfør profilen din først, så kan du invitere venner.';
-    case 'quota':
-      return 'Du har brukt opp invitasjonene dine for nå.';
-    case 'already_user':
-      return 'Den adressen har allerede en konto på Tørny.';
-    case 'already_invited':
-      return 'Den adressen er allerede invitert.';
-    case 'unknown':
-      return STATUS_LINES.error as string;
-  }
+const ADD_BY_EMAIL_LINES: Record<AddByEmailStatus, string> = {
+  requested: 'Sendt. Vennen din får en venneforespørsel eller en invitasjon på e-post.',
+  self: STATUS_LINES.self as string,
+  email_required: STATUS_LINES.email_required as string,
+  invalid_email: 'Det ser ikke ut som en e-postadresse. Sjekk den og prøv igjen.',
+  disposable_email: 'Engangs-e-post går ikke. Be om en vanlig e-postadresse.',
+  profile_incomplete: 'Fullfør profilen din først, så kan du legge til venner på e-post.',
+  quota: 'Du har lagt til mange på e-post i dag. Prøv igjen i morgen.',
+  error: STATUS_LINES.error as string,
+};
+
+export function addByEmailLine(status: AddByEmailStatus): StatusLine {
+  return { text: ADD_BY_EMAIL_LINES[status], tone: status === 'requested' ? 'ok' : 'error' };
 }
 
 /**

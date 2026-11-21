@@ -1,6 +1,6 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { getFriendConnectionIds } from './getFriendConnectionIds';
+import { getFriendIds } from './getFriendIds';
 import type { PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
 
 type FriendUserRow = {
@@ -14,10 +14,11 @@ type FriendUserRow = {
 };
 
 /**
- * Venne-relasjonene til en bruker som `PlayerOption`-rader for kompis-hurtig-
- * legg-til i opprett-veiviseren (#369). Inkluderer både aksepterte venner og
- * folk du har en pending venneforespørsel med (begge retninger), så de kan
- * velges i et spill før forespørselen er besvart. Admin-client fordi users-RLS
+ * Vennene til en bruker som `PlayerOption`-rader for kompis-hurtig-legg-til i
+ * opprett-veiviseren (#369). Bare godkjente vennskap: en ubesvart forespørsel
+ * gir verken plass i lista eller innsyn i handicap, og databasen slipper
+ * heller ikke personen inn på rosteret (`is_invite_eligible`, 0252).
+ * Admin-client fordi users-RLS
  * skjuler relasjoner du aldri har delt et spill med for en vanlig bruker — uten
  * dette ville de ikke vært i veiviserens spiller-liste. Ingen e-post (samme
  * personvern som #435).
@@ -27,7 +28,7 @@ type FriendUserRow = {
 export async function getFriendPlayerOptions(
   userId: string,
 ): Promise<PlayerOption[]> {
-  const connectionIds = await getFriendConnectionIds(userId);
+  const connectionIds = await getFriendIds(userId);
   if (connectionIds.length === 0) return [];
 
   const admin = getAdminClient();

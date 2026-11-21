@@ -41,7 +41,7 @@ export async function getFriendData(userId: string): Promise<FriendData> {
 
   const { data: rows, error } = await admin
     .from('friendships')
-    .select('id, requester_id, addressee_id, status')
+    .select('id, requester_id, addressee_id, status, by_email')
     .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`)
     .returns<FriendshipRow[]>();
   if (error) console.error('[getFriendData] friendships lookup failed', error);

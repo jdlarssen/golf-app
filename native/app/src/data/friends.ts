@@ -16,11 +16,11 @@
 // `data/profile.ts`). Skjermen leser aldri et statusnummer.
 import {
   FRIEND_LINK_RELATIONS,
+  asAddByEmailStatus,
   asFriendStatus,
-  asInviteStatus,
+  type AddByEmailStatus,
   type FriendLinkRelation,
   type FriendStatus,
-  type InviteStatus,
 } from '../../../../lib/friends/friendStatus';
 import { callWebRoute, type WebApiFailure } from './webApi';
 
@@ -281,8 +281,12 @@ export function sendFriendRequest(addresseeId: string): Promise<FriendActionResu
   return act('/api/friends/request', { addresseeId }, asFriendStatus);
 }
 
-export function addFriendByEmail(email: string): Promise<FriendActionResult<FriendStatus>> {
-  return act('/api/friends/by-email', { email }, asFriendStatus);
+/**
+ * Legg til venn på e-post. `requested` er svaret for alle adresser: serveren
+ * sender en venneforespørsel eller en invitasjon, og sier ikke hvilken.
+ */
+export function addFriendByEmail(email: string): Promise<FriendActionResult<AddByEmailStatus>> {
+  return act('/api/friends/by-email', { email }, asAddByEmailStatus);
 }
 
 export function respondToFriendRequest(
@@ -294,8 +298,4 @@ export function respondToFriendRequest(
 
 export function removeFriend(otherId: string): Promise<FriendActionResult<FriendStatus>> {
   return act('/api/friends/remove', { otherId }, asFriendStatus);
-}
-
-export function inviteFriend(email: string): Promise<FriendActionResult<InviteStatus>> {
-  return act('/api/friends/invite', { email }, asInviteStatus);
 }

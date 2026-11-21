@@ -1,15 +1,19 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { getFriendConnectionIds } from '@/lib/friends/getFriendConnectionIds';
+import { getFriendIds } from '@/lib/friends/getFriendIds';
 import { getCoPlayerIds } from '@/lib/users/getCoPlayerIds';
 
 /**
  * Bruker-ider en IKKE-admin oppretter har lov til å legge til på et spill-roster
  * fra detalj-/arrangør-invite-flyten (#906, speiler #464-veiviserens scope).
  *
- *     eligible = venne-connections (akseptert + pending, begge retninger)
+ *     eligible = venner (godkjente vennskap, begge retninger)
  *              ∪ co-players (delt minst ett spill)
  *              ∪ klubbmedlemmer av spillets group (når `groupId` er satt)
+ *
+ * Regelen har to hjem som endres sammen: `is_invite_eligible` i databasen
+ * (0252) og denne funksjonen. `lib/friends/inviteEligibilityRule.test.ts`
+ * holder dem like. En ubesvart venneforespørsel teller ikke i noen av dem.
  *
  * Oppretteren selv er ikke i settet — call-siten tillater alltid `=== inviterUserId`
  * eksplisitt før denne kalles. Settet er **unionen** av alt de legitime invite-UI-ene
@@ -30,7 +34,7 @@ export async function getInviteEligibleIds(
   groupId: string | null,
 ): Promise<Set<string>> {
   const [friendIds, coPlayerIds, clubMemberIds] = await Promise.all([
-    getFriendConnectionIds(creatorUserId),
+    getFriendIds(creatorUserId),
     getCoPlayerIds(creatorUserId),
     groupId ? getGroupMemberIds(groupId) : Promise.resolve<string[]>([]),
   ]);

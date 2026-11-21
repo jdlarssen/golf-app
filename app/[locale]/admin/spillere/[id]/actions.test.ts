@@ -40,6 +40,8 @@ vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({
     auth: { admin: { updateUserById: updateUserByIdMock } },
     from: (table: string) => adminQueryMock.from(table),
+    // 0252: the address check runs with the service role.
+    rpc: (name: string, params: unknown) => adminQueryMock.rpc(name, params),
   }),
 }));
 vi.mock('@/lib/admin/auth', () => ({ requireAdmin: vi.fn() }));
@@ -155,6 +157,36 @@ describe('updateUser — the users write must hit the row (#2054)', () => {
     expect(updateUserByIdMock).toHaveBeenNthCalledWith(1, ID, { email: NEW_EMAIL });
     expect(updateUserByIdMock).toHaveBeenNthCalledWith(2, ID, { email: OLD_EMAIL });
     expect(recomputeCourseHandicapForUser).not.toHaveBeenCalled();
+  });
+
+  it('the address check runs with the service role, and a taken address stops the change (0252)', async () => {
+    adminQueryMock = buildSupabaseMock(
+      [{ data: { email: OLD_EMAIL }, error: null }],
+      { email_is_registered: true, email_is_in_auth_users: false },
+    );
+    supabaseMock = buildSupabaseMock([
+      { data: [], error: null }, // active games
+      { count: 0, data: null, error: null }, // game_players in active games
+    ]);
+    expect(await run(validForm(NEW_EMAIL))).toBe(`/admin/spillere/${ID}?error=email_in_use`);
+    expect(adminQueryMock.rpc).toHaveBeenCalledWith('email_is_registered', { p_email: NEW_EMAIL });
+    expect(supabaseMock.rpc).not.toHaveBeenCalled();
+    expect(updateUserByIdMock).not.toHaveBeenCalled();
+  });
+
+  it('a failed address check stops the change (0252)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminQueryMock = buildSupabaseMock(
+      [{ data: { email: OLD_EMAIL }, error: null }],
+      {},
+      { rpcErrors: { email_is_registered: { message: 'nede' } } },
+    );
+    supabaseMock = buildSupabaseMock([
+      { data: [], error: null },
+      { count: 0, data: null, error: null },
+    ]);
+    expect(await run(validForm(NEW_EMAIL))).toBe(`/admin/spillere/${ID}?error=email_update_failed`);
+    expect(updateUserByIdMock).not.toHaveBeenCalled();
   });
 
   it('a normal save → status=updated, and the recompute runs', async () => {

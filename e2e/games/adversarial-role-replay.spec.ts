@@ -552,8 +552,8 @@ test.describe('Role D – non-admin creator invite-eligibility on game_players @
     stranger = players[1];
 
     // Seed an ACCEPTED friendship player↔friend so the friend is eligible via the
-    // friend branch of is_invite_eligible (mirrors connectedIdsFromRows: any
-    // direction, accepted or pending). FK on_delete_cascade clears it in afterAll.
+    // friend branch of is_invite_eligible (mirrors getFriendIds: any direction,
+    // accepted only, 0252). FK on_delete_cascade clears it in afterAll.
     const { error: friErr } = await admin.from('friendships').insert({
       requester_id: playerUserId,
       addressee_id: friend.id,

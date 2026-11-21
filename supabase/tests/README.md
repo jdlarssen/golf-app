@@ -6,7 +6,7 @@ våre. De kjører mot en **ekte lokal Postgres** med alle migrasjonene i
 `scores`-write-policyene; rigg-primitivene er bygd for gjenbruk av #412 / #414
 (RLS-policy-omskrivinger).
 
-> **Status:** Mappa har én pgTAP-suite per regel (70 filer per 2026-11-21). CI kjører
+> **Status:** Mappa har én pgTAP-suite per regel (71 filer per 2026-11-21). CI kjører
 > alle sammen i `.github/workflows/migrations-gate.yml` på hver PR som rører
 > `supabase/migrations/`, `supabase/tests/` eller `supabase/config.toml`. Det er den
 > eneste automatiske porten for disse testene.

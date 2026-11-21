@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   otherParty,
   friendIdsFromRows,
-  connectedIdsFromRows,
+  isUnansweredEmailRequestFrom,
   partitionFriendships,
   suggestionIds,
   distinctInviterIds,
@@ -52,26 +52,35 @@ describe('friendIdsFromRows', () => {
   });
 });
 
-describe('connectedIdsFromRows', () => {
-  it('collects accepted AND pending relations in both directions', () => {
-    const rows: FriendshipRow[] = [
-      row({ requester_id: ME, addressee_id: A, status: 'accepted' }),
-      row({ requester_id: B, addressee_id: ME, status: 'pending' }), // incoming
-      row({ requester_id: ME, addressee_id: C, status: 'pending' }), // outgoing
-    ];
-    expect(connectedIdsFromRows(rows, ME).sort()).toEqual([A, B, C]);
+describe('a request sent to an e-mail address (0252)', () => {
+  const mine = row({ requester_id: ME, addressee_id: A, status: 'pending', by_email: true });
+
+  it('is left out of every list built for the sender while it waits', () => {
+    expect(isUnansweredEmailRequestFrom(mine, ME)).toBe(true);
+    const parts = partitionFriendships([mine], ME);
+    expect(parts.outgoing).toEqual([]);
+    expect(parts.friends).toEqual([]);
+    expect([...parts.relatedIds]).toEqual([]);
+    // The person stays a suggestion when the two have played together.
+    expect(suggestionIds([A], parts.relatedIds, ME)).toEqual([A]);
   });
 
-  it('dedupes if the same pair appears twice', () => {
-    const rows: FriendshipRow[] = [
-      row({ requester_id: ME, addressee_id: A, status: 'pending' }),
-      { id: 'dup', requester_id: A, addressee_id: ME, status: 'accepted' },
-    ];
-    expect(connectedIdsFromRows(rows, ME)).toEqual([A]);
+  it('is an ordinary incoming request for the person who received it', () => {
+    expect(isUnansweredEmailRequestFrom(mine, A)).toBe(false);
+    const parts = partitionFriendships([mine], A);
+    expect(parts.incoming).toEqual([{ id: mine.id, otherId: ME }]);
   });
 
-  it('returns empty for no rows', () => {
-    expect(connectedIdsFromRows([], ME)).toEqual([]);
+  it('is an ordinary friendship once it is accepted', () => {
+    const accepted = { ...mine, status: 'accepted' as const };
+    expect(isUnansweredEmailRequestFrom(accepted, ME)).toBe(false);
+    expect(partitionFriendships([accepted], ME).friends).toEqual([{ otherId: A }]);
+  });
+
+  it('a request to a person picked from a list is listed as before', () => {
+    const picked = row({ requester_id: ME, addressee_id: B, status: 'pending', by_email: false });
+    expect(isUnansweredEmailRequestFrom(picked, ME)).toBe(false);
+    expect(partitionFriendships([picked], ME).outgoing).toEqual([{ id: picked.id, otherId: B }]);
   });
 });
 

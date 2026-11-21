@@ -40,7 +40,18 @@ const fake = createAdminClientMock({
     throw new Error(`uventet spørring: ${op.kind} ${op.table}`);
   },
 });
-vi.mock('@/lib/supabase/admin', () => ({ getAdminClient: () => fake.client }));
+/** The service-role lookup behind «add by e-mail» (0252). Set per test. */
+const lookupMock = vi.fn();
+vi.mock('@/lib/supabase/admin', () => ({
+  getAdminClient: () => Object.assign(fake.client, { rpc: lookupMock }),
+}));
+
+/** What a route hands to `after`: run after the answer is on its way. */
+const afterTasks: Array<() => Promise<void>> = [];
+vi.mock('next/server', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('next/server')>()),
+  after: (task: () => Promise<void>) => void afterTasks.push(task),
+}));
 
 /** Klienten med kallerens token. RPC-svarene settes per test. */
 let caller: ReturnType<typeof buildSupabaseMock>;
@@ -107,6 +118,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   fake.reset();
   callerBuiltFrom.length = 0;
+  afterTasks.length = 0;
   caller = buildSupabaseMock([]);
   linkOwner = null;
   linkError = null;
@@ -279,7 +291,6 @@ describe('GET /api/friends/code', () => {
 
 const POSTS = [
   ['/request', postRequest, { addresseeId: KARI }, 'send_friend_request', 'requested'],
-  ['/by-email', postByEmail, { email: 'Kari@Example.com' }, 'send_friend_request_by_email', { status: 'requested', target_id: KARI }],
   ['/respond', postRespond, { requestId: 'req-1', accept: true }, 'respond_friend_request', 'accepted'],
   ['/remove', postRemove, { otherId: KARI }, 'remove_friend', 'removed'],
 ] as const;
@@ -298,9 +309,7 @@ describe.each(POSTS)('POST /api/friends%s', (path, handler, body, rpcName, rpcRe
     expect(res.status).toBe(200);
     expect(caller.rpc).toHaveBeenCalledWith(rpcName, expect.any(Object));
     expect(callerBuiltFrom).toEqual([`Bearer ${TOKEN}`]);
-    expect(await res.json()).toEqual({
-      status: typeof rpcResult === 'string' ? rpcResult : rpcResult.status,
-    });
+    expect(await res.json()).toEqual({ status: rpcResult });
   });
 
   it('lar ikke en bruker-id i kroppen velge hvem som handler', async () => {
@@ -330,6 +339,66 @@ describe('POST /api/friends/respond', () => {
       p_request_id: 'req-1',
       p_accept: false,
     });
+  });
+});
+
+// 0252: one answer for every address. The lookup runs with the service role
+// and its result stays on the server.
+describe('POST /api/friends/by-email', () => {
+  const COMPLETED = { data: { name: 'Jørgen', profile_completed_at: '2026-01-01T00:00:00Z' }, error: null };
+  const body = { email: 'Kari@Example.com' };
+  const callerClient = () =>
+    buildSupabaseMock([], { email_is_invited: false }, { byTable: { users: [COMPLETED] } });
+
+  beforeEach(() => {
+    privateFieldsMock.mockResolvedValue(new Map([[ME, { email: 'jorgen@example.com', friendCode: 'kode1234' }]]));
+  });
+
+  it('svarer 401 uten token og rører ikke basen', async () => {
+    const res = await postByEmail(req('/by-email', { body }));
+    expect(res.status).toBe(401);
+    expect(lookupMock).not.toHaveBeenCalled();
+    expect(callerBuiltFrom).toHaveLength(0);
+  });
+
+  it.each([
+    ['unknown', null],
+    ['requested', KARI],
+    ['already_friends', KARI],
+  ] as const)('gir samme svar, byte for byte, når oppslaget finner «%s»', async (outcome, target) => {
+    lookupMock.mockResolvedValue({ data: { outcome, target_id: target }, error: null });
+    caller = callerClient();
+    const res = await postByEmail(req('/by-email', { token: TOKEN, body }));
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('{"status":"requested"}');
+    // Varselet og e-posten venter til svaret er gitt.
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(afterTasks).toHaveLength(1);
+  });
+
+  it('spør for tokenets bruker, også når kroppen nevner en annen', async () => {
+    lookupMock.mockResolvedValue({ data: { outcome: 'requested', target_id: KARI }, error: null });
+    caller = callerClient();
+    await postByEmail(req('/by-email', { token: TOKEN, body: { ...body, userId: KARI, actor_id: KARI } }));
+    expect(lookupMock).toHaveBeenCalledWith('friend_request_by_email', {
+      p_requester: ME,
+      p_email: 'kari@example.com',
+      p_token: expect.any(String),
+      p_expires_at: expect.any(String),
+    });
+    for (const task of afterTasks) await task();
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: KARI, kind: 'friend_request', payload: expect.objectContaining({ actor_id: ME }) }),
+    );
+  });
+
+  it('svarer med en fast kode når oppslaget feiler', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    lookupMock.mockResolvedValue({ data: null, error: { message: 'forbindelsen røk' } });
+    caller = callerClient();
+    const res = await postByEmail(req('/by-email', { token: TOKEN, body }));
+    expect(await res.json()).toEqual({ status: 'error' });
+    expect(afterTasks).toHaveLength(0);
   });
 });
 
