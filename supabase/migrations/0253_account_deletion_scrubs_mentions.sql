@@ -15,11 +15,14 @@
 -- New: scrub_user_mentions(user, name, nickname, email), called by
 -- anonymize_user before it changes anything, and by a BEFORE DELETE trigger on
 -- public.users, so the hard-delete path (an account that never played, a guest)
--- cleans the same rows inside the same transaction. On that path the text is
--- only searched for an account that has completed its profile and is not a
--- guest. A guest, and an account that is removed again right after it was
--- made (a creation that is rolled back), is matched on the id alone, so a
--- name a host typed can never rewrite a namesake's notice.
+-- cleans the same rows inside the same transaction. On that path the name and
+-- the nickname are only searched for an account that has completed its profile
+-- and is not a guest: a name a host typed for a guest, or the name on an
+-- account that is removed again right after it was made (a creation that is
+-- rolled back), can never rewrite a namesake's notice. An account without a
+-- completed profile is still searched by its masked address, which is what
+-- others saw in place of a name (a request to join a club). A guest is matched
+-- on the id alone.
 --
 -- How a name is found. A payload key with an id next to it (`player_id`,
 -- `submitter_id`, `actor_id`, the sign-up's `request_id`) is matched on the id,
@@ -332,17 +335,20 @@ set search_path = ''
 as $function$
   declare
     -- A guest's name is typed by a host, and an account without a completed
-    -- profile was made moments ago (a creation that is rolled back lands
-    -- here). Neither has written anything under its own name, so the text is
-    -- not searched: id matches only.
-    v_text boolean := not old.is_guest and old.profile_completed_at is not null;
+    -- profile has not written anything under a name of its own (a creation
+    -- that is rolled back lands here). For those the name and the nickname
+    -- are not searched.
+    v_named boolean := not old.is_guest and old.profile_completed_at is not null;
   begin
     if old.deleted_at is null then
       perform public.scrub_user_mentions(
         old.id,
-        case when v_text then old.name end,
-        case when v_text then old.nickname end,
-        case when v_text then old.email end);
+        case when v_named then old.name end,
+        case when v_named then old.nickname end,
+        -- The masked address is what others saw for an account without a
+        -- name, so it is searched for every account but a guest (whose
+        -- address is a placeholder nobody has seen).
+        case when not old.is_guest then old.email end);
     end if;
     return old;
   end;

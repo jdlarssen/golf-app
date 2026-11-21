@@ -171,7 +171,7 @@ Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
 ## Sletting av konto — navnet i andres rader (0253)
 
 - `anonymize_user` vasker `users`-raden og sletter personens egne rader. Navnet står også som tekst i rader som tilhører andre: `notifications.payload` (navnenøklene, påmeldingsmeldingen, fornavnene i arrangørens kveldsstatus), `games.round_report`, `admin_audit_log.actor_name` og andres `kavalkades`. Dem tar `scrub_user_mentions`, som `anonymize_user` kaller før den endrer noe. En `BEFORE DELETE`-trigger på `users` kaller den samme funksjonen, så hard sletting (en konto som aldri har spilt, en gjest) rydder likt.
-- På hard sletting søkes teksten bare for en konto med fullført profil som ikke er gjest. En gjest, og en konto som fjernes rett etter at den ble laget (en opprettelse som rulles tilbake), matches bare på id-en.
+- På hard sletting søkes navnet og kallenavnet bare for en konto med fullført profil som ikke er gjest. En konto uten fullført profil søkes likevel på den maskerte adressen, som er det andre så i stedet for et navn. En gjest matches bare på id-en.
 - Et kampreferat fjernes når det har fornavnet, etternavnet eller kallenavnet som helt ord, med eller uten genitivs-s.
 - En navnenøkkel med id-en ved siden av (`player_id`, `submitter_id`, `actor_id`, påmeldingens `request_id`) matches på id-en. En nøkkel uten id matches på teksten. Legg derfor id-en ved siden av navnet i en ny payload.
 - Verdien som skrives er «Slettet bruker», den samme som `users.name` får. Flere navnenøkler er ikke nullbare i skjemaene, og apper som alt er installert leser dem.
