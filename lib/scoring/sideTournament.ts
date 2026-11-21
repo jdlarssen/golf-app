@@ -44,6 +44,12 @@ export interface SideTournamentInput {
     userId: UserId;
     perHoleGross: Array<number | null>;
     perHoleNetto: Array<number | null>;
+    /**
+     * The player's own par per hole (tee/gender), 18 elements. Every
+     * score-against-par category measures the player against it; without it
+     * the course par (`coursePars`) applies. Audit 2026-11-20.
+     */
+    perHolePar?: number[];
   }>;
   nettoBestBallPerHole: Array<{
     teamId: TeamId;
@@ -154,6 +160,19 @@ function findMaxTeams(
 }
 
 /**
+ * The player's own par on hole index `h` (0-based): `perHolePar` when the call
+ * site knows the player's tee, else the course par. The hole-type categories
+ * (king of par 3/4/5 and the all-par-groups course gate) keep the course par.
+ */
+function parOf(
+  player: SideTournamentInput['playerScoresPerHole'][number],
+  coursePars: number[],
+  h: number,
+): number | undefined {
+  return player.perHolePar?.[h] ?? coursePars[h];
+}
+
+/**
  * Counts holes where `predicate(netto, par)` is true for a single player.
  * Used by count-based categories (birdies/eagles/pars) and only considers
  * netto values, matching how the app already evaluates scores per hole.
@@ -169,7 +188,7 @@ function countMatchesForPlayer(
   let count = 0;
   for (let h = 0; h < 18; h++) {
     const netto = player.perHoleNetto[h];
-    const par = coursePars[h];
+    const par = parOf(player, coursePars, h);
     if (netto != null && par != null && predicate(netto, par)) count++;
   }
   return count;
@@ -395,7 +414,7 @@ export function calculateSideTournament(
       total: sumHoles(t.perHoleNetto, 0, 18),
     }));
     for (const teamId of findMinTeams(totals18)) {
-      award(teamId, { category: 'best_netto_18', teamId, points: 10 });
+      award(teamId, { category: 'best_netto_18', teamId, points: SIDE_TOURNAMENT_POINTS.bestNetto18 });
     }
   }
 
@@ -406,7 +425,7 @@ export function calculateSideTournament(
       total: sumHoles(t.perHoleNetto, 0, 9),
     }));
     for (const teamId of findMinTeams(totalsF9)) {
-      award(teamId, { category: 'best_netto_f9', teamId, points: 5 });
+      award(teamId, { category: 'best_netto_f9', teamId, points: SIDE_TOURNAMENT_POINTS.bestNettoF9 });
     }
   }
 
@@ -417,7 +436,7 @@ export function calculateSideTournament(
       total: sumHoles(t.perHoleNetto, 9, 18),
     }));
     for (const teamId of findMinTeams(totalsB9)) {
-      award(teamId, { category: 'best_netto_b9', teamId, points: 5 });
+      award(teamId, { category: 'best_netto_b9', teamId, points: SIDE_TOURNAMENT_POINTS.bestNettoB9 });
     }
   }
 
@@ -433,7 +452,7 @@ export function calculateSideTournament(
         award(winners[0]!, {
           category: 'hole_win',
           teamId: winners[0]!,
-          points: 2,
+          points: SIDE_TOURNAMENT_POINTS.holeWin,
           detail: `Hull ${hole + 1}`,
           holeNumber: hole + 1,
         });
@@ -450,7 +469,7 @@ export function calculateSideTournament(
           award(teamId, {
             category: 'longest_drive',
             teamId,
-            points: 2,
+            points: SIDE_TOURNAMENT_POINTS.longestDrive,
             detail: `Slot ${w.position}`,
           });
         }
@@ -467,7 +486,7 @@ export function calculateSideTournament(
           award(teamId, {
             category: 'closest_to_pin',
             teamId,
-            points: 2,
+            points: SIDE_TOURNAMENT_POINTS.closestToPin,
             detail: `Slot ${w.position}`,
           });
         }
@@ -883,7 +902,7 @@ export function calculateSideTournament(
         const streak = longestStreak(
           p.perHoleNetto,
           (netto, h) => {
-            const par = input.coursePars[h];
+            const par = parOf(p, input.coursePars, h);
             return par != null && netto <= par;
           },
         );
@@ -977,7 +996,7 @@ export function calculateSideTournament(
         p.perHoleNetto,
         3,
         (netto, h) => {
-          const par = input.coursePars[h];
+          const par = parOf(p, input.coursePars, h);
           return par != null && netto < par;
         },
       );
@@ -1005,11 +1024,10 @@ export function calculateSideTournament(
       // 1 if every member has netto < par on this hole, else null (breaks streak)
       const allBirdiedFlag: Array<number | null> = new Array(18).fill(null);
       for (let h = 0; h < 18; h++) {
-        const par = input.coursePars[h];
-        if (par == null) continue;
         const allBirdie = memberScores.every((p) => {
           const netto = p.perHoleNetto[h];
-          return netto != null && netto < par;
+          const par = parOf(p, input.coursePars, h);
+          return netto != null && par != null && netto < par;
         });
         if (allBirdie) allBirdiedFlag[h] = 1;
       }
@@ -1043,7 +1061,7 @@ export function calculateSideTournament(
         p.perHoleNetto,
         5,
         (netto, h) => {
-          const par = input.coursePars[h];
+          const par = parOf(p, input.coursePars, h);
           return par != null && netto <= par;
         },
       );
@@ -1070,11 +1088,10 @@ export function calculateSideTournament(
       if (memberScores.length !== n) continue;
       const allParPlusFlag: Array<number | null> = new Array(18).fill(null);
       for (let h = 0; h < 18; h++) {
-        const par = input.coursePars[h];
-        if (par == null) continue;
         const allParPlus = memberScores.every((p) => {
           const netto = p.perHoleNetto[h];
-          return netto != null && netto <= par;
+          const par = parOf(p, input.coursePars, h);
+          return netto != null && par != null && netto <= par;
         });
         if (allParPlus) allParPlusFlag[h] = 1;
       }
@@ -1106,15 +1123,18 @@ export function calculateSideTournament(
       if (memberScores.length !== team.userIds.length) continue; // missing data → skip
       if (memberScores.length === 0) continue;
       for (let h = 0; h < 18; h++) {
-        const par = input.coursePars[h];
-        if (par == null) continue;
-        const grossOnHole = memberScores.map((p) => p.perHoleGross[h]);
+        // Each member against their own par: brutto over par per member.
+        const overOnHole = memberScores.map((p) => {
+          const g = p.perHoleGross[h];
+          const par = parOf(p, input.coursePars, h);
+          return g == null || par == null ? null : g - par;
+        });
         // Need all members to have a recorded brutto AND each must be ≥ par+5
-        if (grossOnHole.some((g) => g == null)) continue;
-        const validGross = grossOnHole as number[];
-        const allSnowman = validGross.every((g) => g >= par + 5);
+        if (overOnHole.some((o) => o == null)) continue;
+        const validOver = overOnHole as number[];
+        const allSnowman = validOver.every((o) => o >= 5);
         if (!allSnowman) continue;
-        const worstOver = Math.max(...validGross) - par;
+        const worstOver = Math.max(...validOver);
         award(team.teamId, {
           category: 'snowman',
           teamId: team.teamId,
@@ -1306,7 +1326,7 @@ export function calculateSideTournament(
       let allParOrBetter = true;
       for (let h = start; h < end; h++) {
         const netto = p.perHoleNetto[h];
-        const par = input.coursePars[h];
+        const par = parOf(p, input.coursePars, h);
         if (netto == null || par == null) { allParOrBetter = false; break; }
         if (netto > par) { allParOrBetter = false; break; }
       }
@@ -1345,7 +1365,7 @@ export function calculateSideTournament(
       let clean = true;
       for (let h = 0; h < 18; h++) {
         const netto = p.perHoleNetto[h];
-        const par = input.coursePars[h];
+        const par = parOf(p, input.coursePars, h);
         if (netto == null || par == null) { clean = false; break; }
         if (netto > par + 1) { clean = false; break; }
       }
@@ -1451,7 +1471,7 @@ export function calculateSideTournament(
       for (const p of input.playerScoresPerHole) {
         let b3 = false, b4 = false, b5 = false;
         for (let h = 0; h < 18; h++) {
-          const par = input.coursePars[h];
+          const par = parOf(p, input.coursePars, h);
           const netto = p.perHoleNetto[h];
           if (par == null || netto == null) continue;
           if (netto < par) {
@@ -1484,9 +1504,10 @@ export function calculateSideTournament(
   // Player's full-18 netto total equals sum(coursePars). Requires all 18
   // holes played. Tie → all get 2p, deduped per team.
   if (!isDisabled('even_par_round', input.config)) {
-    const parTotal = input.coursePars.reduce((s, p) => s + (p ?? 0), 0);
     const qualifiers: UserId[] = [];
     for (const p of input.playerScoresPerHole) {
+      let parTotal = 0;
+      for (let h = 0; h < 18; h++) parTotal += parOf(p, input.coursePars, h) ?? 0;
       const netTotal = sumHoles(p.perHoleNetto, 0, 18);
       if (netTotal != null && netTotal === parTotal) qualifiers.push(p.userId);
     }
@@ -1519,7 +1540,7 @@ export function calculateSideTournament(
         p.perHoleNetto,
         2,
         (netto, h) => {
-          const par = input.coursePars[h];
+          const par = parOf(p, input.coursePars, h);
           return par != null && netto < par;
         },
       );
@@ -1550,7 +1571,7 @@ export function calculateSideTournament(
       if (memberScores.length !== n) continue;
       const allHaveBirdie = memberScores.every((p) => {
         for (let h = 0; h < 18; h++) {
-          const par = input.coursePars[h];
+          const par = parOf(p, input.coursePars, h);
           const netto = p.perHoleNetto[h];
           if (par == null || netto == null) continue;
           if (netto < par) return true;
@@ -1581,11 +1602,10 @@ export function calculateSideTournament(
         .filter((p): p is SideTournamentInput['playerScoresPerHole'][number] => p != null);
       if (memberScores.length !== n) continue;
       for (let h = 0; h < 18; h++) {
-        const par = input.coursePars[h];
-        if (par == null) continue;
         const allParOrBetter = memberScores.every((p) => {
           const netto = p.perHoleNetto[h];
-          return netto != null && netto <= par;
+          const par = parOf(p, input.coursePars, h);
+          return netto != null && par != null && netto <= par;
         });
         if (allParOrBetter) {
           award(team.teamId, {
@@ -1680,4 +1700,20 @@ export function calculateSideTournament(
       awards: standingsMap.get(t.teamId)!.awards,
     })),
   };
+}
+
+/**
+ * Orders the side tournament's standings by points, highest first, with the
+ * engines' ranking (1, 1, 3): teams on equal points share the place and the
+ * next team skips the shared ones. One rule for the web view and the app
+ * (audit 2026-11-20); before, both views ranked densely (1, 1, 2).
+ */
+export function rankSideStandings<T extends { totalPoints: number }>(
+  items: readonly T[],
+): Array<T & { rank: number }> {
+  const sorted = [...items].sort((a, b) => b.totalPoints - a.totalPoints);
+  return sorted.map((item) => ({
+    ...item,
+    rank: sorted.findIndex((other) => other.totalPoints === item.totalPoints) + 1,
+  }));
 }

@@ -109,7 +109,13 @@ type CourseHoleRow = {
   stroke_index: number;
 };
 
-type SnapshotHole = { number: number; par: number; strokeIndex: number };
+type SnapshotHole = {
+  number: number;
+  par: number;
+  strokeIndex: number;
+  /** Par per tee: «dro ned mest» måler hver spiller mot sitt eget par. */
+  parByGender: { mens: number; ladies: number; juniors: number };
+};
 
 /** Grupperer rader per `game_id`, i radenes egen rekkefølge. */
 function groupByGameId<T extends { game_id: string }>(rows: readonly T[]): Map<string, T[]> {
@@ -124,13 +130,19 @@ function groupByGameId<T extends { game_id: string }>(rows: readonly T[]): Map<s
 
 /**
  * `par` ble droppet i migrasjon 0040 til fordel for per-kjønn-kolonner. Map til
- * `par` via par_mens (samme som buildModeResultForGame).
+ * `par` via par_mens (samme som buildModeResultForGame); `parByGender` bærer
+ * alle tre, så «dro ned mest» kan måle spilleren mot sitt eget par.
  */
 function groupHolesByCourse(rows: readonly CourseHoleRow[]): Map<string, SnapshotHole[]> {
   const byCourse = new Map<string, SnapshotHole[]>();
   for (const row of rows) {
     const arr = byCourse.get(row.course_id) ?? [];
-    arr.push({ number: row.hole_number, par: row.par_mens, strokeIndex: row.stroke_index });
+    arr.push({
+      number: row.hole_number,
+      par: row.par_mens,
+      strokeIndex: row.stroke_index,
+      parByGender: { mens: row.par_mens, ladies: row.par_ladies, juniors: row.par_juniors },
+    });
     byCourse.set(row.course_id, arr);
   }
   return byCourse;
@@ -205,7 +217,7 @@ export async function getCupSnapshot(
             supabase
               .from('game_players')
               .select(
-                'game_id, user_id, team_number, course_handicap, submitted_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname)',
+                'game_id, user_id, team_number, course_handicap, submitted_at, withdrawn_at, tee_gender, users!game_players_user_id_fkey(name, nickname)',
               )
               .in('game_id', gameIds)
               .order('game_id')

@@ -313,10 +313,12 @@ function computeTeam(
         };
       });
 
-      // Lag-hull-poeng = MAX av partnernes individuelle poeng. Ved tomt lag
-      // (ingen members) defaulter teamPoints til 0 — defensivt mot edge-case.
-      const teamPoints =
-        players.length === 0 ? 0 : Math.max(...players.map((pc) => pc.points));
+      // Lag-hull-poeng = MAX av poengene til partnerne som SPILTE hullet. En
+      // partner uten slag er ingen ball: i modified stableford ville hans 0
+      // ellers slått en spilt minus (audit 2026-11-20). Ingen spilte (eller
+      // tomt lag) gir 0, som et blankt hull på papirkortet.
+      const playedPoints = players.filter((pc) => pc.gross !== null).map((pc) => pc.points);
+      const teamPoints = playedPoints.length === 0 ? 0 : Math.max(...playedPoints);
 
       // contributorIds = spillere som hadde MAX-poeng OG faktisk spilte hullet.
       // Standard-Stableford: når teamPoints er 0 (alle double-bogey-or-worse

@@ -25,6 +25,7 @@
 // Games without the flag keep the rule above, byte for byte.
 
 import { strokesForHole } from '../strokeAllocation';
+import { parFor } from './parResolver';
 import { rankingHolesByNumber, rankTeams, ranksByNetToPar, UNPLAYED_PADDING } from '../tiebreaker';
 import type {
   ScoringContext,
@@ -54,6 +55,8 @@ interface MemberCell {
   userId: string;
   gross: number | null;
   effectiveScore: number | null;
+  /** The player's own par on the hole (tee/gender, `parFor`). */
+  par: number;
 }
 
 /**
@@ -74,7 +77,7 @@ function computeTeamCell(
       gross === null
         ? null
         : effectiveFor(scoring, gross, p.courseHandicap, hole.strokeIndex);
-    return { userId: p.userId, gross, effectiveScore };
+    return { userId: p.userId, gross, effectiveScore, par: parFor(hole, p.teeGender) };
   });
 
   const scored = cells.filter((c) => c.effectiveScore !== null);
@@ -83,6 +86,7 @@ function computeTeamCell(
     return {
       teamNumber,
       teamScore: null,
+      teamPar: null,
       pending: true,
       perPlayer: cells.map((c) => ({
         userId: c.userId,
@@ -109,11 +113,18 @@ function computeTeamCell(
   const countedSlice = ranked.slice(0, count);
   const countedIds = new Set(countedSlice.map((c) => c.userId));
   let teamScore = 0;
-  for (const c of countedSlice) teamScore += c.effectiveScore ?? 0;
+  // Each counted ball is measured against its own player's par: a lady on the
+  // ladies' tee plays to the ladies' par (audit 2026-11-20).
+  let teamPar = 0;
+  for (const c of countedSlice) {
+    teamScore += c.effectiveScore ?? 0;
+    teamPar += c.par;
+  }
 
   return {
     teamNumber,
     teamScore,
+    teamPar,
     pending: false,
     perPlayer: cells.map((c) => ({
       userId: c.userId,
@@ -197,14 +208,15 @@ export function compute(ctx: ScoringContext): ShambleResult {
     );
     let totalScore = 0;
     let holesCounted = 0;
-    // #2625: a hole counts `count` balls, so its par is `count × par` — the
-    // same rule as the board's hole tones (`teamLiveBoard.ts`).
+    // #2625: a hole counts `count` balls, so its par is the par of those
+    // balls (`teamPar`, each player's own par) — the same rule as the board's
+    // hole tones (`teamLiveBoard.ts`).
     let toPar = 0;
-    cells.forEach((c, idx) => {
-      if (!c.pending && c.teamScore !== null) {
+    cells.forEach((c) => {
+      if (!c.pending && c.teamScore !== null && c.teamPar !== null) {
         totalScore += c.teamScore;
         holesCounted += 1;
-        toPar += c.teamScore - count * holesSorted[idx].par;
+        toPar += c.teamScore - c.teamPar;
       }
     });
     cellsByTeam.set(teamNumber, cells);
@@ -241,7 +253,8 @@ export function compute(ctx: ScoringContext): ShambleResult {
           holes: rankingHolesByNumber(
             cells.map((c, idx) => ({
               holeNumber: holesSorted[idx].number,
-              teamNet: c.teamScore === null ? null : c.teamScore - count * holesSorted[idx].par,
+              teamNet:
+                c.teamScore === null || c.teamPar === null ? null : c.teamScore - c.teamPar,
             })),
           ),
         };

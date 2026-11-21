@@ -50,6 +50,12 @@ describe('isWinningSummary', () => {
     expect(isWinningSummary(skins(2, 3))).toBe(false);
   });
 
+  it('skins: a round where nobody won a skin is no win (audit 2026-11-20)', () => {
+    // Every player shares rank 1 on 0 skins; the result card shows no win
+    // either (`finishedResultBadge`: rank 1 and skins > 0).
+    expect(isWinningSummary(skins(1, 0))).toBe(false);
+  });
+
   it('null summary never wins', () => {
     expect(isWinningSummary(null)).toBe(false);
   });

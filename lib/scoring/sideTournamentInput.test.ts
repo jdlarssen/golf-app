@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildCourseArrays, mapSideWinners } from './sideTournamentInput';
+import { buildCourseArrays, mapSideWinners, playerParsByHole } from './sideTournamentInput';
 import type { SideWinnerRow } from '@/app/[locale]/games/[id]/leaderboard/leaderboardTypes';
 
 // Dense 18-hole course fixture: par cycles 3/4/5, SI = hole number reversed
@@ -84,5 +84,27 @@ describe('mapSideWinners', () => {
   it('returns an empty array for no qualifying rows', () => {
     expect(mapSideWinners([])).toEqual([]);
     expect(mapSideWinners([row('longest_drive', 0, 'u0')])).toEqual([]);
+  });
+});
+
+describe('playerParsByHole (audit 2026-11-20)', () => {
+  const holes = [
+    { holeNumber: 2, parMens: 4, parLadies: 4, parJuniors: 3 },
+    { holeNumber: 1, parMens: 4, parLadies: 5, parJuniors: 4 },
+  ];
+
+  it("picks the player's own tee par per hole, indexed by hole-1", () => {
+    const pars = playerParsByHole(holes, 'ladies');
+    expect(pars).toHaveLength(18);
+    expect(pars.slice(0, 2)).toEqual([5, 4]);
+    expect(playerParsByHole(holes, 'juniors').slice(0, 2)).toEqual([4, 3]);
+    expect(playerParsByHole(holes, 'mens').slice(0, 2)).toEqual([4, 4]);
+  });
+
+  it("falls back to the men's par for an unknown tee, and to 4 for a missing hole", () => {
+    const pars = playerParsByHole(holes, null);
+    expect(pars.slice(0, 2)).toEqual([4, 4]);
+    // Same fallback as `buildCourseArrays`' coursePars.
+    expect(pars[17]).toBe(4);
   });
 });

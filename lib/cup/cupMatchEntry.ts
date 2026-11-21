@@ -22,6 +22,16 @@ export type CupMatchPlayerRow = CupNamedPlayerRow & {
   course_handicap: number | null;
   /** `game_players.withdrawn_at` — input til konvoluttregelen (#1814). */
   withdrawn_at: string | null;
+  /** Teen spilleren spiller fra — «dro ned mest» leser hennes eget par. */
+  tee_gender?: string | null;
+};
+
+/** Ett banehull; `parByGender` (par per tee) når kalleren har den. */
+type CourseHole = {
+  number: number;
+  par: number;
+  strokeIndex: number;
+  parByGender?: { mens: number; ladies: number; juniors: number };
 };
 
 export type CupMatchScoreRow = {
@@ -59,7 +69,7 @@ export type CupMatchEntryInput = {
    */
   scores: readonly CupMatchScoreRow[];
   /** Banens hull, USEGMENTERT — segmentfiltreringen skjer her. */
-  courseHoles: ReadonlyArray<{ number: number; par: number; strokeIndex: number }>;
+  courseHoles: ReadonlyArray<CourseHole>;
   /** Fra `computeSubmissionStatusByGame` (#1488 K4 — avledet arver host). */
   submission: MatchSubmissionStatus;
   unknownLabel: string;
@@ -83,7 +93,7 @@ export type CupMatchEntry = {
  */
 function buildPerformanceGame(
   input: CupMatchEntryInput,
-  holes: ReadonlyArray<{ number: number; par: number; strokeIndex: number }>,
+  holes: ReadonlyArray<CourseHole>,
 ): CupPerformanceGame | null {
   const { game } = input;
   if (game.source_game_id != null) return null;
@@ -91,10 +101,16 @@ function buildPerformanceGame(
 
   return {
     gameId: game.id,
-    holes: holes.map((h) => ({ number: h.number, par: h.par, strokeIndex: h.strokeIndex })),
+    holes: holes.map((h) => ({
+      number: h.number,
+      par: h.par,
+      strokeIndex: h.strokeIndex,
+      ...(h.parByGender ? { parByGender: h.parByGender } : {}),
+    })),
     players: input.players.map((p) => ({
       userId: p.user_id,
       courseHandicap: p.course_handicap ?? 0,
+      teeGender: p.tee_gender ?? null,
     })),
     scores: input.scores.map((s) => ({
       userId: s.user_id,

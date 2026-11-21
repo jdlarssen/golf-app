@@ -60,6 +60,7 @@ function makeResult(): ShambleResult {
           {
             teamNumber: 1,
             teamScore: 7,
+            teamPar: 8,
             pending: false,
             perPlayer: [
               { userId: 'u1', gross: 3, effectiveScore: 3, counted: true },
@@ -71,6 +72,7 @@ function makeResult(): ShambleResult {
           {
             teamNumber: 2,
             teamScore: null,
+            teamPar: null,
             pending: true,
             perPlayer: [
               { userId: 'u5', gross: null, effectiveScore: null, counted: false },
@@ -90,6 +92,7 @@ function makeResult(): ShambleResult {
           {
             teamNumber: 1,
             teamScore: null,
+            teamPar: null,
             pending: true,
             perPlayer: [
               { userId: 'u1', gross: null, effectiveScore: null, counted: false },
@@ -101,6 +104,7 @@ function makeResult(): ShambleResult {
           {
             teamNumber: 2,
             teamScore: null,
+            teamPar: null,
             pending: true,
             perPlayer: [
               { userId: 'u5', gross: null, effectiveScore: null, counted: false },

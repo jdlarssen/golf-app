@@ -654,28 +654,46 @@ describe('wolf — stats: blindWolfWins & wolfHolesPlayed', () => {
     expect(stats).toEqual({ p1: 1, p2: 1, p3: 0, p4: 0 });
   });
 
-  it('wolfHolesPlayed teller hvert hull spilleren var Wolf (uansett outcome)', () => {
-    // Standard rotasjon hull 1-16: hver spiller er Wolf 4 ganger.
-    // Hull 17 + 18: ingen scores/choices → alle på 0 poeng, trailing-tiebreak
-    // velger team_number ASC = p1. Siden ingenting endrer seg etter hull 17
-    // (pending hull deler ikke ut poeng), velges p1 igjen på hull 18.
+  it('wolfHolesPlayed counts no hole before anyone has played it', () => {
+    // Nothing scored: the rotation has a wolf on every hole, but none of
+    // them is played yet, so nobody has a played wolf hole.
     const result = compute(makeCtx({}));
     const stats = Object.fromEntries(
       result.players.map((p) => [p.userId, p.wolfHolesPlayed]),
     );
-    // P1 = hull 1, 5, 9, 13, 17, 18 = 6
-    // P2 = hull 2, 6, 10, 14 = 4
-    // P3 = hull 3, 7, 11, 15 = 4
-    // P4 = hull 4, 8, 12, 16 = 4
-    expect(stats).toEqual({ p1: 6, p2: 4, p3: 4, p4: 4 });
+    expect(stats).toEqual({ p1: 0, p2: 0, p3: 0, p4: 0 });
   });
 
-  it('wolfHolesPlayed: trailing skifter når hull 17 endrer totalene', () => {
-    // Hull 17: P1 trailing wolf (alle på 0, team_number ASC), spiller lone og vinner +4.
-    // Etter hull 17: P1=4, andre=0. Lavest = P2 (team_number ASC).
-    // Hull 18: P2 trailing wolf.
-    // Forventet: P1 = 4 (hull 1,5,9,13) + 1 (hull 17) = 5
-    //            P2 = 4 (hull 2,6,10,14) + 1 (hull 18) = 5
+  it('wolfHolesPlayed counts a hole every player has a score on, whatever the outcome', () => {
+    // Hole 1: p1 wolf, lone, wins. Hole 2: p2 wolf, tied. Hole 3: p3 wolf,
+    // every player scored but no choice was saved — still a played hole.
+    // Hole 4: p4 wolf, one score missing — not played yet.
+    const scores = [
+      ...holeScores(1, { p1: 3, p2: 4, p3: 5, p4: 5 }),
+      ...holeScores(2, { p1: 4, p2: 4, p3: 4, p4: 4 }),
+      ...holeScores(3, { p1: 4, p2: 5, p3: 4, p4: 5 }),
+      ...holeScores(4, { p1: 4, p2: 5, p3: 4, p4: null }),
+    ];
+    const result = compute(
+      makeCtx({
+        scoring: 'gross',
+        scores,
+        wolfChoices: [
+          { holeNumber: 1, wolfUserId: 'p1', choice: 'lone', partnerUserId: null },
+          { holeNumber: 2, wolfUserId: 'p2', choice: 'partner', partnerUserId: 'p3' },
+          { holeNumber: 4, wolfUserId: 'p4', choice: 'lone', partnerUserId: null },
+        ],
+      }),
+    );
+    const stats = Object.fromEntries(
+      result.players.map((p) => [p.userId, p.wolfHolesPlayed]),
+    );
+    expect(stats).toEqual({ p1: 1, p2: 1, p3: 1, p4: 0 });
+  });
+
+  it('wolfHolesPlayed: a played trailing hole counts for the trailing wolf', () => {
+    // Hole 17: P1 trailing wolf (all on 0, team_number ASC), lone, wins +4.
+    // Hole 18 (P2 trailing wolf) is not played yet and does not count.
     const result = compute(
       makeCtx({
         scoring: 'gross',
@@ -688,7 +706,7 @@ describe('wolf — stats: blindWolfWins & wolfHolesPlayed', () => {
     const stats = Object.fromEntries(
       result.players.map((p) => [p.userId, p.wolfHolesPlayed]),
     );
-    expect(stats).toEqual({ p1: 5, p2: 5, p3: 4, p4: 4 });
+    expect(stats).toEqual({ p1: 1, p2: 0, p3: 0, p4: 0 });
   });
 });
 

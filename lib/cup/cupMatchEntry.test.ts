@@ -196,9 +196,9 @@ describe('buildCupMatchEntry — prestasjons-input (#1508)', () => {
       }),
     );
     expect(performance?.players).toEqual([
-      { userId: 'a1', courseHandicap: 12 },
+      { userId: 'a1', courseHandicap: 12, teeGender: null },
       // Manglende banehandicap leses som 0 — aldri null videre i kjeden.
-      { userId: 'a2', courseHandicap: 0 },
+      { userId: 'a2', courseHandicap: 0, teeGender: null },
     ]);
     expect(performance?.scores).toEqual([
       { userId: 'a1', holeNumber: 1, strokes: 5 },

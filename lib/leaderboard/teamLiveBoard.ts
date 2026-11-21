@@ -66,7 +66,7 @@ export function teamDisplayUnit(result: TeamBoardResult): TeamDisplayUnit {
 
 /**
  * Each hole's tone for one team, in hole order. Net in every net format;
- * shamble against the par of every counted ball; team stableford from the
+ * shamble against the own par of every counted ball (`teamPar`); team stableford from the
  * best points among the partners who played the hole, in the game's table
  * (required: the result says `stableford` for both tables), so a mixed team
  * with different pars from the men's and ladies' tees gets the tone its
@@ -88,25 +88,20 @@ export function teamHoleTones(
         return {
           holeNumber: h.holeNumber,
           tone:
-            !cell || cell.pending || cell.teamScore === null
+            !cell || cell.pending || cell.teamScore === null || cell.teamPar === null
               ? 'unset'
-              : vsParTone(cell.teamScore - result.count * h.par),
+              : vsParTone(cell.teamScore - cell.teamPar),
         };
       });
     case 'stableford': {
       const team = result.teams.find((t) => t.teamNumber === teamNumber);
       return (team?.holes ?? []).map((h) => {
-        // The engine counts a partner without a score as 0 points (its
-        // `teamPoints` is the max over the whole team), and 0 is a par in the
-        // modified table. The tone takes the best points among the partners
-        // who played; a hole nobody played has no tone.
-        const played = h.players.filter((p) => p.gross !== null);
+        // The engine's `teamPoints` is the best points among the partners
+        // who played (audit 2026-11-20); a hole nobody played has no tone.
+        const played = h.players.some((p) => p.gross !== null);
         return {
           holeNumber: h.holeNumber,
-          tone:
-            played.length === 0
-              ? 'unset'
-              : stablefordTone(Math.max(...played.map((p) => p.points)), stablefordTable),
+          tone: played ? stablefordTone(h.teamPoints, stablefordTable) : 'unset',
         };
       });
     }
