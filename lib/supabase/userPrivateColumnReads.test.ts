@@ -147,12 +147,6 @@ const ALLOWED: Record<string, Allowed> = {
     receivers: ['admin'],
     reason: '(a) oppslag på adressen brukeren selv logget inn med; bare id-en går videre',
   },
-  // 0252: the age of the account behind the address a code was just sent to.
-  'lib/auth/sendLoginCode.ts': {
-    receivers: ['adminClient'],
-    reason:
-      '(a) oppslag på adressen brukeren selv ba om kode til; bare kontoens alder leses, og ingenting går videre til klienten',
-  },
   'lib/cup/tournamentParticipants.ts': {
     receivers: ['admin'],
     reason: '(c) serverside utsending til cup-deltakere',

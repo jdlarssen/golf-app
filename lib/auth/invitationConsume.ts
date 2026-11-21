@@ -1,30 +1,53 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
+
 /**
- * Which open invitations a login takes (0252).
+ * Which open invitations a login and a code request touch (0252).
  *
  * «Legg til venn på e-post» writes one game-less invitation for every address,
  * also when the address already has an account. That person gets a friend
- * request to answer, and the invitation is only the sender's receipt: a login
- * leaves it alone, so it neither turns into a friendship nor shows the sender
- * that the address has an account. It runs out on its own.
+ * request to answer, and the invitation is only the sender's receipt: it must
+ * stay exactly as it was written, so it neither turns into a friendship nor
+ * shows the sender that the address has an account. It runs out on its own.
  *
- * A game-less invitation that is older than the account is the ordinary case:
- * the person joined after being invited, and the login takes it.
- *
- * Pure, so the rule can be tested without the login around it.
+ * Such a row carries a mark in `invitation_receipts`. The mark is set by
+ * `friend_request_by_email` in the database and by nothing else, and only the
+ * service role reads it. Nothing a signed-in client can write (a row, a
+ * timestamp) decides this.
  */
-export function isReceiptForExistingAccount(
-  invitation: { game_id: string | null; created_at: string },
-  accountCreatedAt: string | null,
-): boolean {
-  if (invitation.game_id !== null) return false;
-  if (!accountCreatedAt) return false;
-  return Date.parse(accountCreatedAt) < Date.parse(invitation.created_at);
+
+/** Drops the marked rows. Pure, so the rule can be tested without the reads. */
+export function withoutReceipts<T extends { id: string }>(
+  invitations: T[],
+  receiptIds: ReadonlySet<string>,
+): T[] {
+  return invitations.filter((inv) => !receiptIds.has(inv.id));
 }
 
-/** The open invitations a login takes, given the account they belong to. */
-export function withoutReceiptsForExistingAccount<
-  T extends { game_id: string | null; created_at: string },
->(invitations: T[], account: { created_at: string } | null | undefined): T[] {
-  const accountCreatedAt = account?.created_at ?? null;
-  return invitations.filter((inv) => !isReceiptForExistingAccount(inv, accountCreatedAt));
+/**
+ * The invitations a login or a code request may touch: every game invitation,
+ * and the game-less ones without a receipt mark. `admin` is the service
+ * client.
+ *
+ * Fails closed: when the marks cannot be read, no game-less invitation is
+ * returned. They stay open and untouched, and the next login tries again.
+ */
+export async function withoutReceiptInvitations<T extends { id: string; game_id: string | null }>(
+  admin: SupabaseClient<Database>,
+  invitations: T[],
+  logPrefix: string,
+): Promise<T[]> {
+  const gameLessIds = invitations.filter((inv) => inv.game_id === null).map((inv) => inv.id);
+  if (gameLessIds.length === 0) return invitations;
+
+  const { data, error } = await admin
+    .from('invitation_receipts')
+    .select('invitation_id')
+    .in('invitation_id', gameLessIds)
+    .returns<{ invitation_id: string }[]>();
+  if (error || !data) {
+    console.error(`[${logPrefix}] receipt marks lookup failed`, error);
+    return invitations.filter((inv) => inv.game_id !== null);
+  }
+  return withoutReceipts(invitations, new Set(data.map((row) => row.invitation_id)));
 }
