@@ -8,6 +8,7 @@ import { scrambleTeamHandicap } from '@/lib/scoring/teamHandicap';
 import { modeCollapsesToTeamCard } from '@/lib/scoring/modes/types';
 import {
   alternateShotSideExtras,
+  matchSideCourseHandicaps,
   matchStrokeHandicap,
 } from '@/lib/scoring/allocatedStrokes';
 import { nameInitials } from '@/lib/names/initials';
@@ -103,8 +104,11 @@ export function buildPlayersForClient(args: {
     // 0 for the gross options (patsome holes 1–6 included). The raw frozen
     // CH made the card give strokes the leaderboard never did. A new singles
     // match gives the difference to the opponent (audit 2026-11-20), so the
-    // whole roster's CHs go in — not the flight's.
-    const matchChs = allPlayers.map((p) => p.course_handicap ?? 0);
+    // two sides' CHs go in (the whole roster's, not the flight's), as the
+    // engine reads them.
+    const matchChs = matchSideCourseHandicaps(
+      allPlayers.map((p) => ({ teamNumber: p.team_number, courseHandicap: p.course_handicap })),
+    );
     return flight.map((p) => {
       const name = playerName(p.users) ?? unknownPlayer;
       const ch = matchStrokeHandicap(

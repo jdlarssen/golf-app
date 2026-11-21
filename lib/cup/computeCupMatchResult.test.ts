@@ -295,3 +295,35 @@ describe('computeCupMatchResult — side-størrelse per modus (#1814)', () => {
     expect(computeCupMatchResult(input)).toBeNull();
   });
 });
+
+describe('computeCupMatchResult — singles with the difference rule (audit 2026-11-20)', () => {
+  // 20 against 5. Gross per SI (hole number = SI): the 20-player wins SI 3–5
+  // and loses SI 6–8 under both rules; on SI 1–2 and 9–15 the 20-player is one
+  // over and on SI 16–18 level. With the difference every one of those is
+  // halved (AS). Under the old rule the 20-player still gets a stroke on
+  // SI 16–18 and wins the match.
+  const gross1 = (si: number) => (si >= 3 && si <= 5 ? 4 : si >= 6 && si <= 8 ? 7 : si >= 16 ? 5 : 6);
+  const gross2 = (si: number) => (si >= 3 && si <= 5 ? 6 : si >= 6 && si <= 8 ? 4 : 5);
+  const input = (modeConfig: CupMatchScoringInput['modeConfig']): CupMatchScoringInput => ({
+    gameMode: 'singles_matchplay',
+    modeConfig,
+    side1: [{ userId: 'a', courseHandicap: 20 }],
+    side2: [{ userId: 'b', courseHandicap: 5 }],
+    holes: par4Holes(N),
+    scores: par4Holes(N).flatMap((h) => [
+      { userId: 'a', holeNumber: h.number, gross: gross1(h.strokeIndex) },
+      { userId: 'b', holeNumber: h.number, gross: gross2(h.strokeIndex) },
+    ]),
+  });
+
+  it('a new cup singles match is scored with the difference: SI 16 halved, match AS', () => {
+    expect(computeCupMatchResult(input({ match_strokes: 'difference' }))).toEqual({
+      winnerSide: 'tied',
+      formatted: 'AS',
+    });
+  });
+
+  it('a cup singles match created before keeps each side\'s own handicap', () => {
+    expect(computeCupMatchResult(input(null))?.winnerSide).toBe(1);
+  });
+});

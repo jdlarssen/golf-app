@@ -37,6 +37,7 @@
 //     tabellen kommer på nettsiden.
 import { computeLeaderboard } from '../../../../lib/scoring';
 import {
+  matchSideCourseHandicaps,
   matchStrokeHandicap,
   playerStrokeHandicap,
 } from '../../../../lib/scoring/allocatedStrokes';
@@ -275,11 +276,12 @@ export function playerExtraForHole(
 }
 
 /**
- * Banehandicapet til hele rosteret, som {@link playerExtraForHole} trenger for
- * singel-matchens forskjell. Et manglende tall regnes som 0, som over.
+ * Banehandicapet til spillerne på side 1 og 2, som {@link playerExtraForHole}
+ * trenger for singel-matchens forskjell — samme utvalg som motoren
+ * (`matchSideCourseHandicaps`). Et manglende tall regnes som 0, som over.
  */
 export function matchCourseHandicaps(players: readonly BundlePlayer[]): number[] {
-  return players.map((p) => p.courseHandicap ?? 0);
+  return matchSideCourseHandicaps(players);
 }
 
 /**

@@ -140,13 +140,29 @@ export function playerStrokeHandicap(
 }
 
 /**
+ * The course handicaps {@link matchStrokeHandicap} compares against: the
+ * players on side 1 and side 2 only, as the singles engine reads them
+ * (`teamNumber === 1` / `=== 2`). A roster row on no side, or another team,
+ * can then never move the lowest handicap the views use away from the
+ * engine's. A missing course handicap counts as 0, as everywhere in the views.
+ */
+export function matchSideCourseHandicaps(
+  players: readonly { teamNumber: number | null; courseHandicap: number | null }[],
+): number[] {
+  return players
+    .filter((p) => p.teamNumber === 1 || p.teamNumber === 2)
+    .map((p) => p.courseHandicap ?? 0);
+}
+
+/**
  * The handicap the engine spreads over SI for one player in the formats with
  * one card per player: `strokesForHole(matchStrokeHandicap(...), si)` is the
  * strokes the player gets on the hole — what the hole page's dots, the
  * scorecard and the app show.
  *
  * `matchCourseHandicaps` is the raw frozen course handicap of every player in
- * the match (the player's own may be included). Only singles reads it: on a
+ * the match (the player's own may be included) — build it with
+ * {@link matchSideCourseHandicaps}. Only singles reads it: on a
  * new match the higher handicap gets the difference and the lower none
  * (`singlesStrokeHandicap`, owner-ordered audit 2026-11-20). Every other mode
  * returns {@link playerStrokeHandicap}.
