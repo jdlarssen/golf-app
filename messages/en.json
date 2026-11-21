@@ -5046,7 +5046,8 @@
         "dangerZone": "Danger zone",
         "deleteLink": "Delete player",
         "deleteBlockSelf": "You cannot delete your own account.",
-        "deleteBlockHasPlayed": "{firstName} has played {count, plural, one {# round} other {# rounds}}. Delete the rounds first if you want to remove the account.",
+        "deleteBlockAdmin": "You cannot delete an admin account here.",
+        "deleteBlockCheckFailed": "Could not check whether the account can be deleted. Reload the page.",
         "relativeNb": {
           "never": "Never",
           "justNow": "Just now",
@@ -5073,7 +5074,7 @@
           "email_invalid": "Invalid email address.",
           "email_in_use": "This email address is already registered.",
           "email_update_failed": "Could not update the email address. Please try again.",
-          "email_change_blocked_active_game": "Cannot change email while the player is in an active game."
+          "email_change_blocked_active_game": "You cannot change the email while the player is in a round that is scheduled or in progress."
         }
       },
       "delete": {

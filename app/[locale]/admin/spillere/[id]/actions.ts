@@ -95,35 +95,38 @@ export async function updateUser(formData: FormData) {
   // previously-inlined `users.is_admin` check.
   await requireAdmin(supabase);
 
-  // Fetch current email to detect whether it has changed.
-  const { data: current } = await getAdminClient()
+  // Fetch current email to detect whether it has changed. A failed read must
+  // not read as «unchanged» and save the rest as if the e-mail went through
+  // (audit 2026-11-20).
+  const { data: current, error: currentError } = await getAdminClient()
     .from('users')
     .select('email')
     .eq('id', id)
-    .single();
+    .maybeSingle<{ email: string }>();
+  if (currentError || !current) {
+    console.error('[admin/spillere] current email read failed', currentError ?? 'no row');
+    redirect({ href: `/admin/spillere/${id}?error=update_failed`, locale });
+  }
 
-  const emailChanged = current && current.email.toLowerCase() !== emailRaw;
+  const emailChanged = current.email.toLowerCase() !== emailRaw;
 
   if (emailChanged) {
-    // Block if the user is in any active game (same guard used for other
-    // destructive flows).
-    const { count: activeGameCount } = await supabase
+    // Block if the player is in a round that is scheduled or in progress
+    // (same rule for both states). One read joins
+    // the player's rows to their games (audit 2026-11-20: the old guard
+    // passed every game id in one `.in()` list, left out scheduled rounds and
+    // ignored errors). A failed read stops the change.
+    const { data: openRounds, error: openRoundsError } = await supabase
       .from('game_players')
-      .select('game_id', { count: 'exact', head: true })
+      .select('game_id, games!inner(status)')
       .eq('user_id', id)
-      .in(
-        'game_id',
-        // Sub-select active games. We use a raw string for the column path
-        // because Supabase JS v2 doesn't support subquery filters natively.
-        (
-          await supabase
-            .from('games')
-            .select('id')
-            .eq('status', 'active')
-        ).data?.map((g) => g.id) ?? [],
-      );
-
-    if ((activeGameCount ?? 0) > 0) {
+      .in('games.status', ['scheduled', 'active'])
+      .limit(1);
+    if (openRoundsError) {
+      console.error('[admin/spillere] open-round check failed', openRoundsError);
+      redirect({ href: `/admin/spillere/${id}?error=email_update_failed`, locale });
+    }
+    if ((openRounds ?? []).length > 0) {
       redirect({ href: `/admin/spillere/${id}?error=email_change_blocked_active_game`, locale });
     }
 
