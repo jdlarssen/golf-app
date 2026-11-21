@@ -36,38 +36,51 @@ export async function removeMember(formData: FormData) {
 
   if (!groupId || !targetUserId) redirect({ href: '/klubber', locale });
 
-  // Verify caller is admin/owner via admin client.
+  // Verify caller is admin/owner via admin client. Every guard read checks its
+  // error: a failed read must not skip the role rule or the last-owner guard
+  // (audit 2026-11-20).
+  const failed = `/klubber/${groupId}/fjern/${targetUserId}?error=remove_failed`;
   const admin = getAdminClient();
-  const { data: callerRow } = await admin
-    .from('group_members')
-    .select('role')
-    .eq('group_id', groupId)
-    .eq('user_id', user.id)
-    .maybeSingle();
+  const [caller, target] = await Promise.all([
+    admin
+      .from('group_members')
+      .select('role')
+      .eq('group_id', groupId)
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    admin
+      .from('group_members')
+      .select('role')
+      .eq('group_id', groupId)
+      .eq('user_id', targetUserId)
+      .maybeSingle(),
+  ]);
+  if (caller.error || target.error) {
+    console.error('[removeMember] guard read failed', caller.error ?? target.error);
+    redirect({ href: failed, locale });
+  }
 
-  const callerRole = callerRow?.role;
+  const callerRole = caller.data?.role;
   if (callerRole !== 'owner' && callerRole !== 'admin') {
     redirect({ href: `/klubber/${groupId}/medlemmer`, locale });
   }
 
-  // Last-owner guard: check if target is the sole owner.
-  const { data: targetRow } = await admin
-    .from('group_members')
-    .select('role')
-    .eq('group_id', groupId)
-    .eq('user_id', targetUserId)
-    .maybeSingle();
-
+  const targetRow = target.data;
   if (targetRow && !canRemoveClubMember(callerRole, targetRow.role as ClubRole)) {
     redirect({ href: `/klubber/${groupId}/medlemmer`, locale });
   }
 
+  // Last-owner guard: block when the target is the sole owner.
   if (targetRow?.role === 'owner') {
-    const { count: ownerCount } = await admin
+    const { count: ownerCount, error: ownerError } = await admin
       .from('group_members')
       .select('user_id', { count: 'exact', head: true })
       .eq('group_id', groupId)
       .eq('role', 'owner');
+    if (ownerError) {
+      console.error('[removeMember] owner count failed', ownerError);
+      redirect({ href: failed, locale });
+    }
 
     if ((ownerCount ?? 0) <= 1) {
       redirect({

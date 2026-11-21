@@ -8,7 +8,9 @@ import {
 /**
  * Club deletes must hit a row (trap 2, audit 2026-11-20): `leaveClub` here,
  * `cancelInvitation` on the club's back room. A delete that matched 0 rows
- * (RLS refused, or the row was already gone) used to report success.
+ * (RLS refused, or the row was already gone) used to report success. A leave
+ * re-reads the membership: gone counts as left. The sole-owner guard stops on
+ * a failed read instead of being skipped.
  */
 
 const redirectMock = makeLocaleRedirectMock();
@@ -50,19 +52,53 @@ beforeEach(() => {
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 
+// The guard's two reads run in one Promise.all: the caller's row resolves
+// first in the mock (`.maybeSingle()` claims its result when called), then the
+// owner count (claimed when awaited).
+const MEMBER_ROW = { data: { role: 'member' }, error: null };
+const TWO_OWNERS = { count: 2, data: null, error: null };
+
 describe('leaveClub', () => {
-  it.each([
-    ['one row deleted → back to the club list', { data: [{ user_id: 'u-1' }], error: null }, '/klubber'],
-    ['0 rows → leave_failed', { data: [], error: null }, `/klubber/${GROUP}/forlat?error=leave_failed`],
-    ['DB error → leave_failed', { data: null, error: { message: 'nede' } }, `/klubber/${GROUP}/forlat?error=leave_failed`],
-  ])('%s', async (_label, deleteResult, expected) => {
-    adminMock = buildSupabaseMock([
-      { count: 2, data: null, error: null }, // owners
-      { data: { role: 'member' }, error: null }, // the caller's row
-    ]);
-    supabaseMock = buildSupabaseMock([deleteResult]);
+  async function leave(admin: Parameters<typeof buildSupabaseMock>[0], deleteResult: unknown) {
+    adminMock = buildSupabaseMock(admin);
+    supabaseMock = buildSupabaseMock(deleteResult === undefined ? [] : [deleteResult as never]);
     supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'u-1' } } });
-    expect(await urlOf(() => leaveClub(fd({ groupId: GROUP })))).toBe(expected);
+    return urlOf(() => leaveClub(fd({ groupId: GROUP })));
+  }
+
+  it('one row deleted → back to the club list', async () => {
+    expect(await leave([MEMBER_ROW, TWO_OWNERS], { data: [{ user_id: 'u-1' }], error: null })).toBe('/klubber');
+  });
+
+  it.each([
+    ['0 rows, membership gone (double tap) → the leave worked', { data: null, error: null }, '/klubber'],
+    ['0 rows, membership still there → leave_failed', { data: { user_id: 'u-1' }, error: null }, `/klubber/${GROUP}/forlat?error=leave_failed`],
+    ['0 rows, re-read fails → leave_failed', { data: null, error: { message: 'nede' } }, `/klubber/${GROUP}/forlat?error=leave_failed`],
+  ])('%s', async (_label, reread, expected) => {
+    expect(await leave([MEMBER_ROW, TWO_OWNERS, reread], { data: [], error: null })).toBe(expected);
+  });
+
+  it('DB error on the delete, membership still there → leave_failed', async () => {
+    expect(
+      await leave([MEMBER_ROW, TWO_OWNERS, { data: { user_id: 'u-1' }, error: null }], {
+        data: null,
+        error: { message: 'nede' },
+      }),
+    ).toBe(`/klubber/${GROUP}/forlat?error=leave_failed`);
+  });
+
+  it.each([
+    ['the caller read fails', [{ data: null, error: { message: 'nede' } }, TWO_OWNERS]],
+    ['the owner count fails', [{ data: { role: 'owner' }, error: null }, { count: null, data: null, error: { message: 'nede' } }]],
+  ])('%s → leave_failed, nothing deleted', async (_label, admin) => {
+    expect(await leave(admin as never, undefined)).toBe(`/klubber/${GROUP}/forlat?error=leave_failed`);
+    expect(supabaseMock.__fromCalls.some((c) => c.method === 'delete')).toBe(false);
+  });
+
+  it('the sole owner is stopped', async () => {
+    expect(
+      await leave([{ data: { role: 'owner' }, error: null }, { count: 1, data: null, error: null }], undefined),
+    ).toBe(`/klubber/${GROUP}/forlat?error=sole_owner`);
   });
 });
 
