@@ -8,17 +8,14 @@
 //  4. Underlinjene fra designet: hva som står, og hva som står ute når et
 //     tall mangler.
 import source from '../../../../messages/no.json';
-import {
-  FRIEND_STATUSES,
-  INVITE_STATUSES,
-  type InviteStatus,
-} from '../../../../lib/friends/friendStatus';
+import { ADD_BY_EMAIL_STATUSES, FRIEND_STATUSES } from '../../../../lib/friends/friendStatus';
 import type { WebApiFailure } from '../data/webApi';
 import { isFinishedSentence } from '../test/copy';
 import {
   FRIEND_LINK_TEXT,
   FRIEND_PAGE_TEXT,
   FRIENDS_TEXT,
+  addByEmailLine,
   firstNameOf,
   friendLinkConnectCard,
   friendPageSubline,
@@ -34,10 +31,6 @@ import {
   headToHeadA11yLabel,
   headToHeadLine,
   incomingSubline,
-  inviteButton,
-  inviteFailureLine,
-  invitePrompt,
-  invitedLine,
   lastPlayedLabel,
   openPersonA11yLabel,
   personActionA11yLabel,
@@ -73,7 +66,6 @@ const MIRRORED: Partial<Record<keyof typeof FRIENDS_TEXT, keyof typeof web>> = {
   addEmailLabel: 'addEmailLabel',
   addEmailPending: 'addEmailPending',
   addEmailButton: 'addEmailButton',
-  invitePending: 'invitePending',
   someoneFallback: 'someoneFallback',
   noFriendsYet: 'noFriendsYet',
   heroTitle: 'heroTitle',
@@ -151,19 +143,29 @@ describe('friendStatusLine', () => {
   });
 });
 
-describe('invitasjonen', () => {
-  it('setter adressen inn akkurat der webben har plassholderen', () => {
-    expect(invitedLine('{email}')).toBe(web.status.invited);
-    expect(invitePrompt('{email}')).toBe(web.invitePrompt);
-    expect(inviteButton('{email}')).toBe(web.inviteButton);
+describe('legg til venn på e-post', () => {
+  // Kodene webben også viser en linje for (`requested` er webbens `sent_by_email`).
+  it.each([
+    ['requested', 'sent_by_email'],
+    ['self', 'self'],
+    ['email_required', 'email_required'],
+    ['invalid_email', 'invalid_email'],
+    ['disposable_email', 'disposable_email'],
+    ['quota', 'quota'],
+    ['error', 'error'],
+  ] as const)('«%s» er webbens friends.status.%s', (status, key) => {
+    expect(addByEmailLine(status).text).toBe(web.status[key]);
   });
 
-  it.each(INVITE_STATUSES.filter((s): s is Exclude<InviteStatus, 'invited'> => s !== 'invited'))(
-    'gir en ferdig setning når invitasjonen stopper på «%s»',
-    (status) => {
-      expect(isFinishedSentence(inviteFailureLine(status))).toBe(true);
-    },
-  );
+  it.each(ADD_BY_EMAIL_STATUSES)('gir en ferdig setning for «%s»', (status) => {
+    expect(isFinishedSentence(addByEmailLine(status).text)).toBe(true);
+  });
+
+  it('er grønn bare når noe ble sendt', () => {
+    for (const status of ADD_BY_EMAIL_STATUSES) {
+      expect(addByEmailLine(status).tone).toBe(status === 'requested' ? 'ok' : 'error');
+    }
+  });
 });
 
 describe('de app-egne linjene', () => {
