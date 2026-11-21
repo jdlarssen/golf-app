@@ -41,8 +41,12 @@
 --    24. a namesake's notice without an id is left alone
 --    25. a notice with the guest's id next to the name is replaced
 --
+--   hard delete of an account that never completed its profile:
+--    26. the delete succeeds
+--    27. its masked address is replaced in other people's notifications
+--
 --   EXECUTE:
---    26. authenticated cannot call scrub_user_mentions
+--    28. authenticated cannot call scrub_user_mentions
 --
 -- See supabase/tests/README.md for how to run.
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -51,7 +55,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(26);
+select plan(28);
 
 \ir fixtures/rls_helpers.psql
 
@@ -74,6 +78,12 @@ insert into public.users (id, email, name, is_guest, guest_created_by)
           true, torny_rls.admin_id())
   on conflict (id) do update
     set name = excluded.name, is_guest = excluded.is_guest, guest_created_by = excluded.guest_created_by;
+
+-- An account that never completed its profile: no name, so others saw the
+-- masked address («ab•••@example.test») in its request to join a club.
+insert into auth.users (id, instance_id, aud, role, email)
+  values ('00000000-0000-4000-a000-0000000000d8', '00000000-0000-0000-0000-000000000000'::uuid,
+          'authenticated', 'authenticated', 'ab-mentions@example.test');
 
 -- A second round the person did NOT play, with its own report.
 insert into public.games (id, name, course_id, tee_box_id, status, game_mode, created_by, started_at, round_report)
@@ -132,7 +142,10 @@ insert into public.notifications (user_id, kind, payload) values
      'organizer_name', 'Petter Åttesen', 'message', 'Beklager, hilsen Petter')),
   (torny_rls.flightmate_id(), 'friend_request', jsonb_build_object(
      'tag', 'guest-id', 'actor_id', '00000000-0000-4000-a000-0000000000d9',
-     'actor_name', 'Kari Åttesen'));
+     'actor_name', 'Kari Åttesen')),
+  (torny_rls.flightmate_id(), 'club_join_request', jsonb_build_object(
+     'tag', 'masked', 'group_id', torny_rls.group_id(), 'group_name', 'K',
+     'requester_name', 'ab•••@example.test'));
 
 insert into public.admin_audit_log (actor_user_id, actor_name, event_type, target_type, target_id, payload)
   values (torny_rls.active_id(), 'Petter Åttesen', 'game.reopened', 'game', torny_rls.game_id(), '{}'::jsonb);
@@ -267,6 +280,14 @@ select is(pg_temp.note('relative')->>'approver_name', 'Kari Åttesen',
 
 select is(pg_temp.note('guest-id')->>'actor_name', 'Slettet bruker',
   'deleting a guest replaces the name where the guest''s id stands next to it');
+
+-- An account without a completed profile: the masked address is still found.
+select lives_ok(
+  $$ delete from auth.users where id = '00000000-0000-4000-a000-0000000000d8'::uuid $$,
+  'an account that never completed its profile hard-deletes');
+
+select is(pg_temp.note('masked')->>'requester_name', 'Slettet bruker',
+  'its masked address is replaced in the club owner''s notice');
 
 -- ═════════════════════════════════════════════════════════════════════════════
 -- EXECUTE
