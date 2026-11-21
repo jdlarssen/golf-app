@@ -2823,6 +2823,18 @@
       "stateSubmittedBy": "Levert av {name}",
       "stateNotSubmitted": "Ikke levert",
       "removeButton": "Fjern",
+      "remove": {
+        "brassRibbon": "Bekreft fjerning",
+        "heading": "Fjerne {name} fra runden?",
+        "body": "Du tar {firstName} ut av runden.",
+        "guests": "{count, plural, one {{firstName} meldte på {names}. Gjesten går også.} other {{firstName} meldte på {names}. Gjestene går også.}}",
+        "guestsUnknown": "Klarte ikke å hente gjestene til {firstName}. Har {firstName} meldt på gjester, går de også.",
+        "canReAdd": "Du kan legge til {firstName} igjen så lenge runden ikke har startet.",
+        "confirmButton": "Ja, fjern {firstName}",
+        "pending": "Fjerner …",
+        "cancel": "Avbryt",
+        "fallbackFirstName": "Spilleren"
+      },
       "cupRosterLockedHint": "Dette er en cupkamp. Spillere bytter du på cupsiden.",
       "withdrawButton": "Trekk",
       "undoWithdrawButton": "Angre",

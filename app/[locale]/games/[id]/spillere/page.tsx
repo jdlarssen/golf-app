@@ -24,7 +24,7 @@ import {
   adminApproveScorecard,
   reopenScorecard,
 } from '@/app/[locale]/admin/games/[id]/actions';
-import { removePlayerFromGame, cancelGameInvitation } from './actions';
+import { cancelGameInvitation } from './actions';
 import { BroughtGuestsNote } from './BroughtGuestsNote';
 import { readBroughtGuestsInGame } from '@/lib/games/broughtGuests';
 import { sendGuestResult } from '@/app/[locale]/games/guestPlayerActions';
@@ -578,17 +578,17 @@ export default async function CreatorSpillerePage({
                         for redigering without justify-between pushing them
                         apart (#1362). */}
                     <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                      {/* Destructive: «Fjern» opens its own confirm page,
+                          which names the guests that leave too (audit
+                          2026-11-20). */}
                       {canRemove && (
-                        <form action={removePlayerFromGame.bind(null, gameId)}>
-                          <input type="hidden" name="user_id" value={p.user_id} />
-                          <button
-                            type="submit"
-                            data-testid="remove-player-button"
-                            className="min-h-[44px] rounded-full border border-border px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:border-danger/40 hover:text-danger"
-                          >
-                            {t('removeButton')}
-                          </button>
-                        </form>
+                        <SmartLink
+                          href={`/games/${gameId}/spillere/fjern/${p.user_id}`}
+                          data-testid="remove-player-button"
+                          className="flex min-h-[44px] items-center rounded-full border border-border px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:border-danger/40 hover:text-danger"
+                        >
+                          {t('removeButton')}
+                        </SmartLink>
                       )}
 
                       {isActive && canWithdrawRow && !wd && (
