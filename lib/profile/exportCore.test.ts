@@ -13,8 +13,9 @@ import messages from '@/messages/no.json';
  *
  * Det som bevises:
  *  1. Hver lesing er filtrert på id-en kjernen fikk. Service-rollen brukes
- *     bare til brukerraden og `game_players` (#2207, #2445); alt annet går
- *     gjennom kallerens egen klient, så RLS gjelder i tillegg.
+ *     bare til lesingene i `SERVICE_ROLE_READS` (rader RLS skjuler for eieren
+ *     selv: #2207, #2445, 0252); alt annet går gjennom kallerens egen klient,
+ *     så RLS gjelder i tillegg.
  *  2. En lesing som feiler, gir `{ ok: false }` med navnet på lesingen, også
  *     for hver av de nye tabellene. Ingen halv fil.
  *  3. Teksten under raden lister nøyaktig det fila har. Den sier hva du får,
@@ -32,7 +33,7 @@ const caller = createAdminClientMock({ respond: (op) => respond('caller', op) })
 
 vi.mock('@/lib/supabase/admin', () => ({ getAdminClient: () => admin.client }));
 
-import { buildUserExport, EXPORT_KEYS, type ExportRead } from './exportCore';
+import { buildUserExport, EXPORT_KEYS, SERVICE_ROLE_READS, type ExportRead } from './exportCore';
 
 let failing: ExportRead | null;
 let userRow: Record<string, unknown> | null;
@@ -47,13 +48,34 @@ const NEW_READS = [
   'kavalkade_shares',
   'reactions',
   'idea_submissions',
+  // Audit 20.11: sign-ups, league and cup participation, club requests, the
+  // notification devices and the newsletter log.
+  'game_registration_requests',
+  'league_players',
+  'tournament_participants',
+  'cup_lineup_slots',
+  'club_join_requests',
+  'push_subscriptions',
+  'apns_tokens',
+  'fcm_tokens',
+  'product_update_digest_recipients',
 ] as const satisfies readonly ExportRead[];
+
+/** The table a read goes to, where the key in the file has another name. */
+const TABLE_OF: Partial<Record<ExportRead, string>> = {
+  club_memberships: 'group_members',
+  club_join_requests: 'group_join_requests',
+};
+const tableOf = (read: ExportRead): string => TABLE_OF[read] ?? read;
+const viaOf = (read: ExportRead): 'admin' | 'caller' =>
+  (SERVICE_ROLE_READS as readonly ExportRead[]).includes(read) ? 'admin' : 'caller';
 
 function readOf(op: QueryOp): ExportRead {
   if (op.table === 'invitations') {
     return op.filters.some((f) => f.op === 'imatch') ? 'invitations by email' : 'invitations by inviter';
   }
   if (op.table === 'group_members') return 'club_memberships';
+  if (op.table === 'group_join_requests') return 'club_join_requests';
   return op.table as ExportRead;
 }
 
@@ -87,18 +109,20 @@ beforeEach(() => {
 });
 
 describe('buildUserExport', () => {
-  it('leser bare kallerens egne rader, og service-rollen bare for brukerraden og game_players', async () => {
+  it('leser bare kallerens egne rader, og service-rollen bare for lesingene i SERVICE_ROLE_READS', async () => {
     const result = await run();
 
     expect(result.ok).toBe(true);
-    expect(admin.ops.map((op) => op.table).sort()).toEqual(['game_players', 'users']);
+    expect(admin.ops.map(readOf).sort()).toEqual([...SERVICE_ROLE_READS].sort());
+    expect(caller.ops.map(readOf).filter((read) => viaOf(read) === 'admin')).toEqual([]);
     for (const op of [...admin.ops, ...caller.ops]) {
       expect([op.table, filteredOnUser(op)]).toEqual([op.table, true]);
     }
-    // De nye tabellene går gjennom kallerens klient, filtrert på eier-kolonnen.
-    for (const table of NEW_READS) {
-      const op = caller.ops.find((o) => o.table === table);
-      expect(op?.filters).toContainEqual({ op: 'eq', column: 'user_id', value: USER });
+    // De nye tabellene er filtrert på eier-kolonnen, hver gjennom sin klient.
+    for (const read of NEW_READS) {
+      const ops = viaOf(read) === 'admin' ? admin.ops : caller.ops;
+      const op = ops.find((o) => o.table === tableOf(read));
+      expect([read, op?.filters]).toEqual([read, [{ op: 'eq', column: 'user_id', value: USER }]]);
     }
   });
 
@@ -107,9 +131,32 @@ describe('buildUserExport', () => {
     if (!result.ok) throw new Error('forventet en fil');
 
     expect(Object.keys(result.payload)).toEqual(['exported_at', ...EXPORT_KEYS]);
-    for (const table of NEW_READS) {
-      expect(result.payload[table]).toEqual([{ id: `${table}-1`, user_id: USER, via: 'caller' }]);
+    for (const read of NEW_READS) {
+      expect(result.payload[read]).toEqual([{ id: `${read}-1`, user_id: USER, via: viaOf(read) }]);
     }
+  });
+
+  // 0252: avsenderens egen økt ser ikke en venneforespørsel på e-post før den er
+  // besvart, og heller ikke en invitasjon sendt til en runde andre arrangerer.
+  it('vennskap og sendte invitasjoner leses med service-rollen, så rader RLS skjuler for avsenderen er med', async () => {
+    const result = await run();
+    if (!result.ok) throw new Error('forventet en fil');
+
+    const friendships = admin.ops.find((o) => o.table === 'friendships');
+    expect(friendships?.filters).toEqual([
+      { op: 'or', column: '', value: `requester_id.eq.${USER},addressee_id.eq.${USER}` },
+    ]);
+    const sent = admin.ops.find((o) => o.table === 'invitations');
+    expect(sent?.filters).toEqual([{ op: 'eq', column: 'invited_by', value: USER }]);
+    expect(result.payload.friendships).toEqual([{ id: 'friendships-1', user_id: USER, via: 'admin' }]);
+  });
+
+  it('nettleserens varselrad eksporteres uten krypteringsnøklene', async () => {
+    await run();
+
+    const op = caller.ops.find((o) => o.table === 'push_subscriptions');
+    expect(op?.columns).not.toMatch(/p256dh|auth\b|\*/);
+    expect(op?.columns).toContain('endpoint');
   });
 
   it('varselvalgene leses med alle kolonnene, så «Del sjeldne slag med alle» (#2894) er med', async () => {
@@ -152,6 +199,17 @@ describe('teksten under «Last ned dataene dine»', () => {
     club_memberships: 'klubbene',
     notifications: 'varslene',
     notification_preferences: 'varslene',
+    // The devices and the newsletter log are part of «varslene» too.
+    push_subscriptions: 'varslene',
+    apns_tokens: 'varslene',
+    fcm_tokens: 'varslene',
+    product_update_digest_recipients: 'varslene',
+    game_registration_requests: 'påmeldingene',
+    league_players: 'ligaene',
+    tournament_participants: 'cupene',
+    cup_lineup_slots: 'cupene',
+    // Requests to join a club stand with the clubs.
+    club_join_requests: 'klubbene',
     ai_consents: 'AI-svaret',
     kavalkades: 'Kavalkaden',
     kavalkade_shares: 'Kavalkaden',

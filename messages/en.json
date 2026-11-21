@@ -559,7 +559,7 @@
       "adminLine": "The administrator who runs Tørny can see your profile, email address, games and clubs.",
       "processorsLine": "The services that process the data for us are listed in the privacy policy.",
       "exportRow": "Download your data",
-      "exportSublabel": "Your profile, handicap history, games, strokes, reactions, invitations, friends, clubs, notifications, AI answer, cavalcade and ideas in one file."
+      "exportSublabel": "Your profile, handicap history, games, strokes, sign-ups, leagues, cups, reactions, invitations, friends, clubs, notifications, AI answer, cavalcade and ideas in one file."
     },
     "dataPage": {
       "sectionYouDecide": "You decide",
