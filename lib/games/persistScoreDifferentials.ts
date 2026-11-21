@@ -7,6 +7,11 @@ import {
 import { getRatingForGender, type TeeGender } from '@/lib/games/teeRating';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { modeCollapsesToTeamCard, type GameMode } from '@/lib/scoring/modes/types';
+import {
+  indexCandidates,
+  planFullCourseHandicap,
+  roundStart,
+} from '@/lib/games/fullCourseHandicapBackfill';
 
 /**
  * Beregner og lagrer WHS score-differensial for hvert kvalifisert spillerpar i
@@ -47,12 +52,14 @@ export async function persistScoreDifferentials(gameId: string): Promise<number>
     const [gameRes, playersRes, scoresRes] = await Promise.all([
       admin
         .from('games')
-        .select('course_id, tee_box_id, game_mode')
+        .select(
+          'course_id, tee_box_id, game_mode, hcp_allowance_pct, hcp_max_strokes, started_at, scheduled_tee_off_at, created_at',
+        )
         .eq('id', gameId)
         .single(),
       admin
         .from('game_players')
-        .select('user_id, tee_gender, full_course_handicap')
+        .select('user_id, tee_gender, course_handicap, full_course_handicap')
         .eq('game_id', gameId),
       selectAllRowsResult(
         (from, to) =>
@@ -150,6 +157,11 @@ export async function persistScoreDifferentials(gameId: string): Promise<number>
       byHole.set(s.hole_number, s.strokes);
     }
 
+    // Rows without the frozen full number (a round started by an app build from
+    // before #2215, whose bundled start code does not write it): recover it the
+    // way the backfill does, or leave the row without a differential.
+    const recovered = await recoverFullCourseHandicaps(admin, game, tee, players);
+
     // Compute and write a differential per player. Best-effort via Promise.allSettled.
     // Each task resolves to true if a row was written, false if skipped (null differential
     // or missing data), and rejects on a DB error.
@@ -162,9 +174,9 @@ export async function persistScoreDifferentials(gameId: string): Promise<number>
           scoresByHole: scoresByUser.get(player.user_id),
           // F1 (NGF 3.1b, s. 31): the full course handicap (100 %) sets every
           // net double bogey, not the playing handicap after the game's share
-          // and cap. Null (a row from before 0254, not yet backfilled) gives
-          // no differential rather than a wrong one.
-          fullCourseHandicap: player.full_course_handicap,
+          // and cap. Null and not recoverable gives no differential rather
+          // than a wrong one.
+          fullCourseHandicap: player.full_course_handicap ?? recovered.get(player.user_id) ?? null,
         });
 
         if (differential === null) {
@@ -177,7 +189,14 @@ export async function persistScoreDifferentials(gameId: string): Promise<number>
         // (trap #2: PostgREST returns error==null even on 0-row updates).
         const result = await admin
           .from('game_players')
-          .update({ score_differential: differential })
+          .update(
+            recovered.has(player.user_id)
+              ? {
+                  score_differential: differential,
+                  full_course_handicap: recovered.get(player.user_id) as number,
+                }
+              : { score_differential: differential },
+          )
           .eq('game_id', gameId)
           .eq('user_id', player.user_id)
           .select('user_id');
@@ -266,4 +285,68 @@ export function computePlayerDifferential(input: {
     slope: rating.slope,
     courseRating: rating.courseRating,
   });
+}
+
+/**
+ * The full course handicap for rows that reached the finish without one,
+ * keyed by user. Same rule as `scripts/backfillFullCourseHandicap.ts`
+ * (`planFullCourseHandicap`): an index (handicap_history at the round's start,
+ * the profile, older history) counts only when it reproduces the frozen
+ * playing handicap exactly, and only when every such index agrees on the full
+ * number. Anything else, or a failed read, leaves the row out. Reads nothing
+ * when every row already has the number.
+ */
+async function recoverFullCourseHandicaps(
+  admin: ReturnType<typeof getAdminClient>,
+  game: {
+    game_mode: string;
+    hcp_allowance_pct: number;
+    hcp_max_strokes: number | null;
+    started_at: string | null;
+    scheduled_tee_off_at: string | null;
+    created_at: string;
+  },
+  tee: Parameters<typeof getRatingForGender>[0],
+  players: Array<{
+    user_id: string;
+    tee_gender: TeeGender | null;
+    course_handicap: number | null;
+    full_course_handicap: number | null;
+  }>,
+): Promise<Map<string, number>> {
+  const recovered = new Map<string, number>();
+  const missing = players.filter(
+    (p) => p.full_course_handicap === null && p.course_handicap !== null,
+  );
+  if (missing.length === 0) return recovered;
+
+  const userIds = missing.map((p) => p.user_id);
+  const [usersRes, historyRes] = await Promise.all([
+    admin.from('users').select('id, hcp_index').in('id', userIds),
+    admin.from('handicap_history').select('user_id, hcp_index, recorded_at').in('user_id', userIds),
+  ]);
+  if (usersRes.error || historyRes.error) {
+    console.error('[persistScoreDifferentials] full course handicap lookup failed', {
+      error: usersRes.error ?? historyRes.error,
+    });
+    return recovered;
+  }
+  const profileIndex = new Map((usersRes.data ?? []).map((u) => [u.id, u.hcp_index]));
+  const startedAt = roundStart(game);
+  for (const player of missing) {
+    const plan = planFullCourseHandicap({
+      gameMode: game.game_mode,
+      storedPct: game.hcp_allowance_pct,
+      storedMaxStrokes: game.hcp_max_strokes,
+      frozenCourseHandicap: player.course_handicap,
+      rating: getRatingForGender(tee, player.tee_gender ?? 'mens'),
+      candidates: indexCandidates({
+        startedAt,
+        history: (historyRes.data ?? []).filter((h) => h.user_id === player.user_id),
+        profileIndex: profileIndex.get(player.user_id) ?? null,
+      }),
+    });
+    if (plan?.status === 'resolved') recovered.set(player.user_id, plan.fullCourseHandicap);
+  }
+  return recovered;
 }
