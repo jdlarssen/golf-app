@@ -264,7 +264,7 @@ export function SoloStablefordPodium({
         </details>
       )}
 
-      <PullQuote className="px-6 pt-4 pb-4">{t('common.congratulations')}</PullQuote>
+      {!noWinner && <PullQuote className="px-6 pt-4 pb-4">{t('common.congratulations')}</PullQuote>}
     </LeaderboardShell>
   );
 }
