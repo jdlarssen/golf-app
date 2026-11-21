@@ -67,6 +67,11 @@ export interface HistoryGameInput {
   teeGender: ScoringGender | null;
   /** Slagene spilleren fikk i spillet; netto = brutto − dette. */
   courseHandicap: number | null;
+  /**
+   * Fullt banehandicap (100 %), frosset ved start (migrasjon 0254). Den live
+   * differensialens netto dobbeltbogey regnes av dette (F1); null = ingen.
+   */
+  fullCourseHandicap?: number | null;
   /** Frosset WHS-differensial, eller `null` (da regnes den her, #941). */
   scoreDifferential: number | null;
   /** Spillerens lagrede utfall (`game_players.result_summary`). */
@@ -207,6 +212,7 @@ export function buildHistoryRounds(
       course_id: game.courseId,
       tee_box_id: game.teeBoxId,
       course_handicap: game.courseHandicap,
+      full_course_handicap: game.fullCourseHandicap ?? null,
       score_differential: game.scoreDifferential,
       holeCount: own.length,
     })),

@@ -230,28 +230,29 @@ describe('Regel 3.1b: netto dobbeltbogey (NGF s. 30-31)', () => {
   });
 });
 
-describe('Kjent avvik', () => {
-  // F1 lives in the two callers, outside lib/scoring: both pass
-  // `game_players.course_handicap`, the number frozen after the game's share
-  // and cap. NGF 3.1b (s. 31): «Spillerens fulle spillehandicap (100 %) skal
-  // brukes for alle netto dobbel bogey justeringer», and 7.2a (s. 65) says the
-  // same for a capped competition. The league example above gives 20,8 with
-  // the rule and 19,9 with the frozen 23. A fix changes the argument, the
-  // assertion holds, and the test turns red. One test per caller, so a fix of
-  // one site cannot hide behind the other. Not caught: a fix that feeds the
-  // full number into `course_handicap` upstream (the history page and the
-  // app's roundHistory.ts build the input) or changes what the column stores;
-  // such a fix flips these tests by hand.
-  it.fails('F1: differensialen ved avslutning får fullt banehandicap til netto dobbeltbogey', () => {
+// F1, fixed: both callers outside lib/scoring pass the full course handicap
+// that the start freezes in `game_players.full_course_handicap`, not
+// `course_handicap` (the number after the game's share and cap). NGF 3.1b
+// (s. 31): «Spillerens fulle spillehandicap (100 %) skal brukes for alle netto
+// dobbel bogey justeringer», and 7.2a (s. 65) says the same for a capped
+// competition. One test per caller, so a regression at one site cannot hide
+// behind the other; the league example's numbers run through each caller in
+// persistScoreDifferentials.test.ts and roundDifferentials.test.ts.
+describe('F1: netto dobbeltbogey regnes av fullt banehandicap', () => {
+  it('F1: differensialen ved avslutning får fullt banehandicap til netto dobbeltbogey', () => {
     const caller = readFileSync('lib/games/persistScoreDifferentials.ts', 'utf8');
     expect(caller).not.toMatch(/courseHandicap:\s*player\.course_handicap\b/);
+    expect(caller).toMatch(/fullCourseHandicap:\s*player\.full_course_handicap\b/);
   });
 
-  it.fails('F1: differensialen historikken fryser selv får fullt banehandicap til netto dobbeltbogey', () => {
+  it('F1: differensialen historikken fryser selv får fullt banehandicap til netto dobbeltbogey', () => {
     const caller = readFileSync('lib/stats/roundDifferentials.ts', 'utf8');
     expect(caller).not.toMatch(/courseHandicap:\s*game\.course_handicap\b/);
+    expect(caller).toMatch(/courseHandicap:\s*game\.full_course_handicap\b/);
   });
+});
 
+describe('Kjent avvik', () => {
   // NGF 3.1b (s. 31): «Når et spillehandicap er beregnet til mer enn 54 og en
   // spiller får 4 eller flere slag på et hull, er maksimal hullscore par + 5».
   // Banehandicap 56 gets four strokes on index 1 and 2; a 12 there counts 9.

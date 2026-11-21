@@ -355,7 +355,7 @@ describe('startScheduledGame — incomplete_sides guard', () => {
     ).__fromCalls.find(
       (c) => c.table === 'game_players' && c.method === 'update',
     );
-    expect(chUpdate?.args[0]).toEqual({ course_handicap: 14 });
+    expect(chUpdate?.args[0]).toEqual({ course_handicap: 14, full_course_handicap: 14 });
   });
 });
 
@@ -1761,6 +1761,48 @@ describe('startScheduledGame — ligaens andel og tak på slag (#2660)', () => {
     expect(result).toEqual({ ok: true, started: false });
     expect(frozenHandicaps(supabase)).toEqual(expected);
   });
+
+  // F1 (NGF 3.1b, s. 31): the score differential's net double bogey needs the
+  // full course handicap, so the start freezes it next to the playing one.
+  // Same roster: HI 10 → 14, HI 54 → 67, before the share and the cap.
+  it('fryser fullt banehandicap ved siden av spillehandicapet', async () => {
+    const roster = [
+      soloPlayer('u1', null),
+      { ...soloPlayer('u2', null), users: { hcp_index: 54 } },
+    ];
+    const supabase = buildSupabaseMock([
+      {
+        data: {
+          ...makeGameRow2('stableford'),
+          hcp_allowance_pct: 75,
+          hcp_max_strokes: 32,
+          tee_boxes: REAL_TEE,
+        },
+        error: null,
+      },
+      { data: roster, error: null },
+      ...passThroughQueue(roster),
+    ]);
+
+    await startScheduledGame(supabase as never, 'game-id');
+
+    const frozen = (
+      supabase as unknown as {
+        __fromCalls: Array<{ table: string; method: string; args: unknown[] }>;
+      }
+    ).__fromCalls
+      .filter(
+        (c) =>
+          c.table === 'game_players' &&
+          c.method === 'update' &&
+          'course_handicap' in (c.args[0] as Record<string, unknown>),
+      )
+      .map((c) => c.args[0]);
+    expect(frozen).toEqual([
+      { course_handicap: 11, full_course_handicap: 14 },
+      { course_handicap: 32, full_course_handicap: 67 },
+    ]);
+  });
 });
 
 // ─── #2924: the share is taken of the unrounded course handicap ──────────────
@@ -1920,14 +1962,23 @@ describe('startScheduledGame — shamble med handicapprosent (#2570)', () => {
   }
 
   it('shamble netto 80 %: rått 20 fryses til 16', async () => {
-    expect(await frozenHandicap(80, 'shamble')).toEqual({ course_handicap: 16 });
+    expect(await frozenHandicap(80, 'shamble')).toEqual({
+      course_handicap: 16,
+      full_course_handicap: 20,
+    });
   });
 
   it('champagne netto 80 %: rått 20 fryses til 16', async () => {
-    expect(await frozenHandicap(80, 'champagne')).toEqual({ course_handicap: 16 });
+    expect(await frozenHandicap(80, 'champagne')).toEqual({
+      course_handicap: 16,
+      full_course_handicap: 20,
+    });
   });
 
   it('brutto (lagret 100): rått 20 fryses fullt', async () => {
-    expect(await frozenHandicap(100, 'shamble')).toEqual({ course_handicap: 20 });
+    expect(await frozenHandicap(100, 'shamble')).toEqual({
+      course_handicap: 20,
+      full_course_handicap: 20,
+    });
   });
 });

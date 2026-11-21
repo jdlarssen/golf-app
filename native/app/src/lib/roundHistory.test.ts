@@ -31,6 +31,7 @@ function game(partial: Partial<HistoryGameInput> & { gameId: string }): HistoryG
     teeBoxId: 't1',
     teeGender: 'mens',
     courseHandicap: 14,
+    fullCourseHandicap: 14,
     scoreDifferential: null,
     resultSummary: null,
     ...partial,
@@ -183,6 +184,25 @@ describe('buildHistoryRounds', () => {
     );
     expect(frozen.differential).toBe(4.5);
     expect(live.differential).toEqual(expect.any(Number));
+  });
+
+  // F1 (NGF 3.1b, s. 31): the live differential's net double bogey uses the
+  // full course handicap, not the playing handicap after the share and cap.
+  it('computes the live differential from the full course handicap, and none without it', () => {
+    // An 11 on every hole: the cap decides every hole, so the two numbers differ.
+    const ELEVENS = Array.from({ length: 18 }, () => 11);
+    const [full, playing, unknown] = buildHistoryRounds(
+      [
+        game({ gameId: 'full', scheduledTeeOffAt: '2026-06-03T08:00:00.000Z', courseHandicap: 10, fullCourseHandicap: 14 }),
+        game({ gameId: 'playing', scheduledTeeOffAt: '2026-06-02T08:00:00.000Z', courseHandicap: 14, fullCourseHandicap: 14 }),
+        game({ gameId: 'unknown', courseHandicap: 10, fullCourseHandicap: null }),
+      ],
+      [...strokes('full', ELEVENS), ...strokes('playing', ELEVENS), ...strokes('unknown', ELEVENS)],
+      COURSES,
+    );
+    expect(full.differential).toEqual(expect.any(Number));
+    expect(full.differential).toBe(playing.differential);
+    expect(unknown.differential).toBeNull();
   });
 
   it('has no differential without 18 own strokes', () => {

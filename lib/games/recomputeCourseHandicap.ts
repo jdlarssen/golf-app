@@ -38,6 +38,8 @@ export interface RecomputeGameRow {
 export interface RecomputeUpdate {
   gameId: string;
   courseHandicap: number;
+  /** The full course handicap (100 %) the score differential uses (F1). */
+  fullCourseHandicap: number;
 }
 
 /**
@@ -86,6 +88,7 @@ export function planHandicapRecompute(
     updates.push({
       gameId: row.gameId,
       courseHandicap: playingHandicapFromRaw(raw, row.allowancePct, row.maxStrokes),
+      fullCourseHandicap: Math.round(raw),
     });
   }
   return updates;
@@ -305,7 +308,10 @@ export async function recomputeCourseHandicapForUser(
   for (const update of updates) {
     const { data: affected, error: updateError } = await admin
       .from('game_players')
-      .update({ course_handicap: update.courseHandicap })
+      .update({
+        course_handicap: update.courseHandicap,
+        full_course_handicap: update.fullCourseHandicap,
+      })
       .eq('user_id', userId)
       .eq('game_id', update.gameId)
       .select('game_id');
