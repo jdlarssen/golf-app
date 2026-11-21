@@ -15,10 +15,13 @@ import { emailMatchPattern } from '@/lib/supabase/emailMatch';
  * proxy-verified session or the GoTrue-validated token, never from the
  * request, and every read below filters on it:
  *
- * - `users` and `game_players` are read with the service role (#2207: the
- *   user's own `email` and `friend_code` are not readable through their
- *   session; #2445: their row on someone else's draft is hidden by RLS, yet it
- *   is still their data under art. 15/20).
+ * - The reads in {@link SERVICE_ROLE_READS} use the service role, because RLS
+ *   hides rows that are still the user's own data under art. 15/20: their own
+ *   `email` and `friend_code` (#2207), their row on someone else's draft
+ *   (#2445), a friend request they sent by e-mail that is not answered yet
+ *   (0252), an invitation they sent to a round they do not organise, and the
+ *   two tables only the server reads (`cup_lineup_slots`,
+ *   `product_update_digest_recipients`). There the filter is the only authz.
  * - Everything else goes through the caller's own client, so RLS applies on
  *   top of the filter. Where RLS lets the caller see more than their own rows
  *   (a club's member list, the reactions in a game, everyone's ideas for an
@@ -39,12 +42,21 @@ export const EXPORT_KEYS = [
   'user',
   'game_players',
   'scores',
+  'game_registration_requests',
+  'league_players',
+  'tournament_participants',
+  'cup_lineup_slots',
   'invitations',
   'friendships',
   'club_memberships',
+  'club_join_requests',
   'handicap_history',
   'notifications',
   'notification_preferences',
+  'push_subscriptions',
+  'apns_tokens',
+  'fcm_tokens',
+  'product_update_digest_recipients',
   'ai_consents',
   'kavalkades',
   'kavalkade_shares',
@@ -66,6 +78,16 @@ export type ExportRead =
 export type BuildUserExportResult =
   | { ok: true; payload: UserExport }
   | { ok: false; read: ExportRead; error: unknown };
+
+/** The reads that go through the service role; see the file comment. */
+export const SERVICE_ROLE_READS = [
+  'users',
+  'game_players',
+  'friendships',
+  'invitations by inviter',
+  'cup_lineup_slots',
+  'product_update_digest_recipients',
+] as const satisfies readonly ExportRead[];
 
 type ReadResult = { data: unknown[] | null; error: unknown };
 
@@ -130,20 +152,25 @@ export async function buildUserExport(userId: string, rlsClient: Client): Promis
       'invitations by email',
       await rlsClient.from('invitations').select('*').filter('email', 'imatch', emailMatchPattern(user.email)),
     );
+    // Service role: the sender's own session reads a sent invitation only when
+    // it has no game or the sender organises the game. One sent as a team
+    // captain or a player is hidden, and so would be left out.
     const invitationsByInviter = rowsOf(
       'invitations by inviter',
-      await rlsClient.from('invitations').select('*').eq('invited_by', userId),
+      await admin.from('invitations').select('*').eq('invited_by', userId),
     );
     const invitations = Array.from(
       new Map([...invitationsByEmail, ...invitationsByInviter].map((row) => [(row as { id: string }).id, row])).values(),
     );
 
-    // Every friendship the user is part of, any status.
+    // Every friendship the user is part of, any status. Service role: a
+    // request the user sent by e-mail is hidden from their own session until
+    // it is answered (0252), and it is still a row about them.
     const friendships = rowsOf(
       'friendships',
       await selectAllRowsResult(
         (from, to) =>
-          rlsClient
+          admin
             .from('friendships')
             .select('*')
             .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`)
@@ -156,6 +183,46 @@ export async function buildUserExport(userId: string, rlsClient: Client): Promis
     const clubMemberships = rowsOf(
       'club_memberships',
       await rlsClient.from('group_members').select('group_id, role, joined_at, groups(name)').eq('user_id', userId),
+    );
+
+    // Sign-ups, league and cup participation, and requests to join a club.
+    const gameRegistrationRequests = rowsOf(
+      'game_registration_requests',
+      await rlsClient.from('game_registration_requests').select('*').eq('user_id', userId),
+    );
+    const leaguePlayers = rowsOf(
+      'league_players',
+      await rlsClient.from('league_players').select('*').eq('user_id', userId),
+    );
+    const tournamentParticipants = rowsOf(
+      'tournament_participants',
+      await rlsClient.from('tournament_participants').select('*').eq('user_id', userId),
+    );
+    const cupLineupSlots = rowsOf(
+      'cup_lineup_slots',
+      await admin.from('cup_lineup_slots').select('*').eq('user_id', userId),
+    );
+    const clubJoinRequests = rowsOf(
+      'club_join_requests',
+      await rlsClient.from('group_join_requests').select('*').eq('user_id', userId),
+    );
+
+    // The devices that get notifications. The web row leaves out the two
+    // encryption keys (`p256dh`, `auth`): they are secrets of the browser, and
+    // the file may end up in a mail or a shared folder.
+    const pushSubscriptions = rowsOf(
+      'push_subscriptions',
+      await rlsClient
+        .from('push_subscriptions')
+        .select('id, user_id, endpoint, user_agent, created_at, last_used_at')
+        .eq('user_id', userId),
+    );
+    const apnsTokens = rowsOf('apns_tokens', await rlsClient.from('apns_tokens').select('*').eq('user_id', userId));
+    const fcmTokens = rowsOf('fcm_tokens', await rlsClient.from('fcm_tokens').select('*').eq('user_id', userId));
+    // Which months the newsletter reached the user (0246).
+    const digestRecipients = rowsOf(
+      'product_update_digest_recipients',
+      await admin.from('product_update_digest_recipients').select('*').eq('user_id', userId),
     );
 
     // #2332: the rest of what Tørny keeps about the user. Reactions are the
@@ -186,12 +253,21 @@ export async function buildUserExport(userId: string, rlsClient: Client): Promis
         user,
         game_players: gamePlayers,
         scores,
+        game_registration_requests: gameRegistrationRequests,
+        league_players: leaguePlayers,
+        tournament_participants: tournamentParticipants,
+        cup_lineup_slots: cupLineupSlots,
         invitations,
         friendships,
         club_memberships: clubMemberships,
+        club_join_requests: clubJoinRequests,
         handicap_history: handicapHistory,
         notifications,
         notification_preferences: notificationPreferences,
+        push_subscriptions: pushSubscriptions,
+        apns_tokens: apnsTokens,
+        fcm_tokens: fcmTokens,
+        product_update_digest_recipients: digestRecipients,
         ai_consents: aiConsents,
         kavalkades,
         kavalkade_shares: kavalkadeShares,

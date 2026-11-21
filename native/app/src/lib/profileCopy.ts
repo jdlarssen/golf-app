@@ -400,7 +400,7 @@ export const DATA_TEXT = {
   // (`lib/profile/exportCore.ts`; `exportCore.test.ts` holder dem i takt).
   exportRow: 'Last ned dataene dine',
   exportSublabel:
-    'Profilen, handicaphistorikken, spillene, slagene, reaksjonene, invitasjonene, vennene, klubbene, varslene, AI-svaret, Kavalkaden og ideene dine i én fil.',
+    'Profilen, handicaphistorikken, spillene, slagene, påmeldingene, ligaene, cupene, reaksjonene, invitasjonene, vennene, klubbene, varslene, AI-svaret, Kavalkaden og ideene dine i én fil.',
 } as const;
 
 /**
