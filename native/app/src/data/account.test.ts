@@ -50,6 +50,17 @@ jest.mock('./aiConsentGate', () => ({
     mockCalls.push('forgetAi');
   }),
 }));
+// A leftover export file and the remembered push token go with the account too.
+jest.mock('./dataExport', () => ({
+  clearDataExportFiles: jest.fn(() => {
+    mockCalls.push('clearExport');
+  }),
+}));
+jest.mock('./pushDevice', () => ({
+  forgetPushAfterAccountDeletion: jest.fn(async () => {
+    mockCalls.push('forgetPush');
+  }),
+}));
 
 const DELETE_URL = `${BASE_URL}/api/account/delete`;
 
@@ -94,7 +105,7 @@ describe('konto-sletting', () => {
 
       // Rekkefølgen, ikke bare tilstedeværelsen: signOut flipper App.tsx til
       // Login og unmounter skjermene, så den må komme sist.
-      expect(mockCalls).toEqual(['wipe', 'forgetAi', 'signOut']);
+      expect(mockCalls).toEqual(['wipe', 'forgetAi', 'clearExport', 'forgetPush', 'signOut']);
       expect(auth().signOut).toHaveBeenCalledWith({ scope: 'local' });
     });
 
@@ -206,7 +217,7 @@ describe('konto-sletting', () => {
       respondWith(200, {});
 
       expect(await account().deleteAccount()).toEqual({ ok: true, mode: null });
-      expect(mockCalls).toEqual(['wipe', 'forgetAi', 'signOut']);
+      expect(mockCalls).toEqual(['wipe', 'forgetAi', 'clearExport', 'forgetPush', 'signOut']);
     });
 
     it('er slettet selv om den lokale utloggingen feiler', async () => {
@@ -215,7 +226,7 @@ describe('konto-sletting', () => {
       jest.spyOn(console, 'error').mockImplementation(() => {});
 
       expect(await account().deleteAccount()).toEqual({ ok: true, mode: 'hard' });
-      expect(mockCalls).toEqual(['wipe', 'forgetAi']);
+      expect(mockCalls).toEqual(['wipe', 'forgetAi', 'clearExport', 'forgetPush']);
     });
 
     // Etter 200 er kontoen borte. Feiler den lokale oppryddingen, er svaret
@@ -232,7 +243,7 @@ describe('konto-sletting', () => {
       });
       // Utloggingen skjer likevel — ellers står brukeren igjen innlogget på en
       // slettet konto.
-      expect(mockCalls).toEqual(['forgetAi', 'signOut']);
+      expect(mockCalls).toEqual(['forgetAi', 'clearExport', 'forgetPush', 'signOut']);
     });
   });
 

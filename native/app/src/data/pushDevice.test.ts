@@ -153,6 +153,14 @@ describe('pushDevice', () => {
     expect(await storage().getItem(subject().PUSH_TOKEN_KEY)).toBeNull();
   });
 
+  it('en slettet konto: tokenet glemmes lokalt uten kall til basen', async () => {
+    await storage().setItem(subject().PUSH_TOKEN_KEY, remembered(ME));
+    await subject().forgetPushAfterAccountDeletion();
+    // Raden gikk med kontoen på serveren, og sesjonen er alt revokert.
+    expect(mocks().supabase.from).not.toHaveBeenCalled();
+    expect(await storage().getItem(subject().PUSH_TOKEN_KEY)).toBeNull();
+  });
+
   it('utlogging uten sesjonen for kontoen sletter ingenting og husker tokenet', async () => {
     mocks().currentDeviceUserId.mockResolvedValue(null);
     await storage().setItem(subject().PUSH_TOKEN_KEY, remembered(ME));
