@@ -11,21 +11,25 @@
  *    `course_handicap` and no `full_course_handicap` gets the full number from
  *    `planFullCourseHandicap` (lib/games/fullCourseHandicapBackfill.ts): the
  *    frozen number itself when no share or cap could apply, otherwise the
- *    index (handicap_history at the start, the profile, older history) that
- *    reproduces the frozen playing handicap exactly. Rows with no matching
- *    index stay null and are listed as unresolved.
+ *    index (handicap_history at the round's start, the profile, older
+ *    history) that reproduces the frozen playing handicap exactly. A row stays
+ *    null, listed with its reason, when no index reproduces it, when indexes
+ *    that reproduce it disagree on the full number (a cap or a low share), or
+ *    when the tee has no rating. Rows in rounds not started yet are skipped:
+ *    the start freezes them.
  * 2. In finished rounds with a personal differential (not a team-ball
- *    format), every FROZEN differential whose full course handicap differs
- *    from the playing handicap is recomputed with `computePlayerDifferential`,
- *    the same function the freeze at the end of a round uses. Rows whose
- *    differential changes are listed old → new. A round that was never frozen
- *    is left alone: the history page freezes it from the full number.
+ *    format), a row with a known full number is recomputed with
+ *    `computePlayerDifferential`, the function the freeze at the end of a
+ *    round uses, when its frozen differential came from a different number
+ *    (corrected) or it has none (frozen now: a round that started before the
+ *    new code and finished before this run).
  *
  * Without `--write` it only reads and prints the preview. With `--write` it
- * writes step 1 (each row asserted as exactly one row, only where the column
- * is still null), then runs `persistScoreDifferentials` for each round with a
- * change and reads the rows back to check they match the preview.
- * Idempotent: a second run finds nothing to fill and nothing to change.
+ * writes exactly the previewed rows, one update per row, each asserted as one
+ * row and guarded on the value the preview read (so a row changed in between
+ * is refused, not overwritten). Safe to re-run at any time: a second run finds
+ * nothing to do. Run it again after each app release, since app builds older
+ * than this change start rounds without the full number.
  *
  * ## How to run it
  *
@@ -55,12 +59,9 @@ import { getRatingForGender, type TeeBoxRatings, type TeeGender } from '@/lib/ga
 import {
   indexCandidates,
   planFullCourseHandicap,
-  type FullCourseHandicapPlan,
+  roundStart,
 } from '@/lib/games/fullCourseHandicapBackfill';
-import {
-  computePlayerDifferential,
-  persistScoreDifferentials,
-} from '@/lib/games/persistScoreDifferentials';
+import { computePlayerDifferential } from '@/lib/games/persistScoreDifferentials';
 import { modeCollapsesToTeamCard, type GameMode } from '@/lib/scoring/modes/types';
 
 const PROD_FLAG = '--prod';
@@ -75,6 +76,8 @@ type GameRow = {
   tee_box_id: string | null;
   course_id: string | null;
   started_at: string | null;
+  scheduled_tee_off_at: string | null;
+  created_at: string;
 };
 
 type PlayerRow = {
@@ -136,7 +139,9 @@ async function main() {
     (from, to) =>
       admin
         .from('games')
-        .select('id, status, game_mode, hcp_allowance_pct, hcp_max_strokes, tee_box_id, course_id, started_at')
+        .select(
+          'id, status, game_mode, hcp_allowance_pct, hcp_max_strokes, tee_box_id, course_id, started_at, scheduled_tee_off_at, created_at',
+        )
         .in('status', ['active', 'finished'])
         .order('id')
         .range(from, to),
@@ -193,8 +198,8 @@ async function main() {
   }
 
   // ── Step 1: the full course handicap per row ────────────────────────────
-  const fills: Array<{ row: PlayerRow; plan: FullCourseHandicapPlan }> = [];
-  const unresolved: PlayerRow[] = [];
+  const fills: Array<{ row: PlayerRow; full: number; source: string }> = [];
+  const unresolved: Array<{ row: PlayerRow; reason: string }> = [];
   for (const row of missing) {
     const game = gameById.get(row.game_id);
     if (!game) continue;
@@ -207,19 +212,20 @@ async function main() {
       frozenCourseHandicap: row.course_handicap,
       rating,
       candidates: indexCandidates({
-        startedAt: game.started_at,
+        startedAt: roundStart(game),
         history: historyByUser.get(row.user_id) ?? [],
         profileIndex: profileIndex.get(row.user_id) ?? null,
       }),
     });
-    if (plan) fills.push({ row, plan });
-    else unresolved.push(row);
+    if (plan === null) continue;
+    if (plan.status === 'resolved') fills.push({ row, full: plan.fullCourseHandicap, source: plan.source });
+    else unresolved.push({ row, reason: plan.reason });
   }
   const fullByRow = new Map<string, number>();
   for (const p of players) {
     if (p.full_course_handicap !== null) fullByRow.set(`${p.game_id}|${p.user_id}`, p.full_course_handicap);
   }
-  for (const f of fills) fullByRow.set(`${f.row.game_id}|${f.row.user_id}`, f.plan.fullCourseHandicap);
+  for (const f of fills) fullByRow.set(`${f.row.game_id}|${f.row.user_id}`, f.full);
 
   // ── Step 2: differentials in finished own-ball rounds ───────────────────
   const finishedOwnBall = games.filter(
@@ -231,22 +237,19 @@ async function main() {
     list.push(p);
     playersByGame.set(p.game_id, list);
   }
-  const changes: Array<{ game: GameRow; row: PlayerRow; full: number; next: number | null }> = [];
-  const keptWrong: PlayerRow[] = [];
+  const changes: Array<{ game: GameRow; row: PlayerRow; full: number; next: number }> = [];
+  let keptUnresolved = 0;
   for (const game of finishedOwnBall) {
     const roster = playersByGame.get(game.id) ?? [];
     const relevant = roster.filter((p) => {
       const full = fullByRow.get(`${p.game_id}|${p.user_id}`);
       if (full === undefined) {
-        // Unresolved: if the playing handicap differs from any full number,
-        // the stored differential may be off, and it stays as it is.
-        if (p.score_differential !== null) keptWrong.push(p);
+        // No known full number: a stored differential stays as it is.
+        if (p.score_differential !== null) keptUnresolved += 1;
         return false;
       }
-      // Only a frozen differential computed from a different number can be
-      // wrong. A round never frozen is left to the history page, which
-      // freezes it live from the full number once it is filled.
-      return full !== p.course_handicap && p.score_differential !== null;
+      // Corrected when it came from a different number; frozen when missing.
+      return p.score_differential === null || full !== p.course_handicap;
     });
     if (relevant.length === 0 || !game.course_id || !game.tee_box_id) continue;
     const tee = teeById.get(game.tee_box_id);
@@ -284,52 +287,62 @@ async function main() {
         scoresByHole,
         fullCourseHandicap: full,
       });
-      if (next !== row.score_differential && next !== null) {
+      if (next !== null && next !== row.score_differential) {
         changes.push({ game, row, full, next });
       }
     }
   }
 
   // ── Preview ─────────────────────────────────────────────────────────────
-  const bySource = new Map<string, number>();
-  for (const f of fills) bySource.set(f.plan.source, (bySource.get(f.plan.source) ?? 0) + 1);
-  console.log(`[fch] started rounds: ${games.length}; frozen rows: ${players.length}; rows without the full number: ${missing.length}`);
+  const describeGame = (g: GameRow) =>
+    `game ${short(g.id)} ${g.status} ${g.game_mode} ${g.hcp_allowance_pct}%${g.hcp_max_strokes !== null ? ` cap ${g.hcp_max_strokes}` : ''}`;
+  const countBy = <T,>(items: T[], key: (item: T) => string) => {
+    const counts = new Map<string, number>();
+    for (const item of items) counts.set(key(item), (counts.get(key(item)) ?? 0) + 1);
+    return counts;
+  };
+  console.log(
+    `[fch] started rounds: ${games.length}; frozen rows: ${players.length}; rows without the full number: ${missing.length}`,
+  );
   console.log(`[fch] step 1 — fill full_course_handicap: ${fills.length} row(s)`);
-  for (const [source, n] of bySource) console.log(`        ${source}: ${n}`);
-  const differs = fills.filter((f) => f.plan.fullCourseHandicap !== f.row.course_handicap);
+  for (const [source, n] of countBy(fills, (f) => f.source)) console.log(`        ${source}: ${n}`);
+  const differs = fills.filter((f) => f.full !== f.row.course_handicap);
   console.log(`        of which full ≠ frozen playing handicap: ${differs.length}`);
   for (const f of differs) {
-    const g = gameById.get(f.row.game_id)!;
     console.log(
-      `        game ${short(g.id)} ${g.status} ${g.game_mode} ${g.hcp_allowance_pct}%${g.hcp_max_strokes !== null ? ` cap ${g.hcp_max_strokes}` : ''} user ${short(f.row.user_id)}: playing ${f.row.course_handicap} → full ${f.plan.fullCourseHandicap} (${f.plan.source})`,
+      `        ${describeGame(gameById.get(f.row.game_id)!)} user ${short(f.row.user_id)}: playing ${f.row.course_handicap} → full ${f.full} (${f.source})`,
     );
   }
   console.log(`[fch] unresolved (stay null): ${unresolved.length} row(s)`);
-  for (const row of unresolved) {
-    const g = gameById.get(row.game_id)!;
+  for (const [reason, n] of countBy(unresolved, (u) => u.reason)) console.log(`        ${reason}: ${n}`);
+  for (const u of unresolved) {
     console.log(
-      `        game ${short(g.id)} ${g.status} ${g.game_mode} ${g.hcp_allowance_pct}%${g.hcp_max_strokes !== null ? ` cap ${g.hcp_max_strokes}` : ''} user ${short(row.user_id)}: playing ${row.course_handicap}, differential ${row.score_differential ?? '—'}`,
+      `        ${describeGame(gameById.get(u.row.game_id)!)} user ${short(u.row.user_id)}: playing ${u.row.course_handicap}, differential ${u.row.score_differential ?? '—'} (${u.reason})`,
     );
   }
-  console.log(`[fch] step 2 — differentials that change: ${changes.length} row(s) in ${new Set(changes.map((c) => c.game.id)).size} round(s)`);
+  const corrected = changes.filter((c) => c.row.score_differential !== null);
+  const frozenNow = changes.filter((c) => c.row.score_differential === null);
+  console.log(
+    `[fch] step 2 — differentials to write: ${changes.length} row(s) in ${new Set(changes.map((c) => c.game.id)).size} round(s): ${corrected.length} corrected, ${frozenNow.length} frozen now`,
+  );
   for (const c of changes) {
     console.log(
-      `        game ${short(c.game.id)} ${c.game.game_mode} ${c.game.hcp_allowance_pct}%${c.game.hcp_max_strokes !== null ? ` cap ${c.game.hcp_max_strokes}` : ''} user ${short(c.row.user_id)}: playing ${c.row.course_handicap}, full ${c.full}: ${c.row.score_differential ?? '—'} → ${c.next}`,
+      `        ${describeGame(c.game)} user ${short(c.row.user_id)}: playing ${c.row.course_handicap}, full ${c.full}: ${c.row.score_differential ?? '—'} → ${c.next}`,
     );
   }
-  console.log(`[fch] stored differentials left as they are (full number unresolved): ${keptWrong.length}`);
+  console.log(`[fch] stored differentials left as they are (full number unresolved): ${keptUnresolved}`);
 
   if (!write) {
     console.log('[fch] preview only. Run again with --write to apply.');
     return;
   }
 
-  // ── Write ───────────────────────────────────────────────────────────────
+  // ── Write: exactly the previewed rows ───────────────────────────────────
   for (const f of fills) {
     expectOne(
       await admin
         .from('game_players')
-        .update({ full_course_handicap: f.plan.fullCourseHandicap })
+        .update({ full_course_handicap: f.full })
         .eq('game_id', f.row.game_id)
         .eq('user_id', f.row.user_id)
         .is('full_course_handicap', null)
@@ -339,28 +352,28 @@ async function main() {
   }
   console.log(`[fch] wrote full_course_handicap on ${fills.length} row(s)`);
 
-  const changedGames = [...new Set(changes.map((c) => c.game.id))];
-  for (const gameId of changedGames) {
-    const written = await persistScoreDifferentials(gameId);
-    console.log(`[fch] persistScoreDifferentials ${short(gameId)} → ${written} row(s)`);
-  }
-
-  // Read back: every previewed change must now be stored.
-  let mismatches = 0;
   for (const c of changes) {
-    const { data, error } = await admin
+    const base = admin
       .from('game_players')
-      .select('score_differential')
+      .update({ score_differential: c.next })
       .eq('game_id', c.game.id)
-      .eq('user_id', c.row.user_id)
-      .single();
-    if (error || data?.score_differential !== c.next) {
-      mismatches += 1;
-      console.error(`[fch] MISMATCH ${short(c.game.id)}/${short(c.row.user_id)}: expected ${c.next}, got ${data?.score_differential ?? error?.message}`);
+      .eq('user_id', c.row.user_id);
+    // Guard on the value the preview read: a row changed in between is refused.
+    const guarded =
+      c.row.score_differential === null
+        ? base.is('score_differential', null)
+        : base.eq('score_differential', c.row.score_differential);
+    const written = expectOne(
+      await guarded.select('score_differential'),
+      `differential ${short(c.game.id)}/${short(c.row.user_id)}`,
+    );
+    if (written.score_differential !== c.next) {
+      throw new Error(
+        `differential ${short(c.game.id)}/${short(c.row.user_id)}: wrote ${written.score_differential}, expected ${c.next}`,
+      );
     }
   }
-  if (mismatches > 0) throw new Error(`${mismatches} differential(s) did not match the preview`);
-  console.log(`[fch] done — ${changes.length} differential(s) verified against the preview`);
+  console.log(`[fch] done — ${changes.length} differential(s) written and read back as previewed`);
 }
 
 main().catch((err) => {
