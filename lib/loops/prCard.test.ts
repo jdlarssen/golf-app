@@ -6,6 +6,7 @@ import {
   buildCardPayload,
   buildReceiptPayload,
   CARD_CHECK_NAME,
+  CARD_CHECK_NAMES,
   CARD_LABEL,
   CI_PATHS_IGNORE,
   classifyChecks,
@@ -108,6 +109,14 @@ describe('classifyChecks', () => {
     it('in_progress post-card blokkerer ikke grønt', () => {
       expect(classifyChecks([green(), card('in_progress', null)])).toBe('green');
     });
+
+    it.each(CARD_CHECK_NAMES.map((name) => [name]))(
+      'kortets jobb «%s» teller aldri med, verken som pending eller rød',
+      (name) => {
+        expect(classifyChecks([green(), { name, status: 'in_progress', conclusion: null }])).toBe('green');
+        expect(classifyChecks([green(), { name, status: 'completed', conclusion: 'failure' }])).toBe('green');
+      },
+    );
 
     it('cancelled post-card gjør ikke PR-en rød', () => {
       expect(classifyChecks([green(), card('completed', 'cancelled')])).toBe('green');
@@ -235,6 +244,17 @@ describe('lockstep mot .github/workflows', () => {
 
   it('CARD_CHECK_NAME er jobnavnet i discord-pr-card.yml', () => {
     expect(workflow('discord-pr-card.yml')).toContain(`\n  ${CARD_CHECK_NAME}:\n`);
+  });
+
+  // Kort-workflowen har flere jobber (delt etter tilgang). Hver av dem henger som
+  // en check-run på PR-head-en, så ALLE må stå i CARD_CHECK_NAMES — en jobb som
+  // mangler der, ville gjort PR-en «pending» eller «rød» på sin egen kortkjøring.
+  it('CARD_CHECK_NAMES er nøyaktig jobbene i discord-pr-card.yml', () => {
+    const jobs = workflow('discord-pr-card.yml').split(/\njobs:\n/)[1] ?? '';
+    const names = [...jobs.matchAll(/^ {2}([A-Za-z0-9_-]+):\s*$/gm)].map((m) => m[1]);
+    expect(names.length).toBeGreaterThan(1);
+    expect([...names].sort()).toEqual([...CARD_CHECK_NAMES].sort());
+    expect(CARD_CHECK_NAMES).toContain(CARD_CHECK_NAME);
   });
 
   it('hvert navn i ADVISORY_CHECK_NAMES er en jobb i schema-drift.yml', () => {

@@ -41,24 +41,38 @@ concurrency:
   group: discord-pr-card-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || inputs.pr }}
   cancel-in-progress: true
 
-permissions:
-  contents: write # auto-merge PR-en (#1406)
-  actions: write # main-verify-dispatch etter auto-merge (#1406)
-  pull-requests: write # dedup-label + lese endrede filer + merge
-  issues: write # dedup-label (labels går via issues-API) + failure-alarm
-  checks: read
+# Ingen tilgang som standard. Hver jobb under ber om akkurat det den trenger.
+permissions: {}
 
+# Tre jobber, delt etter hva de får lov til. Koden i en PR er ikke lest av eieren
+# når kortet lages, så den kjører bare i `card-screenshots`, som verken kan skrive
+# til repoet eller har Discord-nøklene. `card-decide` og `post-card` kjører main
+# sin kode. Jobbnavnene står også i `CARD_CHECK_NAMES` (lib/loops/prCard.ts).
+# Ingen checkout lar tilgangsnøkkelen ligge igjen i arbeidsmappa
+# (persist-credentials: false). Reglene er låst av tests/hooks/guard.test.sh.
 jobs:
-  post-card:
+  # ── AVGJØR: port + gate + visuell-diff-deteksjon. Leser bare fra GitHub. ──
+  card-decide:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read # PR-en, endrede filer, commit-lista
+      issues: read # kommentarer + etiketter på lenkede issues
+      checks: read
+      actions: read # ci.yml-kjøringene for head-SHA-en
+    outputs:
+      run: ${{ steps.guard.outputs.run }}
+      outcome: ${{ steps.decide.outputs.outcome }}
+      is_gui: ${{ steps.decide.outputs.is_gui }}
+      head_sha: ${{ steps.decide.outputs.head_sha }}
+      plan: ${{ steps.plan.outputs.plan }}
     steps:
       # To porter før noe annet kjører:
       #  1. Discord-boten må være satt opp.
-      #  2. PR-ens kode må ligge i DETTE repoet. Jobben sjekker ut PR-ens kode og
-      #     kjører den med hemmelighetene våre (skjermbilde-steget) og med skrive-
-      #     tilgang til repoet. Kode fra en annen kopi av repoet (en fork) har ingen
-      #     hos oss lest, så den får aldri kjøre her: da blir det ikke noe kort, og
-      #     eieren ser PR-en i GitHub. Ukjent opphav teller som fremmed (fail-closed).
+      #  2. PR-ens kode må ligge i DETTE repoet. `card-screenshots` kjører den
+      #     koden med staging-nøklene. Kode fra en annen kopi av repoet (en fork)
+      #     får aldri kjøre her: da blir det ikke noe kort, og eieren ser PR-en i
+      #     GitHub. Ukjent opphav teller som fremmed (fail-closed).
       - name: Skip if Discord bot is not configured or the PR code is not from this repository
         id: guard
         env:
@@ -94,22 +108,13 @@ jobs:
           fi
           # pr-head-trust:end
 
-      # PR-head-koden (workflow_run: head_sha; ready_for_review: PR-ens head-SHA;
-      # workflow_dispatch: PR-ens head-ref) så skjermbildene viser koden under review.
-      - name: Checkout (PR-head)
+      # Main sin kode — aldri PR-ens. Decide leser PR-en gjennom GitHubs API.
+      - name: Checkout (main)
         if: steps.guard.outputs.run == 'true'
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || format('refs/pull/{0}/head', inputs.pr) }}
-
-      # Automasjons-skriptene (scripts/loops, lib/loops) hentes alltid fra main —
-      # en PR-branch kan være forket før disse filene fantes, og da feiler
-      # `tsx`-stegene under med ERR_MODULE_NOT_FOUND (#1181).
-      - name: Bruk main sin versjon av loop-skriptene
-        if: steps.guard.outputs.run == 'true'
-        run: |
-          git fetch --depth=1 origin main
-          git checkout FETCH_HEAD -- scripts/loops lib/loops
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
 
       - name: Setup Node 22
         if: steps.guard.outputs.run == 'true'
@@ -117,9 +122,9 @@ jobs:
         with:
           node-version: 22
 
-      # Steg 1 — AVGJØR: gate + visuell-diff-deteksjon (ingen npm ci). Ved
-      # dispatch venter steget på at checkene lander (maks ~10 min, #1301) —
-      # timeout-minutes rommer ventingen med god margin.
+      # Gate + visuell-diff-deteksjon (ingen npm ci). Ved dispatch venter steget på
+      # at checkene lander (maks ~10 min, #1301) — timeout-minutes rommer ventingen
+      # med god margin.
       - name: Decide
         id: decide
         if: steps.guard.outputs.run == 'true'
@@ -137,12 +142,52 @@ jobs:
           WAIT_FOR_CHECKS: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event.workflow_run.name == 'CI (docs no-op)') && 'true' || 'false' }}
         run: npx --yes tsx scripts/loops/decide-pr-card.ts
 
-      # Steg 2 — SKJERMBILDER (kun visuell diff): booter appen mot staging og
-      # skjermbilder berørte ruter. Best-effort — feil her feller ikke kortet.
+      # Planen går videre som jobb-utdata, ikke som fil: de to neste jobbene får
+      # den slik decide skrev den, og jobben som kjører PR-ens kode kan ikke endre
+      # hva post-jobben leser.
+      - name: Planen som jobb-utdata
+        id: plan
+        if: steps.guard.outputs.run == 'true'
+        run: |
+          if [ -f pr-card-plan.json ]; then
+            echo "plan=$(base64 -w0 pr-card-plan.json)" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ── SKJERMBILDER (kun visuell diff): booter PR-ens kode mot staging og tar
+  # skjermbilder av berørte ruter. Best-effort — feil her feller ikke kortet.
+  # Eneste jobb som sjekker ut PR-ens kode: bare lesetilgang, ingen nøkler utover
+  # staging-nøklene appen trenger for å starte. ──
+  card-screenshots:
+    needs: card-decide
+    if: needs.card-decide.outputs.run == 'true' && needs.card-decide.outputs.outcome != 'noop' && needs.card-decide.outputs.is_gui == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      # Versjonen decide gatet — den samme post-jobben merger eller lager kort for.
+      - name: Checkout (PR-head)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.card-decide.outputs.head_sha }}
+          persist-credentials: false
+
+      # Automasjons-skriptene (scripts/loops, lib/loops) hentes alltid fra main —
+      # en PR-branch kan være forket før disse filene fantes, og da feiler
+      # `tsx`-steget under med ERR_MODULE_NOT_FOUND (#1181).
+      - name: Bruk main sin versjon av loop-skriptene
+        run: |
+          git fetch --depth=1 origin main
+          git checkout FETCH_HEAD -- scripts/loops lib/loops
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Skjermbilder av GUI-ruter (staging)
-        if: steps.guard.outputs.run == 'true' && steps.decide.outputs.outcome != 'noop' && steps.decide.outputs.is_gui == 'true'
-        continue-on-error: true
         env:
+          PLAN_B64: ${{ needs.card-decide.outputs.plan }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -151,6 +196,7 @@ jobs:
           RESEND_STUB_SEND: 'true'
           SELFREG_RATE_LIMIT_DISABLED: 'true'
         run: |
+          printf '%s' "$PLAN_B64" | base64 -d > pr-card-plan.json
           npm ci
           # Turbopack native binding-guard (#1095) — dev-serveren nekter å boote uten.
           BINDING=@next/swc-linux-x64-gnu
@@ -170,20 +216,72 @@ jobs:
           npx --yes tsx scripts/loops/screenshot-routes.ts || echo "::warning::skjermbilder feilet (best-effort)"
           kill "$DEV_PID" 2>/dev/null || true
 
-      # Steg 3 — POST: auto-merge + kvittering ELLER knapp-kort (etter outcome),
-      # fest evt. skjermbilder (multipart).
+      # Også når steget over feilet halvveis: bildene som rakk å bli tatt, blir med.
+      - name: Last opp skjermbildene
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-shots
+          path: pr-shots/
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # ── POST: auto-merge + kvittering ELLER knapp-kort (etter outcome), fest evt.
+  # skjermbilder (multipart). Eneste jobb med skrivetilgang — kjører main sin kode. ──
+  post-card:
+    needs: [card-decide, card-screenshots]
+    # !cancelled(): skjermbilde-jobben kan være hoppet over eller ha feilet uten at
+    # kortet skal utebli, men en avbrutt kjøring (nyere fyring tok over) poster ikke.
+    if: ${{ !cancelled() && needs.card-decide.result == 'success' && needs.card-decide.outputs.run == 'true' && needs.card-decide.outputs.outcome != 'noop' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # auto-merge PR-en (#1406)
+      actions: write # main-verify-dispatch etter auto-merge (#1406)
+      pull-requests: write # dedup-label + merge
+      issues: write # dedup-label (labels går via issues-API)
+      checks: read
+    steps:
+      - name: Checkout (main)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Bildene kommer fra jobben som kjørte PR-ens kode. De leses bare som
+      # bildefiler og festes på kortet; planen kommer fra decide.
+      - name: Hent skjermbildene
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: pr-shots
+          path: pr-shots
+
       - name: Post merge-kort
-        if: steps.guard.outputs.run == 'true' && steps.decide.outputs.outcome != 'noop'
         env:
+          PLAN_B64: ${{ needs.card-decide.outputs.plan }}
           GITHUB_TOKEN: ${{ github.token }}
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
           GH_REPO: ${{ github.repository }}
-        run: npx --yes tsx scripts/loops/post-pr-card.ts
+        run: |
+          printf '%s' "$PLAN_B64" | base64 -d > pr-card-plan.json
+          npx --yes tsx scripts/loops/post-pr-card.ts
 
-      # Rød kjøring skal aldri dø stille (samme mønster som prod-vakt/schema-drift).
+  # Rød kjøring skal aldri dø stille (samme mønster som prod-vakt/schema-drift).
+  # Skjermbilde-jobben er best-effort og teller ikke.
+  card-alert:
+    needs: [card-decide, post-card]
+    if: ${{ !cancelled() && (needs.card-decide.result == 'failure' || needs.post-card.result == 'failure') }}
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
       - name: Open alert issue on failure
-        if: failure()
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}

@@ -202,14 +202,55 @@ trust_case "manuell kjøring, oppslaget feiler → kjører ikke (fail-closed)" "
 trust_case "manuell kjøring, PR-nummer som ikke er et tall → kjører ikke" "run=false" EVENT_NAME=workflow_dispatch PR_INPUT="12/../x" FAKE_PR_HEAD_REPO=jdlarssen/golf-app
 trust_case "ukjent hendelse → kjører ikke" "run=false" EVENT_NAME=push RUN_HEAD_REPO=jdlarssen/golf-app
 trust_case "boten er ikke satt opp → kjører ikke" "run=false" EVENT_NAME=workflow_run RUN_HEAD_REPO=jdlarssen/golf-app BOT=
-# Hvert steg etter porten (unntatt feilalarmen) må ha porten i sin if-linje —
-# ellers kjører et nytt steg selv om porten sa nei.
-steps_total="$(grep -c '^      - name:' "$CARD_WF")"
-steps_gated="$(grep -c "if: steps.guard.outputs.run == 'true'" "$CARD_WF")"
-if [ "$steps_total" -gt 2 ] && [ "$steps_gated" -eq $((steps_total - 2)) ]; then
-  pass=$((pass + 1)); printf 'PASS  alle %s steg etter porten er portet\n' "$steps_gated"
+# Jobbene er delt etter hva de får lov til (p09, runde 2). Koden i en PR er
+# ikke lest av eieren når kortet lages, så den kjører bare i en jobb som verken
+# har skrivetilgang til repoet eller nøkler den ikke trenger:
+#   card-decide       leser fra GitHub, kjører main sin kode, slipper gjennom porten
+#   card-screenshots  eneste jobb som sjekker ut PR-ens kode — bare lesetilgang
+#   post-card         skrivetilgang (merge, etikett) — kjører main sin kode
+wf_check() { # navn kommando…
+  local name="$1"
+  shift
+  if "$@" > /dev/null 2>&1; then
+    pass=$((pass + 1)); printf 'PASS  %s\n' "$name"
+  else
+    fail=$((fail + 1)); printf 'FAIL  %s\n' "$name"
+  fi
+}
+job_block() { # jobbnavn → jobbens linjer
+  awk -v job="$1" '
+    /^  [A-Za-z_-]+:[[:space:]]*$/ { on = ($0 == "  " job ":") }
+    /^[A-Za-z]/ { on = 0 }
+    on' "$CARD_WF"
+}
+job_block card-decide > "$TMP/job-decide.yml"
+job_block card-screenshots > "$TMP/job-screenshots.yml"
+job_block post-card > "$TMP/job-post.yml"
+wf_check "workflowen gir ingen tilgang som standard (permissions: {})" grep -Eq '^permissions: \{\}' "$CARD_WF"
+wf_check "ingen checkout lar tilgangsnøkkelen ligge igjen i arbeidsmappa" \
+  test "$(grep -c 'uses: actions/checkout' "$CARD_WF")" -gt 0 -a \
+       "$(grep -c 'uses: actions/checkout' "$CARD_WF")" -eq "$(grep -Ec '^[[:space:]]+persist-credentials: false' "$CARD_WF")"
+wf_check "screenshots-jobben finnes og sjekker ut PR-ens kode" grep -q 'ref: ${{ needs.card-decide.outputs.head_sha }}' "$TMP/job-screenshots.yml"
+wf_check "screenshots-jobben har bare lesetilgang" sh -c "grep -q 'contents: read' '$TMP/job-screenshots.yml' && ! grep -Eq ': write' '$TMP/job-screenshots.yml'"
+wf_check "screenshots-jobben får verken GitHub-nøkkelen eller Discord-nøklene" sh -c "test -s '$TMP/job-screenshots.yml' && ! grep -Eq 'github\.token|GITHUB_TOKEN|DISCORD_' '$TMP/job-screenshots.yml'"
+wf_check "decide-jobben har bare lesetilgang" sh -c "grep -q 'contents: read' '$TMP/job-decide.yml' && ! grep -Eq ': write' '$TMP/job-decide.yml'"
+wf_check "decide- og post-jobben sjekker bare ut main sin kode" sh -c "
+  for f in '$TMP/job-decide.yml' '$TMP/job-post.yml'; do
+    grep -q 'uses: actions/checkout' \"\$f\" || exit 1
+    grep -E '^[[:space:]]+ref:' \"\$f\" | grep -vq 'github.event.repository.default_branch' && exit 1
+    grep -Eq 'refs/pull|pull_request\.head\.sha|workflow_run\.head_sha' \"\$f\" && exit 1
+  done; exit 0"
+wf_check "screenshots- og post-jobben kjører bare når porten sa ja" sh -c "
+  grep -Eq \"^    if: .*needs\.card-decide\.outputs\.run == 'true'\" '$TMP/job-screenshots.yml' &&
+  grep -Eq \"^    if: .*needs\.card-decide\.outputs\.run == 'true'\" '$TMP/job-post.yml'"
+# Hvert steg i decide-jobben etter porten må ha porten i sin if-linje — ellers
+# kjører et nytt steg selv om porten sa nei.
+steps_total="$(grep -c '^      - name:' "$TMP/job-decide.yml")"
+steps_gated="$(grep -c "if: steps.guard.outputs.run == 'true'" "$TMP/job-decide.yml")"
+if [ "$steps_total" -gt 1 ] && [ "$steps_gated" -eq $((steps_total - 1)) ]; then
+  pass=$((pass + 1)); printf 'PASS  alle %s steg etter porten i decide-jobben er portet\n' "$steps_gated"
 else
-  fail=$((fail + 1)); printf 'FAIL  %s steg, %s med porten (forventet alle unntatt porten selv og feilalarmen)\n' "$steps_total" "$steps_gated"
+  fail=$((fail + 1)); printf 'FAIL  decide-jobben: %s steg, %s med porten (forventet alle unntatt porten selv)\n' "$steps_total" "$steps_gated"
 fi
 
 echo "== vaktlogg =="
