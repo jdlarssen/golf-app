@@ -43,6 +43,11 @@ jest.mock('./db', () => {
   };
 });
 
+// Eksportfila i cache-mappa ryddes ved utlogging. Egen spion, utenfor
+// kall-loggen: rekkefølgen mot wipen betyr ingenting, bare at sesjonen er borte.
+const mockClearExport = jest.fn();
+jest.mock('./dataExport', () => ({ clearDataExportFiles: () => mockClearExport() }));
+
 const GAME = 'game-1';
 const ME = 'user-me';
 const SERVER_TIME = '2026-08-30T10:00:09.000Z';
@@ -120,6 +125,7 @@ describe('logOut', () => {
   useFreshModules();
 
   beforeEach(() => {
+    mockClearExport.mockClear();
     mockCalls.length = 0;
     const { currentDeviceUserId, supabase } = mocks();
     currentDeviceUserId.mockResolvedValue(ME);
@@ -176,6 +182,8 @@ describe('logOut', () => {
 
     // Sesjonen dør FØR basen røres — motsatt av `deleteAccount`, med vilje.
     expect(mockCalls).toEqual(['signOut', 'wipe']);
+    // En eksportfil som ble liggende etter «Last ned dataene dine» går også.
+    expect(mockClearExport).toHaveBeenCalledTimes(1);
     expect(await getScore(await getDb(), scoreKey(GAME, ME, 1))).toBeUndefined();
     // Tom kø → ingen grunn til å ringe serveren i det hele tatt.
     expect(mocks().supabase.rpc).not.toHaveBeenCalled();
@@ -418,6 +426,7 @@ describe('logOut', () => {
     // Ingen wipe. Spilleren er fortsatt innlogget, og dataene er hens.
     expect(mockCalls).toEqual(['signOut']);
     expect(wipeMock()).not.toHaveBeenCalled();
+    expect(mockClearExport).not.toHaveBeenCalled();
     expect(await getScore(await getDb(), scoreKey(GAME, ME, 1))).toMatchObject({
       strokes: 4,
     });

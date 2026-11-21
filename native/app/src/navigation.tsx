@@ -28,6 +28,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { errorBoundaryVariantFor } from './lib/errorBoundaryCopy';
 import { INBOX_TEXT } from './lib/inboxCopy';
+import { clearDataExportFiles } from './data/dataExport';
 import { listenForPushTokenChanges, settlePushOwner, syncPushToken } from './data/pushDevice';
 import {
   appLinkStep,
@@ -427,6 +428,9 @@ export function RootNavigator() {
   // står varsler på for denne kontoen, er raden oppdatert med tokenet (#2758).
   useEffect(() => {
     void settlePushOwner().then(syncPushToken);
+    // En eksportfil fra forrige økt (Android leser den etter at delingsarket er
+    // lukket, så den slettes ikke der og da; se `dataExport.ts`).
+    clearDataExportFiles();
     return listenForPushTokenChanges();
   }, []);
   // #2627, #2748: en lenke som kommer mens appen er åpen. En som kom før

@@ -259,6 +259,15 @@ export async function forgetPushBeforeSignOut(): Promise<void> {
 }
 
 /**
+ * Kontoen er slettet: raden i tabellen gikk med den på serveren, så her er det
+ * bare det telefonen husker som skal bort. Uten dette sto tokenet igjen med
+ * id-en til en konto som ikke finnes. Kaster aldri.
+ */
+export async function forgetPushAfterAccountDeletion(): Promise<void> {
+  await forgetStoredToken();
+}
+
+/**
  * Ved innlogging: husker telefonen et token for en ANNEN konto, får den kontoen
  * fortsatt varsler hit. Telefonen viser fram tokenet (RPC-en flytter raden til
  * den som er logget inn), og så slettes raden. Den nye

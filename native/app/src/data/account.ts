@@ -37,7 +37,9 @@
 import type { AccountDeleteFailure, DeleteBlockReason } from '../lib/accountCopy';
 import { supabase } from '../supabase';
 import { forgetAiConsentAnswers } from './aiConsentGate';
+import { clearDataExportFiles } from './dataExport';
 import { wipeLocalData } from './db';
+import { forgetPushAfterAccountDeletion } from './pushDevice';
 import { callWebRoute } from './webApi';
 
 /** Ruta appen snakker med. Én sti, to verb. */
@@ -132,6 +134,8 @@ export async function fetchDeleteStatus(): Promise<AccountDeleteStatus> {
  * 1. **POST.** Serveren sletter eller anonymiserer og revokerer sesjonene.
  * 2. **Kun ved 200: {@link wipeLocalData}.** Lokal base tømmes først, mens
  *    appen fortsatt står på skjermen og kan vente på at kallet fullfører.
+ *    Deretter det andre telefonen husker om kontoen: AI-svaret, en eksportfil
+ *    som ble liggende, og tokenet for varsler.
  * 3. **`signOut({ scope: 'local' })`.** Sesjonene er alt revokert av GoTrue, så
  *    global scope ville bare gitt 403-støy. Dette steget er også det som
  *    rydder opp etter seg selv: `App.tsx` lytter på `onAuthStateChange`, setter
@@ -171,6 +175,10 @@ export async function deleteAccount(): Promise<AccountDeleteResult> {
     // #2561: svaret på AI-spørsmålet husket i AsyncStorage går med kontoen.
     // Kaster aldri.
     await forgetAiConsentAnswers();
+    // En eksportfil som ble liggende etter «Last ned dataene dine», og tokenet
+    // telefonen husker for varsler, går også med kontoen. Ingen av dem kaster.
+    clearDataExportFiles();
+    await forgetPushAfterAccountDeletion();
     try {
       await supabase.auth.signOut({ scope: 'local' });
     } catch (err) {

@@ -17,6 +17,14 @@
 //
 // **Et lukket ark er ingen feil.** `shareAsync` svarer likt når spilleren delte
 // og når arket ble lukket, og begge er `ok`: fila ble laget og tilbudt.
+//
+// **Fila skal ikke bli liggende.** Den har navn, e-post, handicap og alle slagene
+// i klartekst. På iPhone er delingen ferdig når arket lukkes, og fila slettes da.
+// På Android svarer `shareAsync` idet spilleren velger en app, og den appen leser
+// fila ETTERPÅ, så en sletting der ville gitt et tomt vedlegg. Der ryddes fila
+// ved neste eksport, ved neste oppstart, ved utlogging og når kontoen slettes
+// (`clearDataExportFiles`).
+import { Platform } from 'react-native';
 import { callWebRoute, type WebApiFailure } from './webApi';
 
 const EXPORT_PATH = '/api/profile/export';
@@ -44,6 +52,29 @@ export function dataExportFilename(now: Date): string {
   return `torny-data-${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.json`;
 }
 
+const EXPORT_FILE_NAME = /^torny-data-\d{4}-\d{2}-\d{2}\.json$/;
+
+/**
+ * Slett alle eksportfilene i cache-mappa. Kaster aldri: en fil som ikke lar seg
+ * slette, stopper verken de andre filene eller den som kalte.
+ */
+export function clearDataExportFiles(): void {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- lastes ved behov, se toppen av fila
+    const { Paths } = require('expo-file-system') as typeof import('expo-file-system');
+    for (const entry of Paths.cache.list()) {
+      if (!EXPORT_FILE_NAME.test(entry.name)) continue;
+      try {
+        entry.delete();
+      } catch (err) {
+        console.error('[dataExport] fikk ikke slettet eksportfila', err);
+      }
+    }
+  } catch (err) {
+    console.error('[dataExport] fikk ikke ryddet eksportfilene', err);
+  }
+}
+
 /** Hent fila, skriv den og åpne delingsarket. Kaster aldri. */
 export async function downloadDataExport(now: Date = new Date()): Promise<DataExportResult> {
   const call = await callWebRoute(EXPORT_PATH, 'GET', undefined, { timeoutMs: EXPORT_TIMEOUT_MS });
@@ -56,6 +87,8 @@ export async function downloadDataExport(now: Date = new Date()): Promise<DataEx
     const { File, Paths } = require('expo-file-system') as typeof import('expo-file-system');
     const sharing = require('expo-sharing') as typeof import('expo-sharing');
     /* eslint-enable @typescript-eslint/no-require-imports */
+    // En fil fra en tidligere eksport (Android, eller et eldre bygg) går først.
+    clearDataExportFiles();
     const file = new File(Paths.cache, dataExportFilename(now));
     file.create({ overwrite: true });
     file.write(JSON.stringify(call.body, null, 2));
@@ -64,5 +97,9 @@ export async function downloadDataExport(now: Date = new Date()): Promise<DataEx
   } catch (err) {
     console.error('[dataExport] fila kunne ikke skrives eller deles', err);
     return { ok: false, reason: 'failed' };
+  } finally {
+    // iPhone: arket er lukket, og delingen er ferdig. Også når skrivingen eller
+    // delingen kastet. Android: se toppen av fila.
+    if (Platform.OS === 'ios') clearDataExportFiles();
   }
 }

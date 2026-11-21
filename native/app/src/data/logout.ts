@@ -27,6 +27,7 @@
 // lover derfor ikke levering, og sier forbeholdet rett ut.)
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { currentDeviceUserId, supabase } from '../supabase';
+import { clearDataExportFiles } from './dataExport';
 import { getDb, listQueue, listTeeShotQueue, wipeLocalData } from './db';
 import { forgetPushBeforeSignOut } from './pushDevice';
 import { LOCAL_DATA_OWNER_KEY } from './localOwner';
@@ -185,6 +186,17 @@ async function signOutAndConfirm(): Promise<boolean> {
 }
 
 /**
+ * {@link signOutAndConfirm}, og når sesjonen ER borte: en eksportfil som ble
+ * liggende i cache-mappa etter «Last ned dataene dine» slettes. Fila er ikke
+ * et utastet slag, så den går uansett hva som skjer med køen.
+ */
+async function signOutAndTidy(): Promise<boolean> {
+  const gone = await signOutAndConfirm();
+  if (gone) clearDataExportFiles();
+  return gone;
+}
+
+/**
  * Logg ut, og la ingenting ligge igjen til neste bruker av telefonen.
  *
  * @param opts.keepUnsent Spilleren har svart ja på «logg ut likevel». Da hoppes
@@ -210,7 +222,7 @@ export async function logOut(opts?: {
   // «uleverte slag» gjelder ikke denne spilleren, og wipen ville kastet dem.
   // Logg ut og la alt ligge; vakten prøver wipen igjen ved neste innlogging.
   if (await ownedBySomeoneElse()) {
-    if (!(await signOutAndConfirm())) {
+    if (!(await signOutAndTidy())) {
       return { ok: false, reason: 'signout-failed' };
     }
     return { ok: true };
@@ -227,7 +239,7 @@ export async function logOut(opts?: {
 
   // Basen svarer ikke: logg ut likevel, og la den ligge. Se `pendingCountOrNull`.
   if (pending == null) {
-    if (!(await signOutAndConfirm())) {
+    if (!(await signOutAndTidy())) {
       return { ok: false, reason: 'signout-failed' };
     }
     return { ok: true };
@@ -240,7 +252,7 @@ export async function logOut(opts?: {
   // Vet vi ikke at sesjonen er borte, rører vi ingenting. Se
   // `signOutAndConfirm` for det ene tilfellet der auth-js svarer med feil OG
   // beholder sesjonen — det er nettopp en teeboks uten dekning.
-  if (!(await signOutAndConfirm())) {
+  if (!(await signOutAndTidy())) {
     return { ok: false, reason: 'signout-failed' };
   }
 
