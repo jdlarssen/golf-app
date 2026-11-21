@@ -14,8 +14,8 @@ import messages from '@/messages/no.json';
  * Det som bevises:
  *  1. Hver lesing er filtrert på id-en kjernen fikk. Service-rollen brukes
  *     bare til lesingene i `SERVICE_ROLE_READS` (rader RLS skjuler for eieren
- *     selv: #2207, #2445, 0252); alt annet går gjennom kallerens egen klient,
- *     så RLS gjelder i tillegg.
+ *     selv: #2207, #2445); alt annet går gjennom kallerens egen klient, så RLS
+ *     gjelder i tillegg. Vennskap er med vilje ikke blant dem (0252).
  *  2. En lesing som feiler, gir `{ ok: false }` med navnet på lesingen, også
  *     for hver av de nye tabellene. Ingen halv fil.
  *  3. Teksten under raden lister nøyaktig det fila har. Den sier hva du får,
@@ -37,6 +37,8 @@ import { buildUserExport, EXPORT_KEYS, SERVICE_ROLE_READS, type ExportRead } fro
 
 let failing: ExportRead | null;
 let userRow: Record<string, unknown> | null;
+/** What the client answers for `friendships`; null gives the default row. */
+let friendshipRows: Record<string, unknown>[] | null;
 
 const NEW_READS = [
   'handicap_history',
@@ -84,6 +86,7 @@ function respond(client: 'admin' | 'caller', op: QueryOp): QueryResponse {
   const read = readOf(op);
   if (failing === read) return { data: null, error: { message: `${read} failed` } };
   if (read === 'users') return { data: userRow };
+  if (read === 'friendships' && friendshipRows) return { data: friendshipRows };
   return { data: [{ id: `${read}-1`, user_id: USER, via: client }] };
 }
 
@@ -106,6 +109,7 @@ beforeEach(() => {
   caller.reset();
   failing = null;
   userRow = { id: USER, email: EMAIL, name: 'Meg Selv' };
+  friendshipRows = null;
 });
 
 describe('buildUserExport', () => {
@@ -136,19 +140,45 @@ describe('buildUserExport', () => {
     }
   });
 
-  // 0252: avsenderens egen økt ser ikke en venneforespørsel på e-post før den er
-  // besvart, og heller ikke en invitasjon sendt til en runde andre arrangerer.
-  it('vennskap og sendte invitasjoner leses med service-rollen, så rader RLS skjuler for avsenderen er med', async () => {
-    const result = await run();
-    if (!result.ok) throw new Error('forventet en fil');
+  // 0252: raden for en ubesvart venneforespørsel sendt på e-post sier at
+  // adressen har en konto (`addressee_id`). Avsenderens egen økt leser den
+  // ikke, og fila skal ikke gjøre det heller.
+  it('vennskap leses med kallerens klient, så RLS skjuler en ubesvart forespørsel sendt på e-post', async () => {
+    await run();
 
-    const friendships = admin.ops.find((o) => o.table === 'friendships');
+    expect(admin.ops.some((o) => o.table === 'friendships')).toBe(false);
+    const friendships = caller.ops.find((o) => o.table === 'friendships');
     expect(friendships?.filters).toEqual([
       { op: 'or', column: '', value: `requester_id.eq.${USER},addressee_id.eq.${USER}` },
     ]);
+  });
+
+  it('en ubesvart forespørsel sendt på e-post er ikke i fila, selv om klienten skulle svare med raden', async () => {
+    friendshipRows = [
+      { id: 'f-sendt', requester_id: USER, addressee_id: 'har-konto', status: 'pending', by_email: true },
+      { id: 'f-godtatt', requester_id: USER, addressee_id: 'venn-1', status: 'accepted', by_email: true },
+      { id: 'f-vanlig', requester_id: USER, addressee_id: 'venn-2', status: 'pending', by_email: false },
+      { id: 'f-mottatt', requester_id: 'venn-3', addressee_id: USER, status: 'pending', by_email: true },
+    ];
+
+    const result = await run();
+    if (!result.ok) throw new Error('forventet en fil');
+
+    expect((result.payload.friendships as { id: string }[]).map((row) => row.id)).toEqual([
+      'f-godtatt',
+      'f-vanlig',
+      'f-mottatt',
+    ]);
+    expect(JSON.stringify(result.payload)).not.toContain('har-konto');
+  });
+
+  // En invitasjon sendt til en runde andre arrangerer er skjult for avsenderens
+  // egen økt, så den leses med service-rollen, filtrert på avsenderen.
+  it('sendte invitasjoner leses med service-rollen, filtrert på avsenderen', async () => {
+    await run();
+
     const sent = admin.ops.find((o) => o.table === 'invitations');
     expect(sent?.filters).toEqual([{ op: 'eq', column: 'invited_by', value: USER }]);
-    expect(result.payload.friendships).toEqual([{ id: 'friendships-1', user_id: USER, via: 'admin' }]);
   });
 
   it('nettleserens varselrad eksporteres uten krypteringsnøklene', async () => {
