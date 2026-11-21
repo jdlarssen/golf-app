@@ -35,6 +35,12 @@ uverifisert merge. Docs-only-PR-er oppfyller kravene via no-op-tvillingen
 
 Fil: `.github/workflows/discord-pr-card.yml`. Tre steg (`scripts/loops/`):
 
+**Bare kode fra dette repoet.** Jobben sjekker ut PR-ens kode og kjører den med
+hemmelighetene (skjermbilde-steget) og med skrivetilgang til repoet. Første steg
+slipper derfor bare gjennom en PR som har koden sin i dette repoet. En PR fra en
+annen kopi (en fork), eller en PR jobben ikke får slått opp, får ikke kort: eieren
+ser den i GitHub og merger der. Regelen er låst av `tests/hooks/guard.test.sh`.
+
 1. **Trigger:** `workflow_run` når **CI** eller **CI (docs no-op)** fullfører
    (tvillingen dekker docs-only-PR-ene hendelsesdrevet, #1483), ELLER
    `pull_request: ready_for_review` når en draft flippes til ready (#1516 —
