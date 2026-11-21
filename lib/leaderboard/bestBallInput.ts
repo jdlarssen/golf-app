@@ -1,5 +1,5 @@
 import type { LbHole, LbPlayer, LbScore } from '@/lib/leaderboard';
-import { playerStrokeHandicap } from '@/lib/scoring/allocatedStrokes';
+import { matchStrokeHandicap } from '@/lib/scoring/allocatedStrokes';
 import { ranksByNetToPar } from '@/lib/scoring/tiebreaker';
 import type { GameMode, GameModeConfig, ScoringGender } from '@/lib/scoring/modes/types';
 
@@ -41,7 +41,7 @@ export type BestBallScoreInputRow = {
  *   spill (`ranksByNetToPar`). Sendes rett videre til `computeLeaderboard`, så
  *   tavla, «Hull for hull», CSV-en og appen rangerer likt.
  *
- * `courseHandicap` følger motoren (`playerStrokeHandicap`, #2218). For best ball
+ * `courseHandicap` følger motoren (`matchStrokeHandicap`, #2218). For best ball
  * er det det rå banehandicapet, som tavla alltid har brukt.
  *
  * Hjelperen segmentfiltrerer ikke: kallstedet sender inn rader som allerede er
@@ -71,6 +71,7 @@ export function bestBallBoardInput(opts: {
     }));
   const withdrawnIds = new Set(withdrawn.map((p) => p.user_id));
 
+  const matchChs = roster.map((p) => p.course_handicap ?? 0);
   const players: LbPlayer[] = roster
     .filter((p) => p.users != null && p.withdrawn_at == null)
     .map((p) => ({
@@ -78,7 +79,7 @@ export function bestBallBoardInput(opts: {
       name: p.users!.name ?? unknownPlayer,
       nickname: p.users!.nickname,
       teamNumber: p.team_number,
-      courseHandicap: playerStrokeHandicap(gameMode, modeConfig, p.course_handicap ?? 0),
+      courseHandicap: matchStrokeHandicap(gameMode, modeConfig, p.course_handicap ?? 0, matchChs),
       teeGender: p.tee_gender,
     }));
 

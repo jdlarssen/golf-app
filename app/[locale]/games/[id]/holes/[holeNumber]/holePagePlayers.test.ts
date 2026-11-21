@@ -192,6 +192,18 @@ describe('buildPlayersForClient — per-spiller-slag som motoren (#2218)', () =>
     expect(perPlayerStrokes({ game: BEST_BALL, allPlayers: FOURBALL_PLAYERS, strokeIndex: 18 }).a).toBe(1);
   });
 
+  it('ny singel-match: 20 mot 5 gir 20-spilleren en prikk på SI 15, ingen på SI 16, 5-spilleren ingen (revisjonen 20.11)', () => {
+    const SINGLES = game('singles_matchplay', {
+      kind: 'singles_matchplay',
+      team_size: 1,
+      teams_count: 2,
+      match_strokes: 'difference',
+    });
+    const players = [player('a', 1, 20), player('b', 2, 5)];
+    expect(perPlayerStrokes({ game: SINGLES, allPlayers: players, strokeIndex: 15 })).toEqual({ a: 1, b: 0 });
+    expect(perPlayerStrokes({ game: SINGLES, allPlayers: players, strokeIndex: 16 })).toEqual({ a: 0, b: 0 });
+  });
+
   it('greensome med egne lag-slag {8, 3}: lag 1 får slag på SI 5, ikke på SI 6 (#1447 holder)', () => {
     const GREENSOME = game('greensome_matchplay', {
       kind: 'greensome_matchplay',

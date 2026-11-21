@@ -472,6 +472,27 @@ describe('resolveScorecardLayout', () => {
       expect(layout.isStableford).toBe(false);
     });
 
+    it('ny singel-match: kolonnene bærer forskjellen, 20 mot 5 gir 15 og 0 (revisjonen 20.11)', () => {
+      const game: GameForHole = {
+        ...baseGame,
+        game_mode: 'singles_matchplay',
+        mode_config: {
+          kind: 'singles_matchplay',
+          team_size: 1,
+          teams_count: 2,
+          match_strokes: 'difference',
+        },
+      };
+      const me = player('me', 1, { course_handicap: 5 });
+      const opponent = player('opp', 2, { course_handicap: 20 });
+      const layout = resolveScorecardLayout(game, [me, opponent], me, false, fmt);
+      expect(layout.columns.map((c) => [c.userId, c.courseHandicap])).toEqual([
+        ['me', 0],
+        ['opp', 15],
+      ]);
+      expect(layout.primaryHandicap).toBe(0);
+    });
+
     it('best-ball uten partner i samme team → defensiv Layout A fallback', () => {
       const game: GameForHole = {
         ...baseGame,

@@ -11,6 +11,7 @@ import { calculateCourseHandicap } from '@/lib/scoring/courseHandicap';
 import { greensomeTeamHandicap } from '@/lib/scoring/modes/greensomeMatchplay';
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
 import type { CupBundleFormat } from './cupPairing';
+import { stampNewSinglesMatchConfig } from '@/lib/games/modeConfigEdit';
 
 /**
  * Innsettings-kjernen for cup-matcher — delt av generer-veiviseren (#219/#1441)
@@ -125,7 +126,8 @@ function greensomeAutoTeamStrokes(
 
 /**
  * Bygger mode_config i samme form som de manuelt opprettede cup-matchene lagrer
- * (verifisert mot prod): singles = `{kind, team_size:1}`, 2v2-format =
+ * (verifisert mot prod): singles = `{kind, team_size:1}` (pluss
+ * `match_strokes: 'difference'` fra revisjonen 20.11), 2v2-format =
  * `{kind, team_size:2, teams_count:2, allowance_pct}`. best_ball (#1441, D4)
  * og greensomes `team_strokes_override` (#1441, D10) er splittet-cup-dagens
  * tilskudd.
@@ -142,7 +144,12 @@ export function cupMatchModeConfig(
   teamStrokesOverrideAuto?: { team1: number; team2: number },
 ): GameModeConfig {
   if (format === 'singles_matchplay') {
-    return { kind: 'singles_matchplay', team_size: 1 } as GameModeConfig;
+    // Audit 2026-11-20: a new cup singles match gives the higher handicap the
+    // difference, like every new singles match (`stampNewSinglesMatchConfig`).
+    return stampNewSinglesMatchConfig({
+      kind: 'singles_matchplay',
+      team_size: 1,
+    } as GameModeConfig);
   }
   const { modeConfigAllowancePct } = cupMatchAllowance(format, allowances);
   if (format === 'best_ball') {

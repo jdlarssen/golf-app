@@ -495,9 +495,11 @@ describe('createCupMatchesFromPlan — happy path', () => {
       .filter((c) => c.table === 'games' && c.method === 'insert')
       .map((c) => c.args[0] as Record<string, unknown>)
       .find((row) => row.game_mode === 'singles_matchplay')!;
+    // Audit 2026-11-20: a new cup singles match carries the difference rule.
     expect(singlesGame.mode_config).toEqual({
       kind: 'singles_matchplay',
       team_size: 1,
+      match_strokes: 'difference',
     });
   });
 
@@ -791,7 +793,11 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
     expect(singles1Row.hole_segment).toBe('back9');
     expect(singles1Row.score_visibility).toBe('reveal');
     expect(singles1Row.source_game_id).toBe('game-bestball');
-    expect(singles1Row.mode_config).toEqual({ kind: 'singles_matchplay', team_size: 1 });
+    expect(singles1Row.mode_config).toEqual({
+      kind: 'singles_matchplay',
+      team_size: 1,
+      match_strokes: 'difference',
+    });
 
     expect(singles2Row.source_game_id).toBe('game-bestball');
   });

@@ -484,7 +484,21 @@ export type GameModeConfig =
   | { kind: 'stableford'; team_size: 2; points_table: 'standard'; ranking?: 'net_to_par' }
   | { kind: 'modified_stableford'; team_size: 1; points_table: 'modified'; ranking?: 'net_to_par' }
   | { kind: 'modified_stableford'; team_size: 2; points_table: 'modified'; ranking?: 'net_to_par' }
-  | { kind: 'singles_matchplay'; team_size: 1; teams_count: 2 }
+  | {
+      kind: 'singles_matchplay';
+      team_size: 1;
+      teams_count: 2;
+      /**
+       * Owner-ordered audit 2026-11-20: `'difference'` gives the higher
+       * handicap the difference between the two, spread over SI, and the
+       * lower handicap no strokes (`singlesStrokeHandicap`). Stamped on NEW
+       * games at creation (`stampNewGameModeConfig`, and the cup's singles),
+       * never added to an existing game. Absent = the original rule: each
+       * side gets strokes off its own full handicap, so a finished match is
+       * never recalculated.
+       */
+      match_strokes?: 'difference';
+    }
   | {
       kind: 'solo_strokeplay';
       team_size: 1;

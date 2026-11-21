@@ -244,3 +244,33 @@ describe('stampNewGameModeConfig (#2314)', () => {
     expect(carryPreservedModeConfigKeys(flaggedWolf, skins)).toEqual(skins);
   });
 });
+
+describe('stampNewGameModeConfig (singles, audit 2026-11-20)', () => {
+  // A new singles match gives the higher handicap the difference; a match
+  // created before keeps each side's own handicap and is never recalculated.
+  const singles = { kind: 'singles_matchplay', team_size: 1, teams_count: 2 } as GameModeConfig;
+  const flaggedSingles = { ...singles, match_strokes: 'difference' } as GameModeConfig;
+
+  it('stamps the difference rule on a new singles match', () => {
+    expect(stampNewGameModeConfig(singles)).toEqual(flaggedSingles);
+  });
+
+  it('an edit of a singles match without the flag does not add it', () => {
+    expect(editedModeConfig(singles, singles)).toEqual(singles);
+    expect(editedModeConfig(singles, singles)).not.toHaveProperty('match_strokes');
+  });
+
+  it('an edit of a singles match with the flag keeps it', () => {
+    expect(editedModeConfig(flaggedSingles, singles)).toEqual(flaggedSingles);
+  });
+
+  it('a draft that switches to singles is stamped as the new match it is', () => {
+    const skins = { kind: 'skins', team_size: 1, skins_scoring: 'net' } as GameModeConfig;
+    expect(editedModeConfig(skins, singles)).toEqual(flaggedSingles);
+  });
+
+  it('a draft that switches away from singles drops the flag', () => {
+    const skins = { kind: 'skins', team_size: 1, skins_scoring: 'net' } as GameModeConfig;
+    expect(carryPreservedModeConfigKeys(flaggedSingles, skins)).toEqual(skins);
+  });
+});

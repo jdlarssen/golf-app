@@ -122,6 +122,7 @@ describe('buildScorecardRows — vanlig kort', () => {
       teamOwnerId: null,
       teeGender: MENS,
       courseHandicap: 18,
+      matchCourseHandicaps: [],
       teamNumber: null,
       leaderboard: null,
     });
@@ -152,6 +153,7 @@ describe('buildScorecardRows — vanlig kort', () => {
       teamOwnerId: null,
       teeGender: MENS,
       courseHandicap: 0,
+      matchCourseHandicaps: [],
       teamNumber: null,
       leaderboard: null,
     });
@@ -169,6 +171,7 @@ describe('buildScorecardRows — vanlig kort', () => {
       teamOwnerId: null,
       teeGender: 'ladies',
       courseHandicap: 0,
+      matchCourseHandicaps: [],
       teamNumber: null,
       leaderboard: null,
     });
@@ -186,6 +189,7 @@ describe('buildScorecardRows — vanlig kort', () => {
       teamOwnerId: null,
       teeGender: MENS,
       courseHandicap: 20,
+      matchCourseHandicaps: [],
       teamNumber: 1,
       leaderboard: null,
     };
@@ -229,6 +233,7 @@ describe('buildScorecardRows — lagkort', () => {
       teamOwnerId: 'anna',
       teeGender: MENS,
       courseHandicap: 20,
+      matchCourseHandicaps: [],
       teamNumber: 1,
       leaderboard,
     });
@@ -253,6 +258,7 @@ describe('buildScorecardRows — lagkort', () => {
       // Mitt eget banehandicap er 20; laget får 10. Ville koden falt tilbake
       // til mitt, ga hull 1 og 2 to slag i stedet for ett hver.
       courseHandicap: 20,
+      matchCourseHandicaps: [],
       teamNumber: 1,
       leaderboard,
     });
@@ -277,6 +283,7 @@ describe('buildScorecardRows — lagkort', () => {
       teamOwnerId: 'cato',
       teeGender: MENS,
       courseHandicap: 0,
+      matchCourseHandicaps: [],
       teamNumber: 2,
       leaderboard,
     });
@@ -296,6 +303,7 @@ describe('buildScorecardRows — lagkort', () => {
       teamOwnerId: 'anna',
       teeGender: MENS,
       courseHandicap: 20,
+      matchCourseHandicaps: [],
       teamNumber: 1,
       leaderboard: blind,
     });
@@ -319,6 +327,7 @@ describe('buildScorecardRows — lagkort', () => {
       teamOwnerId: 'anna',
       teeGender: MENS,
       courseHandicap: 20,
+      matchCourseHandicaps: [],
       teamNumber: null,
       leaderboard,
     });
@@ -356,6 +365,7 @@ describe('buildScorecardRows — kapteinen har slettet kontoen (#2067)', () => {
       teamOwnerId,
       teeGender: MENS,
       courseHandicap: 20,
+      matchCourseHandicaps: [],
       teamNumber: 1,
       leaderboard: computeGameLeaderboard(withdrawnBundle, scores),
     });

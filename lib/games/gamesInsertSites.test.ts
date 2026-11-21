@@ -23,7 +23,7 @@ const INSERT_SITES: Record<string, { count: number; stamps: boolean; reason: str
     count: 1,
     stamps: false,
     reason:
-      'cup matches are matchplay or best ball (CupBundleFormat); the cup keeps the original rule by decision (contract #2625)',
+      'cup matches are matchplay or best ball (CupBundleFormat); the cup keeps the original ranking rule by decision (contract #2625). Its singles matches get the difference rule through stampNewSinglesMatchConfig (audit 2026-11-20)',
   },
   'lib/league/startLeagueRoundFlightCore.ts': {
     count: 1,
@@ -112,6 +112,12 @@ describe('games insert sites stamp the net-to-par ranking (#2253, #2625)', () =>
     expect(cupFormats).not.toContain('solo_strokeplay');
     expect(cupFormats).not.toMatch(/stableford|patsome|nassau/);
     expect(sources['lib/cup/insertCupMatches.ts']).not.toContain('stampNewGameModeConfig(');
+  });
+
+  it('the cup stamps its singles matches with the difference rule (audit 2026-11-20)', () => {
+    // A new singles match gives the higher handicap the difference, in the cup
+    // too. The narrow stamp touches singles only, so cup best ball keeps #2625.
+    expect(sources['lib/cup/insertCupMatches.ts']).toContain('stampNewSinglesMatchConfig(');
   });
 
   it('no database function inserts a game', () => {

@@ -8,7 +8,7 @@ import { scrambleTeamHandicap } from '@/lib/scoring/teamHandicap';
 import { modeCollapsesToTeamCard } from '@/lib/scoring/modes/types';
 import {
   alternateShotSideExtras,
-  playerStrokeHandicap,
+  matchStrokeHandicap,
 } from '@/lib/scoring/allocatedStrokes';
 import { nameInitials } from '@/lib/names/initials';
 import { resolveFlight as resolveFlightFor } from '@/lib/games/flightScope';
@@ -101,13 +101,17 @@ export function buildPlayersForClient(args: {
   if (!modeCollapsesToTeamCard(game.game_mode, holeNumber)) {
     // #2218: the strokes the engine counts — fourball/round robin allowance,
     // 0 for the gross options (patsome holes 1–6 included). The raw frozen
-    // CH made the card give strokes the leaderboard never did.
+    // CH made the card give strokes the leaderboard never did. A new singles
+    // match gives the difference to the opponent (audit 2026-11-20), so the
+    // whole roster's CHs go in — not the flight's.
+    const matchChs = allPlayers.map((p) => p.course_handicap ?? 0);
     return flight.map((p) => {
       const name = playerName(p.users) ?? unknownPlayer;
-      const ch = playerStrokeHandicap(
+      const ch = matchStrokeHandicap(
         game.game_mode,
         game.mode_config,
         p.course_handicap ?? 0,
+        matchChs,
       );
       const scoreRow = scoresByUser[p.user_id];
       return {

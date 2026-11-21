@@ -14,6 +14,7 @@
 import { strokesForHole } from '../strokeAllocation';
 import { parFor } from './parResolver';
 import type {
+  GameModeConfig,
   ScoringContext,
   SinglesMatchplayResult,
   MatchplayHoleRow,
@@ -202,6 +203,11 @@ export interface MatchplayRunningHole {
 
 export interface MatchplayRunningSide {
   userId: string;
+  /**
+   * The handicap spread over SI for this side — already through the format's
+   * rule (`matchStrokeHandicap`: the difference on a new singles match), not
+   * the raw frozen course handicap.
+   */
   courseHandicap: number;
 }
 
@@ -278,6 +284,35 @@ export function computeMatchplayRunningStatus(
 }
 
 /**
+ * The handicap one side spreads over SI in a singles match — the one home of
+ * the rule (AGENTS.md trap 4). The engine below, the hole page, the scorecard
+ * and the app all read it (the views via `matchStrokeHandicap` in
+ * `lib/scoring/allocatedStrokes.ts`).
+ *
+ * - `match_strokes: 'difference'` (new matches, owner-ordered audit
+ *   2026-11-20): the player gets `courseHandicap − lowestInMatch`. The higher
+ *   handicap gets the difference, the lower gets 0 — as the alternate shot
+ *   formats already do (`computeFoursomesCore`). 20 against 5 gives one stroke
+ *   on SI 1–15 to the 20-player and none to the 5-player. A plus handicap
+ *   gives no strokes back: +2 against 10 gives the 10-player 12.
+ * - Key absent (matches created before): the player's own full handicap,
+ *   unchanged, so a finished match is never recalculated.
+ *
+ * `lowestInMatch` is the lowest course handicap of the two players (the
+ * player's own included).
+ */
+export function singlesStrokeHandicap(
+  config: GameModeConfig,
+  courseHandicap: number,
+  lowestInMatch: number,
+): number {
+  const difference =
+    config.kind === 'singles_matchplay' && config.match_strokes === 'difference';
+  if (!difference) return courseHandicap;
+  return courseHandicap - Math.min(courseHandicap, lowestInMatch);
+}
+
+/**
  * Beregner singles matchplay-resultatet fra en ScoringContext.
  *
  * Forutsetninger:
@@ -324,6 +359,20 @@ export function compute(ctx: ScoringContext): SinglesMatchplayResult {
     grossByKey.set(`${s.userId}#${s.holeNumber}`, s.gross);
   }
 
+  // The handicap each side spreads over SI: the difference on a new match,
+  // each side's own on a match created before (`singlesStrokeHandicap`).
+  const lowestInMatch = Math.min(side1Player.courseHandicap, side2Player.courseHandicap);
+  const side1StrokeHcp = singlesStrokeHandicap(
+    ctx.game.mode_config,
+    side1Player.courseHandicap,
+    lowestInMatch,
+  );
+  const side2StrokeHcp = singlesStrokeHandicap(
+    ctx.game.mode_config,
+    side2Player.courseHandicap,
+    lowestInMatch,
+  );
+
   let side1Wins = 0;
   let side2Wins = 0;
   let holesPlayed = 0;
@@ -337,8 +386,8 @@ export function compute(ctx: ScoringContext): SinglesMatchplayResult {
     const side1Gross = grossByKey.get(`${side1Player.userId}#${hole.number}`) ?? null;
     const side2Gross = grossByKey.get(`${side2Player.userId}#${hole.number}`) ?? null;
 
-    const side1Extra = strokesForHole(side1Player.courseHandicap, hole.strokeIndex);
-    const side2Extra = strokesForHole(side2Player.courseHandicap, hole.strokeIndex);
+    const side1Extra = strokesForHole(side1StrokeHcp, hole.strokeIndex);
+    const side2Extra = strokesForHole(side2StrokeHcp, hole.strokeIndex);
 
     const side1Net = side1Gross === null ? null : side1Gross - side1Extra;
     const side2Net = side2Gross === null ? null : side2Gross - side2Extra;

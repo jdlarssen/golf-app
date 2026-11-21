@@ -7,7 +7,7 @@ import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { scrambleTeamHandicap } from '@/lib/scoring/teamHandicap';
 import {
   alternateShotSideExtras,
-  playerStrokeHandicap,
+  matchStrokeHandicap,
 } from '@/lib/scoring/allocatedStrokes';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
 import type { StablefordPointsFn } from '@/lib/scoring/modes/stableford';
@@ -361,9 +361,11 @@ export function resolveScorecardLayout(
   const isTeamMode = isBestBall || isStablefordTeam || isMatchplay;
 
   // #2218: the handicap the engine spreads over SI for one player —
-  // fourball/round robin allowance, 0 for the gross options, raw elsewhere.
+  // fourball/round robin allowance, 0 for the gross options, the difference
+  // on a new singles match (audit 2026-11-20), raw elsewhere.
+  const matchChs = players.map((p) => p.course_handicap ?? 0);
   const strokeHandicap = (p: PlayerForHole): number =>
-    playerStrokeHandicap(mode, cfg, p.course_handicap ?? 0);
+    matchStrokeHandicap(mode, cfg, p.course_handicap ?? 0, matchChs);
 
   if (!isTeamMode || revealActive) {
     return {
