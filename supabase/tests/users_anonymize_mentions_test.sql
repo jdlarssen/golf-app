@@ -18,7 +18,7 @@
 --     6. another person who shares the last name is left alone
 --     7. game_name is never touched, also when it holds the person's name
 --     8. the first name leaves the organiser's evening status and is counted
---     9. the round report that names the person is removed
+--     9. the round report that names the person is removed (genitive forms)
 --    10. its first lines leave the «round finished» notice
 --    11. a round report that does not name the person stays
 --    12. the name snapshot in the audit log is replaced
@@ -27,13 +27,22 @@
 --    15. the invitations the account sent are deleted
 --    16. the recipient's own notifications about someone else are unchanged
 --    17. a second call is a no-op and does not raise
+--    18. a name stored in capitals with other punctuation is still found
+--    19. the organiser's own words in a cancellation notice go with the name
+--    20. a report where the name is only the START of another word stays
+--        («Pettersen», «Åttafjell»)
 --
 --   hard delete (auth.users cascade, an account that never played):
---    18. the delete succeeds
---    19. the name is replaced in other people's notifications
+--    21. the delete succeeds
+--    22. the name is replaced in other people's notifications
+--
+--   hard delete of a guest (a host typed the name):
+--    23. the delete succeeds
+--    24. a namesake's notice without an id is left alone
+--    25. a notice with the guest's id next to the name is replaced
 --
 --   EXECUTE:
---    20. authenticated cannot call scrub_user_mentions
+--    26. authenticated cannot call scrub_user_mentions
 --
 -- See supabase/tests/README.md for how to run.
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -42,7 +51,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(20);
+select plan(26);
 
 \ir fixtures/rls_helpers.psql
 
@@ -52,18 +61,38 @@ select torny_rls.seed_active_game();
 -- The person who deletes the account: «Petter Åttesen», nickname «Åtta».
 update public.users set name = 'Petter Åttesen', nickname = 'Åtta'
  where id = torny_rls.active_id();
--- The hard-delete person: never on a roster.
-update public.users set name = 'Hanna Hardslett'
+-- The hard-delete person: never on a roster, with a completed profile.
+update public.users set name = 'Hanna Hardslett', profile_completed_at = now()
  where id = torny_rls.outsider_id();
+
+-- A guest a host typed in with the name of a real player («Kari Åttesen»).
+insert into auth.users (id, instance_id, aud, role, email)
+  values ('00000000-0000-4000-a000-0000000000d9', '00000000-0000-0000-0000-000000000000'::uuid,
+          'authenticated', 'authenticated', 'mentions-guest@example.test');
+insert into public.users (id, email, name, is_guest, guest_created_by)
+  values ('00000000-0000-4000-a000-0000000000d9', 'mentions-guest@example.test', 'Kari Åttesen',
+          true, torny_rls.admin_id())
+  on conflict (id) do update
+    set name = excluded.name, is_guest = excluded.is_guest, guest_created_by = excluded.guest_created_by;
 
 -- A second round the person did NOT play, with its own report.
 insert into public.games (id, name, course_id, tee_box_id, status, game_mode, created_by, started_at, round_report)
   values ('00000000-0000-4000-a000-0000000000a9', 'Other round', torny_rls.course_id(),
           torny_rls.tee_box_id(), 'active', 'solo_strokeplay', torny_rls.admin_id(), now(),
           'Petter Åttesen var ikke med her.');
+-- Genitive forms only: «Petters», «Åttas».
 update public.games
-   set round_report = 'Petter Åttesen åpnet med birdie. «Åtta» holdt unna til slutt.'
+   set round_report = 'Petters birdie på første ga tonen. Ingen tok igjen «Åttas» forsprang.'
  where id = torny_rls.game_id();
+
+-- A third round the person DID play. Its report holds the first name and the
+-- nickname only as the start of other words.
+insert into public.games (id, name, course_id, tee_box_id, status, game_mode, created_by, started_at, round_report)
+  values ('00000000-0000-4000-a000-0000000000a8', 'Third round', torny_rls.course_id(),
+          torny_rls.tee_box_id(), 'active', 'solo_strokeplay', torny_rls.admin_id(), now(),
+          'Pettersen og Åttafjell spilte jevnt hele veien.');
+insert into public.game_players (game_id, user_id, team_number, flight_number)
+  values ('00000000-0000-4000-a000-0000000000a8', torny_rls.active_id(), 1, 1);
 
 -- Notifications in the flight-mate's inbox. `tag` names the row for the asserts.
 insert into public.notifications (user_id, kind, payload) values
@@ -94,7 +123,16 @@ insert into public.notifications (user_id, kind, payload) values
      'report_start', 'Petter Åttesen åpnet med birdie.')),
   (torny_rls.flightmate_id(), 'club_join_request', jsonb_build_object(
      'tag', 'hard', 'group_id', torny_rls.group_id(), 'group_name', 'K',
-     'requester_name', 'Hanna Hardslett'));
+     'requester_name', 'Hanna Hardslett')),
+  (torny_rls.flightmate_id(), 'scorecard_approved', jsonb_build_object(
+     'tag', 'capitals', 'game_id', torny_rls.game_id(), 'game_name', 'G',
+     'approver_name', 'PETTER  Åttesen, "Åtta"')),
+  (torny_rls.flightmate_id(), 'game_cancelled', jsonb_build_object(
+     'tag', 'cancelled', 'game_name', 'G', 'tee_off_at', null,
+     'organizer_name', 'Petter Åttesen', 'message', 'Beklager, hilsen Petter')),
+  (torny_rls.flightmate_id(), 'friend_request', jsonb_build_object(
+     'tag', 'guest-id', 'actor_id', '00000000-0000-4000-a000-0000000000d9',
+     'actor_name', 'Kari Åttesen'));
 
 insert into public.admin_audit_log (actor_user_id, actor_name, event_type, target_type, target_id, payload)
   values (torny_rls.active_id(), 'Petter Åttesen', 'game.reopened', 'game', torny_rls.game_id(), '{}'::jsonb);
@@ -196,6 +234,19 @@ select lives_ok(
   format('select public.anonymize_user(%L::uuid)', torny_rls.active_id()),
   'a second call does not raise');
 
+select is(pg_temp.note('capitals')->>'approver_name', 'Slettet bruker',
+  'a name stored in capitals with other punctuation is found (the narrowed scan loses nothing)');
+
+select ok(
+  pg_temp.note('cancelled')->>'organizer_name' = 'Slettet bruker'
+    and not pg_temp.note('cancelled') ? 'message',
+  'the cancellation notice loses the organiser''s name and own words');
+
+select is(
+  (select round_report from public.games where id = '00000000-0000-4000-a000-0000000000a8'),
+  'Pettersen og Åttafjell spilte jevnt hele veien.',
+  'a report where the name is only the start of another word stays');
+
 -- ═════════════════════════════════════════════════════════════════════════════
 -- Hard delete — the auth.users cascade fires the trigger
 -- ═════════════════════════════════════════════════════════════════════════════
@@ -205,6 +256,17 @@ select lives_ok(
 
 select is(pg_temp.note('hard')->>'requester_name', 'Slettet bruker',
   'the hard-delete path replaces the name in other people''s notifications too');
+
+-- A guest: the name is a host's text, so only the id is trusted.
+select lives_ok(
+  $$ delete from auth.users where id = '00000000-0000-4000-a000-0000000000d9'::uuid $$,
+  'a guest that is on no roster hard-deletes');
+
+select is(pg_temp.note('relative')->>'approver_name', 'Kari Åttesen',
+  'deleting a guest does not touch a namesake''s notice that has no id');
+
+select is(pg_temp.note('guest-id')->>'actor_name', 'Slettet bruker',
+  'deleting a guest replaces the name where the guest''s id stands next to it');
 
 -- ═════════════════════════════════════════════════════════════════════════════
 -- EXECUTE

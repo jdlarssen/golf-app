@@ -15,7 +15,11 @@
 -- New: scrub_user_mentions(user, name, nickname, email), called by
 -- anonymize_user before it changes anything, and by a BEFORE DELETE trigger on
 -- public.users, so the hard-delete path (an account that never played, a guest)
--- cleans the same rows inside the same transaction.
+-- cleans the same rows inside the same transaction. On that path the text is
+-- only searched for an account that has completed its profile and is not a
+-- guest. A guest, and an account that is removed again right after it was
+-- made (a creation that is rolled back), is matched on the id alone, so a
+-- name a host typed can never rewrite a namesake's notice.
 --
 -- How a name is found. A payload key with an id next to it (`player_id`,
 -- `submitter_id`, `actor_id`, the sign-up's `request_id`) is matched on the id,
@@ -32,8 +36,16 @@
 -- nullable), also in app builds that are already installed.
 --
 -- A round report cannot be edited word by word, so the report of a round the
--- person played is removed when it names them (first name, last name or
--- nickname as the start of a word). The result list of the round is untouched.
+-- person played is removed when it names them: first name, last name or
+-- nickname as a whole word, with or without a genitive s («Ola», «Olas», never
+-- «Olav»). The result list of the round is untouched.
+--
+-- The scan is narrowed before the JSON work: a notification is only opened
+-- when its text holds the person's id, one of the sign-up ids, or the first
+-- word of the name, the nickname or the masked address.
+--
+-- Rows written before this migration are not revisited: an account that was
+-- deleted earlier has no name left to search for.
 --
 -- anonymize_user: the live body on staging 2026-11-21 (md5(prosrc) 98ae28c6,
 -- byte-identical to 0247) plus three changes: it reads name, nickname and
@@ -76,8 +88,8 @@ as $function$
   from (select public.mention_norm(p_value) as v) n;
 $function$;
 
--- Does this prose name the person? A token of three letters or more matches the
--- start of a word («Ola» finds «Olas»); a shorter one must be the whole word.
+-- Does this prose name the person? A token must be a whole word, with or
+-- without a genitive s: «Per» finds «Per» and «Pers», not «personlig».
 create or replace function public.mention_in_prose(p_text text, p_tokens text[])
 returns boolean
 language sql
@@ -85,9 +97,10 @@ immutable
 set search_path = ''
 as $function$
   select coalesce(bool_or(
-    position(' ' || t.token || case when length(t.token) < 3 then ' ' else '' end
-             in ' ' || public.mention_norm(p_text) || ' ') > 0), false)
-  from unnest(p_tokens) as t(token);
+    position(' ' || t.token || ' ' in n.v) > 0
+      or position(' ' || t.token || 's ' in n.v) > 0), false)
+  from unnest(p_tokens) as t(token),
+       (select ' ' || public.mention_norm(p_text) || ' ' as v) n;
 $function$;
 
 -- ─── The scrub ─────────────────────────────────────────────────────────────
@@ -125,6 +138,7 @@ as $function$
     v_forms text[];
     v_short text[];
     v_tokens text[];
+    v_needles text[];
     v_games text[];
     v_requests text[];
   begin
@@ -158,6 +172,14 @@ as $function$
     ], null);
     v_short := array_remove(array[v_first, v_nick, v_name], null);
     v_tokens := array_remove(array[v_first, v_last, v_nick], null);
+    -- Every form above holds the first word of the name, of the nickname or of
+    -- the masked address. A payload whose text holds none of them (and neither
+    -- the id nor a sign-up id) cannot match, and is never opened.
+    v_needles := array_remove(array[
+      split_part(v_name, ' ', 1),
+      split_part(v_nick, ' ', 1),
+      split_part(v_masked, ' ', 1)
+    ], null);
 
     select coalesce(array_agg(gp.game_id::text), array[]::text[]) into v_games
       from public.game_players gp where gp.user_id = p_user_id;
@@ -165,7 +187,8 @@ as $function$
       from public.game_registration_requests r where r.user_id = p_user_id;
 
     -- (1) The sign-up message is the person's own words; the request row it
-    -- came from is deleted with the account.
+    -- came from is deleted with the account. The same goes for what an
+    -- organiser wrote when cancelling a round.
     update public.notifications n
        set payload = n.payload - 'message'
      where n.user_id <> p_user_id
@@ -173,6 +196,13 @@ as $function$
        and n.payload ? 'message'
        and (n.payload->>'request_id' = any(v_requests)
             or public.mention_is_person(n.payload->>'requester_name', v_forms, v_full));
+
+    update public.notifications n
+       set payload = n.payload - 'message'
+     where n.user_id <> p_user_id
+       and n.kind = 'game_cancelled'
+       and n.payload ? 'message'
+       and public.mention_is_person(n.payload->>'organizer_name', v_forms, v_full);
 
     -- (2) The name keys.
     update public.notifications n
@@ -204,6 +234,11 @@ as $function$
           from public.notifications n2
          where n2.user_id <> p_user_id
            and n2.payload ?| c_person_keys
+           and (strpos(n2.payload::text, v_uid) > 0
+                or n2.payload->>'request_id' = any(v_requests)
+                or exists (
+                     select 1 from unnest(v_needles) as nd(needle)
+                      where strpos(lower(n2.payload::text), nd.needle) > 0))
       ) s
      where n.id = s.id
        and s.scrubbed is distinct from n.payload;
@@ -295,9 +330,19 @@ language plpgsql
 security definer
 set search_path = ''
 as $function$
+  declare
+    -- A guest's name is typed by a host, and an account without a completed
+    -- profile was made moments ago (a creation that is rolled back lands
+    -- here). Neither has written anything under its own name, so the text is
+    -- not searched: id matches only.
+    v_text boolean := not old.is_guest and old.profile_completed_at is not null;
   begin
     if old.deleted_at is null then
-      perform public.scrub_user_mentions(old.id, old.name, old.nickname, old.email);
+      perform public.scrub_user_mentions(
+        old.id,
+        case when v_text then old.name end,
+        case when v_text then old.nickname end,
+        case when v_text then old.email end);
     end if;
     return old;
   end;
