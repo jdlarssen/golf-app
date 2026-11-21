@@ -118,7 +118,7 @@ const adminGamePlayersInsertMock = vi.fn();
 
 function makeAdminBuilder() {
   const builder: Record<string, unknown> = {};
-  for (const m of ['filter', 'is', 'eq', 'select']) {
+  for (const m of ['filter', 'is', 'eq', 'in', 'select']) {
     builder[m] = () => builder;
   }
   // Awaitable terminal — supabase-js gjør samme triks på update-chains.
@@ -172,6 +172,15 @@ vi.mock('@/lib/supabase/admin', () => ({
             });
             return builder;
           },
+        };
+      }
+      if (table === 'invitation_receipts') {
+        // 0252: the receipt marks. None of the invitations in this suite is
+        // a receipt, so the read answers «no marks».
+        return {
+          select: () => ({
+            in: () => ({ returns: async () => ({ data: [], error: null }) }),
+          }),
         };
       }
       if (table === 'users') {

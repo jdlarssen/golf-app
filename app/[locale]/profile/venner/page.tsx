@@ -7,7 +7,6 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { getServerClient } from '@/lib/supabase/server';
 import { AppShell } from '@/components/ui/AppShell';
-import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { Kicker } from '@/components/ui/Kicker';
 import { SmartLink } from '@/components/ui/SmartLink';
@@ -18,7 +17,6 @@ import type { FriendStats } from '@/lib/friends/friendStats';
 import { lastPlayedLabel } from '@/lib/friends/lastPlayedLabel';
 import { nameInitials } from '@/lib/names/initials';
 import { formatHcpDisplay } from '@/lib/handicap/signFormat';
-import { sendFriendInvite } from '../../invite/actions';
 import {
   sendFriendRequest,
   addFriendByEmail,
@@ -31,12 +29,11 @@ import { ChevronRightIcon } from '@/components/icons';
 
 type SearchParams = Promise<{
   status?: string | string[];
-  invite_email?: string | string[];
 }>;
 
 const STATUS_TONE: Record<string, 'success' | 'error' | 'info'> = {
   requested: 'success',
-  invited: 'success',
+  sent_by_email: 'success',
   accepted: 'success',
   already_friends: 'info',
   already_pending: 'info',
@@ -44,12 +41,15 @@ const STATUS_TONE: Record<string, 'success' | 'error' | 'info'> = {
   removed: 'info',
   self: 'error',
   email_required: 'error',
+  invalid_email: 'error',
+  disposable_email: 'error',
+  quota: 'error',
   error: 'error',
 };
 
 type StatusKey =
   | 'requested'
-  | 'invited'
+  | 'sent_by_email'
   | 'accepted'
   | 'already_friends'
   | 'already_pending'
@@ -57,6 +57,9 @@ type StatusKey =
   | 'removed'
   | 'self'
   | 'email_required'
+  | 'invalid_email'
+  | 'disposable_email'
+  | 'quota'
   | 'error';
 
 /** Section kicker as the artboard spaces it: 18 px above, 8 px below. */
@@ -118,16 +121,12 @@ export default async function VennerPage({
 
   const sp = await searchParams;
   const statusCode = first(sp.status);
-  const inviteEmail = first(sp.invite_email);
 
   const statusBanner =
     statusCode && statusCode in STATUS_TONE
       ? {
           tone: STATUS_TONE[statusCode],
-          text:
-            statusCode === 'invited' && inviteEmail
-              ? t('status.invited', { email: inviteEmail })
-              : t(`status.${statusCode as StatusKey}`),
+          text: t(`status.${statusCode as StatusKey}`),
         }
       : undefined;
 
@@ -195,23 +194,6 @@ export default async function VennerPage({
         {statusBanner && (
           <div className="mx-4 mt-3.5">
             <Banner tone={statusBanner.tone}>{statusBanner.text}</Banner>
-          </div>
-        )}
-
-        {inviteEmail && (
-          <div className="mx-4 mt-3.5">
-            <Card>
-              <p className="mb-3 font-sans text-[15px] text-text">
-                {t('invitePrompt', { email: inviteEmail })}
-              </p>
-              <form action={sendFriendInvite} className="flex items-center gap-2">
-                <input type="hidden" name="email" value={inviteEmail} />
-                <input type="hidden" name="return" value="venner" />
-                <SubmitButton pendingLabel={t('invitePending')}>
-                  {t('inviteButton', { email: inviteEmail })}
-                </SubmitButton>
-              </form>
-            </Card>
           </div>
         )}
 
