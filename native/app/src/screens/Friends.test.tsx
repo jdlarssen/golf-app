@@ -18,12 +18,11 @@ import { Share } from 'react-native';
 import {
   addFriendByEmail,
   fetchFriends,
-  inviteFriend,
   removeFriend,
   respondToFriendRequest,
   sendFriendRequest,
 } from '../data/friends';
-import { FRIENDS_TEXT, friendStatusLine, invitedLine } from '../lib/friendsCopy';
+import { FRIENDS_TEXT, addByEmailLine, friendStatusLine } from '../lib/friendsCopy';
 import type { ScreenProps } from '../navigation';
 import { Friends } from './Friends';
 import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
@@ -38,7 +37,6 @@ jest.mock('../data/friends', () => ({
   addFriendByEmail: jest.fn(),
   respondToFriendRequest: jest.fn(),
   removeFriend: jest.fn(),
-  inviteFriend: jest.fn(),
 }));
 // Fokuset kjøres som en effekt, og testen kan fokusere skjermen igjen (som League.test.tsx).
 let mockFocus: () => void = () => {};
@@ -58,7 +56,6 @@ const respondMock = respondToFriendRequest as jest.Mock;
 const removeMock = removeFriend as jest.Mock;
 const sendMock = sendFriendRequest as jest.Mock;
 const addByEmailMock = addFriendByEmail as jest.Mock;
-const inviteMock = inviteFriend as jest.Mock;
 
 const NONE = { roundsTogether: 0, lastPlayedAt: null, lastGameName: null };
 const FULL = {
@@ -218,10 +215,9 @@ describe('Friends', () => {
     expect(screen.getByTestId('friends-open-ola')).toBeTruthy();
   });
 
-  it('viser tomtilstanden, og tilbyr invitasjon når adressen ikke er på Tørny', async () => {
+  it('viser tomtilstanden, og gir samme kvittering for enhver adresse', async () => {
     fetchFriendsMock.mockResolvedValue({ ok: true, data: EMPTY });
-    addByEmailMock.mockResolvedValue({ ok: true, status: 'not_found' });
-    inviteMock.mockResolvedValue({ ok: true, status: 'invited' });
+    addByEmailMock.mockResolvedValue({ ok: true, status: 'requested' });
     await renderScreen();
 
     expect(await screen.findByTestId('friends-empty')).toBeTruthy();
@@ -234,14 +230,25 @@ describe('Friends', () => {
       fireEvent.press(screen.getByTestId('friends-email-submit'));
     });
     expect(addByEmailMock).toHaveBeenCalledWith('ny@example.com');
-    expect(screen.getByTestId('friends-invite-offer')).toBeTruthy();
-
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('friends-invite'));
-    });
-    expect(inviteMock).toHaveBeenCalledWith('ny@example.com');
-    expect(screen.getByTestId('friends-status')).toHaveTextContent(invitedLine('ny@example.com'));
+    expect(screen.getByTestId('friends-status')).toHaveTextContent(addByEmailLine('requested').text);
+    // Ett steg: ingen egen invitasjon å trykke på etterpå.
     expect(screen.queryByTestId('friends-invite-offer')).toBeNull();
+    expect(screen.getByTestId('friends-email-input').props.value).toBe('');
+  });
+
+  it('sier hvorfor når adressen ikke kan brukes, og lar den stå', async () => {
+    fetchFriendsMock.mockResolvedValue({ ok: true, data: EMPTY });
+    addByEmailMock.mockResolvedValue({ ok: true, status: 'quota' });
+    await renderScreen();
+    await screen.findByTestId('friends-empty');
+
+    await fireEvent.press(screen.getByTestId('friends-email-toggle'));
+    await fireEvent.changeText(screen.getByTestId('friends-email-input'), 'ny@example.com');
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('friends-email-submit'));
+    });
+    expect(screen.getByTestId('friends-status')).toHaveTextContent(addByEmailLine('quota').text);
+    expect(screen.getByTestId('friends-email-input').props.value).toBe('ny@example.com');
   });
 
   it('sier at venner krever nett, og prøver igjen', async () => {

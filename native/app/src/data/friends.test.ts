@@ -247,12 +247,13 @@ describe('vennehandlingene', () => {
     expect(await friends().sendFriendRequest('per')).toEqual(expected);
   });
 
-  it('gir invitasjonens egen kode, og «unknown» for en kode den ikke kjenner', async () => {
+  it('gir e-postveiens egen kode, og «error» for en kode den ikke kjenner', async () => {
     respondWith(200, { status: 'quota' });
-    expect(await friends().inviteFriend('ny@example.com')).toEqual({ ok: true, status: 'quota' });
+    expect(await friends().addFriendByEmail('ny@example.com')).toEqual({ ok: true, status: 'quota' });
     expect(JSON.parse(String(requestInit().body))).toEqual({ email: 'ny@example.com' });
 
-    respondWith(200, { status: 'noe_nytt' });
-    expect(await friends().inviteFriend('ny@example.com')).toEqual({ ok: true, status: 'unknown' });
+    // Koden fra før 0252 finnes ikke lenger: serveren sier aldri hvem som har konto.
+    respondWith(200, { status: 'not_found' });
+    expect(await friends().addFriendByEmail('ny@example.com')).toEqual({ ok: true, status: 'error' });
   });
 });
