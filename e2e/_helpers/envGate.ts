@@ -12,6 +12,8 @@
  * import it.
  */
 
+import { testDatabaseRefusal } from '../../lib/supabaseTarget';
+
 // Not NodeJS.ProcessEnv: Next's global types make NODE_ENV required there.
 // process.env is still assignable to this.
 type E2eEnv = Readonly<Record<string, string | undefined>>;
@@ -93,6 +95,31 @@ export function e2eEnvGateFailure(env: E2eEnv): string | null {
     '  E2E_ALLOW_ENV_SKIP=1 npm run e2e:gate',
     '',
     'E2E_ALLOW_ENV_SKIP has no effect in CI.',
+    '',
+  ].join('\n');
+}
+
+/**
+ * `null` = run. A string = refuse the run: the suite is pointed at a database
+ * that is not staging (or a local one).
+ *
+ * The specs create and delete rows with the service-role key. Until the audit
+ * of 20.11 only habit kept that away from production — one wrong env file was
+ * enough. No opt-out, locally or in CI. An unset URL is not this gate's
+ * business: `e2eEnvGateFailure` reports it.
+ */
+export function e2eTargetFailure(env: E2eEnv): string | null {
+  const url = env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) return null;
+  const refusal = testDatabaseRefusal(url);
+  if (refusal === null) return null;
+  return [
+    '',
+    `Refusing to run the suite: ${refusal}`,
+    '',
+    'Load the staging env into this shell and re-run:',
+    '',
+    '  set -a && source .env.staging.local && set +a',
     '',
   ].join('\n');
 }

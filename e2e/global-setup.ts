@@ -7,7 +7,7 @@ import {
   type LocalIdentity,
   type ServerIdentity,
 } from '@/lib/serverIdentity/assess';
-import { e2eEnvGateFailure, missingE2eEnvReason } from './_helpers/envGate';
+import { e2eEnvGateFailure, e2eTargetFailure, missingE2eEnvReason } from './_helpers/envGate';
 
 /**
  * Stops a run that would otherwise be tested against the wrong server (#1299,
@@ -24,10 +24,14 @@ import { e2eEnvGateFailure, missingE2eEnvReason } from './_helpers/envGate';
  * Fail-closed on anything that answers but does not match; fail-open only when
  * nothing is listening at all.
  *
- * Before that, the env gate (#2226) refuses a run whose authenticated specs
- * would all skip themselves — see `./_helpers/envGate`.
+ * Before that, two gates in `./_helpers/envGate`: the target gate refuses a run
+ * pointed at anything but staging or a local database, and the env gate (#2226)
+ * refuses a run whose authenticated specs would all skip themselves.
  */
 export default async function globalSetup(config: FullConfig): Promise<void> {
+  // First: never against production (or any database we do not know).
+  const targetFailure = e2eTargetFailure(process.env);
+  if (targetFailure !== null) throw new Error(targetFailure);
   const envFailure = e2eEnvGateFailure(process.env);
   if (envFailure !== null) throw new Error(envFailure);
   const envGap = missingE2eEnvReason(process.env);
