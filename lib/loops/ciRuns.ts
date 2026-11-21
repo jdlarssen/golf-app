@@ -47,7 +47,8 @@ const FILES_PER_PAGE = 100;
 const FILES_MAX_PAGES = 3;
 
 /**
- * Endrede filer i PR-en, eller `null` når vi ikke kan stole på lista: HTTP ≠ 200 eller
+ * Endrede filer i PR-en (for omdøpte filer både nytt og gammelt navn), eller `null`
+ * når vi ikke kan stole på lista: HTTP ≠ 200 eller
  * avkortet av 3×100-taket. `null` MÅ skilles fra `[]` (tom diff) — kallstedene leser
  * `null` som «kode-PR» (fail-closed), ellers slås ci.yml-gaten stille AV (#1520).
  */
@@ -63,8 +64,13 @@ export async function fetchChangedFiles(
       `/repos/${repo}/pulls/${n}/files?per_page=${FILES_PER_PAGE}&page=${page}`,
     );
     if (res.status !== 200) return null;
-    const batch = (res.json as Array<{ filename?: string }>) ?? [];
-    for (const f of batch) if (f.filename) files.push(f.filename);
+    const batch = (res.json as Array<{ filename?: string; previous_filename?: string }>) ?? [];
+    for (const f of batch) {
+      if (f.filename) files.push(f.filename);
+      // En omdøpt fil står med det nye navnet. Det gamle navnet teller også: en fil
+      // flyttet UT av en sti bare eieren merger, er fortsatt en endring i den stien.
+      if (f.previous_filename) files.push(f.previous_filename);
+    }
     if (batch.length < FILES_PER_PAGE) return files;
   }
   // Siste side var full: det kan finnes flere filer vi ikke har sett (#2835).

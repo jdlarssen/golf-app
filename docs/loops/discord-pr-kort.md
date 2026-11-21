@@ -125,7 +125,9 @@ derfor jobben selv:
 **Kvitteringskort, ikke godkjenningskort:** kvalifiserte PR-er merges av kortet
 selv; knappen står bare igjen der eieren faktisk trengs. Trykker eieren en
 gjenværende merge-knapp, verifiserer #1124-endepunktet CI grønn på nytt,
-av-drafter og rebase-merger (uendret) — den stien merger med eierens egen
+av-drafter og rebase-merger. Mergen sender med hvilken versjon (head-SHA) CI-sjekken
+gjaldt: kommer det en ny commit i mellomtiden, svarer GitHub 409, ingenting merges,
+og eieren får beskjed om å trykke igjen når CI er grønn. Den stien merger med eierens egen
 `GITHUB_LOOP_PAT`-identitet, ikke workflow-identiteten, så GitHubs auto-close
 antas å fungere der som før og har ikke fått lukke-steget. Ser du et issue stå
 åpent etter en knapp-merge også, er antakelsen feil: da hører `closeLinkedIssues`
@@ -170,6 +172,12 @@ vinner:
      `lib/payment/**`, `.github/**`, `.githooks/**`, `.claude/**`, `lib/loops/**`,
      `scripts/loops/**`, appens innloggings-, konto- og butikkflater under `native/app/`
      (fillista i `NEVER_AUTO_MERGE_RULES`, #2134), `native/ios/**` eller `native/android/**`.
+     Fra gjennomgangen 20.11 står også kontoslettingens delte hjelper
+     (`lib/users/deleteAccount.ts`), `components/auth/**`, `components/passkey/**`,
+     tilgangssjekkene `lib/cron/auth.ts`, `lib/api/appAuth.ts` og `lib/admin/auth.ts`,
+     appens `devLogin.ts` og AI-samtykkets filer (web og app) på lista.
+     En omdøpt fil teller med både nytt og gammelt navn: en fil flyttet ut av en
+     sti på lista er fortsatt en endring i den stien.
      Migrasjoner, destruktive flyter,
      auth/sikkerhet, penger, enforcement-flater, merge-porten selv og appens
      auth-, konto- og butikkflater beholder menneske-porten (fail-closed, bredere enn issue-ets
@@ -200,9 +208,14 @@ vinner:
      PR-en på knapp-kortet for alltid, og eieren merger manuelt.
      Kommentar-oppslaget er selv fail-closed: lar kommentarene seg ikke lese, blir
      utfallet `noop` (ingen kort, ingen merge) — en fail-open her ville gjenåpnet
-     hullet #1656 lukket.
+     hullet #1656 lukket. Lar labelene på et lenket issue seg ikke lese
+     (`linkedIssueNeedsDecision` svarer `null`), blir utfallet knapp-kort: en
+     eierbeslutning kan vente uten at kortet ser den.
    - **Staging-porten:** PR-en er bruker-synlig (≥1 commit med `feat|fix|perf`-prefiks
      uten `[no-changelog]`, §T7) OG mangler `staging-verified`-labelen (#1076).
+     Lar commit-lista seg ikke lese (`fetchCommitMessages` svarer `null` ved HTTP-feil
+     eller avkortet liste), regnes PR-en som bruker-synlig: uten labelen blir
+     utfallet knapp-kort, aldri auto-merge.
 3. **`auto-merge`** ellers.
 
 Hver degradering fra auto-merge til knapp-kort logges med `demotedReason` — ingen

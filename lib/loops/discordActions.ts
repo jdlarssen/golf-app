@@ -324,12 +324,18 @@ async function handleMergePr(
   }
 
   // Alltid rebase — squash er forbudt i repoet (mister granulær audit-trail).
+  // `sha` binder mergen til versjonen CI-porten over sjekket: kommer det en ny
+  // commit mellom sjekken og mergen, svarer GitHub 409 og ingenting merges.
   const merge = await gh.rest('PUT', `/repos/${LOOP_REPO}/pulls/${action.pr}/merge`, {
     merge_method: 'rebase',
+    sha: pr.head.sha,
   });
   if (merge.status !== 200) {
     const detail = (merge.json as { message?: string })?.message ?? `HTTP ${merge.status}`;
-    const failure = `Fikk ikke merget PR #${action.pr}: ${detail}`;
+    const failure =
+      merge.status === 409
+        ? `PR #${action.pr} fikk nye commits mens jeg sjekket den — ikke merget. Trykk igjen når CI er grønn på den nye versjonen.`
+        : `Fikk ikke merget PR #${action.pr}: ${detail}`;
     if (!flippedFromDraft) return failure;
     // « — » skiller GitHubs melding (uforutsigbar tegnsetting) fra rollback-noten,
     // så svaret ikke blir en løpesetning når meldingen mangler punktum.

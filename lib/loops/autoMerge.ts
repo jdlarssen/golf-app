@@ -26,6 +26,7 @@ const PAYMENT = 'rører betaling';
 const API = 'rører serverens API';
 const GATE = 'rører merge-porten/verktøyene';
 const APP_BUILD = 'rører app-bygg/signering';
+const AI_CONSENT = 'rører AI-samtykket';
 
 export const NEVER_AUTO_MERGE_RULES: ReadonlyArray<{ glob: string; ownerReason: string }> = [
   { glob: 'supabase/**', ownerReason: DB }, // migrasjoner (prod-brannmur #1074), RLS, DB-config
@@ -73,6 +74,27 @@ export const NEVER_AUTO_MERGE_RULES: ReadonlyArray<{ glob: string; ownerReason: 
   // `native/ios/` er nød-utgangen etter slipp til N8 er lukket og én app-oppdatering er ute.
   { glob: 'native/ios/**', ownerReason: APP_BUILD },
   { glob: 'native/android/**', ownerReason: APP_BUILD },
+  // Gjennomgangen 20.11 (eierkort 9): kontosletting, innlogging og AI-samtykke hadde
+  // filer som ingen rad over traff. Den delte slette-hjelperen brukes av selv-slett,
+  // admin-slett og API-ruta; skjemaene for sletting/utlogging og passkey-knappene
+  // ligger under components/; de tre `auth.ts`-filene avgjør hvem som slipper inn i
+  // cron-, app- og admin-flatene; `devLogin.ts` er appens test-innlogging.
+  { glob: 'lib/users/deleteAccount.ts', ownerReason: DELETE },
+  { glob: 'components/auth/**', ownerReason: AUTH },
+  { glob: 'components/passkey/**', ownerReason: AUTH },
+  { glob: 'lib/cron/auth.ts', ownerReason: AUTH },
+  { glob: 'lib/api/appAuth.ts', ownerReason: AUTH },
+  { glob: 'lib/admin/auth.ts', ownerReason: AUTH },
+  { glob: 'native/app/src/devLogin.ts', ownerReason: AUTH },
+  // AI-samtykket: hvem som har sagt ja til at rundene deres sendes til en AI-tjeneste.
+  { glob: 'lib/ai/consent.ts', ownerReason: AI_CONSENT },
+  { glob: 'app/[locale]/profile/AiConsentToggle.tsx', ownerReason: AI_CONSENT },
+  { glob: 'components/aiConsent/**', ownerReason: AI_CONSENT },
+  { glob: 'native/app/src/data/aiConsent.ts', ownerReason: AI_CONSENT },
+  { glob: 'native/app/src/data/aiConsentGate.ts', ownerReason: AI_CONSENT },
+  { glob: 'native/app/src/components/AiConsentGate.tsx', ownerReason: AI_CONSENT },
+  { glob: 'native/app/src/screens/AiConsentQuestion.tsx', ownerReason: AI_CONSENT },
+  { glob: 'native/app/src/lib/aiConsentCopy.ts', ownerReason: AI_CONSENT },
 ];
 
 export const NEVER_AUTO_MERGE_GLOBS: readonly string[] = NEVER_AUTO_MERGE_RULES.map((r) => r.glob);
@@ -191,6 +213,58 @@ export function isUserVisibleByCommits(commitMessages: string[]): boolean {
   });
 }
 
+// ── Oppslagene bak klassifiseringen (decide-steget) ──────────────────────────
+// Begge svarer `null` når GitHub ikke ga et helt svar. `null` er ikke «ingenting
+// funnet»: klassifiseringen under leser det som «vet ikke» og holder PR-en til eieren.
+
+const COMMITS_PER_PAGE = 100;
+const COMMITS_MAX_PAGES = 3;
+
+/** Commit-meldingene på PR-en, eller `null` ved HTTP ≠ 200 eller avkortet liste. */
+export async function fetchCommitMessages(
+  gh: GitHubClient,
+  repo: string,
+  n: number,
+): Promise<string[] | null> {
+  const messages: string[] = [];
+  for (let page = 1; page <= COMMITS_MAX_PAGES; page++) {
+    const res = await gh.rest(
+      'GET',
+      `/repos/${repo}/pulls/${n}/commits?per_page=${COMMITS_PER_PAGE}&page=${page}`,
+    );
+    if (res.status !== 200) return null;
+    const batch = (res.json as Array<{ commit?: { message?: string } }>) ?? [];
+    for (const c of batch) if (c.commit?.message) messages.push(c.commit.message);
+    if (batch.length < COMMITS_PER_PAGE) return messages;
+  }
+  // Siste side var full: det kan finnes commits vi ikke har sett.
+  return null;
+}
+
+/**
+ * Har minst ett lenket issue `autonomy:needs-decision`? `true` så snart labelen er
+ * sett. `null` når et oppslag feilet og ingen av de andre hadde labelen. Et issue
+ * som ikke finnes (404/410) er et svar, ikke en feil.
+ */
+export async function linkedIssueNeedsDecision(
+  gh: GitHubClient,
+  repo: string,
+  body: string | null | undefined,
+): Promise<boolean | null> {
+  let unread = false;
+  for (const issue of linkedIssueNumbers(body)) {
+    const res = await gh.rest('GET', `/repos/${repo}/issues/${issue}`);
+    if (res.status === 404 || res.status === 410) continue;
+    if (res.status !== 200) {
+      unread = true;
+      continue;
+    }
+    const labels = ((res.json as { labels?: Array<{ name: string }> }).labels ?? []).map((l) => l.name);
+    if (labels.includes(NEEDS_DECISION_LABEL)) return true;
+  }
+  return unread ? null : false;
+}
+
 // ── Klassifisering ───────────────────────────────────────────────────────────
 
 export type AutoMergeInput = {
@@ -198,7 +272,12 @@ export type AutoMergeInput = {
   title: string;
   body: string | null | undefined;
   changedFiles: string[];
-  commitMessages: string[];
+  /**
+   * `null` = commit-lista kunne ikke leses (GitHub svarte ikke, eller lista var
+   * avkortet). Da vet vi ikke om PR-en er bruker-synlig, og den regnes som det:
+   * uten `staging-verified` blir utfallet knapp-kort (fail-closed).
+   */
+  commitMessages: string[] | null;
   /**
    * Bodyene til PR-ens issue-kommentarer (#1656). Valg-markøren leses her i tillegg
    * til `body`. Kortets/nattkjørerens EGNE kommentarer teller med — en markør de har
@@ -207,9 +286,23 @@ export type AutoMergeInput = {
    */
   commentBodies: string[];
   prLabels: string[];
-  /** Minst ett lenket issue har autonomy:needs-decision (slås opp av decide — ikke rent). */
-  needsDecisionIssue: boolean;
+  /**
+   * Minst ett lenket issue har autonomy:needs-decision (slås opp av decide — ikke rent).
+   * `null` = labelene kunne ikke leses. Da kan en eierbeslutning vente uten at vi ser
+   * den, og utfallet blir knapp-kort (fail-closed).
+   */
+  needsDecisionIssue: boolean | null;
 };
+
+// Grunnene kortet viser eieren når GitHub ikke svarte (produktspråk, #2147).
+const UNREAD_COMMITS_REASON = 'GitHub svarte ikke, så testbeviset kunne ikke sjekkes';
+const UNREAD_ISSUE_REASON = 'GitHub svarte ikke, så saken kunne ikke sjekkes for en ventende beslutning';
+
+// Bruker-synlig uten stagingbevis. En ulest commit-liste (`null`) regnes som bruker-synlig.
+function lacksStagingProof(input: AutoMergeInput): boolean {
+  if (input.prLabels.includes(STAGING_VERIFIED_LABEL)) return false;
+  return input.commitMessages === null || isUserVisibleByCommits(input.commitMessages);
+}
 
 export type AutoMergeClassification = {
   outcome: 'auto-merge' | 'card';
@@ -230,10 +323,18 @@ export function classifyAutoMerge(input: AutoMergeInput): AutoMergeClassificatio
     return { outcome: 'card', demotedReason: 'endrer fil på aldri-lista' };
   if (hasChoiceMarker(input.body) || input.commentBodies.some(hasChoiceMarker))
     return { outcome: 'card', demotedReason: 'produktvalg-markør i PR-body/kommentar' };
+  if (input.needsDecisionIssue === null)
+    return { outcome: 'card', demotedReason: 'fikk ikke lest labelene på lenket issue' };
   if (input.needsDecisionIssue)
     return { outcome: 'card', demotedReason: 'lenket issue har autonomy:needs-decision' };
-  if (isUserVisibleByCommits(input.commitMessages) && !input.prLabels.includes(STAGING_VERIFIED_LABEL))
-    return { outcome: 'card', demotedReason: 'bruker-synlig uten staging-verified' };
+  if (lacksStagingProof(input))
+    return {
+      outcome: 'card',
+      demotedReason:
+        input.commitMessages === null
+          ? 'fikk ikke lest commit-meldingene'
+          : 'bruker-synlig uten staging-verified',
+    };
   return { outcome: 'auto-merge', demotedReason: null };
 }
 
@@ -254,11 +355,12 @@ export function ownerWaitReasons(input: AutoMergeInput): string[] {
   if (
     hasChoiceMarker(input.body) ||
     input.commentBodies.some(hasChoiceMarker) ||
-    input.needsDecisionIssue
+    input.needsDecisionIssue === true
   )
     reasons.add('produktvalg i PR-en');
-  if (isUserVisibleByCommits(input.commitMessages) && !input.prLabels.includes(STAGING_VERIFIED_LABEL))
-    reasons.add('mangler staging-bevis');
+  if (input.needsDecisionIssue === null) reasons.add(UNREAD_ISSUE_REASON);
+  if (lacksStagingProof(input))
+    reasons.add(input.commitMessages === null ? UNREAD_COMMITS_REASON : 'mangler staging-bevis');
   return [...reasons];
 }
 
