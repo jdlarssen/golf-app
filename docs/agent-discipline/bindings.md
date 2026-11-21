@@ -34,13 +34,15 @@ target.
   `ALLOW_MAIN_PUSH=1` · pointing `core.hooksPath` away from `.githooks` · merging
   any other way than `gh pr merge --rebase` (no squash, no merge commit, no
   `--admin`, no merge through the GitHub API) · changing branch protection ·
-  creating git or gh aliases · changing the hook files (`.githooks/`) or
-  `.git/config` from the shell · rewording commands to dodge a matcher that fired
+  creating git or gh aliases · changing the hook files (`.githooks/`,
+  `.claude/hooks/`), `.claude/settings*.json` or `.git/config` from the shell · rewording commands to dodge a matcher that fired
   correctly. bash-guard reads the command the way the shell does: it splits the
   command into its parts, resolves quotes and backslashes in each, reads text that
   one part hands to a shell or an interpreter (`bash -c`, `eval`, `source <(…)`,
   `node -e`) as a command, and puts a variable set in the same command in where it
-  is used. A commit message in another part stays text. That is best effort, not a
+  is used — before it judges the part, so a shell named through a variable is
+  still a shell. A commit message in another part stays text, and so does text
+  sent to git or gh on stdin (`git commit -F - <<EOF`). That is best effort, not a
   proof, and the rule itself (I7) is what binds. A hook file is changed with the
   editor tools in a PR, where the change shows in the diff; CI runs the same
   checks server-side.

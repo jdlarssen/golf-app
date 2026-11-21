@@ -11,7 +11,8 @@
 #            skript med prod-flagg (#1074) — engangs-luke: touch .claude/approve-prod
 #   • DENY   --no-verify og git commit -n — omgår commit-msg/pre-commit/pre-push
 #   • DENY   core.hooksPath pekt bort fra .githooks, GIT_CONFIG_*, ALLOW_MAIN_PUSH=1
-#   • DENY   nye aliaser for git/gh, og endring av .githooks/ og .git/config fra skallet
+#   • DENY   nye aliaser for git/gh, og endring av .githooks/, .claude/hooks/,
+#            .claude/settings*.json og .git/config fra skallet
 #   • DENY   &, nohup, setsid, disown — løsrevne prosesser TaskStop ikke når
 #   • DENY   gh pr merge med annet enn rebase (--squash/-s, --merge/-m) eller --admin
 #   • DENY   merge utenom gh pr merge (gh api/curl mot …/pulls/N/merge, …/merges,
@@ -44,12 +45,6 @@ PROD_REF="glofubopddkjhymcbaph"
 cmd="$(jq -r '.tool_input.command // empty' 2>/dev/null)"
 [ -z "$cmd" ] && exit 0
 
-# Defekt (a)-fiks: workflow-triggere vurderes uten quotet innhold, så prosa i
-# -m/--body-strenger ikke utløser dem. Newlines flates ut først — sed er
-# linjebasert, og quotede strenger i commit-/PR-bodies spenner over flere linjer.
-# Innholds-sjekker (Closes #, --milestone) og prod-reglene bruker fortsatt $cmd.
-cmd_stripped="$(printf '%s' "$cmd" | tr '\n' ' ' | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g")"
-
 # ── Kommandoen slik skallet leser den (p09) ──────────────────────────────────
 # Tre trinn: strip_heredocs → read_command → expand_simple. Resultatet er
 # cmd_norm: ett ledd per linje, med anførselstegn og backslash løst opp.
@@ -59,8 +54,9 @@ cmd_stripped="$(printf '%s' "$cmd" | tr '\n' ' ' | sed -E "s/'[^']*'//g; s/\"[^\
 # sluker kommandoene etter heredoc-en. Unntak: sendes heredoc-en til et skall
 # eller en tolk (bash <<EOF, cat <<EOF | sh, node <<EOF), ER kroppen kommando.
 # Da står linjene igjen, uten anførselstegn og backslash, så ingenting skjules.
+# Med argumentet 1 står også en kropp som skrives til en fil igjen.
 strip_heredocs() {
-  awk '
+  awk -v files="${1:-0}" '
     skip {
       t = $0; sub(/^[ \t]+/, "", t)
       if (t == word) { skip = 0; next }
@@ -76,6 +72,12 @@ strip_heredocs() {
       word = w; skip = 1
       code = ($0 ~ /(^|[^A-Za-z0-9_.-])((ba|z|da|k)?sh|node|tsx|python[0-9.]*|perl|ruby|deno|bun|php)[ \t]*(-[A-Za-z]*[ \t]*)*<</ \
         || $0 ~ /\|[ \t]*(sudo[ \t]+)?((ba|z|da|k)?sh|node|python[0-9.]*|perl|ruby)([ \t]|$)/)
+      # files=1: en kropp som skrives til en FIL (cat > x <<EOF, tee x <<EOF) står
+      # også igjen — fila kan kjøres etterpå. En kropp på stdin til git/gh er tekst.
+      if (files && !code) {
+        around = substr(probe, 1, RSTART - 1) substr(probe, RSTART + RLENGTH)
+        code = (around ~ />/ || around ~ /(^|[ \t;&|(])tee[ \t]/)
+      }
       print substr($0, 1, RSTART - 1); next
     }
     { print }'
@@ -90,8 +92,10 @@ strip_heredocs() {
 #                 Et sitat med mellomrom eller skalltegn er tekst og blir «Q» —
 #                 unntatt når det inneholder $( eller `, som skallet kjører.
 #   Ledd som sender tekst videre til et skall eller en tolk (bash -c, eval,
-#   env -S, source <(…), bash < <(…), node -e, python -c, tekst i rør til sh,
-#   $(…) som kommando): teksten ER kommando. Alle sitater limes inn, i tre lag,
+#   env -S, source <(…), bash <(…), node -e, python -c, tekst i rør til sh,
+#   $(…) som kommando, en ukjent variabel som program med -c): teksten ER
+#   kommando. En variabel satt tidligere i samme kommando settes inn FØR leddet
+#   vurderes, så B=bash; $B -c … er det samme som bash -c …. Alle sitater limes inn, i tre lag,
 #   så et flagg i anførselstegn inni teksten også står igjen som et flagg.
 #   Skall-leddene skrives i tillegg ut med prefikset «W:» (bakgrunnsregelen).
 #   Ledd som kaller GitHubs API (gh api, curl, wget): innholdet limes inn, så
@@ -181,6 +185,47 @@ read_command() {
       if (q == "d") out = out piece(span, keep, span ~ /\$\(|`/)
       return out
     }
+    # Setter inn variabler som er satt tidligere i SAMME kommando (vars), og løser
+    # ${X:-verdi}. Utenfor apostrofer — der løser ikke skallet opp noe. Gjøres FØR
+    # leddet klassifiseres, så et skall eller `eval` som står i en variabel
+    # (B=bash; $B -c …) blir gjenkjent.
+    function subst(s,   n, i, c, q, out, rest, body, name, tail, close_at) {
+      n = length(s); out = ""; q = ""; i = 1
+      while (i <= n) {
+        c = substr(s, i, 1)
+        if (q == "s") { out = out c; if (c == "\047") q = ""; i++; continue }
+        if (c == "\\" && i < n) { out = out c substr(s, i + 1, 1); i += 2; continue }
+        if (c == "\047" && q != "d") { q = "s"; out = out c; i++; continue }
+        if (c == "\"") { q = (q == "d" ? "" : "d"); out = out c; i++; continue }
+        if (c == "$") {
+          rest = substr(s, i + 1)
+          if (substr(rest, 1, 1) == "{") {
+            close_at = index(rest, "}")
+            body = substr(rest, 2, close_at - 2)
+            if (close_at > 0 && match(body, /^[A-Za-z_][A-Za-z0-9_]*/)) {
+              name = substr(body, 1, RLENGTH); tail = substr(body, RLENGTH + 1)
+              if ((name in vars) && (tail == "" || tail ~ /^:?[-=+]/)) { out = out vars[name]; i += close_at + 1; continue }
+              if (tail ~ /^:?[-=+]/) { sub(/^:?[-=+]/, "", tail); out = out tail; i += close_at + 1; continue }
+            }
+          } else if (match(rest, /^[A-Za-z_][A-Za-z0-9_]*/)) {
+            name = substr(rest, 1, RLENGTH)
+            if (name in vars) { out = out vars[name]; i += RLENGTH + 1; continue }
+          }
+        }
+        out = out c; i++
+      }
+      return out
+    }
+    # Er leddet en ren tilordning ([export ]NAVN=ettord)? Da huskes verdien.
+    function remember_assignment(raw,   a, eq) {
+      a = raw
+      sub(/^[ \t]+/, "", a); sub(/[ \t]+$/, "", a)
+      sub(/^(export|readonly|local|declare)[ \t]+(-[A-Za-z]+[ \t]+)*/, "", a)
+      if (a !~ /^[A-Za-z_][A-Za-z0-9_]*=/) return
+      if (unq(a, 0, 0) ~ /[ \t]/) return
+      eq = index(a, "=")
+      vars[substr(a, 1, eq - 1)] = unq(substr(a, eq + 1), 1, 0)
+    }
     function deep(s, lit,   d) {
       d = unq(unq(unq(s, 1, lit), 1, lit), 1, lit)
       gsub(/\n/, " ; ", d)
@@ -196,6 +241,8 @@ read_command() {
         || r ~ /(^|[^A-Za-z0-9_.-])env[ \t]+([^ \t]+[ \t]+)*(-[A-Za-z]*S|--split-string)/ \
         || r ~ /(^|[^A-Za-z0-9_.-])su[ \t]+([^ \t]+[ \t]+)*-c([ \t]|$)/ \
         || r ~ /(^|[^A-Za-z0-9_.-])(source|\.)[ \t]+<\(/ \
+        || r ~ /(^|[^A-Za-z0-9_.-])(ba|z|da|k)?sh[ \t]+([^ \t]+[ \t]+)*<\(/ \
+        || r ~ /^[ \t]*\$\{?[A-Za-z_][A-Za-z0-9_]*\}?[ \t]+([^ \t]+[ \t]+)*-[A-Za-z]*c([ \t]|$)/ \
         || r ~ /(^|[^A-Za-z0-9_.-])(ba|z|da|k)?sh[ \t]*(-[A-Za-z]*[ \t]*)*<[ \t]*<\(/ \
         || r ~ /(^|[^A-Za-z0-9_.-])(ba|z|da|k)?sh[ \t]*(-[A-Za-z]*[ \t]*)*<<</
     }
@@ -234,7 +281,11 @@ read_command() {
         seg = seg c
       }
       push_segment()
-      for (k = 1; k <= count; k++) plain[k] = unq(segs[k], 0, 0)
+      for (k = 1; k <= count; k++) {
+        segs[k] = subst(segs[k])
+        plain[k] = unq(segs[k], 0, 0)
+        remember_assignment(segs[k])
+      }
       for (k = 1; k <= count; k++) {
         r = plain[k]
         piped_to_shell = (k < count && seps[k + 1] == "|" && bare_shell(plain[k + 1]))
@@ -293,6 +344,15 @@ expand_simple() {
       print s
     }'
 }
+
+# Defekt (a)-fiks (#1074): workflow-triggere vurderes uten quotet innhold, så
+# prosa i -m/--body-strenger ikke utløser dem. Newlines flates ut først — sed er
+# linjebasert, og quotede strenger i commit-/PR-bodies spenner over flere linjer.
+# Heredoc-kropper på stdin er også ute (p09): en commit-melding eller PR-tekst
+# som sendes inn slik (git commit -F - <<EOF) er tekst. En kropp som sendes til
+# et skall eller skrives til en fil, står igjen og leses som før (strip_heredocs 1). Innholds-sjekker
+# (Closes #, --milestone, e-postskanningen) og prod-reglene bruker fortsatt $cmd.
+cmd_stripped="$(printf '%s\n' "$cmd" | strip_heredocs 1 | tr '\n' ' ' | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g")"
 
 read_out="$(printf '%s\n' "$cmd" | strip_heredocs | read_command)"
 # cmd_marked har \002/\003 der et $ eller ` er bokstavelig (bare i API-ledd);
@@ -432,16 +492,17 @@ fi
 
 # ── DENY: hookfilene og .git/config endret fra skallet (p09) ──
 # .githooks/ er vaktene som kjører ved commit og push, og .git/config sier hvor
-# de ligger. En endring i en hook hører hjemme i en PR (stien er eier-merge) og
+# de ligger. .claude/hooks/ og .claude/settings*.json er vaktene i denne mappa
+# og oppsettet som kobler dem inn. En endring i en hook hører hjemme i en PR (stien er eier-merge) og
 # gjøres med redigeringsverktøyet, der den synes i diffen. Lesing er lov, og
 # chmod +x på en ny hook er lov.
-HOOK_FILES='(\.githooks|\.git/config|\.git/hooks)'
+HOOK_FILES='(\.githooks|\.git/config|\.git/hooks|\.claude/hooks|\.claude/settings[A-Za-z.]*\.json)'
 if printf '%s\n' "$norm_segments" | grep -Eq -- ">>?[[:space:]]*[^[:space:]]*${HOOK_FILES}" \
   || printf '%s\n' "$norm_segments" | grep -Eq -- "(^|[[:space:](){!\`])(tee|rm|mv|truncate|ln|install|unlink|rmdir|dd)[[:space:]]([^>]*[[:space:]=])?[^[:space:]>]*${HOOK_FILES}" \
   || printf '%s\n' "$norm_segments" | grep -Eq -- "(^|[[:space:](){!\`])(sed|perl)[[:space:]].*-[A-Za-z]*i.*${HOOK_FILES}" \
   || printf '%s\n' "$norm_segments" | grep -Eq -- "(^|[[:space:](){!\`])cp[[:space:]].*[[:space:]][^[:space:]]*${HOOK_FILES}[^[:space:]]*[[:space:]]*\$" \
-  || printf '%s\n' "$norm_segments" | grep -Eq -- "(^|[[:space:](){!\`])chmod[[:space:]]+([^[:space:]]+[[:space:]]+)*(-[A-Za-z]*x[A-Za-z]*|[ugoa]*-[rwxXst]*x[rwxXst]*|[0-7]?[0246][0-7][0-7])[[:space:]].*(\.githooks|\.git/hooks)"; then
-  emit_deny "hook-files" "Hookfilene (.githooks/) og .git/config endres ikke fra skallet. Skal en hook endres, gjør det med redigeringsverktøyet i en PR, der endringen synes i diffen (stien er eier-merge). Lesing og chmod +x på en ny hook er lov."
+  || printf '%s\n' "$norm_segments" | grep -Eq -- "(^|[[:space:](){!\`])chmod[[:space:]]+([^[:space:]]+[[:space:]]+)*(-[A-Za-z]*x[A-Za-z]*|[ugoa]*-[rwxXst]*x[rwxXst]*|[0-7]?[0246][0-7][0-7])[[:space:]].*(\.githooks|\.git/hooks|\.claude/hooks)"; then
+  emit_deny "hook-files" "Hookfilene (.githooks/, .claude/hooks/), .claude/settings*.json og .git/config endres ikke fra skallet. Skal en hook endres, gjør det med redigeringsverktøyet i en PR, der endringen synes i diffen (stien er eier-merge). Lesing og chmod +x på en ny hook er lov."
 fi
 
 # ── DENY: prosesser som løsrives fra økta (&, nohup, setsid, disown) ──────────
