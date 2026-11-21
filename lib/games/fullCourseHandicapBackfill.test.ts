@@ -2,13 +2,15 @@ import { describe, expect, it } from 'vitest';
 import {
   indexCandidates,
   planFullCourseHandicap,
+  roundStart,
   type FullCourseHandicapInput,
 } from './fullCourseHandicapBackfill';
 
 // Type A. The backfill (0254, F1) recovers the full course handicap for rows
 // frozen before the column existed. It trusts the frozen playing handicap and
 // accepts an index only when one of the app's freeze formulas turns it into
-// exactly that frozen number.
+// exactly that frozen number, and only when every index that does so gives
+// the same full number.
 
 // League tee 125 / 70,0 / 72: index 30,0 → raw 31,19 → course handicap 31;
 // 75 % = 23,39 → 23; index 12,1 → raw 11,385 → 11; 75 % = 8,54 → 9.
@@ -36,7 +38,7 @@ describe('planFullCourseHandicap', () => {
       planFullCourseHandicap(
         input({ storedPct: 100, storedMaxStrokes: null, frozenCourseHandicap: 17, candidates: [] }),
       ),
-    ).toEqual({ fullCourseHandicap: 17, source: 'frozen_at_100' });
+    ).toEqual({ status: 'resolved', fullCourseHandicap: 17, source: 'frozen_at_100' });
   });
 
   it('a format with its own percentage froze the full number (stored 100)', () => {
@@ -50,38 +52,42 @@ describe('planFullCourseHandicap', () => {
           candidates: [],
         }),
       ),
-    ).toEqual({ fullCourseHandicap: 12, source: 'frozen_at_100' });
+    ).toEqual({ status: 'resolved', fullCourseHandicap: 12, source: 'frozen_at_100' });
   });
 
   it('a reduced game takes the index that reproduces the frozen playing handicap', () => {
     expect(planFullCourseHandicap(input())).toEqual({
+      status: 'resolved',
       fullCourseHandicap: 31,
       source: 'history_at_start',
     });
   });
 
-  it('the first matching candidate wins, in the order given', () => {
+  it('only the candidates that reproduce the frozen number count', () => {
     expect(
       planFullCourseHandicap(
         input({
           candidates: [
             { hcpIndex: 12.1, source: 'history_at_start' }, // 9 ≠ 23
             { hcpIndex: 30.0, source: 'profile_now' }, // 23 ✓
-            { hcpIndex: 30.4, source: 'history_other' },
+            { hcpIndex: 30.4, source: 'history_other' }, // 31,63 → 24 ≠ 23
           ],
         }),
       ),
-    ).toEqual({ fullCourseHandicap: 31, source: 'profile_now' });
+    ).toEqual({ status: 'resolved', fullCourseHandicap: 31, source: 'profile_now' });
   });
 
   it('no candidate reproduces the frozen number → unresolved', () => {
     expect(
       planFullCourseHandicap(input({ candidates: [{ hcpIndex: 12.1, source: 'profile_now' }] })),
-    ).toBeNull();
+    ).toEqual({ status: 'unresolved', reason: 'no_match' });
   });
 
   it('no tee rating → unresolved (unless the frozen number is already full)', () => {
-    expect(planFullCourseHandicap(input({ rating: null }))).toBeNull();
+    expect(planFullCourseHandicap(input({ rating: null }))).toEqual({
+      status: 'unresolved',
+      reason: 'no_rating',
+    });
   });
 
   it('the cap: index 54 at 75 % with a cap of 32 froze 32; the full number is 58', () => {
@@ -90,7 +96,37 @@ describe('planFullCourseHandicap', () => {
       planFullCourseHandicap(
         input({ frozenCourseHandicap: 32, candidates: [{ hcpIndex: 54, source: 'profile_now' }] }),
       ),
-    ).toEqual({ fullCourseHandicap: 58, source: 'profile_now' });
+    ).toEqual({ status: 'resolved', fullCourseHandicap: 58, source: 'profile_now' });
+  });
+
+  it('two candidates that reproduce the frozen number with different full numbers → ambiguous', () => {
+    // Under the cap of 32 every full number from 43 up freezes as 32: index 54
+    // (full 58) and index 50 (full 53) both reproduce it.
+    expect(
+      planFullCourseHandicap(
+        input({
+          frozenCourseHandicap: 32,
+          candidates: [
+            { hcpIndex: 54, source: 'history_at_start' },
+            { hcpIndex: 50, source: 'profile_now' },
+          ],
+        }),
+      ),
+    ).toEqual({ status: 'unresolved', reason: 'ambiguous' });
+  });
+
+  it('two candidates that agree on the full number are not ambiguous', () => {
+    // 30,0 and 30,1 are both course handicap 31 and both freeze as 23.
+    expect(
+      planFullCourseHandicap(
+        input({
+          candidates: [
+            { hcpIndex: 30.0, source: 'history_at_start' },
+            { hcpIndex: 30.1, source: 'profile_now' },
+          ],
+        }),
+      ),
+    ).toEqual({ status: 'resolved', fullCourseHandicap: 31, source: 'history_at_start' });
   });
 
   it('before #2924: the share of the rounded course handicap also counts as a match', () => {
@@ -107,7 +143,7 @@ describe('planFullCourseHandicap', () => {
           candidates: [{ hcpIndex: 8.6, source: 'history_at_start' }],
         }),
       ),
-    ).toEqual({ fullCourseHandicap: 10, source: 'history_at_start' });
+    ).toEqual({ status: 'resolved', fullCourseHandicap: 10, source: 'history_at_start' });
   });
 
   it('before #2210: a stale stored share on an own-percentage format also counts', () => {
@@ -124,7 +160,7 @@ describe('planFullCourseHandicap', () => {
           candidates: [{ hcpIndex: 20, source: 'profile_now' }],
         }),
       ),
-    ).toEqual({ fullCourseHandicap: 20, source: 'profile_now' });
+    ).toEqual({ status: 'resolved', fullCourseHandicap: 20, source: 'profile_now' });
   });
 
   it('an older freeze of the full number on a reduced game also counts', () => {
@@ -141,7 +177,7 @@ describe('planFullCourseHandicap', () => {
           candidates: [{ hcpIndex: 18.2, source: 'history_at_start' }],
         }),
       ),
-    ).toEqual({ fullCourseHandicap: 18, source: 'history_at_start' });
+    ).toEqual({ status: 'resolved', fullCourseHandicap: 18, source: 'history_at_start' });
   });
 
   it('the game\'s own share beats an older full-number freeze, whatever the candidate order', () => {
@@ -156,7 +192,7 @@ describe('planFullCourseHandicap', () => {
           ],
         }),
       ),
-    ).toEqual({ fullCourseHandicap: 31, source: 'profile_now' });
+    ).toEqual({ status: 'resolved', fullCourseHandicap: 31, source: 'profile_now' });
   });
 
   it('a plus handicap: the full number keeps its sign', () => {
@@ -170,7 +206,16 @@ describe('planFullCourseHandicap', () => {
           candidates: [{ hcpIndex: -2.2, source: 'profile_now' }],
         }),
       ),
-    ).toEqual({ fullCourseHandicap: -2, source: 'profile_now' });
+    ).toEqual({ status: 'resolved', fullCourseHandicap: -2, source: 'profile_now' });
+  });
+});
+
+describe('roundStart', () => {
+  it('the start time, else the planned tee-off, else when the round was made', () => {
+    const at = { started_at: 'S', scheduled_tee_off_at: 'T', created_at: 'C' };
+    expect(roundStart(at)).toBe('S');
+    expect(roundStart({ ...at, started_at: null })).toBe('T');
+    expect(roundStart({ ...at, started_at: null, scheduled_tee_off_at: null })).toBe('C');
   });
 });
 

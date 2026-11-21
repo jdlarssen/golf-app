@@ -21,6 +21,9 @@ import { effectiveHcpAllowancePct, effectiveHcpMaxStrokes } from './hcpAllowance
  *   - older freezes that kept the full number (share 100).
  * When no share or cap could ever have been applied (stored and effective
  * share 100, no cap), the frozen number is the full one and no index is needed.
+ * A cap or a low share maps many full numbers to one frozen number, so when
+ * candidates reproduce it with different full numbers the row stays
+ * unresolved rather than take a guess.
  */
 
 export type IndexSource = 'history_at_start' | 'profile_now' | 'history_other';
@@ -41,11 +44,24 @@ export type FullCourseHandicapInput = {
   candidates: IndexCandidate[];
 };
 
-export type FullCourseHandicapPlan = {
-  fullCourseHandicap: number;
-  source: 'frozen_at_100' | IndexSource;
-};
+export type FullCourseHandicapPlan =
+  | {
+      status: 'resolved';
+      fullCourseHandicap: number;
+      source: 'frozen_at_100' | IndexSource;
+    }
+  | {
+      status: 'unresolved';
+      /**
+       * `no_rating`: the tee has no rating for the player's tee class.
+       * `no_match`: no candidate reproduces the frozen number.
+       * `ambiguous`: candidates reproduce it with different full numbers
+       * (a cap or a low share maps many full numbers to one frozen number).
+       */
+      reason: 'no_rating' | 'no_match' | 'ambiguous';
+    };
 
+/** Null when there is no frozen playing handicap (nothing to recover). */
 export function planFullCourseHandicap(
   input: FullCourseHandicapInput,
 ): FullCourseHandicapPlan | null {
@@ -60,15 +76,16 @@ export function planFullCourseHandicap(
     effectiveCap === null &&
     input.storedMaxStrokes === null
   ) {
-    return { fullCourseHandicap: frozen, source: 'frozen_at_100' };
+    return { status: 'resolved', fullCourseHandicap: frozen, source: 'frozen_at_100' };
   }
 
   const { rating } = input;
-  if (!rating) return null;
+  if (!rating) return { status: 'unresolved', reason: 'no_rating' };
 
   const caps = [...new Set([effectiveCap, input.storedMaxStrokes])];
-  const firstMatch = (shares: number[]): FullCourseHandicapPlan | null => {
-    for (const candidate of input.candidates) {
+  /** Every candidate that reproduces the frozen number at one of `shares`. */
+  const matches = (shares: number[]) =>
+    input.candidates.flatMap((candidate) => {
       const raw = rawCourseHandicap({ hcpIndex: candidate.hcpIndex, ...rating });
       const full = Math.round(raw);
       const reproduces = shares.some((pct) =>
@@ -78,17 +95,35 @@ export function planFullCourseHandicap(
             applyAllowance(full, pct, cap) === frozen,
         ),
       );
-      if (reproduces) return { fullCourseHandicap: full, source: candidate.source };
+      return reproduces ? [{ full, source: candidate.source }] : [];
+    });
+  const decide = (found: Array<{ full: number; source: IndexSource }>): FullCourseHandicapPlan => {
+    if (found.length === 0) return { status: 'unresolved', reason: 'no_match' };
+    if (new Set(found.map((m) => m.full)).size > 1) {
+      return { status: 'unresolved', reason: 'ambiguous' };
     }
-    return null;
+    return { status: 'resolved', fullCourseHandicap: found[0].full, source: found[0].source };
   };
-  // The game's own shares first, for every candidate. Only then share 100:
-  // some older freezes kept the full number whatever the stored share said
-  // (shamble before #2570), and an index must still reproduce it exactly.
-  return (
-    firstMatch([...new Set([effectivePct, input.storedPct])]) ??
-    (effectivePct === 100 && input.storedPct === 100 ? null : firstMatch([100]))
-  );
+
+  // The game's own shares first. Only when no candidate reproduces the frozen
+  // number there, share 100: some older freezes kept the full number whatever
+  // the stored share said (shamble before #2570).
+  const own = matches([...new Set([effectivePct, input.storedPct])]);
+  if (own.length > 0 || (effectivePct === 100 && input.storedPct === 100)) return decide(own);
+  return decide(matches([100]));
+}
+
+/**
+ * When the round began, for the history lookup: the start, else the planned
+ * tee-off, else when the round was made. Rounds started by older code have no
+ * `started_at`.
+ */
+export function roundStart(game: {
+  started_at: string | null;
+  scheduled_tee_off_at: string | null;
+  created_at: string;
+}): string {
+  return game.started_at ?? game.scheduled_tee_off_at ?? game.created_at;
 }
 
 /**
