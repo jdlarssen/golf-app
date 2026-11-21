@@ -4,6 +4,7 @@ import type { Database } from '@/lib/database.types';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { emailMatchPattern } from '@/lib/supabase/emailMatch';
+import { isUnansweredEmailRequestFrom, type FriendshipRow } from '@/lib/friends/friendGraph';
 
 /**
  * «Last ned dataene dine» (#2332), one home for both doors: the website's
@@ -18,10 +19,15 @@ import { emailMatchPattern } from '@/lib/supabase/emailMatch';
  * - The reads in {@link SERVICE_ROLE_READS} use the service role, because RLS
  *   hides rows that are still the user's own data under art. 15/20: their own
  *   `email` and `friend_code` (#2207), their row on someone else's draft
- *   (#2445), a friend request they sent by e-mail that is not answered yet
- *   (0252), an invitation they sent to a round they do not organise, and the
- *   two tables only the server reads (`cup_lineup_slots`,
+ *   (#2445), an invitation they sent to a round they do not organise, and
+ *   the two tables only the server reads (`cup_lineup_slots`,
  *   `product_update_digest_recipients`). There the filter is the only authz.
+ * - `friendships` is NOT one of them. A request the user sent by e-mail is
+ *   hidden from their own session until it is answered (0252), because the
+ *   row would say that the address has an account, and which one. The file
+ *   keeps that rule: the read goes through the caller's client, and a row of
+ *   that kind is dropped if a client ever returns one. What the user sent is
+ *   still in the file, as the invitation row with the address they typed.
  * - Everything else goes through the caller's own client, so RLS applies on
  *   top of the filter. Where RLS lets the caller see more than their own rows
  *   (a club's member list, the reactions in a game, everyone's ideas for an
@@ -83,7 +89,6 @@ export type BuildUserExportResult =
 export const SERVICE_ROLE_READS = [
   'users',
   'game_players',
-  'friendships',
   'invitations by inviter',
   'cup_lineup_slots',
   'product_update_digest_recipients',
@@ -163,14 +168,15 @@ export async function buildUserExport(userId: string, rlsClient: Client): Promis
       new Map([...invitationsByEmail, ...invitationsByInviter].map((row) => [(row as { id: string }).id, row])).values(),
     );
 
-    // Every friendship the user is part of, any status. Service role: a
-    // request the user sent by e-mail is hidden from their own session until
-    // it is answered (0252), and it is still a row about them.
+    // Every friendship the user's own session reads, any status. A request
+    // the user sent by e-mail and that is not answered is left out (0252): its
+    // `addressee_id` would tell the sender that the address has an account.
+    // RLS hides it already; the filter keeps the file right if that changes.
     const friendships = rowsOf(
       'friendships',
       await selectAllRowsResult(
         (from, to) =>
-          admin
+          rlsClient
             .from('friendships')
             .select('*')
             .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`)
@@ -178,7 +184,7 @@ export async function buildUserExport(userId: string, rlsClient: Client): Promis
             .range(from, to),
         'profile export friendships',
       ),
-    );
+    ).filter((row) => !isUnansweredEmailRequestFrom(row as FriendshipRow, userId));
 
     const clubMemberships = rowsOf(
       'club_memberships',
