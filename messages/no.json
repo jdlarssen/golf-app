@@ -5047,7 +5047,8 @@
         "dangerZone": "Faresone",
         "deleteLink": "Slett spilleren",
         "deleteBlockSelf": "Du kan ikke slette din egen konto.",
-        "deleteBlockHasPlayed": "{firstName} har spilt {count, plural, one {# runde} other {# runder}}. Slett spillene først hvis du vil fjerne kontoen.",
+        "deleteBlockAdmin": "Du kan ikke slette en admin-konto her.",
+        "deleteBlockCheckFailed": "Klarte ikke å sjekke om kontoen kan slettes. Last inn siden på nytt.",
         "relativeNb": {
           "never": "Aldri",
           "justNow": "Akkurat nå",
@@ -5074,7 +5075,7 @@
           "email_invalid": "Ugyldig e-postadresse.",
           "email_in_use": "E-postadressen er allerede registrert.",
           "email_update_failed": "Klarte ikke oppdatere e-postadressen. Prøv igjen.",
-          "email_change_blocked_active_game": "Kan ikke endre e-post mens spilleren er i et aktivt spill."
+          "email_change_blocked_active_game": "Du kan ikke endre e-posten mens spilleren er med i en runde som er planlagt eller i gang."
         }
       },
       "delete": {

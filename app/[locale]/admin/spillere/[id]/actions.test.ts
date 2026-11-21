@@ -149,8 +149,7 @@ describe('updateUser — the users write must hit the row (#2054)', () => {
 
   it('0 rows after an email change → the auth email is rolled back to the old one', async () => {
     supabaseMock = buildSupabaseMock([
-      { data: [], error: null }, // active games
-      { count: 0, data: null, error: null }, // game_players in active games
+      { data: [], error: null }, // no scheduled or active round
       { data: [], error: null }, // update matched nothing
     ]);
     expect(await run(validForm(NEW_EMAIL))).toBe(`/admin/spillere/${ID}?error=update_failed`);
@@ -165,8 +164,7 @@ describe('updateUser — the users write must hit the row (#2054)', () => {
       { email_is_registered: true, email_is_in_auth_users: false },
     );
     supabaseMock = buildSupabaseMock([
-      { data: [], error: null }, // active games
-      { count: 0, data: null, error: null }, // game_players in active games
+      { data: [], error: null }, // no scheduled or active round
     ]);
     expect(await run(validForm(NEW_EMAIL))).toBe(`/admin/spillere/${ID}?error=email_in_use`);
     expect(adminQueryMock.rpc).toHaveBeenCalledWith('email_is_registered', { p_email: NEW_EMAIL });
@@ -182,8 +180,7 @@ describe('updateUser — the users write must hit the row (#2054)', () => {
       { rpcErrors: { email_is_registered: { message: 'nede' } } },
     );
     supabaseMock = buildSupabaseMock([
-      { data: [], error: null },
-      { count: 0, data: null, error: null },
+      { data: [], error: null }, // no scheduled or active round
     ]);
     expect(await run(validForm(NEW_EMAIL))).toBe(`/admin/spillere/${ID}?error=email_update_failed`);
     expect(updateUserByIdMock).not.toHaveBeenCalled();
@@ -199,5 +196,26 @@ describe('updateUser — the users write must hit the row (#2054)', () => {
     const selectAfterUpdate = supabaseMock.__fromCalls.findLastIndex((c) => c.method === 'select');
     const update = supabaseMock.__fromCalls.findIndex((c) => c.method === 'update');
     expect(selectAfterUpdate).toBeGreaterThan(update);
+  });
+
+  it.each([
+    ['in a scheduled or active round', [{ data: [{ game_id: 'g1', games: { status: 'scheduled' } }], error: null }], 'email_change_blocked_active_game'],
+    ['the round check fails', [{ data: null, error: { message: 'nede' } }], 'email_update_failed'],
+  ])('e-mail change, %s → %s, auth untouched (audit 2026-11-20)', async (_label, queue, code) => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    supabaseMock = buildSupabaseMock(queue);
+    expect(await run(validForm(NEW_EMAIL))).toBe(`/admin/spillere/${ID}?error=${code}`);
+    expect(updateUserByIdMock).not.toHaveBeenCalled();
+    const statusFilter = supabaseMock.__fromCalls.find((c) => c.method === 'in');
+    expect(statusFilter?.args).toEqual(['games.status', ['scheduled', 'active']]);
+  });
+
+  it('the current e-mail read fails → update_failed, nothing is written (audit 2026-11-20)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminQueryMock = buildSupabaseMock([{ data: null, error: { message: 'nede' } }]);
+    supabaseMock = buildSupabaseMock([]);
+    expect(await run(validForm(NEW_EMAIL))).toBe(`/admin/spillere/${ID}?error=update_failed`);
+    expect(updateUserByIdMock).not.toHaveBeenCalled();
+    expect(supabaseMock.__fromCalls).toEqual([]);
   });
 });

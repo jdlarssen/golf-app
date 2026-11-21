@@ -17,6 +17,8 @@ import type { AppLocale } from '@/i18n/routing';
 import { HCP_MAX, HCP_MIN } from '@/lib/users/profileInput';
 import { updateUser } from './actions';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { getDeleteBlockReason } from '@/lib/users/deleteAccount';
+import { deleteBlockMessageKey } from '@/lib/users/deleteBlockMessage';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -97,28 +99,25 @@ export default async function PlayerDetailPage({
   if (error) throw error;
   if (!target) notFound();
 
-  // Count game_players rows (used for block-condition and activity stats).
-  const { count: gamePlayerCount } = await supabase
-    .from('game_players')
-    .select('game_id', { count: 'exact', head: true })
-    .eq('user_id', id);
-
   const isSelf = target.id === adminUserId;
-  const hasPlayed = (gamePlayerCount ?? 0) > 0;
-  const canDelete = !isSelf && !hasPlayed;
+
+  // Count game_players rows (activity stats only). The delete link follows the
+  // delete page's own rule (`getDeleteBlockReason`), so the two never disagree:
+  // a player with history is anonymised by the flow, not blocked.
+  const [{ count: gamePlayerCount }, deleteOutcome] = await Promise.all([
+    supabase
+      .from('game_players')
+      .select('game_id', { count: 'exact', head: true })
+      .eq('user_id', id),
+    isSelf ? Promise.resolve(null) : getDeleteBlockReason(id),
+  ]);
+
+  const deleteBlockKey = deleteBlockMessageKey(isSelf, deleteOutcome);
+  const canDelete = deleteBlockKey === null;
+  const deleteBlockReason = deleteBlockKey === null ? null : tProfile(deleteBlockKey);
 
   // Pending invitees have NULL name until they finish profile.
   const displayName = target.name?.trim() || target.email;
-
-  let deleteBlockReason: string | null = null;
-  if (isSelf) deleteBlockReason = tProfile('deleteBlockSelf');
-  else if (hasPlayed) {
-    const firstName = target.name?.trim().split(/\s+/)[0] || 'Spilleren';
-    deleteBlockReason = tProfile('deleteBlockHasPlayed', {
-      firstName,
-      count: gamePlayerCount ?? 0,
-    });
-  }
 
   return (
     <AdminShell>

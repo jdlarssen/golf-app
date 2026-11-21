@@ -50,6 +50,11 @@ vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => adminClientMock(),
 }));
 
+const lookupUserByEmailMock = vi.fn();
+vi.mock('@/lib/users/lookupByEmail', () => ({
+  lookupUserByEmail: (...args: unknown[]) => lookupUserByEmailMock(...args),
+}));
+
 vi.mock('@/lib/admin/rateLimit', () => ({
   consumeAdminInviteRateLimit: vi.fn(async () => true),
   getClientIp: vi.fn(async () => '127.0.0.1'),
@@ -374,5 +379,35 @@ describe('resendInvitation — a game invitation keeps the game terms (#2212)', 
       '/admin/spillere?error=mail_failed&email=spiller%40example.com',
     );
     consoleError.mockRestore();
+  });
+});
+
+describe('withdrawInvitation — frees the e-mail of an unfinished account (audit 2026-11-20)', () => {
+  // The old lookup read only the first page of `auth.admin.listUsers()` (50
+  // accounts), so on a larger install the account was never found. The
+  // account is now found through public.users (`lookupUserByEmail`).
+  it.each([
+    ['unfinished profile → the account is deleted', { id: 'u-9' }, { profile_completed_at: null }, true],
+    ['finished profile → the account stays', { id: 'u-9' }, { profile_completed_at: '2026-01-01T00:00:00Z' }, false],
+    ['no account → nothing to delete', null, null, false],
+  ] as const)('%s', async (_label, account, profile, deleted) => {
+    supabaseMock = buildSupabaseMock([
+      { data: { email: 'Ola_N@Example.test', accepted_at: null }, error: null }, // invitation
+      { data: null, error: null }, // invitation delete
+    ]);
+    lookupUserByEmailMock.mockResolvedValue(account);
+    const deleteUser = vi.fn(async () => ({ error: null }));
+    const listUsers = vi.fn();
+    const users = buildSupabaseMock([{ data: profile, error: null }]);
+    adminClientMock.mockReturnValue({ from: users.from, auth: { admin: { deleteUser, listUsers } } });
+    const { withdrawInvitation } = await import('./actions');
+
+    await expect(withdrawInvitation(fd({ id: 'inv-1' }))).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/admin/spillere?status=withdrawn&email=Ola_N%40Example.test');
+    expect(lookupUserByEmailMock).toHaveBeenCalledWith('Ola_N@Example.test');
+    expect(listUsers).not.toHaveBeenCalled();
+    if (deleted) expect(deleteUser).toHaveBeenCalledWith('u-9');
+    else expect(deleteUser).not.toHaveBeenCalled();
   });
 });

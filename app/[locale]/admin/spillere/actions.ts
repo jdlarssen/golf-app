@@ -5,6 +5,7 @@ import { getLocale } from 'next-intl/server';
 import { randomUUID } from 'node:crypto';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { lookupUserByEmail } from '@/lib/users/lookupByEmail';
 import { requireAdmin } from '@/lib/admin/auth';
 import { sendInviteNotification } from '@/lib/mail/inviteNotification';
 import {
@@ -260,25 +261,28 @@ export async function withdrawInvitation(formData: FormData) {
   }
 
   // If the invitee had requested a code (auth.users row exists) but never
-  // completed their profile (public.users.profile_completed_at IS NULL —
-  // the row itself is now auto-created via trigger in migration 0014, so
-  // its absence is no longer the right signal), clean up the auth.users
-  // row via service-role so the email becomes free again. Cascade from
-  // auth.users → public.users handles the placeholder row.
+  // completed their profile (public.users.profile_completed_at IS NULL),
+  // clean up the auth.users row via service-role so the email becomes free
+  // again. Cascade from auth.users → public.users handles the placeholder row.
+  //
+  // The account is found through public.users (`lookupUserByEmail`, an exact
+  // case-insensitive match), whose row the trigger in 0014 creates with the
+  // same id and e-mail for every auth user. Audit 2026-11-20: the old
+  // `listUsers()` call read only its first page (50 accounts), so on a larger
+  // install the account was never found and the e-mail stayed blocked.
   try {
     const admin = getAdminClient();
-    const { data: authList } = await admin.auth.admin.listUsers();
-    const orphan = authList?.users?.find(
-      (u) => u.email?.toLowerCase() === inv.email.toLowerCase(),
-    );
+    const orphan = await lookupUserByEmail(inv.email);
     if (orphan) {
-      const { data: publicRow } = await admin
+      const { data: publicRow, error: rowError } = await admin
         .from('users')
         .select('profile_completed_at')
         .eq('id', orphan.id)
-        .maybeSingle();
-      const profileIncomplete =
-        !publicRow || publicRow.profile_completed_at == null;
+        .maybeSingle<{ profile_completed_at: string | null }>();
+      if (rowError) {
+        console.error('[admin/spillere] orphan profile read failed', rowError);
+      }
+      const profileIncomplete = !rowError && publicRow?.profile_completed_at == null;
       if (profileIncomplete) {
         // auth-js returns its error instead of throwing it; the catch below
         // only sees throws (#2223).
