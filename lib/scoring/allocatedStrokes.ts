@@ -15,6 +15,7 @@ import { applyAllowance } from './courseHandicap';
 import { chapmanSideHandicap, combinedSideHandicap } from './modes/foursomesMatchplay';
 import type { SideHandicapFn } from './modes/foursomesMatchplay';
 import { greensomeTeamHandicap, readTeamStrokesOverride } from './modes/greensomeMatchplay';
+import { singlesStrokeHandicap } from './modes/singlesMatchplay';
 import type { GameMode, GameModeConfig } from './modes/types';
 
 /** `allowance_pct` for `kind`, or the engine's fallback when the kind differs or the field is missing. */
@@ -95,9 +96,13 @@ function strokeRuleFor(mode: GameMode): StrokeRule {
 }
 
 /**
+ * The player's own handicap after the format's allowance or gross option —
+ * the number a scorecard header shows. For the strokes on a hole use
+ * {@link matchStrokeHandicap}: in a new singles match the strokes come from
+ * the difference to the opponent, not from this number.
+ *
  * Handicapet motoren fordeler over SI for én spiller i formatene med ett kort
- * per spiller. `strokesForHole(playerStrokeHandicap(...), si)` er slagene
- * spilleren får på hullet.
+ * per spiller (unntatt singles med `match_strokes: 'difference'`).
  *
  * - Fourball: `applyAllowance(ch, allowance_pct)`, fallback 100 (`fourballMatchplay.ts`).
  * - Round robin: samme, fallback 85 (`roundRobin.ts`).
@@ -132,6 +137,31 @@ export function playerStrokeHandicap(
     case 'raw':
       return courseHandicap;
   }
+}
+
+/**
+ * The handicap the engine spreads over SI for one player in the formats with
+ * one card per player: `strokesForHole(matchStrokeHandicap(...), si)` is the
+ * strokes the player gets on the hole — what the hole page's dots, the
+ * scorecard and the app show.
+ *
+ * `matchCourseHandicaps` is the raw frozen course handicap of every player in
+ * the match (the player's own may be included). Only singles reads it: on a
+ * new match the higher handicap gets the difference and the lower none
+ * (`singlesStrokeHandicap`, owner-ordered audit 2026-11-20). Every other mode
+ * returns {@link playerStrokeHandicap}.
+ */
+export function matchStrokeHandicap(
+  mode: GameMode,
+  config: GameModeConfig,
+  courseHandicap: number,
+  matchCourseHandicaps: readonly number[],
+): number {
+  if (mode === 'singles_matchplay') {
+    const lowestInMatch = Math.min(courseHandicap, ...matchCourseHandicaps);
+    return singlesStrokeHandicap(config, courseHandicap, lowestInMatch);
+  }
+  return playerStrokeHandicap(mode, config, courseHandicap);
 }
 
 interface AlternateShotRule {

@@ -808,3 +808,86 @@ describe('compute — per-gender par (#240)', () => {
     expect(r.sides[1].teeGender).toBe('ladies');
   });
 });
+
+describe('compute — slag etter forskjellen (revisjon 20.11, nye matcher)', () => {
+  // A NEW singles match carries `match_strokes: 'difference'` (stamped at
+  // creation). The higher handicap gets the difference on the hardest holes;
+  // the lower gets none. Same rule as the alternate shot formats.
+  function ctxWith(
+    config: ScoringContext['game']['mode_config'],
+    ch1: number,
+    ch2: number,
+  ): ScoringContext {
+    return {
+      game: { id: 'g-mp', game_mode: 'singles_matchplay', mode_config: config },
+      players: [
+        { userId: 'a', teamNumber: 1, flightNumber: 1, courseHandicap: ch1 },
+        { userId: 'b', teamNumber: 2, flightNumber: 2, courseHandicap: ch2 },
+      ],
+      holes: par4Holes(18),
+      scores: [],
+    };
+  }
+  const DIFFERENCE = {
+    kind: 'singles_matchplay',
+    team_size: 1,
+    teams_count: 2,
+    match_strokes: 'difference',
+  } as const;
+  const extras = (ctx: ScoringContext) =>
+    compute(ctx).holes.map((h) => [h.strokeIndex, h.side1Extra, h.side2Extra]);
+
+  it('20 mot 5: 20-spilleren får ett slag på indeks 1–15, 5-spilleren ingen', () => {
+    expect(extras(ctxWith(DIFFERENCE, 20, 5))).toEqual(
+      Array.from({ length: 18 }, (_, i) => [i + 1, i + 1 <= 15 ? 1 : 0, 0]),
+    );
+  });
+
+  it('5 mot 20 (høyest på side 2): forskjellen går til side 2', () => {
+    expect(extras(ctxWith(DIFFERENCE, 5, 20))).toEqual(
+      Array.from({ length: 18 }, (_, i) => [i + 1, 0, i + 1 <= 15 ? 1 : 0]),
+    );
+  });
+
+  it('forskjell over 18: 30 mot 5 gir to slag på indeks 1–7, ett på resten', () => {
+    expect(extras(ctxWith(DIFFERENCE, 30, 5)).map(([, s1]) => s1)).toEqual(
+      Array.from({ length: 18 }, (_, i) => (i + 1 <= 7 ? 2 : 1)),
+    );
+  });
+
+  it('plusshandicap: +2 mot 10 gir 10-spilleren 12 slag, plusspilleren ingen', () => {
+    const rows = extras(ctxWith(DIFFERENCE, -2, 10));
+    expect(rows.map(([, s1]) => s1)).toEqual(Array(18).fill(0));
+    expect(rows.map(([, , s2]) => s2)).toEqual(
+      Array.from({ length: 18 }, (_, i) => (i + 1 <= 12 ? 1 : 0)),
+    );
+  });
+
+  it('likt handicap gir ingen slag til noen', () => {
+    expect(extras(ctxWith(DIFFERENCE, 14, 14)).flatMap(([, a, b]) => [a, b])).toEqual(
+      Array(36).fill(0),
+    );
+  });
+
+  it('nettoen og hullvinneren følger forskjellen', () => {
+    const ctx = ctxWith(DIFFERENCE, 20, 5);
+    ctx.scores = [
+      // SI 16: no stroke for the 20-player any more, so 5 against 5 is halved.
+      { userId: 'a', holeNumber: 16, gross: 5 },
+      { userId: 'b', holeNumber: 16, gross: 5 },
+    ];
+    const hole16 = compute(ctx).holes[15];
+    expect(hole16.side1Net).toBe(5);
+    expect(hole16.side2Net).toBe(5);
+    expect(hole16.result).toBe('tied');
+  });
+
+  it('en match uten nøkkelen (laget før endringen) beholder den gamle regelen', () => {
+    // Finished matches are never recalculated: each side keeps its own full
+    // handicap, as before.
+    const legacy = { kind: 'singles_matchplay', team_size: 1, teams_count: 2 } as const;
+    expect(extras(ctxWith(legacy, 20, 5))).toEqual(
+      Array.from({ length: 18 }, (_, i) => [i + 1, i + 1 <= 2 ? 2 : 1, i + 1 <= 5 ? 1 : 0]),
+    );
+  });
+});

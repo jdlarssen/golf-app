@@ -145,7 +145,11 @@ import { findInRoster, resolveFlight, toRoster, type RosterEntry } from '../lib/
 import { isGameOrganiser } from '../lib/gameOrganiser';
 import { reopenHint } from '../lib/rosterCopy';
 import { teeShotMinimum, teeShotTeams } from '../lib/teeShotTeams';
-import { computeGameLeaderboard, playerExtraForHole } from '../lib/scoringContext';
+import {
+  computeGameLeaderboard,
+  matchCourseHandicaps,
+  playerExtraForHole,
+} from '../lib/scoringContext';
 import {
   buildTeamCards,
   filledHolesForOwner,
@@ -684,6 +688,7 @@ function HoleView({
             bundle.game,
             entry.player.courseHandicap,
             hole.strokeIndex,
+            matchCourseHandicaps(bundle.players),
           ),
           submitted: entry.submitted_at != null,
           note: null,
@@ -1079,6 +1084,7 @@ function HoleView({
               key={entry.user_id}
               entry={entry}
               game={bundle.game}
+              matchChs={matchCourseHandicaps(bundle.players)}
               hole={hole}
               score={byUserHole.get(`${entry.user_id}#${holeNumber}`)}
               isMe={entry.user_id === userId}
@@ -1349,6 +1355,7 @@ function teeStarterNameFor(opts: {
 function PlayerCard({
   entry,
   game,
+  matchChs,
   hole,
   score,
   isMe,
@@ -1361,6 +1368,8 @@ function PlayerCard({
   entry: RosterEntry;
   /** Formatet og configen — badgen viser slagene motoren regner med (#2218). */
   game: Pick<BundleGame, 'gameMode' | 'modeConfig'>;
+  /** Hele rosterets banehandicap — singel-matchens forskjell (revisjonen 20.11). */
+  matchChs: readonly number[];
   hole: BundleHole;
   score: LocalScore | undefined;
   isMe: boolean;
@@ -1374,7 +1383,7 @@ function PlayerCard({
   const { ui } = useTheme();
   const player: BundlePlayer = entry.player;
   // `null` = configen peker på et annet format: da vises ingen badge.
-  const extra = playerExtraForHole(game, player.courseHandicap, hole.strokeIndex);
+  const extra = playerExtraForHole(game, player.courseHandicap, hole.strokeIndex, matchChs);
 
   // Kortflaten er selve snarveien til par. Stepperne og «Angre» inni er egne
   // Pressables, og i React Native vinner den innerste berøringen — derfor

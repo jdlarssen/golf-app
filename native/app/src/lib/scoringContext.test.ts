@@ -11,6 +11,7 @@ import type { BundlePlayer, GameBundle } from '../data/gameBundle';
 import {
   buildScoringContext,
   computeGameLeaderboard,
+  matchCourseHandicaps,
   playerExtraForHole,
 } from './scoringContext';
 import { wolfRotationPlayers } from './wolfHole';
@@ -511,25 +512,40 @@ describe('playerExtraForHole', () => {
 
   it('fourball 85 %: banehandicap 20 blir 17 — ingen slag på SI 18', () => {
     const game = fourball({ kind: 'fourball_matchplay', team_size: 2, teams_count: 2, allowance_pct: 85 });
-    expect(playerExtraForHole(game, 20, 18)).toBe(0);
-    expect(playerExtraForHole(game, 20, 1)).toBe(1);
+    expect(playerExtraForHole(game, 20, 18, [])).toBe(0);
+    expect(playerExtraForHole(game, 20, 1, [])).toBe(1);
   });
 
   it('skins brutto gir 0 slag', () => {
     const game = { gameMode: 'skins', modeConfig: { kind: 'skins', team_size: 1, skins_scoring: 'gross' } };
-    expect(playerExtraForHole(game, 18, 1)).toBe(0);
+    expect(playerExtraForHole(game, 18, 1, [])).toBe(0);
   });
 
   it('en config for et annet format er ukjent — null, ikke 0', () => {
     const game = fourball({ kind: 'skins', team_size: 1, skins_scoring: 'gross' });
-    expect(playerExtraForHole(game, 20, 1)).toBeNull();
+    expect(playerExtraForHole(game, 20, 1, [])).toBeNull();
   });
 
   it('modeConfig null (DB-default) følger motorens fallback: fourball 100 %', () => {
-    expect(playerExtraForHole(fourball(null), 20, 18)).toBe(1);
+    expect(playerExtraForHole(fourball(null), 20, 18, [])).toBe(1);
   });
 
   it('manglende banehandicap regnes som 0, som webben', () => {
-    expect(playerExtraForHole(fourball(null), null, 1)).toBe(0);
+    expect(playerExtraForHole(fourball(null), null, 1, [])).toBe(0);
+  });
+
+  // Revisjonen 20.11: en ny singel-match gir forskjellen til motstanderen.
+  it('singel med forskjellen: 20 mot 5 gir 20-spilleren slag på SI 15, ikke SI 16', () => {
+    const game = {
+      gameMode: 'singles_matchplay',
+      modeConfig: { kind: 'singles_matchplay', team_size: 1, teams_count: 2, match_strokes: 'difference' },
+    };
+    const roster = matchCourseHandicaps([
+      { courseHandicap: 20 },
+      { courseHandicap: 5 },
+    ] as unknown as Parameters<typeof matchCourseHandicaps>[0]);
+    expect(playerExtraForHole(game, 20, 15, roster)).toBe(1);
+    expect(playerExtraForHole(game, 20, 16, roster)).toBe(0);
+    expect(playerExtraForHole(game, 5, 1, roster)).toBe(0);
   });
 });

@@ -147,6 +147,7 @@ import {
   teamScorecardKicker,
 } from '../lib/scorecardHeader';
 import { buildScorecardRows } from '../lib/scorecardRows';
+import { matchCourseHandicaps } from '../lib/scoringContext';
 import {
   UNKNOWN_PLAYER,
   teeShotDeliveryLock,
@@ -399,6 +400,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     teamOwnerId: myCaptainId,
     teeGender: me.player.teeGender as ScoringGender,
     courseHandicap,
+    matchCourseHandicaps: matchCourseHandicaps(bundle.players),
     teamNumber: myTeamCard?.teamNumber ?? me.player.teamNumber,
     leaderboard,
   });

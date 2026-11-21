@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { computeLeaderboard } from '@/lib/scoring';
 import { strokesForHole } from './strokeAllocation';
-import { alternateShotSideExtras, playerStrokeHandicap } from './allocatedStrokes';
+import {
+  alternateShotSideExtras,
+  matchStrokeHandicap,
+  playerStrokeHandicap,
+} from './allocatedStrokes';
 import type {
   GameMode,
   GameModeConfig,
@@ -194,24 +198,40 @@ const PARITY_ROWS: Array<{
   ]),
   { label: 'solo slagspill', mode: 'solo_strokeplay', config: { kind: 'solo_strokeplay', team_size: 1 }, grouping: 'solo' },
   { label: 'singles matchplay', mode: 'singles_matchplay', config: { kind: 'singles_matchplay', team_size: 1, teams_count: 2 }, grouping: 'singles' },
+  { label: 'singles matchplay, forskjellen', mode: 'singles_matchplay', config: { kind: 'singles_matchplay', team_size: 1, teams_count: 2, match_strokes: 'difference' }, grouping: 'singles' },
 ];
 
-describe('playerStrokeHandicap — paritet mot motorene', () => {
+describe('matchStrokeHandicap — paritet mot motorene', () => {
   it.each(PARITY_ROWS)('$label: kortets slag = motorens slag i hver celle', ({ mode, config, grouping }) => {
     const result = computeLeaderboard(ctxFor(mode, config, grouping));
+    // Every player in the match, as the views pass them (the roster's CHs).
+    const matchChs = playersFor(grouping).map((p) => p.courseHandicap);
     const compared = cellsOf(result).filter((c) => c.gross !== null && c.effective !== null);
 
     // An empty shell would compare nothing and pass (I3) — demand real cells.
     expect(compared.length).toBeGreaterThan(0);
 
     for (const c of compared) {
-      const expected = strokesForHole(playerStrokeHandicap(mode, config, CH[c.userId]), c.strokeIndex);
+      const expected = strokesForHole(
+        matchStrokeHandicap(mode, config, CH[c.userId], matchChs),
+        c.strokeIndex,
+      );
       expect({ userId: c.userId, si: c.strokeIndex, strokes: c.gross! - c.effective! }).toEqual({
         userId: c.userId,
         si: c.strokeIndex,
         strokes: expected,
       });
     }
+  });
+
+  it('singles med forskjellen: 20 mot 5 gir 15 og 0; uten nøkkelen 20 og 5', () => {
+    const diff = { kind: 'singles_matchplay', team_size: 1, teams_count: 2, match_strokes: 'difference' } as const;
+    const legacy = { kind: 'singles_matchplay', team_size: 1, teams_count: 2 } as const;
+    expect(matchStrokeHandicap('singles_matchplay', diff, 20, [20, 5])).toBe(15);
+    expect(matchStrokeHandicap('singles_matchplay', diff, 5, [20, 5])).toBe(0);
+    expect(matchStrokeHandicap('singles_matchplay', legacy, 20, [20, 5])).toBe(20);
+    // The player's own handicap (the header's number) is not the match strokes.
+    expect(playerStrokeHandicap('singles_matchplay', diff, 20)).toBe(20);
   });
 
   it('fourball 85 % gir banehandicap 20 → 17, altså ingen slag på SI 18', () => {

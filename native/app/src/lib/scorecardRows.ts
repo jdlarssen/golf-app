@@ -60,6 +60,11 @@ export function buildScorecardRows(opts: {
   teamOwnerId: string | null;
   teeGender: ScoringGender;
   courseHandicap: number;
+  /**
+   * Hele rosterets banehandicap (`matchCourseHandicaps`): en ny singel-match
+   * gir forskjellen til motstanderen (revisjonen 20.11).
+   */
+  matchCourseHandicaps: readonly number[];
   /** Lagnummeret mitt — nøkkelen motoren kjenner laget på. */
   teamNumber: number | null;
   /** Motor-resultatet, eller `null` når runden ikke er et lagkort. */
@@ -89,7 +94,12 @@ export function buildScorecardRows(opts: {
             hole.strokeIndex,
           )
         : null
-      : playerExtraForHole(opts.game, opts.courseHandicap, hole.strokeIndex);
+      : playerExtraForHole(
+          opts.game,
+          opts.courseHandicap,
+          hole.strokeIndex,
+          opts.matchCourseHandicaps,
+        );
 
     return {
       holeNumber: hole.holeNumber,

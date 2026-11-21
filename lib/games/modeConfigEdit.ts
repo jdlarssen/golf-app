@@ -26,6 +26,10 @@ import { supportsNetToParRanking } from '@/lib/scoring/tiebreaker';
  *
  * `wolf_rotation` (#2314) follows the same pattern: stamped on a new wolf
  * game, carried through an edit, and never added to a game created before.
+ *
+ * `match_strokes` (owner-ordered audit 2026-11-20) too: stamped on a new
+ * singles match (`stampNewSinglesMatchConfig`), carried through an edit, and
+ * never added to a match created before.
  */
 export const PRESERVED_MODE_CONFIG_KEYS = [
   'team_strokes_override',
@@ -33,11 +37,25 @@ export const PRESERVED_MODE_CONFIG_KEYS = [
   'withdrawal_play_on',
   'ranking',
   'wolf_rotation',
+  'match_strokes',
 ] as const;
 
 /**
+ * Owner-ordered audit 2026-11-20: a NEW singles match gives the higher
+ * handicap the difference (`match_strokes: 'difference'`, read by
+ * `singlesStrokeHandicap` in the engine). Its own function so the cup, which
+ * keeps the original ranking rule on best ball (#2625), stamps its singles
+ * matches without stamping anything else. Any other config is returned
+ * unchanged.
+ */
+export function stampNewSinglesMatchConfig(config: GameModeConfig): GameModeConfig {
+  if (config.kind !== 'singles_matchplay') return config;
+  return { ...config, match_strokes: 'difference' };
+}
+
+/**
  * #2253 / #2625 / #2314: stamps the rules a NEW game is created with onto its
- * `mode_config`. Today there are two:
+ * `mode_config`. Today there are three:
  *  - solo strokeplay, the team strokeplay formats (best ball,
  *    Texas/Ambrose/Florida scramble, shamble) and Nassau rank on net to par
  *    (`ranking: 'net_to_par'`, read by `ranksByNetToPar` in the scoring
@@ -45,7 +63,9 @@ export const PRESERVED_MODE_CONFIG_KEYS = [
  *    (#2738);
  *  - wolf gives the last holes to the player in last place only with a gap of
  *    n points (`wolf_rotation: 'catch_up'`, read by `wolfForHole` in
- *    `lib/scoring/modes/wolfTurn.ts`).
+ *    `lib/scoring/modes/wolfTurn.ts`);
+ *  - singles matchplay gives the higher handicap the difference
+ *    (`stampNewSinglesMatchConfig`, audit 2026-11-20).
  * Every other config is returned unchanged.
  *
  * Called at every insert site that can create one of those formats — the
@@ -56,6 +76,7 @@ export const PRESERVED_MODE_CONFIG_KEYS = [
  */
 export function stampNewGameModeConfig(config: GameModeConfig): GameModeConfig {
   if (config.kind === 'wolf') return { ...config, wolf_rotation: 'catch_up' };
+  if (config.kind === 'singles_matchplay') return stampNewSinglesMatchConfig(config);
   if (!supportsNetToParRanking(config)) return config;
   return { ...config, ranking: 'net_to_par' };
 }

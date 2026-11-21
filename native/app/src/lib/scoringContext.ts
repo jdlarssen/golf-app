@@ -36,7 +36,10 @@
 //     leaderboard-skjerm som krasjer midt i runden er verre enn en som sier at
 //     tabellen kommer på nettsiden.
 import { computeLeaderboard } from '../../../../lib/scoring';
-import { playerStrokeHandicap } from '../../../../lib/scoring/allocatedStrokes';
+import {
+  matchStrokeHandicap,
+  playerStrokeHandicap,
+} from '../../../../lib/scoring/allocatedStrokes';
 import { strokesForHole } from '../../../../lib/scoring/strokeAllocation';
 import { buildContextForMode } from '../../../../lib/scoring/buildModeResultFromData';
 import type {
@@ -49,7 +52,7 @@ import type {
   WolfHoleChoice,
 } from '../../../../lib/scoring/modes/types';
 import type { LocalScore } from '../data/db';
-import type { BundleGame, GameBundle } from '../data/gameBundle';
+import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import { gameHoleNumbers, gameHoles } from './segmentRound';
 
 /**
@@ -246,9 +249,13 @@ export function asModeConfig(mode: GameMode, raw: unknown): GameModeConfig | nul
 
 /**
  * Slagene én spiller får på ett hull, slik motoren regner dem (#2218):
- * allowance i fourball og round robin, 0 i brutto-valgene. Regelen bor i den
- * delte `allocatedStrokes.ts` — appen skriver den ikke på nytt, den sender bare
- * inn samme config som motoren får (`asModeConfig`).
+ * allowance i fourball og round robin, 0 i brutto-valgene, og forskjellen til
+ * motstanderen i en ny singel-match (revisjonen 20.11). Regelen bor i den
+ * delte `allocatedStrokes.ts` (`matchStrokeHandicap`) — appen skriver den ikke
+ * på nytt, den sender bare inn samme config som motoren får (`asModeConfig`).
+ *
+ * `matchCourseHandicaps` er banehandicapet til alle i rosteret
+ * ({@link matchCourseHandicaps}); bare singel leser det.
  *
  * `null` = ukjent: configen peker på et annet format, og motoren ville ikke
  * regnet. Samme «ukjent er null, aldri 0» som lagkortene. Et manglende
@@ -258,9 +265,21 @@ export function playerExtraForHole(
   game: Pick<BundleGame, 'gameMode' | 'modeConfig'>,
   courseHandicap: number | null,
   strokeIndex: number,
+  matchCourseHandicaps: readonly number[],
 ): number | null {
-  const playing = playerStrokeHandicapFor(game, courseHandicap ?? 0);
-  return playing != null ? strokesForHole(playing, strokeIndex) : null;
+  const mode = game.gameMode as GameMode;
+  const cfg = asModeConfig(mode, game.modeConfig);
+  if (cfg === null) return null;
+  const playing = matchStrokeHandicap(mode, cfg, courseHandicap ?? 0, matchCourseHandicaps);
+  return strokesForHole(playing, strokeIndex);
+}
+
+/**
+ * Banehandicapet til hele rosteret, som {@link playerExtraForHole} trenger for
+ * singel-matchens forskjell. Et manglende tall regnes som 0, som over.
+ */
+export function matchCourseHandicaps(players: readonly BundlePlayer[]): number[] {
+  return players.map((p) => p.courseHandicap ?? 0);
 }
 
 /**
