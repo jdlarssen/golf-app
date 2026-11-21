@@ -104,8 +104,9 @@ select ok(not has_function_privilege('anon', 'public.create_course_with_layout(t
       and has_function_privilege('authenticated', 'public.create_course_with_layout(text,jsonb,jsonb,boolean)', 'EXECUTE'),
   '#1121: create_course_with_layout anon-revoked, authenticated kept');
 select ok(not has_function_privilege('anon', 'public.email_is_registered(text)', 'EXECUTE')
-      and has_function_privilege('authenticated', 'public.email_is_registered(text)', 'EXECUTE'),
-  '#1121: email_is_registered anon-revoked (fixes #671 drift), authenticated kept');
+      and not has_function_privilege('authenticated', 'public.email_is_registered(text)', 'EXECUTE')
+      and has_function_privilege('service_role', 'public.email_is_registered(text)', 'EXECUTE'),
+  '#1121, 0252: email_is_registered anon-revoked (fixes #671 drift); service role only since 0252');
 select ok(not has_function_privilege('anon', 'public.can_react_in_game(uuid)', 'EXECUTE')
       and has_function_privilege('authenticated', 'public.can_react_in_game(uuid)', 'EXECUTE'),
   '#1121: can_react_in_game anon-revoked, authenticated kept');
