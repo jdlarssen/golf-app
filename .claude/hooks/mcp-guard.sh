@@ -16,6 +16,9 @@
 #            kjente lesefunksjoner (en funksjon kan skrive, så ukjent = skriv).
 #            Tekst i enkle anførselstegn regnes ikke som SQL når spørringen er
 #            enkel nok til at grensene er sikre (ingen ", \, $, -- eller /*).
+#            Forutsetning: databasen har ingen skrivende funksjon som tar en
+#            tabellrad som eneste argument, og ingen egne operatorer. Å lage en
+#            slik er selv et prod-skriv som krever godkjenning.
 #   • PASS   alt mot staging/branch-prosjekter (prod-ref finnes ikke i kallet)
 #
 # Godkjennings-luke (engangs): eier godkjenner eksplisitt i økten →

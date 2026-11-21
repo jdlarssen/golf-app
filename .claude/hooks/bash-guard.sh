@@ -11,10 +11,11 @@
 #            skript med prod-flagg (#1074) — engangs-luke: touch .claude/approve-prod
 #   • DENY   --no-verify og git commit -n — omgår commit-msg/pre-commit/pre-push
 #   • DENY   core.hooksPath pekt bort fra .githooks, GIT_CONFIG_*, ALLOW_MAIN_PUSH=1
+#   • DENY   nye aliaser for git/gh, og endring av .githooks/ og .git/config fra skallet
 #   • DENY   &, nohup, setsid, disown — løsrevne prosesser TaskStop ikke når
 #   • DENY   gh pr merge med annet enn rebase (--squash/-s, --merge/-m) eller --admin
 #   • DENY   merge utenom gh pr merge (gh api/curl mot …/pulls/N/merge, …/merges,
-#            GraphQL-mergen) og endring av branch-beskyttelsen
+#            GraphQL-mergen, GraphQL lest fra fil) og endring av branch-beskyttelsen
 #   • DENY   gh pr merge på bruker-synlig PR uten staging-verified/needs-manual-qa (#1303)
 #   • DENY   git push --force/-f/+ref/--mirror på selve push-leddet (lease er OK, #2713)
 #   • REMIND gh issue create uten --milestone (mandatory milestone-regel)
@@ -25,9 +26,12 @@
 # det er skrevet, mens tekst med mellomrom i anførselstegn (en commit-melding, en
 # PR-body) står igjen som «Q» og aldri utløser noe (#1074 defekt a). Sender
 # kommandoen tekst videre til et skall eller en tolk (bash -c, eval, | sh,
-# node -e), leses også teksten som kommando. Prod-reglene matcher full kommando
-# — der er ref-en i en quotet URL nettopp det vi vil fange; bruk --body-file for
-# prosa som må nevne prod-detaljer.
+# node -e), leses også teksten som kommando, i flere lag. En variabel som settes
+# i samme kommando, settes inn der den brukes. Dette er beste evne, ikke et
+# bevis: omveier vakta ikke kan følge, finnes — regelen (I7) gjelder uansett.
+# Prod-reglene leses både mot kommandoen som skrevet (der er ref-en i en quotet
+# URL nettopp det vi vil fange) og mot den oppløste; bruk --body-file for prosa
+# som må nevne prod-detaljer.
 #
 # Hver deny/ask/remind logges som én JSONL-linje til .claude/logs/ (#1074).
 #
@@ -60,16 +64,23 @@ strip_heredocs() {
 
 # shell_words <keep>: løser opp '…', "…" og backslash tegn for tegn. Et sitat
 # uten mellomrom og skalltegn limes inn som det er ("--force" → --force,
-# --no-ver""ify → --no-verify). Et sitat med mellomrom eller skalltegn er tekst
+# --no-ver""ify → --no-verify, "+$B" → +$B). Et sitat med mellomrom eller skalltegn er tekst
 # og blir «Q» — unntatt når det inneholder $( eller `, som skallet kjører. Med
 # keep=1 limes ALT inn: da er ingenting skjult. Mellomrom og tab slås sammen til
-# ett mellomrom; linjeskift står.
+# ett mellomrom; linjeskift står. $'…' leses som skallet leser det (\x2d, \055
+# og vanlige escapes dekodes); $"…" er et vanlig "…".
 shell_words() {
   awk -v keep="$1" '
     function emit(code) {
-      if (keep || code || span ~ /^[A-Za-z0-9_@%+=:,.\/-]*$/) add(span); else add("Q")
+      if (keep || code || span ~ /^[A-Za-z0-9_@%+=:,.\/${}-]*$/) add(span); else add("Q")
     }
     function add(str) { out = out str; if (str != "") last = substr(str, length(str), 1) }
+    function numval(digits, base,   j, v) {
+      v = 0
+      for (j = 1; j <= length(digits); j++)
+        v = v * base + index("0123456789abcdef", tolower(substr(digits, j, 1))) - 1
+      return v
+    }
     BEGIN { RS = "\001"; ORS = "" }
     {
       s = $0; n = length(s); out = ""; q = ""; span = ""; last = ""
@@ -79,39 +90,109 @@ shell_words() {
           if (c == "\047") { emit(0); q = "" } else span = span c
           continue
         }
+        if (q == "a") {
+          if (c == "\\" && i < n) {
+            i++; e = substr(s, i, 1); num = ""
+            if (e == "x") {
+              while (length(num) < 2 && i < n && substr(s, i + 1, 1) ~ /[0-9A-Fa-f]/) { i++; num = num substr(s, i, 1) }
+              span = span (num == "" ? "x" : sprintf("%c", numval(num, 16)))
+            } else if (e ~ /[0-7]/) {
+              num = e
+              while (length(num) < 3 && i < n && substr(s, i + 1, 1) ~ /[0-7]/) { i++; num = num substr(s, i, 1) }
+              span = span sprintf("%c", numval(num, 8))
+            } else if (e == "n") span = span "\n"
+            else if (e == "t") span = span "\t"
+            else span = span e
+            continue
+          }
+          if (c == "\047") { emit(0); q = "" } else span = span c
+          continue
+        }
         if (q == "d") {
           if (c == "\\" && i < n) { i++; span = span substr(s, i, 1); continue }
           if (c == "\"") { emit(span ~ /\$\(|`/); q = "" } else span = span c
           continue
         }
         if (c == "\\" && i < n) { i++; c2 = substr(s, i, 1); if (c2 != "\n") add(c2); continue }
+        if (c == "$" && i < n && substr(s, i + 1, 1) == "\047") { i++; q = "a"; span = ""; continue }
+        if (c == "$" && i < n && substr(s, i + 1, 1) == "\"") continue
         if (c == "\047") { q = "s"; span = ""; continue }
         if (c == "\"") { q = "d"; span = ""; continue }
         if (c == " " || c == "\t") { if (last != " " && last != "\n" && last != "") add(" "); continue }
         add(c)
       }
-      if (q == "s") emit(0)
+      if (q == "s" || q == "a") emit(0)
       if (q == "d") emit(span ~ /\$\(|`/)
       print out
     }'
 }
 
-# Sender kommandoen tekst videre til et skall (bash -c, eval, | sh, bash <<EOF)
-# eller en tolk (node -e, python -c)? Da er teksten kommando, og alt leses.
+# expand_simple: de enkleste omveiene skallet selv løser opp. ${X:-verdi} blir
+# verdien, og en variabel som settes i SAMME kommando (X=verdi; … $X) settes inn
+# der den brukes. Beste evne: en variabel satt et annet sted ser vakta ikke.
+expand_simple() {
+  sed -E 's/\$\{[A-Za-z_][A-Za-z0-9_]*:?[-=+]([^}]*)\}/\1/g' | awk '
+    function replace_all(text, needle, value,   at, res) {
+      res = ""
+      while ((at = index(text, needle)) > 0) {
+        res = res substr(text, 1, at - 1) value
+        text = substr(text, at + length(needle))
+      }
+      return res text
+    }
+    # $NAME, men ikke $NAMEX: tegnet etter navnet kan ikke være en del av et navn.
+    function replace_bare(text, name, value,   at, res, needle, nxt) {
+      res = ""; needle = "$" name
+      while ((at = index(text, needle)) > 0) {
+        nxt = substr(text, at + length(needle), 1)
+        res = res substr(text, 1, at - 1) (nxt ~ /[A-Za-z0-9_]/ ? needle : value)
+        text = substr(text, at + length(needle))
+      }
+      return res text
+    }
+    BEGIN { RS = "\001"; ORS = "" }
+    {
+      s = $0; rest = s; count = 0
+      while (count < 20 && match(rest, /(^|[ ;&|(\n])[A-Za-z_][A-Za-z0-9_]*=[^ ;&|\n)]+/)) {
+        pair = substr(rest, RSTART, RLENGTH); rest = substr(rest, RSTART + RLENGTH)
+        sub(/^[ ;&|(\n]/, "", pair)
+        eq = index(pair, "=")
+        names[++count] = substr(pair, 1, eq - 1); values[count] = substr(pair, eq + 1)
+      }
+      for (k = 1; k <= count; k++) {
+        s = replace_all(s, "${" names[k] "}", values[k])
+        s = replace_bare(s, names[k], values[k])
+      }
+      print s
+    }'
+}
+
+# Alt innhold synlig: anførselstegn løses opp i tre runder, så et flagg i
+# anførselstegn INNI tekst som sendes til et skall (bash -c '… "-f" …') også
+# står igjen som et flagg.
+cmd_all="$(printf '%s' "$cmd" | shell_words 1 | shell_words 1 | shell_words 1 | expand_simple)"
+
+# Sender kommandoen tekst videre til et skall (bash -c, eval, | sh, bash <<EOF,
+# env -S) eller en tolk (node -e, python -c)? Da er teksten kommando, og alt
+# leses. Mønsteret tåler flagg mellom navnet og -c (bash --norc -c, bash -o
+# pipefail -c) og leses både fra kommandoen som skrevet og med anførselstegn
+# løst opp ("bash" -c).
 cmd_flat="$(printf '%s' "$cmd" | tr '\n' ' ')"
+cmd_all_flat="$(printf '%s' "$cmd_all" | tr '\n' ' ')"
+SHELL_WRAP_RE='(^|[^[:alnum:]_.-])(ba|z|da|k|fi)?sh[[:space:]]+([^[:space:];&|]+[[:space:]]+)*-[A-Za-z]*c([[:space:]]|$)|(^|[^[:alnum:]_.-])eval[[:space:]]|\|[[:space:]]*(ba|z|da|k)?sh([[:space:]]|$)|(^|[^[:alnum:]_.-])(ba|z|da|k)?sh[[:space:]]*(-s[[:space:]]*)?<<|(^|[^[:alnum:]_.-])env[[:space:]]+([^[:space:];&|]+[[:space:]]+)*(-[A-Za-z]*S|--split-string)|(^|[^[:alnum:]_.-])su[[:space:]]+([^[:space:];&|]+[[:space:]]+)*-c([[:space:]]|$)'
+CODE_WRAP_RE='(^|[^[:alnum:]_.-])(node|tsx|ts-node|python[0-9.]*|perl|ruby|deno|bun|php)[[:space:]]+([^[:space:];&|]+[[:space:]]+)*(-e|-c|-p|-r|--eval|--print)([[:space:]=]|$)'
 shell_wrap=""
 code_wrap=""
-if printf '%s' "$cmd_flat" | grep -Eq '(^|[^[:alnum:]_.-])(ba|z|da|k|fi)?sh[[:space:]]+(-[A-Za-z]+[[:space:]]+)*-[A-Za-z]*c([[:space:]]|$)|(^|[^[:alnum:]_.-])eval[[:space:]]|\|[[:space:]]*(ba|z|da|k)?sh([[:space:]]|$)|(^|[^[:alnum:]_.-])(ba|z|da|k)?sh[[:space:]]*(-s[[:space:]]*)?<<'; then
+if printf '%s' "$cmd_flat" | grep -Eq "$SHELL_WRAP_RE" || printf '%s' "$cmd_all_flat" | grep -Eq "$SHELL_WRAP_RE"; then
   shell_wrap=1
 fi
-if printf '%s' "$cmd_flat" | grep -Eq '(^|[^[:alnum:]_.-])(node|python[0-9.]*|perl|ruby|deno|bun)[[:space:]]+(-[A-Za-z-]+[[:space:]]+)*(-e|-c|-p|--eval|--print)([[:space:]]|$)'; then
+if printf '%s' "$cmd_flat" | grep -Eq "$CODE_WRAP_RE" || printf '%s' "$cmd_all_flat" | grep -Eq "$CODE_WRAP_RE"; then
   code_wrap=1
 fi
-cmd_all="$(printf '%s' "$cmd" | shell_words 1)"
 if [ -n "$shell_wrap" ] || [ -n "$code_wrap" ]; then
   cmd_norm="$cmd_all"
 else
-  cmd_norm="$(printf '%s\n' "$cmd" | strip_heredocs | shell_words 0)"
+  cmd_norm="$(printf '%s\n' "$cmd" | strip_heredocs | shell_words 0 | expand_simple)"
 fi
 # Ett ledd per linje (; & | og linjeskift skiller ledd).
 norm_segments="$(printf '%s\n' "$cmd_norm" | sed -E 's/[0-9]*>&[0-9-]*/ /g; s/&>/ /g' | tr ';&|' '\n\n\n')"
@@ -164,29 +245,37 @@ prod_extra=""
 # «.env.local» som eget filnavn (med eller uten sti og anførselstegn) — ikke
 # .env.staging.local og ikke .env.local.example.
 ENV_LOCAL='["'"'"']?([^[:space:]"'"'"'=]*/)?\.env\.local(["'"'"'[:space:];&|)]|$)'
-if printf '%s' "$cmd" | grep -Eq "postgres(ql)?://[^[:space:]]*${PROD_REF}"; then
-  # postgres-connstring mot prod — psql read-only kan ikke klassifiseres trygt
-  prod_rule="prod-connstring"
-elif printf '%s' "$cmd" | grep -Eq "(curl|wget|psql|pg_dump|pg_restore)" && printf '%s' "$cmd" | grep -q "${PROD_REF}"; then
-  # Nettklient + prod-ref hvor som helst i kommandoen (også via en variabel).
-  prod_rule="prod-http"
-elif printf '%s' "$cmd" | grep -Eq "(^|[^[:alnum:]_])(node|deno|bun|tsx|python[0-9.]*|ruby|perl|php|nc|ncat|openssl)([^[:alnum:]_]|$)" && printf '%s' "$cmd" | grep -q "${PROD_REF}\.supabase\.co"; then
-  # Tolk + prod-URL: et skript på én linje er også en nettklient.
-  prod_rule="prod-http"
-elif printf '%s' "$cmd" | grep -Eq -- "--env-file[= ]+${ENV_LOCAL}|(^|[[:space:];&|(])(source|\.)[[:space:]]+${ENV_LOCAL}|dotenv[^;&|]*[[:space:]]-e[[:space:]]+${ENV_LOCAL}|DOTENV_CONFIG_PATH=${ENV_LOCAL}|\\\$\((cat|grep|sed|awk)[^)]*\.env\.local"; then
-  # .env.local holder prod-nøklene. Lastes den inn i en kommando, står
-  # kommandoen mot prod uten at ref-en er synlig.
-  prod_rule="prod-env-file"
-  prod_extra=" .env.local peker på prod. Bruk .env.staging.local for testing."
-elif printf '%s' "$cmd" | grep -Eq -- "provision-review-account[^;&|]*--env[= ]+[\"']?prod|backfillResultSummaries[^;&|]*--prod([[:space:]\"';&|]|$)"; then
-  prod_rule="prod-script"
-  prod_extra=" Skriptet er bedt om å skrive til prod."
-elif printf '%s' "$cmd" | grep -Eq "(^|[[:space:];&|])(npx[[:space:]]+)?supabase[[:space:]]" && printf '%s' "$cmd" | grep -q "$PROD_REF" \
-  && ! printf '%s' "$cmd" | grep -Eq "supabase[[:space:]]+(gen|inspect)[[:space:]]"; then
-  # supabase-CLI mot prod, unntatt read-only gen/inspect (gen:types er lov)
-  prod_rule="prod-supabase-cli"
-  prod_extra=" supabase-CLI mot prod er kun lov for 'gen'/'inspect' (read-only)."
-fi
+# Reglene leses to ganger: mot kommandoen som skrevet (der en ref i en quotet URL
+# skal treffes), og mot kommandoen med anførselstegn og backslash løst opp, så
+# et filnavn eller flagg som er delt opp (".env"".local", --pro""d) er det samme.
+prod_classify() { # tekst → setter prod_rule/prod_extra
+  local t="$1"
+  if printf '%s' "$t" | grep -Eq "postgres(ql)?://[^[:space:]]*${PROD_REF}"; then
+    # postgres-connstring mot prod — psql read-only kan ikke klassifiseres trygt
+    prod_rule="prod-connstring"
+  elif printf '%s' "$t" | grep -Eq "(curl|wget|psql|pg_dump|pg_restore)" && printf '%s' "$t" | grep -q "${PROD_REF}"; then
+    # Nettklient + prod-ref hvor som helst i kommandoen (også via en variabel).
+    prod_rule="prod-http"
+  elif printf '%s' "$t" | grep -Eq "(^|[^[:alnum:]_])(node|deno|bun|tsx|python[0-9.]*|ruby|perl|php|nc|ncat|openssl)([^[:alnum:]_]|$)" && printf '%s' "$t" | grep -q "${PROD_REF}\.supabase\.co"; then
+    # Tolk + prod-URL: et skript på én linje er også en nettklient.
+    prod_rule="prod-http"
+  elif printf '%s' "$t" | grep -Eq -- "--env-file[= ]+${ENV_LOCAL}|(^|[[:space:];&|(])(source|\.)[[:space:]]+${ENV_LOCAL}|dotenv[^;&|]*[[:space:]]-e[[:space:]]+${ENV_LOCAL}|DOTENV_CONFIG_PATH=${ENV_LOCAL}|\\\$\((cat|grep|sed|awk)[^)]*\.env\.local"; then
+    # .env.local holder prod-nøklene. Lastes den inn i en kommando, står
+    # kommandoen mot prod uten at ref-en er synlig.
+    prod_rule="prod-env-file"
+    prod_extra=" .env.local peker på prod. Bruk .env.staging.local for testing."
+  elif printf '%s' "$t" | grep -Eq -- "provision-review-account[^;&|]*--env[= ]+[\"']?prod|backfillResultSummaries[^;&|]*--prod([[:space:]\"';&|]|$)"; then
+    prod_rule="prod-script"
+    prod_extra=" Skriptet er bedt om å skrive til prod."
+  elif printf '%s' "$t" | grep -Eq "(^|[[:space:];&|])(npx[[:space:]]+)?supabase[[:space:]]" && printf '%s' "$t" | grep -q "$PROD_REF" \
+    && ! printf '%s' "$t" | grep -Eq "supabase[[:space:]]+(gen|inspect)[[:space:]]"; then
+    # supabase-CLI mot prod, unntatt read-only gen/inspect (gen:types er lov)
+    prod_rule="prod-supabase-cli"
+    prod_extra=" supabase-CLI mot prod er kun lov for 'gen'/'inspect' (read-only)."
+  fi
+}
+prod_classify "$cmd"
+[ -z "$prod_rule" ] && prod_classify "$cmd_all"
 if [ -n "$prod_rule" ]; then
   if approved; then
     log_event "$prod_rule" "allow-prod-approved"
@@ -201,7 +290,7 @@ fi
 # kortformen -n på git commit (git push -n er tørrkjøring og er lov).
 no_verify=""
 case "$cmd_stripped" in *--no-verify*) no_verify=1 ;; esac
-printf '%s\n' "$norm_segments" | grep -E "${GIT_LEAD}" | grep -Eq -- '--no-veri' && no_verify=1
+printf '%s\n' "$norm_segments" | grep -E "${GIT_LEAD}" | grep -Eq -- '--no-v(e(r(i[a-z]*)?)?)?([[:space:])=]|$)' && no_verify=1
 printf '%s\n' "$norm_segments" | grep -E "${GIT_LEAD}commit([[:space:]]|\$)" \
   | grep -Eq '(^|[[:space:]])-[A-Za-z]*n[A-Za-z]*([[:space:])]|$)' && no_verify=1
 if [ -n "$no_verify" ]; then
@@ -223,6 +312,29 @@ if [ -n "$hooks_off" ]; then
 fi
 if printf '%s' "$cmd_norm" | grep -Eq 'ALLOW_MAIN_PUSH=[^0[:space:]]'; then
   emit_deny "allow-main-push" "ALLOW_MAIN_PUSH=1 er eierens nødutgang forbi «aldri direkte push til main» og brukes ikke av agenter (bindings §Enforcement). Push grenen og åpne en PR."
+fi
+
+# ── DENY: aliaser for git og gh (p09) ──
+# Et alias gir en kommando et nytt navn, og da ser ikke reglene under hva som
+# faktisk kjøres. Å lese et alias er lov; å lage eller endre ett er det ikke.
+if printf '%s\n' "$norm_segments" | grep -E "${GIT_LEAD}" \
+    | grep -Eiq '(^|[[:space:]])alias\.[^[:space:]=]+(=|[[:space:]]+[^[:space:]])' \
+  || printf '%s\n' "$norm_segments" | grep -Eq '(^|[[:space:](){!`])([^[:space:]]*/)?gh[[:space:]]+alias[[:space:]]+(set|import|delete)([[:space:]]|$)'; then
+  emit_deny "alias" "Aliaser for git og gh lages ikke i en agentøkt: et alias skjuler hvilken kommando som kjøres. Skriv kommandoen fullt ut."
+fi
+
+# ── DENY: hookfilene og .git/config endret fra skallet (p09) ──
+# .githooks/ er vaktene som kjører ved commit og push, og .git/config sier hvor
+# de ligger. En endring i en hook hører hjemme i en PR (stien er eier-merge) og
+# gjøres med redigeringsverktøyet, der den synes i diffen. Lesing er lov, og
+# chmod +x på en ny hook er lov.
+HOOK_FILES='(\.githooks|\.git/config|\.git/hooks)'
+if printf '%s\n' "$norm_segments" | grep -Eq -- ">>?[[:space:]]*[^[:space:]]*${HOOK_FILES}" \
+  || printf '%s\n' "$norm_segments" | grep -Eq -- "(^|[[:space:](){!\`])(tee|rm|mv|truncate|ln|install|unlink|rmdir|dd)[[:space:]]([^>]*[[:space:]=])?[^[:space:]>]*${HOOK_FILES}" \
+  || printf '%s\n' "$norm_segments" | grep -Eq -- "(^|[[:space:](){!\`])(sed|perl)[[:space:]].*-[A-Za-z]*i.*${HOOK_FILES}" \
+  || printf '%s\n' "$norm_segments" | grep -Eq -- "(^|[[:space:](){!\`])cp[[:space:]].*[[:space:]][^[:space:]]*${HOOK_FILES}[^[:space:]]*[[:space:]]*\$" \
+  || printf '%s\n' "$norm_segments" | grep -Eq -- "(^|[[:space:](){!\`])chmod[[:space:]]+([^[:space:]]+[[:space:]]+)*(-[A-Za-z]*x[A-Za-z]*|[ugoa]*-[rwxXst]*x[rwxXst]*|[0-7]?[0246][0-7][0-7])[[:space:]].*(\.githooks|\.git/hooks)"; then
+  emit_deny "hook-files" "Hookfilene (.githooks/) og .git/config endres ikke fra skallet. Skal en hook endres, gjør det med redigeringsverktøyet i en PR, der endringen synes i diffen (stien er eier-merge). Lesing og chmod +x på en ny hook er lov."
 fi
 
 # ── DENY: prosesser som løsrives fra økta (&, nohup, setsid, disown) ──────────
@@ -315,7 +427,12 @@ if printf '%s' "$cmd_all" | grep -Eq '(^|[^[:alnum:]_.-])(gh[[:space:]]+api|curl
   if printf '%s' "$api_flat" | grep -Eq 'mergePullRequest|enablePullRequestAutoMerge|enqueuePullRequest'; then
     emit_deny "api-merge" "Merge skjer bare med «gh pr merge <N> --rebase --delete-branch», der vakta kan sjekke strategi og stagingbevis. Merge via GraphQL-API-et er sperret."
   fi
-  if [ -n "$api_write" ] && printf '%s' "$api_flat" | grep -Eq 'pulls/[0-9]+/merge|repos/[^[:space:]/]+/[^[:space:]/]+/merges([^A-Za-z]|$)'; then
+  # GraphQL lest fra en fil kan vakta ikke lese: da vet den ikke om det er en merge.
+  if printf '%s' "$api_flat" | grep -Eq '(^|[^[:alnum:]_])graphql([^[:alnum:]_]|$)' \
+    && printf '%s' "$api_flat" | grep -Eq -- '=@|--input([[:space:]=]|$)|(-d|--data[a-z-]*)[[:space:]=]*@'; then
+    emit_deny "api-graphql-file" "GraphQL-kall der spørringen leses fra en fil, er sperret: vakta kan ikke se om kallet er en merge. Skriv spørringen rett i kommandoen (-f query='…')."
+  fi
+  if [ -n "$api_write" ] && printf '%s' "$api_flat" | grep -Eq 'pulls/[^/[:space:]]+/+merge|repos/[^[:space:]/]+/[^[:space:]/]+/merges([^A-Za-z]|$)'; then
     emit_deny "api-merge" "Merge skjer bare med «gh pr merge <N> --rebase --delete-branch», der vakta kan sjekke strategi og stagingbevis. Merge via REST-API-et er sperret. Vil du bare se om PR-en er merget: gh pr view <N> --json state,mergedAt."
   fi
   if { [ -n "$api_write" ] && printf '%s' "$api_flat" | grep -Eq 'branches/[^[:space:]/]+/protection|/rulesets'; } \
@@ -338,10 +455,10 @@ case "$has_merge" in
     # Bare rebase (p09): --squash/-s og --merge/-m, også klynget (-sd) og i
     # anførselstegn. --admin går forbi kravene på grenen og er eierens.
     merge_lines="$(printf '%s\n' "$merge_norm" | tr ';&|' '\n\n\n' | grep -E 'gh pr merge')"
-    if printf '%s\n' "$merge_lines" | grep -Eq -- '(^|[[:space:]])(--squash|--merge|-[A-Za-z]*[sm][A-Za-z]*)([[:space:]]|$)'; then
+    if printf '%s\n' "$merge_lines" | grep -Eq -- '(^|[[:space:]])(--squash|--merge|-[A-Za-z]*[sm][A-Za-z]*)([[:space:]=]|$)'; then
       emit_deny "squash-merge" "Tørny merger bare med rebase (squash og merge-commit mister granulær audit-trail per commit). Bruk: gh pr merge --rebase --delete-branch. Se CLAUDE.md → «Branch + PR-flyt»."
     fi
-    if printf '%s\n' "$merge_lines" | grep -Eq -- '(^|[[:space:]])--admin([[:space:]]|$)'; then
+    if printf '%s\n' "$merge_lines" | grep -Eq -- '(^|[[:space:]])--admin([[:space:]=]|$)'; then
       emit_deny "merge-admin" "gh pr merge --admin går forbi kravene på grenen (grønn CI) og er eierens. Vent på grønn CI, eller be eieren merge."
     fi
     # Kommandoskillere → linjeskift. merge_norm har heredoc-kropper ute og
@@ -428,8 +545,8 @@ esac
 # bash -c "git push -f" leses som det skallet kjører (p09). Forkortelsen --forc
 # og --mirror (overskriver alt på remote) teller som force.
 force_seg="$(printf '%s\n' "$norm_segments" | grep -E "${GIT_LEAD}push([[:space:]]|\$)" \
-  | sed -E 's/--force-with-lease(=[^[:space:]]*)?//g; s/--force-if-includes//g' \
-  | grep -E -- '(^|[[:space:]])(--for[a-z-]*|--mirror|-[A-Za-z]*f[A-Za-z]*|\+[^[:space:]]+)([[:space:])]|$)' | head -n1)"
+  | sed -E 's/--force-with-lease(=[^[:space:]]*)?//g; s/--force-if-includes//g; s/--follow-tags//g' \
+  | grep -E -- '(^|[[:space:]])(--f[a-z-]*|--mirror|-[A-Za-z]*f[A-Za-z]*|\+[^[:space:]]+)([[:space:])]|$)' | head -n1)"
 if [ -n "$force_seg" ]; then
   emit_deny "force-push" "git push --force/-f er nektet (CLAUDE.md: «Aldri force-push uten god grunn»). --force-with-lease fra rebase-flyten er OK og blokkeres ikke. Trenger grenen en omskriving: push til en NY gren (git push origin HEAD:refs/heads/<ny-gren>), eller be eieren kjøre force-pushen selv."
 fi

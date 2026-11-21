@@ -34,10 +34,15 @@ target.
   `ALLOW_MAIN_PUSH=1` · pointing `core.hooksPath` away from `.githooks` · merging
   any other way than `gh pr merge --rebase` (no squash, no merge commit, no
   `--admin`, no merge through the GitHub API) · changing branch protection ·
-  rewording commands to dodge a matcher that fired correctly. bash-guard reads the
-  command the way the shell does (quotes and backslashes resolved, text handed to
-  `bash -c`/`eval`/an interpreter read as a command), so the spelling does not
-  matter.
+  creating git or gh aliases · changing the hook files (`.githooks/`) or
+  `.git/config` from the shell · rewording commands to dodge a matcher that fired
+  correctly. bash-guard reads the command the way the shell does (quotes and
+  backslashes resolved, text handed to `bash -c`/`eval`/an interpreter read as a
+  command, a variable set in the same command put in where it is used). That is
+  best effort, not a proof: indirection the guard cannot follow can still get
+  through, and the rule itself (I7) is what binds. A hook file is changed with the
+  editor tools in a PR, where the change shows in the diff; CI runs the same
+  checks server-side.
 - Prod firewall, what counts as a prod call: a Supabase MCP call with prod as its
   project (any tool that is not on mcp-guard's list of read tools), a shell command
   that reaches prod, a command that loads `.env.local` (it holds the prod keys:
@@ -46,6 +51,9 @@ target.
   A prod SQL call passes without approval only when mcp-guard can prove it is a
   read: one statement, no comments, no write keyword outside string literals, and
   every function call on its list of known read functions (a function can write).
+  The proof assumes that the database has no writing function that takes a table
+  row as its only argument and no custom operators; adding either is itself a
+  prod write that needs approval.
   The deny text names what stopped the proof — rewrite the read; an unproven read
   uses up the approval.
 - The e2e suite and the service-role scripts check their own target
