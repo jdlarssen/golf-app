@@ -168,6 +168,50 @@ for tool_name in mcp__supabase__execute_sql mcp__36be25a6-2d72-41c3-a675-2352133
   fi
 done
 
+# Discord-kort-jobben (p09): jobben sjekker ut PR-ens kode og kjører den med
+# hemmeligheter. Porten i første steg skal bare slippe gjennom kode som ligger i
+# dette repoet. Skriptet klippes ut av workflow-fila og kjøres med en gh-stubb.
+echo "== discord-pr-card: bare kode fra dette repoet =="
+CARD_WF="$ROOT/.github/workflows/discord-pr-card.yml"
+TRUST_SH="$TMP/pr-head-trust.sh"
+awk '/# pr-head-trust:start/{on=1; next} /# pr-head-trust:end/{on=0} on' "$CARD_WF" | sed -E 's/^          //' > "$TRUST_SH"
+mkdir -p "$TMP/bin"
+printf '#!/bin/sh\nprintf "%%s" "$FAKE_PR_HEAD_REPO"\n[ -n "$FAKE_GH_FAIL" ] && exit 1\nexit 0\n' > "$TMP/bin/gh"
+chmod +x "$TMP/bin/gh"
+trust_case() { # navn forventet(run=true|run=false) VAR=verdi…
+  local name="$1" want="$2" got
+  shift 2
+  : > "$TMP/gh-output"
+  env -i PATH="$TMP/bin:$PATH" GITHUB_OUTPUT="$TMP/gh-output" GITHUB_REPOSITORY="jdlarssen/golf-app" \
+    BOT=b CHANNEL=c "$@" bash "$TRUST_SH" > /dev/null 2>&1
+  got="$(tail -n 1 "$TMP/gh-output")"
+  if [ -s "$TRUST_SH" ] && [ "$got" = "$want" ]; then
+    pass=$((pass + 1)); printf 'PASS  %s\n' "$name"
+  else
+    fail=$((fail + 1)); printf 'FAIL  %s\n      forventet %s, fikk %s\n' "$name" "$want" "${got:-<tomt>}"
+  fi
+}
+trust_case "CI-fullført, kode fra dette repoet → kjører" "run=true" EVENT_NAME=workflow_run RUN_HEAD_REPO=jdlarssen/golf-app
+trust_case "CI-fullført, kode fra en fork → kjører ikke" "run=false" EVENT_NAME=workflow_run RUN_HEAD_REPO=fremmed/golf-app
+trust_case "CI-fullført, ukjent opphav → kjører ikke (fail-closed)" "run=false" EVENT_NAME=workflow_run
+trust_case "ready-flipp, kode fra dette repoet → kjører" "run=true" EVENT_NAME=pull_request PR_HEAD_REPO=jdlarssen/golf-app
+trust_case "ready-flipp, kode fra en fork → kjører ikke" "run=false" EVENT_NAME=pull_request PR_HEAD_REPO=fremmed/golf-app
+trust_case "manuell kjøring, PR fra dette repoet → kjører" "run=true" EVENT_NAME=workflow_dispatch PR_INPUT=12 FAKE_PR_HEAD_REPO=jdlarssen/golf-app
+trust_case "manuell kjøring, PR fra en fork → kjører ikke" "run=false" EVENT_NAME=workflow_dispatch PR_INPUT=12 FAKE_PR_HEAD_REPO=fremmed/golf-app
+trust_case "manuell kjøring, oppslaget feiler → kjører ikke (fail-closed)" "run=false" EVENT_NAME=workflow_dispatch PR_INPUT=12 FAKE_GH_FAIL=1
+trust_case "manuell kjøring, PR-nummer som ikke er et tall → kjører ikke" "run=false" EVENT_NAME=workflow_dispatch PR_INPUT="12/../x" FAKE_PR_HEAD_REPO=jdlarssen/golf-app
+trust_case "ukjent hendelse → kjører ikke" "run=false" EVENT_NAME=push RUN_HEAD_REPO=jdlarssen/golf-app
+trust_case "boten er ikke satt opp → kjører ikke" "run=false" EVENT_NAME=workflow_run RUN_HEAD_REPO=jdlarssen/golf-app BOT=
+# Hvert steg etter porten (unntatt feilalarmen) må ha porten i sin if-linje —
+# ellers kjører et nytt steg selv om porten sa nei.
+steps_total="$(grep -c '^      - name:' "$CARD_WF")"
+steps_gated="$(grep -c "if: steps.guard.outputs.run == 'true'" "$CARD_WF")"
+if [ "$steps_total" -gt 2 ] && [ "$steps_gated" -eq $((steps_total - 2)) ]; then
+  pass=$((pass + 1)); printf 'PASS  alle %s steg etter porten er portet\n' "$steps_gated"
+else
+  fail=$((fail + 1)); printf 'FAIL  %s steg, %s med porten (forventet alle unntatt porten selv og feilalarmen)\n' "$steps_total" "$steps_gated"
+fi
+
 echo "== vaktlogg =="
 LOG="$TMP/.claude/logs/guard-events.jsonl"
 if [ -s "$LOG" ] && jq -es 'length > 0' "$LOG" > /dev/null 2>&1; then
