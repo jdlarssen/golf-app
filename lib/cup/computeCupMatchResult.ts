@@ -117,10 +117,13 @@ export type CupMatchScoringInput = {
    * greensome-lag-slag) leses KUN videre når `gameMode ===
    * 'greensome_matchplay'`; feltet ignoreres for øvrige moduser (samme
    * bevisste smalhet som `allowance_pct` alt hadde).
+   * `match_strokes` (revisjonen 20.11) leses KUN for `singles_matchplay`: en
+   * ny singel-match gir forskjellen i slag (`singlesStrokeHandicap`).
    */
   modeConfig: {
     allowance_pct?: number;
     team_strokes_override?: { team1: number; team2: number };
+    match_strokes?: 'difference';
   } | null;
   side1: CupMatchSidePlayer[];
   side2: CupMatchSidePlayer[];
@@ -157,9 +160,22 @@ export function computeCupMatchResult(input: CupMatchScoringInput): CupMatchInpu
   const teamStrokesOverride =
     input.gameMode === 'greensome_matchplay' ? input.modeConfig?.team_strokes_override : undefined;
 
+  // Audit 2026-11-20: a new singles match carries `match_strokes`; without
+  // it here the cup points scored the match on full handicaps while the
+  // match page used the difference.
+  const matchStrokes =
+    input.gameMode === 'singles_matchplay' && input.modeConfig?.match_strokes === 'difference'
+      ? input.modeConfig.match_strokes
+      : undefined;
+
   const modeConfig: GameModeConfig = (
     cfg.teamSize === 1
-      ? { kind: input.gameMode, team_size: 1, teams_count: 2 }
+      ? {
+          kind: input.gameMode,
+          team_size: 1,
+          teams_count: 2,
+          ...(matchStrokes ? { match_strokes: matchStrokes } : {}),
+        }
       : {
           kind: input.gameMode,
           team_size: 2,

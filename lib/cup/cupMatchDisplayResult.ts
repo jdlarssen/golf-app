@@ -32,6 +32,8 @@ export type CupMatchDisplayResultInput = {
   modeConfig: {
     allowance_pct?: number;
     team_strokes_override?: { team1: number; team2: number };
+    /** Singel-match: forskjellen i slag (revisjonen 20.11). */
+    match_strokes?: 'difference';
   } | null;
   side1: CupMatchSidePlayer[];
   side2: CupMatchSidePlayer[];

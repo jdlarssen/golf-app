@@ -123,9 +123,11 @@ export function buildCupMatchEntry(input: CupMatchEntryInput): CupMatchEntry {
   // dens allowance bor på `games.hcp_allowance_pct` og er alt anvendt i det
   // frosne banehandicapet, slik at kampens egen tavle og cup-poenget regner
   // med samme tall. Se `lib/cup/cupMatchAllowance.ts`.
+  // `match_strokes`: forskjellen i en ny singel-match (revisjonen 20.11).
   const modeConfig = (game.mode_config ?? null) as {
     allowance_pct?: number;
     team_strokes_override?: { team1: number; team2: number };
+    match_strokes?: 'difference';
   } | null;
 
   // #1814: er kampen avgjort ved trekk? Utledes hver gang, aldri lagret —

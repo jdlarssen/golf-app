@@ -540,10 +540,14 @@ describe('playerExtraForHole', () => {
       gameMode: 'singles_matchplay',
       modeConfig: { kind: 'singles_matchplay', team_size: 1, teams_count: 2, match_strokes: 'difference' },
     };
+    // A row on no side (CH 0) must not move the lowest handicap: the engine
+    // reads sides 1 and 2 only.
     const roster = matchCourseHandicaps([
-      { courseHandicap: 20 },
-      { courseHandicap: 5 },
+      { teamNumber: 1, courseHandicap: 20 },
+      { teamNumber: 2, courseHandicap: 5 },
+      { teamNumber: null, courseHandicap: 0 },
     ] as unknown as Parameters<typeof matchCourseHandicaps>[0]);
+    expect(roster).toEqual([20, 5]);
     expect(playerExtraForHole(game, 20, 15, roster)).toBe(1);
     expect(playerExtraForHole(game, 20, 16, roster)).toBe(0);
     expect(playerExtraForHole(game, 5, 1, roster)).toBe(0);

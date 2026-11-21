@@ -1,5 +1,5 @@
 import type { LbHole, LbPlayer, LbScore } from '@/lib/leaderboard';
-import { matchStrokeHandicap } from '@/lib/scoring/allocatedStrokes';
+import { matchSideCourseHandicaps, matchStrokeHandicap } from '@/lib/scoring/allocatedStrokes';
 import { ranksByNetToPar } from '@/lib/scoring/tiebreaker';
 import type { GameMode, GameModeConfig, ScoringGender } from '@/lib/scoring/modes/types';
 
@@ -71,7 +71,9 @@ export function bestBallBoardInput(opts: {
     }));
   const withdrawnIds = new Set(withdrawn.map((p) => p.user_id));
 
-  const matchChs = roster.map((p) => p.course_handicap ?? 0);
+  const matchChs = matchSideCourseHandicaps(
+    roster.map((p) => ({ teamNumber: p.team_number, courseHandicap: p.course_handicap })),
+  );
   const players: LbPlayer[] = roster
     .filter((p) => p.users != null && p.withdrawn_at == null)
     .map((p) => ({

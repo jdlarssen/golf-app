@@ -3,6 +3,7 @@ import { computeLeaderboard } from '@/lib/scoring';
 import { strokesForHole } from './strokeAllocation';
 import {
   alternateShotSideExtras,
+  matchSideCourseHandicaps,
   matchStrokeHandicap,
   playerStrokeHandicap,
 } from './allocatedStrokes';
@@ -232,6 +233,17 @@ describe('matchStrokeHandicap — paritet mot motorene', () => {
     expect(matchStrokeHandicap('singles_matchplay', legacy, 20, [20, 5])).toBe(20);
     // The player's own handicap (the header's number) is not the match strokes.
     expect(playerStrokeHandicap('singles_matchplay', diff, 20)).toBe(20);
+  });
+
+  it('matchSideCourseHandicaps leser bare side 1 og 2, som singel-motoren', () => {
+    expect(
+      matchSideCourseHandicaps([
+        { teamNumber: 1, courseHandicap: 20 },
+        { teamNumber: 2, courseHandicap: null },
+        { teamNumber: null, courseHandicap: -3 },
+        { teamNumber: 3, courseHandicap: -1 },
+      ]),
+    ).toEqual([20, 0]);
   });
 
   it('fourball 85 % gir banehandicap 20 → 17, altså ingen slag på SI 18', () => {

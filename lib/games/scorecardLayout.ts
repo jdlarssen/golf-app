@@ -7,6 +7,7 @@ import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { scrambleTeamHandicap } from '@/lib/scoring/teamHandicap';
 import {
   alternateShotSideExtras,
+  matchSideCourseHandicaps,
   matchStrokeHandicap,
 } from '@/lib/scoring/allocatedStrokes';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
@@ -35,6 +36,11 @@ export interface ScorecardColumnPlayer {
   userId: string;
   initial: string;
   displayName: string;
+  /**
+   * Handicapet motoren fordeler over SI for kolonnen (`matchStrokeHandicap`):
+   * allowance, brutto-valg, eller forskjellen i en ny singel-match. Bare til
+   * `strokesForHole` — vises aldri som «handicap».
+   */
   courseHandicap: number;
   isCurrentUser: boolean;
   /**
@@ -78,7 +84,9 @@ export interface ScorecardLayout {
   /**
    * Layout A: handicapet brukt til netto-utregning, slik motoren fordeler
    * det over SI (allowance og brutto-valg, #2218). For Texas brukes
-   * lag-handicap (sum av medlemmer × pct), ikke individuell.
+   * lag-handicap (sum av medlemmer × pct), ikke individuell. I en ny
+   * singel-match er det forskjellen (0 for laveste handicap, revisjonen
+   * 20.11). Bare til `strokesForHole` — vises aldri som «handicap».
    */
   primaryHandicap: number;
   /** True for par-stableford (Layout B viser poeng istedenfor netto). */
@@ -363,7 +371,9 @@ export function resolveScorecardLayout(
   // #2218: the handicap the engine spreads over SI for one player —
   // fourball/round robin allowance, 0 for the gross options, the difference
   // on a new singles match (audit 2026-11-20), raw elsewhere.
-  const matchChs = players.map((p) => p.course_handicap ?? 0);
+  const matchChs = matchSideCourseHandicaps(
+    players.map((p) => ({ teamNumber: p.team_number, courseHandicap: p.course_handicap })),
+  );
   const strokeHandicap = (p: PlayerForHole): number =>
     matchStrokeHandicap(mode, cfg, p.course_handicap ?? 0, matchChs);
 
