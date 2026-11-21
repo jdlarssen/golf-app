@@ -115,6 +115,66 @@ describe('DeleteAccountForm', () => {
     errorSpy.mockRestore();
   });
 
+  // Audit 20.11: the local steps never decide the outcome.
+  it('drain throws → the delete still runs, then wipe, then login', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    drainBeforeDeletionBrowser.mockImplementationOnce(async () => {
+      calls.push('drain');
+      throw new Error('local store unavailable');
+    });
+    deleteOwnAccount.mockImplementation(async () => {
+      calls.push('delete');
+      return { ok: true };
+    });
+    renderForm();
+    submit();
+    await waitFor(() => expect(replace).toHaveBeenCalled());
+    expect(calls).toEqual(['drain', 'delete', 'cleanup', 'replace:/login?melding=konto_slettet']);
+    expect(screen.queryByText('boundary')).toBeNull();
+    errorSpy.mockRestore();
+  });
+
+  it('wipe throws after the delete → the user still leaves for login', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    deleteOwnAccount.mockImplementation(async () => {
+      calls.push('delete');
+      return { ok: true };
+    });
+    finishAccountDeletionBrowser.mockImplementationOnce(async () => {
+      calls.push('cleanup');
+      throw new Error('IndexedDB is gone');
+    });
+    renderForm();
+    submit();
+    await waitFor(() => expect(replace).toHaveBeenCalled());
+    expect(calls).toEqual(['drain', 'delete', 'cleanup', 'replace:/login?melding=konto_slettet']);
+    expect(screen.queryByText('boundary')).toBeNull();
+    errorSpy.mockRestore();
+  });
+
+  it('drain throws and the delete is refused → a second tap runs the action again', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    drainBeforeDeletionBrowser.mockImplementation(async () => {
+      throw new Error('local store unavailable');
+    });
+    deleteOwnAccount.mockImplementation(async () => {
+      calls.push('delete');
+      return undefined;
+    });
+    renderForm();
+    submit();
+    await waitFor(() => expect(calls).toEqual(['delete']));
+    await act(async () => {});
+    submit();
+    await waitFor(() => expect(calls).toEqual(['delete', 'delete']));
+    await act(async () => {});
+    expect(replace).not.toHaveBeenCalled();
+    drainBeforeDeletionBrowser.mockImplementation(async () => {
+      calls.push('drain');
+    });
+    errorSpy.mockRestore();
+  });
+
   it('double tap while pending → the action runs once', async () => {
     let release: (v: { ok: true }) => void = () => {};
     deleteOwnAccount.mockImplementation(

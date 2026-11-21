@@ -20,6 +20,15 @@ import { deleteOwnAccount } from '@/app/[locale]/profile/slett-konto/actions';
  * the wipe below is never reached and nothing local is touched
  * — the account still exists, and so must its strokes.
  *
+ * The local steps (1 and the wipe in 3) are best-effort. A cleanup chunk that
+ * does not load, or a browser store that throws, never decides whether the
+ * account is deleted: before the delete the form goes on to the server call,
+ * and after it the form still leaves for login. Without this a throw in step 1
+ * left the button dead (the re-entrancy ref stayed set), and a throw in step 3
+ * left the user on the page of an account that no longer exists. Rows a failed
+ * wipe leaves behind are cleared by the owner guard at the next login
+ * (`ensureLocalDataOwner`).
+ *
  * `onSubmit` + `startTransition` instead of `<form action>`: React 19 resets a
  * form action on submit, and the client needs control after the success.
  */
@@ -42,8 +51,13 @@ export function DeleteAccountForm({
         if (submitting.current) return;
         submitting.current = true;
         startTransition(async () => {
-          const cleanup = await import('@/lib/sync/localDataCleanup');
-          await cleanup.drainBeforeDeletionBrowser();
+          let cleanup: typeof import('@/lib/sync/localDataCleanup') | null = null;
+          try {
+            cleanup = await import('@/lib/sync/localDataCleanup');
+            await cleanup.drainBeforeDeletionBrowser();
+          } catch (error) {
+            console.error('[DeleteAccountForm] drain before deletion failed', error);
+          }
           let result: Awaited<ReturnType<typeof deleteOwnAccount>>;
           try {
             result = await deleteOwnAccount();
@@ -55,7 +69,14 @@ export function DeleteAccountForm({
             submitting.current = false;
             return;
           }
-          await cleanup.finishAccountDeletionBrowser();
+          // The account IS deleted from here on. Whatever the cleanup does,
+          // the user leaves for login.
+          try {
+            cleanup ??= await import('@/lib/sync/localDataCleanup');
+            await cleanup.finishAccountDeletionBrowser();
+          } catch (error) {
+            console.error('[DeleteAccountForm] local cleanup after deletion failed', error);
+          }
           router.replace('/login?melding=konto_slettet');
         });
       }}
