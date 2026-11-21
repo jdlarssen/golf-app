@@ -146,7 +146,10 @@ node scripts/provision-review-account.mjs --env prod --store apple
 
 Skriptet printer hvilken Supabase-URL det skriver til før første skriv — les
 den linja før du lar det gå videre. `--env prod` må stå der; uten flagget
-kjører det mot staging.
+kjører det mot staging. Skriptet sjekker selv at env-fila peker på prosjektet
+flagget sier, og stopper før første kall hvis ikke. I en agentøkt stopper
+kommandovakta `--env prod` til eieren har godkjent prod-kjøringen
+(`touch .claude/approve-prod`, engangs, 10 minutter).
 
 Skriptet setter admin-kontoen din som arrangør av demo-rundene og legger
 review-kontoen inn som deltaker. Har du bare én admin-konto, finner det henne

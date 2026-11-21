@@ -30,8 +30,27 @@ target.
 
 - Guards: `.githooks/` (commit-msg, pre-commit, pre-push) + `.claude/hooks/` (bash-guard,
   mcp-guard). Denial texts name the rule and the remedy — read them.
-- Forbidden bypasses (I7): `--no-verify` · `git push --force` · `ALLOW_MAIN_PUSH=1` ·
-  rewording commands to dodge a matcher that fired correctly.
+- Forbidden bypasses (I7): `--no-verify` (and `git commit -n`) · `git push --force` ·
+  `ALLOW_MAIN_PUSH=1` · pointing `core.hooksPath` away from `.githooks` · merging
+  any other way than `gh pr merge --rebase` (no squash, no merge commit, no
+  `--admin`, no merge through the GitHub API) · changing branch protection ·
+  rewording commands to dodge a matcher that fired correctly. bash-guard reads the
+  command the way the shell does (quotes and backslashes resolved, text handed to
+  `bash -c`/`eval`/an interpreter read as a command), so the spelling does not
+  matter.
+- Prod firewall, what counts as a prod call: a Supabase MCP call with prod as its
+  project (any tool that is not on mcp-guard's list of read tools), a shell command
+  that reaches prod, a command that loads `.env.local` (it holds the prod keys:
+  `--env-file=.env.local`, `source .env.local`), and a script asked to write to prod
+  (`provision-review-account.mjs --env prod`, `backfillResultSummaries.ts --prod`).
+  A prod SQL call passes without approval only when mcp-guard can prove it is a
+  read: one statement, no comments, no write keyword outside string literals, and
+  every function call on its list of known read functions (a function can write).
+  The deny text names what stopped the proof — rewrite the read; an unproven read
+  uses up the approval.
+- The e2e suite and the service-role scripts check their own target
+  (`lib/supabaseTarget.ts`): tests run only against staging or a local database,
+  scripts refuse a database they do not know.
 - Sanctioned workarounds (NOT dodges): `--body-file` for issue/PR bodies whose PROSE
   trips the prod-firewall or Closes-detection matchers · `--force-with-lease` inside the
   documented rebase flow · owner-approved `touch .claude/approve-prod` (one-shot, 10 min)

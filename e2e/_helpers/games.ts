@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { expect, type Page } from '@playwright/test';
 import { missingE2eEnvReason } from './envGate';
+import { testDatabaseRefusal } from '../../lib/supabaseTarget';
 
 /**
  * Felles helpers for selv-påmelding-E2E (`#199 chunk 14`).
@@ -45,6 +46,12 @@ export function adminClient(): SupabaseClient {
       'Supabase service-role env missing — sjekk envReady før du kaller adminClient().',
     );
   }
+  // Service-role bypasses every access rule. Global setup already refuses a run
+  // against the wrong database; this is the last check before a client exists,
+  // and it also covers callers that never go through Playwright
+  // (scripts/loops/screenshot-routes.ts).
+  const refusal = testDatabaseRefusal(SUPABASE_URL);
+  if (refusal !== null) throw new Error(refusal);
   return createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });

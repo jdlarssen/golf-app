@@ -8,10 +8,12 @@
  * ## Slik kjører du den
  *
  * **Staging først — alltid.** `.env.staging.local` peker på `torny-staging`;
- * det er den eneste basen scriptet skal møte uten videre. En prod-kjøring
- * (`.env.local`) er en skrivende operasjon mot ekte data og er dekket av
- * prod-brannmuren (#1074) — den krever eksplisitt eier-godkjenning i økten,
- * aldri på eget initiativ.
+ * det er den eneste basen scriptet skal møte uten videre. Scriptet sjekker selv
+ * hvilken base det står mot før første kall, og skriver den ut. En prod-kjøring
+ * (`.env.local` + flagget `--prod`) er en skrivende operasjon mot ekte data og
+ * er dekket av prod-brannmuren (#1074) — den krever eksplisitt eier-godkjenning
+ * i økten, aldri på eget initiativ. Uten `--prod` nekter scriptet å skrive til
+ * prod, og en base det ikke kjenner, skriver det aldri til.
  *
  * `--tsconfig scripts/tsconfig.json` er ikke valgfritt: lib-modulene starter
  * med `import 'server-only'`, en Next-markør som ikke er en installert pakke,
@@ -47,6 +49,7 @@
  */
 import { getAdminClient } from '@/lib/supabase/admin';
 import { persistResultSummaries } from '@/lib/games/persistResultSummaries';
+import { scriptTargetRefusal, supabaseTargetOf } from '@/lib/supabaseTarget';
 import type { HoleSegment } from '@/lib/scoring';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
 import type {
@@ -55,6 +58,8 @@ import type {
 } from '@/lib/scoring/modes/types';
 
 const REPAIR_FLAG = '--repair-matchplay-margins';
+/** Required for a production run; refused against anything else. */
+const PROD_FLAG = '--prod';
 
 interface FinishedGameRow {
   id: string;
@@ -258,6 +263,14 @@ async function runMatchplayMarginRepair(
 }
 
 async function main() {
+  // Check the target before a client exists: staging runs as is, production
+  // needs --prod (and the owner's approval — the command guard asks for it),
+  // and a database this script does not know is never written to.
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const refusal = scriptTargetRefusal({ url, wantProd: process.argv.includes(PROD_FLAG) });
+  if (refusal !== null) throw new Error(refusal);
+  console.log(`[backfill] writing to ${supabaseTargetOf(url)} (${new URL(url ?? '').host})`);
+
   const admin = getAdminClient();
   const repairMode = process.argv.includes(REPAIR_FLAG);
 

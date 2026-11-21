@@ -47,6 +47,28 @@ import { createClient } from '@supabase/supabase-js';
 const PROD_ENV = '.env.local';
 const STAGING_ENV = '.env.staging.local';
 
+// The whole host must match — a ref somewhere in the URL is not enough. The refs
+// are copies of lib/supabaseTarget.ts (plain JS cannot import it);
+// tests/supabaseTarget.test.ts locks them together.
+const PROD_REF = 'glofubopddkjhymcbaph';
+const STAGING_REF = 'snwmueecmfqqdurxedxv';
+
+/** Stops before the first call when an env file points at the wrong project. */
+function assertTarget(env, file, expectedRef, role) {
+  const url = env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+  let host = '';
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    // empty host → refused below
+  }
+  if (host !== `${expectedRef}.supabase.co`) {
+    throw new Error(
+      `${file} peker ikke på ${role} (${expectedRef}) — avbryter før noe leses eller skrives. Fikk «${host || url || 'tom URL'}».`,
+    );
+  }
+}
+
 /** Runbookens krav (steg 1 genererer 28 tegn). Porten under er fail-closed. */
 const MIN_PASSWORD_LENGTH = 24;
 
@@ -548,23 +570,14 @@ async function main() {
 
   const envFile = target === 'prod' ? PROD_ENV : STAGING_ENV;
   const env = loadEnv(envFile);
-  const db = client(env, envFile);
 
-  // Prod-vakt: staging-kjøring som peker på prod-URL-en er en feilkonfigurert
-  // .env.staging.local — stopp FØR noe skrives.
-  if (target === 'staging') {
-    let prodUrl = null;
-    try {
-      prodUrl = loadEnv(PROD_ENV).NEXT_PUBLIC_SUPABASE_URL ?? null;
-    } catch {
-      // Ingen .env.local her — ingenting å sammenligne mot.
-    }
-    if (prodUrl && prodUrl === env.NEXT_PUBLIC_SUPABASE_URL) {
-      throw new Error(
-        `${STAGING_ENV} peker på SAMME Supabase-prosjekt som ${PROD_ENV} — avbryter før skriving.`,
-      );
-    }
-  }
+  // Målvakt: env-fila må peke på nøyaktig det prosjektet --env sier. En
+  // .env.staging.local som peker på prod (eller omvendt) stoppes FØR noe skrives,
+  // også på en maskin som mangler den andre fila.
+  if (target === 'prod') assertTarget(env, envFile, PROD_REF, 'prod');
+  else assertTarget(env, envFile, STAGING_REF, 'staging');
+
+  const db = client(env, envFile);
 
   console.log(`Miljø:        ${target}  (${envFile})`);
   console.log(`Butikk:       ${storeName}  (demo-rundene «${store.demoGameName}» og «${store.scrambleGameName}», ligaen «${store.leagueName}»)`);

@@ -27,6 +27,28 @@ const TOURNAMENT_ID = process.argv[2] ?? '7fb3caab-1b01-4247-9dbc-4f26d67d1c81';
 const PROD_ENV = '.env.local';
 const STAGING_ENV = '.env.staging.local';
 
+// The whole host must match — a ref somewhere in the URL is not enough. The refs
+// are copies of lib/supabaseTarget.ts (plain JS cannot import it);
+// tests/supabaseTarget.test.ts locks them together.
+const PROD_REF = 'glofubopddkjhymcbaph';
+const STAGING_REF = 'snwmueecmfqqdurxedxv';
+
+/** Stops before the first call when an env file points at the wrong project. */
+function assertTarget(env, file, expectedRef, role) {
+  const url = env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+  let host = '';
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    // empty host → refused below
+  }
+  if (host !== `${expectedRef}.supabase.co`) {
+    throw new Error(
+      `${file} peker ikke på ${role} (${expectedRef}) — avbryter før noe leses eller skrives. Fikk «${host || url || 'tom URL'}».`,
+    );
+  }
+}
+
 /** Minimal dotenv reader — we only need three keys per file. */
 function loadEnv(file) {
   let raw;
@@ -75,6 +97,10 @@ const uniq = (values) => [...new Set(values.filter(Boolean))];
 async function main() {
   const prodEnv = loadEnv(PROD_ENV);
   const stagingEnv = loadEnv(STAGING_ENV);
+  // Prod is only read, staging is rebuilt (deleted first). Each file must point
+  // at exactly the project its name says, or the delete could hit the wrong one.
+  assertTarget(prodEnv, PROD_ENV, PROD_REF, 'prod');
+  assertTarget(stagingEnv, STAGING_ENV, STAGING_REF, 'staging');
 
   const prod = client(prodEnv, PROD_ENV);
   const staging = client(stagingEnv, STAGING_ENV);
