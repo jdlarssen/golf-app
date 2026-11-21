@@ -3,6 +3,9 @@
 // (`finish-pipeline`) omtrent et minutt senere. Står spilleren på tavla da,
 // skal sitatet og kortet dukke opp av seg selv.
 //
+// Revisjonen 20.11: tavla bruker den også mens en blind runde pågår, så
+// avsløringen kommer straks arrangøren avslutter.
+//
 // Kanalen er den samme som venterommets (`subscribeGameStatus`: UPDATE på
 // spillraden). Hver abonnent får sitt eget kanalnavn (`realtime.ts` legger et
 // løpenummer på), så den kolliderer ikke med venterommet. Den åpnes bare mens

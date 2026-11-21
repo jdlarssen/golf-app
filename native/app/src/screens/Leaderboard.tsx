@@ -400,9 +400,14 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   const report = finishedGame ? (bundle?.game.roundReport ?? null) : null;
   // Sveipet skriver den omtrent et minutt etter en avslutning i appen. Står
   // spilleren på tavla da, hentes spillet på nytt når raden endres.
+  // Revisjonen 20.11: en blind runde viser ingenting før arrangøren avslutter.
+  // Står spilleren på tavla da, hentes spillet på nytt når raden endres, så
+  // avsløringen kommer uten at hun må gå ut og inn igjen. Samme kanal.
+  const blindActive =
+    bundle?.game.scoreVisibility === 'reveal' && bundle.game.status === 'active';
   useRoundReportArrival({
     gameId,
-    waiting: focused && finishedGame && report === null,
+    waiting: focused && ((finishedGame && report === null) || blindActive),
     refresh,
   });
   const scrollRef = useRef<ScrollView>(null);

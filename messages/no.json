@@ -3357,6 +3357,7 @@
       "perHullKicker": "Per hull",
       "revealHiddenTitle": "Resultatene avsløres etter runden",
       "winnerAnnounced": "Vinneren er kåret",
+      "noWinner": "Ingen vinner",
       "winnerTeamAnnounced": "Vinnerlaget er kåret",
       "winnerTeamAnnounced2": "Vinner-laget er kåret",
       "afterNHoles": "Etter {holes} hull",

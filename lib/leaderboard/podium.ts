@@ -159,6 +159,25 @@ function teamLines(result: Parameters<typeof teamResultBoard>[0]): Line[] {
 }
 
 /**
+ * Everyone on zero of something you win (no skin taken, no bingo, every Nassau
+ * section halved): nobody won. Par on a to-par board is a real score.
+ */
+function nobodyWonLines(lines: readonly Line[]): boolean {
+  return lines.length > 0 && lines.every((line) => line.total === 0 && line.unit !== 'toPar');
+}
+
+/**
+ * The game ended with nobody winning anything (audit 2026-11-20). The podiums
+ * on the web and the app's result say «Ingen vinner» and fire no confetti. The
+ * match play family and an empty field answer `false`: they have their own
+ * wording. The one rule `podiumFor` uses too.
+ */
+export function nobodyWon(result: ModeResult): boolean {
+  const lines = linesOf(result);
+  return lines !== null && nobodyWonLines(lines);
+}
+
+/**
  * The top of the board, or `null` when the game has none to show: the match
  * play family, an empty field, a league flight (#2712, #2850) and a game
  * nobody won anything in.
@@ -169,9 +188,7 @@ export function podiumFor(
 ): Podium | null {
   const lines = linesOf(result);
   if (lines === null || lines.length === 0) return null;
-  // Everyone on zero of something you win (no skin taken, no bingo, every Nassau
-  // section halved): nobody won. Par on a to-par board is a real score.
-  if (lines.every((line) => line.total === 0 && line.unit !== 'toPar')) return null;
+  if (nobodyWonLines(lines)) return null;
   if (leagueFlightHasNoPlace(opts.leagueFlight ?? false)) return null;
   const counts = new Map<number, number>();
   for (const line of lines) counts.set(line.rank, (counts.get(line.rank) ?? 0) + 1);

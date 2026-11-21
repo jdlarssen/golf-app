@@ -3357,6 +3357,7 @@
       "perHullKicker": "By hole",
       "revealHiddenTitle": "Results revealed after the round",
       "winnerAnnounced": "The winner has been crowned",
+      "noWinner": "No winner",
       "winnerTeamAnnounced": "The winning team has been crowned",
       "winnerTeamAnnounced2": "The winning team has been crowned",
       "afterNHoles": "After {holes} holes",

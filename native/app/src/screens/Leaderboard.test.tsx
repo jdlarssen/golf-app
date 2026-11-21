@@ -1342,6 +1342,24 @@ describe('resultatets topp', () => {
     expect(screen.queryByTestId('result-hero')).toBeNull();
   });
 
+  it('en blind runde som avsluttes mens tavla står åpen: avsløringen kommer uten trykk (revisjonen 20.11)', async () => {
+    mockSubscribeGameStatus.mockClear();
+    mockSubscribeGameStatus.mockReturnValue(() => undefined);
+    mockBundleOverride.current = game({ status: 'active', scoreVisibility: 'reveal' });
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('leaderboard-gross-only')).toBeTruthy());
+    await waitFor(() => expect(mockSubscribeGameStatus).toHaveBeenCalledTimes(1));
+    expect(mockSubscribeGameStatus.mock.calls[0]![0]).toBe(GAME_ID);
+
+    // Arrangøren avslutter: raden endres, og tavla henter spillet på nytt.
+    mockBundleOverride.current = game({ status: 'finished', scoreVisibility: 'reveal' });
+    await act(async () => {
+      (mockSubscribeGameStatus.mock.calls[0]![1] as { onUpdate: () => void }).onUpdate();
+    });
+    await waitFor(() => expect(screen.getByTestId('result-hero')).toBeTruthy());
+    expect(screen.queryByTestId('leaderboard-gross-only')).toBeNull();
+  });
+
   // Ingen format er stengt i dag (`GATED_MODES` er tom), så porten prøves med
   // motorens svar: alt som ikke når tabellen, får ingen setning.
   it('et motorproblem: den rolige noten, ingen setning', async () => {

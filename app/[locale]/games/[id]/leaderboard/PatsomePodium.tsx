@@ -20,6 +20,7 @@ import {
 } from './podiumPresentation';
 import { ConfettiBurst } from './ConfettiBurst';
 import type { PatsomePlayerInfo } from './PatsomeView';
+import { nobodyWon } from '@/lib/leaderboard/podium';
 
 // Distinkt sessionStorage-prefiks fra andre podium-er.
 const STORAGE_PREFIX = 'torny-patsome-podium-confetti-seen-';
@@ -65,8 +66,11 @@ export function PatsomePodium({
 }: PatsomePodiumProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const [replayKey, setReplayKey] = useState(0);
+  // Audit 2026-11-20: everyone on zero won nothing — «Ingen vinner», no confetti.
+  const noWinner = nobodyWon(result);
 
   useEffect(() => {
+    if (noWinner) return;
     const key = `${STORAGE_PREFIX}${gameId}`;
     try {
       if (window.sessionStorage.getItem(key) === '1') return;
@@ -76,7 +80,7 @@ export function PatsomePodium({
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setReplayKey(1);
-  }, [gameId]);
+  }, [gameId, noWinner]);
 
   if (result.teams.length === 0) {
     return (
@@ -109,7 +113,7 @@ export function PatsomePodium({
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <Kicker tone="accent">{t('common.podiumKicker')}</Kicker>
         <h1 className="mt-2 font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          {t('common.winnerTeamAnnounced')}
+          {noWinner ? t('common.noWinner') : t('common.winnerTeamAnnounced')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
           {t('patsome.podiumSubtitle', { scoring: scoringLabel })}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildShareCardData } from '@/lib/games/buildShareCardData';
-import { PLACE_TIER, medalRank, podiumFor, podiumPlace, type PodiumRow } from './podium';
+import { PLACE_TIER, medalRank, nobodyWon, podiumFor, podiumPlace, type PodiumRow } from './podium';
 import { soloResultBoard, teamResultBoard } from './resultBoard';
 import type {
   AceyDeuceyResult,
@@ -266,6 +266,50 @@ describe('podiumFor: no top to show', () => {
       ],
     } as unknown as BingoBangoBongoResult;
     expect(podiumFor(result)).toBeNull();
+  });
+});
+
+describe('nobodyWon (audit 2026-11-20): the podiums say «ingen vinner»', () => {
+  it('is true when every competitor is on zero of something you win', () => {
+    const skins = {
+      kind: 'skins',
+      players: [
+        { userId: 'a', rank: 1, totalSkins: 0 },
+        { userId: 'b', rank: 1, totalSkins: 0 },
+      ],
+    } as unknown as SkinsResult;
+    expect(nobodyWon(skins)).toBe(true);
+  });
+
+  it('is false once one competitor has won something', () => {
+    const skins = {
+      kind: 'skins',
+      players: [
+        { userId: 'a', rank: 1, totalSkins: 1 },
+        { userId: 'b', rank: 2, totalSkins: 0 },
+      ],
+    } as unknown as SkinsResult;
+    expect(nobodyWon(skins)).toBe(false);
+  });
+
+  it('is false for everyone on par on a to-par board, and for a league flight', () => {
+    const toPar = {
+      kind: 'solo_strokeplay',
+      ranking: 'net_to_par',
+      holes: [],
+      players: [
+        { userId: 'a', rank: 1, holesPlayed: 18, totalNetStrokes: 72, netToPar: 0, tiedWith: [], decidedBy: null },
+        { userId: 'b', rank: 1, holesPlayed: 18, totalNetStrokes: 72, netToPar: 0, tiedWith: [], decidedBy: null },
+      ],
+    } as unknown as SoloStrokeplayResult;
+    expect(nobodyWon(toPar)).toBe(false);
+    // A league flight has no podium, but somebody still won points.
+    expect(nobodyWon(solo([['a', 34, 1], ['b', 30, 2]]))).toBe(false);
+  });
+
+  it('is false for the match play family and an empty field', () => {
+    const empty = solo([]);
+    expect(nobodyWon(empty)).toBe(false);
   });
 });
 

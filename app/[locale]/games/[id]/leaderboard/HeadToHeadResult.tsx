@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/LeaderboardBackLink';
 import { Kicker } from '@/components/ui/Kicker';
 import { formatRevealName } from '@/lib/names/formatRevealName';
-import { headToHeadSummary } from '@/lib/leaderboard/headToHead';
+import { duelNobodyWon, headToHeadSummary } from '@/lib/leaderboard/headToHead';
 import { LeaderboardShell } from './LeaderboardChrome';
 import { ConfettiBurst } from './ConfettiBurst';
 
@@ -100,8 +100,11 @@ export function HeadToHeadResult({
 }: HeadToHeadResultProps): JSX.Element {
   const t = useTranslations('leaderboard.h2h');
   const [replayKey, setReplayKey] = useState(0);
+  // Audit 2026-11-20: a 0–0 duel nobody won fires no confetti.
+  const nobodyWon = duelNobodyWon({ sideA, sideB, winnerUserId, lowerWins });
 
   useEffect(() => {
+    if (nobodyWon) return;
     const key = `${STORAGE_PREFIX}${gameId}`;
     try {
       if (window.sessionStorage.getItem(key) === '1') return;
@@ -111,7 +114,7 @@ export function HeadToHeadResult({
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setReplayKey(1);
-  }, [gameId]);
+  }, [gameId, nobodyWon]);
 
   // Matten (vinner, bar-andeler, dommens deler) bor i headToHeadSummary og
   // testes der (lib/leaderboard/headToHead.test.ts). Her velges bare tekst.

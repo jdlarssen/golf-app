@@ -114,7 +114,7 @@ describe('setningen', () => {
     expect(text(hero(rr).lines)).toEqual(['Marte vant', 'med 7 hull']);
   });
 
-  it('ingen tok et skin: den rolige linja, ingen feiring', () => {
+  it('ingen tok et skin: «Ingen vinner», ingen feiring (revisjonen 20.11)', () => {
     const skins = {
       kind: 'skins',
       scoring: 'net',
@@ -124,7 +124,22 @@ describe('setningen', () => {
       ],
     } as unknown as ModeResult;
     const model = hero(skins);
-    expect(text(model.lines)).toEqual(['Spillet er ferdig']);
+    expect(text(model.lines)).toEqual(['Ingen vinner']);
+    expect(model.celebrates).toBe(false);
+  });
+
+  it('alle på null poeng i wolf: «Ingen vinner», ingen feiring (revisjonen 20.11)', () => {
+    const wolf = {
+      kind: 'wolf',
+      scoring: 'gross',
+      holes: [],
+      players: [
+        { userId: 'a', rank: 1, totalPoints: 0, teamNumber: 1, wolfHolesPlayed: 0, blindWolfWins: 0, tiedWith: ['b'] },
+        { userId: 'b', rank: 1, totalPoints: 0, teamNumber: 2, wolfHolesPlayed: 0, blindWolfWins: 0, tiedWith: ['a'] },
+      ],
+    } as unknown as ModeResult;
+    const model = hero(wolf);
+    expect(text(model.lines)).toEqual(['Ingen vinner']);
     expect(model.celebrates).toBe(false);
   });
 

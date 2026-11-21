@@ -19,6 +19,7 @@ import {
 import { ConfettiBurst } from './ConfettiBurst';
 import type { NinesPlayerInfo } from './NinesView';
 import { RowReactionsForPlayer } from './RowReactionsForPlayer';
+import { nobodyWon } from '@/lib/leaderboard/podium';
 
 // Distinkt sessionStorage-prefiks fra andre podium-er.
 const STORAGE_PREFIX = 'torny-nines-podium-confetti-seen-';
@@ -64,8 +65,11 @@ export function NinesPodium({
 }: NinesPodiumProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const [replayKey, setReplayKey] = useState(0);
+  // Audit 2026-11-20: everyone on zero won nothing — «Ingen vinner», no confetti.
+  const noWinner = nobodyWon(result);
 
   useEffect(() => {
+    if (noWinner) return;
     const key = `${STORAGE_PREFIX}${gameId}`;
     try {
       if (window.sessionStorage.getItem(key) === '1') return;
@@ -75,7 +79,7 @@ export function NinesPodium({
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setReplayKey(1);
-  }, [gameId]);
+  }, [gameId, noWinner]);
 
   if (result.players.length === 0) {
     return (
@@ -117,7 +121,7 @@ export function NinesPodium({
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <Kicker tone="accent">{t('common.podiumKicker')}</Kicker>
         <h1 className="mt-2 font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          {t('common.winnerAnnounced')}
+          {noWinner ? t('common.noWinner') : t('common.winnerAnnounced')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
           {variantLabel} · {scoringLabel}

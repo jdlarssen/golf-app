@@ -51,7 +51,7 @@ export async function renderFoursomesMatchplay(opts: {
   // Gjelder hele foursomes-familien (foursomes, greensome, chapman, gruesome).
   const revSt = revealState(game.score_visibility, game.status);
   if (shouldHideNetto(revSt)) {
-    return <RevealHiddenView gameName={game.name} backHref={backHref} />;
+    return <RevealHiddenView gameId={gameId} gameName={game.name} backHref={backHref} />;
   }
 
   // #1958: the shared builder drops withdrawn players and their scores, the

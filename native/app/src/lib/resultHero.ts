@@ -15,7 +15,7 @@ import { isUnplacedLeagueCard } from '../../../../lib/games/finishedResultBadge'
 import { formatDisplayLabelKey } from '../../../../lib/games/formatLabel';
 import { isHoleInSegment } from '../../../../lib/games/holeScope';
 import { formatVsPar } from '../../../../lib/leaderboard/vsPar';
-import { podiumFor, type Podium, type PodiumRow } from '../../../../lib/leaderboard/podium';
+import { nobodyWon, podiumFor, type Podium, type PodiumRow } from '../../../../lib/leaderboard/podium';
 import { formatPublicName } from '../../../../lib/names/formatPublicName';
 import {
   MAX_SHARED_NAMES,
@@ -197,7 +197,14 @@ type Sentence = { lines: Word[][]; goldItalic: boolean; celebrates: boolean; res
 
 const CALM = { goldItalic: false, celebrates: false, resultInSentence: false };
 
-function sentenceFor(spec: HeadlineSpec, podium: Podium | null): Sentence {
+function sentenceFor(spec: HeadlineSpec, podium: Podium | null, noWinner: boolean): Sentence {
+  // Revisjonen 20.11: alle endte på null av det man vinner (ingen skins, ingen
+  // poeng). Ingen vant, så linja sier det, og konfettien blir stående. Samme
+  // regel som pallene på nett (`nobodyWon`). En ligaflight sier fortsatt
+  // «Godkjent».
+  if (noWinner && spec.kind !== 'approved') {
+    return { ...CALM, lines: plainLine(RESULT_APP_TEXT.noWinner) };
+  }
   switch (spec.kind) {
     case 'finished':
       return { ...CALM, lines: plainLine(RESULT_CARD_TEXT.gameFinished) };
@@ -298,7 +305,7 @@ export function resultHeroFor(opts: {
   });
   const spec = headlineSpec(model, { leagueFlight });
   const podium = podiumFor(result, { leagueFlight });
-  const sentence = sentenceFor(spec, podium);
+  const sentence = sentenceFor(spec, podium, nobodyWon(result));
   const soleTeam =
     podium?.winners.length === 1 && podium.winners[0].teamNumber !== null ? podium.winners[0] : null;
   return {

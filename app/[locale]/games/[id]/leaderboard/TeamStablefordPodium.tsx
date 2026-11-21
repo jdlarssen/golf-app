@@ -23,6 +23,7 @@ import {
 } from './podiumPresentation';
 import { ConfettiBurst } from './ConfettiBurst';
 import type { SoloStablefordPlayerInfo } from './SoloStablefordView';
+import { nobodyWon } from '@/lib/leaderboard/podium';
 
 // Distinkt fra solo-key (`torny-stableford-podium-confetti-seen-…`) slik at
 // admin som har sett solo-podium for spill X ikke skipper konfettien hvis
@@ -85,11 +86,14 @@ export function TeamStablefordPodium({
 }: TeamStablefordPodiumProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const [replayKey, setReplayKey] = useState(0);
+  // Audit 2026-11-20: everyone on zero won nothing — «Ingen vinner», no confetti.
+  const noWinner = nobodyWon(result);
 
   // Auto-fyr konfetti på første besøk per browser-sesjon. Wrapped i try/catch
   // siden sessionStorage kan kaste i private-browsing eller når brukeren har
   // site-data disabled. Samme mønster som SoloStablefordPodium.
   useEffect(() => {
+    if (noWinner) return;
     const key = `${STORAGE_PREFIX}${gameId}`;
     try {
       if (window.sessionStorage.getItem(key) === '1') return;
@@ -99,7 +103,7 @@ export function TeamStablefordPodium({
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setReplayKey(1);
-  }, [gameId]);
+  }, [gameId, noWinner]);
 
   if (result.teams.length === 0) {
     return (
@@ -131,7 +135,7 @@ export function TeamStablefordPodium({
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <Kicker tone="accent">{t('common.podiumKicker')}</Kicker>
         <h1 className="mt-2 font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          {t('common.winnerTeamAnnounced')}
+          {noWinner ? t('common.noWinner') : t('common.winnerTeamAnnounced')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
           {t('teamStableford.podiumSubtitle', { holes: holesPlayed })}

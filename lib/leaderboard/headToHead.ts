@@ -92,3 +92,20 @@ export function headToHeadSummary({
 
   return { winner, pctA, pctB, hasNegativeScore, verdict };
 }
+
+/**
+ * A duel nobody won (audit 2026-11-20): no winner, and both sides on zero of
+ * something you win (0–0 in skins, no Nassau unit, no bingo). The duel card
+ * then fires no confetti. A level score where lowest wins, or on a to-par
+ * label («E–E»), is a real tie and keeps its celebration.
+ */
+export function duelNobodyWon({ sideA, sideB, winnerUserId, lowerWins }: HeadToHeadInput): boolean {
+  return (
+    winnerUserId === null &&
+    !lowerWins &&
+    sideA.scoreLabel == null &&
+    sideB.scoreLabel == null &&
+    sideA.score === 0 &&
+    sideB.score === 0
+  );
+}
