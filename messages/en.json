@@ -2823,6 +2823,18 @@
       "stateSubmittedBy": "Submitted by {name}",
       "stateNotSubmitted": "Not submitted",
       "removeButton": "Remove",
+      "remove": {
+        "brassRibbon": "Confirm removal",
+        "heading": "Remove {name} from the round?",
+        "body": "This takes {firstName} out of the round.",
+        "guests": "{count, plural, one {{firstName} signed up {names}. The guest goes too.} other {{firstName} signed up {names}. The guests go too.}}",
+        "guestsUnknown": "Could not load the guests {firstName} signed up. Any guests {firstName} signed up go too.",
+        "canReAdd": "You can add {firstName} again as long as the round has not started.",
+        "confirmButton": "Yes, remove {firstName}",
+        "pending": "Removing …",
+        "cancel": "Cancel",
+        "fallbackFirstName": "The player"
+      },
       "cupRosterLockedHint": "This is a cup match. You swap players on the cup page.",
       "withdrawButton": "Withdraw",
       "undoWithdrawButton": "Undo",
