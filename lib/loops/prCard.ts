@@ -101,6 +101,17 @@ const BAD_CONCLUSIONS = new Set(['failure', 'cancelled', 'timed_out', 'action_re
 // LOCKSTEP: navnet er jobnavnet i `.github/workflows/discord-pr-card.yml`
 // (`jobs.post-card`) — endres jobben der, MÅ konstanten endres her.
 export const CARD_CHECK_NAME = 'post-card';
+// Kort-workflowen er delt i flere jobber etter tilgang (gjennomgangen 20.11):
+// avgjør, skjermbilder, post og feilalarm. Hver av dem er en check-run på
+// PR-head-en, og ingen av dem er CI — skjermbilde-jobben er best-effort og kan
+// være rød uten at det sier noe om PR-en. LOCKSTEP: nøyaktig jobbnavnene i
+// workflow-fila (låst av prCard.test.ts).
+export const CARD_CHECK_NAMES: readonly string[] = [
+  'card-decide',
+  'card-screenshots',
+  CARD_CHECK_NAME,
+  'card-alert',
+];
 
 // Rådgivende sjekker (#2917): ikke påkrevd av branch protection, så en rød en skal
 // verken stoppe kortet eller eierens knapp. `drift` sammenligner grenens
@@ -126,7 +137,7 @@ const isBad = (r: CheckRun): boolean => r.conclusion !== null && BAD_CONCLUSIONS
  * - `green`: alle checks fullført uten dårlig konklusjon, bortsett fra rådgivende.
  */
 export function classifyChecks(allRuns: CheckRun[]): ChecksState {
-  const runs = allRuns.filter((r) => r.name !== CARD_CHECK_NAME);
+  const runs = allRuns.filter((r) => !CARD_CHECK_NAMES.includes(r.name ?? ''));
   if (runs.length === 0) return 'pending';
   if (runs.some((r) => r.status !== 'completed')) return 'pending';
   if (runs.some((r) => !isAdvisory(r) && isBad(r))) return 'red';

@@ -6,8 +6,8 @@
 // Env: GITHUB_TOKEN, GH_REPO, PR_NUMBER (eller GITHUB_EVENT_PATH), CARD_PLAN_PATH,
 // WAIT_FOR_CHECKS ('true' ved workflow_dispatch — vent på at checkene lander, #1301),
 // GITHUB_EVENT_NAME (Actions setter den; `pull_request` kan overlevere til reléet, #2095).
-// Skriver `outcome` ('auto-merge'|'card'|'noop') + `is_gui` til $GITHUB_OUTPUT så
-// workflowen kan gate stegene (#1406).
+// Skriver `outcome` ('auto-merge'|'card'|'noop'), `is_gui` og `head_sha` til
+// $GITHUB_OUTPUT så workflowen kan gate jobbene (#1406).
 
 import { appendFileSync } from 'node:fs';
 import { candidatePrNumber, eventHeadSha, ghClient } from './ghClient';
@@ -50,6 +50,8 @@ function emit(plan: CardPlan): void {
   writePlan(plan);
   ghOutput('outcome', plan.outcome);
   ghOutput('is_gui', plan.isGui ? 'true' : 'false');
+  // Versjonen porten gjaldt: skjermbilde-jobben sjekker ut nøyaktig den.
+  ghOutput('head_sha', plan.headSha ?? '');
 }
 
 const NO_CARD: CardPlan = {

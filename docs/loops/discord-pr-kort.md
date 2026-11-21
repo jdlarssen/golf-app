@@ -35,11 +35,28 @@ uverifisert merge. Docs-only-PR-er oppfyller kravene via no-op-tvillingen
 
 Fil: `.github/workflows/discord-pr-card.yml`. Tre steg (`scripts/loops/`):
 
-**Bare kode fra dette repoet.** Jobben sjekker ut PR-ens kode og kjører den med
-hemmelighetene (skjermbilde-steget) og med skrivetilgang til repoet. Første steg
-slipper derfor bare gjennom en PR som har koden sin i dette repoet. En PR fra en
-annen kopi (en fork), eller en PR jobben ikke får slått opp, får ikke kort: eieren
-ser den i GitHub og merger der. Regelen er låst av `tests/hooks/guard.test.sh`.
+**Bare kode fra dette repoet.** Skjermbilde-jobben sjekker ut PR-ens kode og kjører
+den med staging-nøklene. Første steg slipper derfor bare gjennom en PR som har
+koden sin i dette repoet. En PR fra en annen kopi (en fork), eller en PR jobben
+ikke får slått opp, får ikke kort: eieren ser den i GitHub og merger der.
+
+**Jobbene er delt etter hva de får lov til.** Koden i en PR er ikke lest av eieren
+når kortet lages. Derfor:
+
+| Jobb | Kode som kjører | Tilgang |
+|---|---|---|
+| `card-decide` | main sin | lese fra GitHub |
+| `card-screenshots` | PR-ens | bare lese repoet, staging-nøklene, ingen Discord-nøkler |
+| `post-card` | main sin | skrive (merge, etikett), Discord-nøklene |
+| `card-alert` | ingen fra repoet | opprette varsel-issue |
+
+Workflowen gir ingen tilgang som standard (`permissions: {}`), og ingen checkout
+lar tilgangsnøkkelen ligge igjen i arbeidsmappa (`persist-credentials: false`).
+Planen går fra `card-decide` til de to neste jobbene som jobb-utdata, så jobben
+som kjører PR-ens kode ikke kan endre hva `post-card` leser. Skjermbildene går som
+en artefakt og leses bare som bildefiler. Jobbnavnene står i `CARD_CHECK_NAMES`
+(`lib/loops/prCard.ts`), fordi hver jobb også er en sjekk på PR-en. Reglene er
+låst av `tests/hooks/guard.test.sh` og `lib/loops/prCard.test.ts`.
 
 1. **Trigger:** `workflow_run` når **CI** eller **CI (docs no-op)** fullfører
    (tvillingen dekker docs-only-PR-ene hendelsesdrevet, #1483), ELLER
@@ -59,7 +76,8 @@ ser den i GitHub og merger der. Regelen er låst av `tests/hooks/guard.test.sh`.
    ci.yml lander poster kortet. Før #2095 ventet den og ble kansellert av reléet,
    noe som så ut som en flake. Feilet ci.yml-oppslag eller ingen registrert
    kjøring → vent som før (fail-closed). Dispatch og tvillingen venter alltid.
-   Checker ut PR-head-koden så skjermbildene viser koden under review. (Vi bruker
+   Skjermbilde-jobben sjekker ut PR-head-koden så skjermbildene viser koden under
+   review; de to andre jobbene sjekker ut main. (Vi bruker
    `workflow_run`, ikke `check_suite`: check_suite fyrer ikke for
    GitHub-Actions-suiter, så CI trigget aldri kortet.)
 2. **`decide-pr-card.ts` — gate + tre-utfalls-klassifisering:** åpen · ikke draft
@@ -147,8 +165,10 @@ vinner:
 1. **`noop`** som før: ingen kandidat-PR · ikke åpen · draft (#1516) · allerede kortet · CI ikke grønn.
 
    **Hva «CI grønn» betyr (#1520):** `classifyChecks` (`lib/loops/prCard.ts`) filtrerer
-   først bort kortets EGEN `post-card`-check (`CARD_CHECK_NAME`) — den er
-   `in_progress` under hele decide-pollingen (den ER decide), og en kansellert
+   først bort kortets EGNE sjekker (`CARD_CHECK_NAMES`: `card-decide`,
+   `card-screenshots`, `post-card`, `card-alert`) — `card-decide` er
+   `in_progress` under hele decide-pollingen (den ER decide), skjermbilde-jobben er
+   best-effort og kan være rød uten at det sier noe om PR-en, og en kansellert
    kortkjøring etterlater `cancelled`, så uten filteret ville kortet aldri sett grønt
    eller sett rødt for alltid på samme SHA. Filteret gjelder både decide-steget og
    merge-endepunktets re-sjekk (ett hjem). Deretter **ci.yml-gaten**
