@@ -2,7 +2,8 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Catalog-based test for migration 0104 (#671):
 --   1. email_is_in_auth_users has NO EXECUTE grant to `anon` (revoked by 0104)
---   2. email_is_in_auth_users STILL has EXECUTE grant to `authenticated` (no regression)
+--   2. email_is_in_auth_users has NO EXECUTE grant to `authenticated` either: the
+--      service role calls it (0252)
 --   3. email_is_invited          STILL has EXECUTE grant to `anon` (login gate must not break)
 --   4–7. The 4 hardened RLS helpers all have SET search_path in their prosrc /
 --        pg_proc.proconfig — verified via information_schema + pg_proc.
@@ -40,9 +41,9 @@ select ok(
   '#671: anon does NOT have EXECUTE on email_is_in_auth_users after 0104'
 );
 
--- ── 2. email_is_in_auth_users: authenticated STILL has EXECUTE ────────────────
+-- ── 2. email_is_in_auth_users: a server helper since 0252 ────────────────────
 select ok(
-  exists(
+  not exists(
     select 1
     from information_schema.role_routine_grants
     where routine_schema  = 'public'
@@ -50,7 +51,7 @@ select ok(
       and grantee         = 'authenticated'
       and privilege_type  = 'EXECUTE'
   ),
-  '#671: authenticated STILL has EXECUTE on email_is_in_auth_users (no regression)'
+  '0252: authenticated does NOT have EXECUTE on email_is_in_auth_users (service role only)'
 );
 
 -- ── 3. email_is_invited: anon STILL has EXECUTE (login gate must not break) ───
