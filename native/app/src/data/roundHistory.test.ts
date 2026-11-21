@@ -32,6 +32,7 @@ function playerRow(
     game_id: gameId,
     tee_gender: 'mens',
     course_handicap: 12,
+    full_course_handicap: 12,
     result_summary: null,
     score_differential: null,
     games: {

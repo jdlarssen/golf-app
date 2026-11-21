@@ -42,6 +42,7 @@ function game(
     course_id: 'course-1',
     tee_box_id: 'tee-1',
     course_handicap: 18,
+    full_course_handicap: 18,
     score_differential: frozen,
     holeCount: 18,
   };
@@ -112,6 +113,62 @@ describe('computeDifferentials — team-ball rounds (#2273)', () => {
   it('no games → empty result', () => {
     const { byGame, toFreeze } = computeDifferentials([], deps([]));
     expect(byGame.size).toBe(0);
+    expect(toFreeze).toEqual([]);
+  });
+});
+
+// F1 in docs/regelbok-gjennomgang.md. NGF 3.1b (s. 31): the full course
+// handicap (100 %) sets every net double bogey, also in a game with a share
+// or a cap. League flight at 75 % with a cap of 32 on tee 125/70,0/72: index
+// 30,0 is course handicap 31 and playing handicap 23. Bogey on 17 holes and a
+// 9 on the par 4 with index 6: the full number gives two strokes there and the
+// cap 8, AGS 93, differential 20,8. The playing handicap would give 19,9.
+describe('computeDifferentials — netto dobbeltbogey av fullt banehandicap (F1)', () => {
+  const LEAGUE_TEE: TeeBoxRatings = {
+    ...TEE,
+    slope_mens: 125,
+    course_rating_mens: 70,
+    par_total_mens: 72,
+  };
+
+  function leagueDeps(games: DifferentialGame[]): DifferentialDeps {
+    return {
+      teeById: new Map([['tee-1', LEAGUE_TEE]]),
+      genderByGame: new Map(games.map((g) => [g.id, 'mens' as const])),
+      holesByCourse: new Map([['course-1', HOLES]]),
+      scoresByGame: new Map(
+        games.map((g) => [
+          g.id,
+          Array.from({ length: 18 }, (_, i) => ({
+            hole_number: i + 1,
+            strokes: i + 1 === 6 ? 9 : 5,
+          })),
+        ]),
+      ),
+    };
+  }
+
+  it('the live differential uses the full course handicap, not the playing handicap', () => {
+    const games: DifferentialGame[] = [
+      { ...game('league', 'stableford', null), course_handicap: 23, full_course_handicap: 31 },
+    ];
+
+    const { byGame, toFreeze } = computeDifferentials(games, leagueDeps(games));
+
+    expect(byGame.get('league')).toBe(20.8);
+    expect(toFreeze).toEqual([{ gameId: 'league', differential: 20.8 }]);
+  });
+
+  it('without the full course handicap there is no live differential; a frozen one still shows', () => {
+    const games: DifferentialGame[] = [
+      { ...game('unknown', 'stableford', null), course_handicap: 23, full_course_handicap: null },
+      { ...game('app', 'stableford', null), course_handicap: 23, full_course_handicap: undefined },
+      { ...game('frozen', 'stableford', 20.8), course_handicap: 23, full_course_handicap: null },
+    ];
+
+    const { byGame, toFreeze } = computeDifferentials(games, leagueDeps(games));
+
+    expect(byGame).toEqual(new Map([['frozen', 20.8]]));
     expect(toFreeze).toEqual([]);
   });
 });

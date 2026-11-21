@@ -50,6 +50,7 @@ function mockGame(gameMode: GameMode, scoredUsers: string[]) {
     user_id,
     tee_gender: 'mens',
     course_handicap: 18,
+    full_course_handicap: 18,
   }));
   adminMock = buildSupabaseMock([], {}, {
     byTable: {
@@ -112,5 +113,66 @@ describe('persistScoreDifferentials — team-ball rounds (#2273)', () => {
     for (const w of writes) {
       expect(w.args[0]).toEqual({ score_differential: 18 });
     }
+  });
+});
+
+// F1 in docs/regelbok-gjennomgang.md: NGF 3.1b (s. 31) sets every net double
+// bogey from the full course handicap (100 %). The league example: 75 % with a
+// cap of 32 on tee 125/70,0/72, index 30,0 → course handicap 31, playing
+// handicap 23. Bogey on 17 holes and a 9 on the par 4 with index 6 → cap 8,
+// AGS 93, differential 20,8 (the playing handicap would give 19,9).
+describe('persistScoreDifferentials — netto dobbeltbogey av fullt banehandicap (F1)', () => {
+  const LEAGUE_TEE = { ...TEE, slope_mens: 125, course_rating_mens: 70, par_total_mens: 72 };
+
+  function mockLeagueGame(players: Array<{ user_id: string; full_course_handicap: number | null }>) {
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: {
+        games: [
+          {
+            data: { course_id: 'course-1', tee_box_id: 'tee-1', game_mode: 'stableford' },
+            error: null,
+          },
+        ],
+        game_players: [
+          {
+            data: players.map((p) => ({ ...p, tee_gender: 'mens', course_handicap: 23 })),
+            error: null,
+          },
+          ...players.map(({ user_id }) => ({ data: [{ user_id }], error: null })),
+        ],
+        scores: [
+          {
+            data: players.flatMap(({ user_id }) =>
+              HOLES.map((h) => ({
+                user_id,
+                hole_number: h.hole_number,
+                strokes: h.hole_number === 6 ? 9 : 5,
+              })),
+            ),
+            error: null,
+          },
+        ],
+        course_holes: [{ data: HOLES, error: null }],
+        tee_boxes: [{ data: LEAGUE_TEE, error: null }],
+      },
+    });
+  }
+
+  it('freezes the differential from the full course handicap (20,8, not 19,9)', async () => {
+    mockLeagueGame([{ user_id: CAPTAIN, full_course_handicap: 31 }]);
+
+    const written = await persistScoreDifferentials(GAME_ID);
+
+    expect(written).toBe(1);
+    expect(updates().map((u) => u.args[0])).toEqual([{ score_differential: 20.8 }]);
+  });
+
+  it('a row without the full course handicap gets no differential rather than a wrong one', async () => {
+    mockLeagueGame([{ user_id: CAPTAIN, full_course_handicap: null }]);
+
+    const written = await persistScoreDifferentials(GAME_ID);
+
+    expect(written).toBe(0);
+    expect(updates()).toHaveLength(0);
   });
 });

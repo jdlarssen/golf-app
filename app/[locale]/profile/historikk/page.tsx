@@ -109,6 +109,8 @@ type ScoreRow = {
 type GameWithMeta = GameRow & {
   /** Strokes received — netto = brutto − dette (#866). */
   course_handicap: number | null;
+  /** Fullt banehandicap (100 %), frosset ved start: differensialens netto dobbeltbogey (F1). */
+  full_course_handicap: number | null;
   /** Format-riktig utfall (#572) → resultat-badge. */
   result_summary: ResultSummary | null;
   /** #941 — frosset WHS-differensial (null = ikke frosset ennå → live-beregnes). */
@@ -148,7 +150,7 @@ export default async function HistorikkPage() {
   const { data: gamePlayers, error: gpError } = await supabase
     .from('game_players')
     .select(
-      'game_id, tee_gender, course_handicap, result_summary, score_differential, games!inner(id, name, scheduled_tee_off_at, ended_at, game_mode, mode_config, course_id, tee_box_id, source_game_id, league_round_id, courses(name))',
+      'game_id, tee_gender, course_handicap, full_course_handicap, result_summary, score_differential, games!inner(id, name, scheduled_tee_off_at, ended_at, game_mode, mode_config, course_id, tee_box_id, source_game_id, league_round_id, courses(name))',
     )
     .eq('user_id', userId)
     .eq('games.status', 'finished')
@@ -254,6 +256,7 @@ export default async function HistorikkPage() {
     .map((r) => ({
       ...r.games,
       course_handicap: r.course_handicap,
+      full_course_handicap: r.full_course_handicap,
       result_summary: r.result_summary,
       score_differential: r.score_differential,
     }))

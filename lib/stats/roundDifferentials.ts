@@ -18,8 +18,14 @@ export type DifferentialGame = {
   game_mode: GameMode;
   course_id: string | null;
   tee_box_id: string | null;
-  /** Strokes received — banehandicapet i spillet. */
+  /** Strokes received — spillehandicapet i spillet (etter andel og tak). */
   course_handicap: number | null;
+  /**
+   * Fullt banehandicap (100 %), frosset ved start (0254). Netto dobbeltbogey
+   * regnes av dette tallet (F1, NGF 3.1b). Null eller utelatt (eldre appbygg
+   * leser ikke kolonnen) = ukjent: ingen live-differensial.
+   */
+  full_course_handicap?: number | null;
   /** Frosset WHS-differensial (null = ikke frosset ennå → live-beregnes). */
   score_differential: number | null;
   /** Antall hull spilleren selv har slag på. */
@@ -42,7 +48,7 @@ export type DifferentialDeps = {
  * #941 — WHS score-differensial per komplett 18-hulls-runde. Frosset verdi
  * (`game_players.score_differential`) vinner; ellers beregnes den live fra rå
  * runde-data (samme `computeScoreDifferential` som fryse-helperen — formelen bor
- * ett sted). Runder uten 18 hull, slope/CR eller banehandicap hoppes over.
+ * ett sted). Runder uten 18 hull, slope/CR eller fullt banehandicap hoppes over.
  * `toFreeze` lister live-beregnede runder som bør lazy-fryses.
  *
  * #2273: runder der laget delte én ball (`modeCollapsesToTeamCard` på hull 18)
@@ -96,7 +102,8 @@ export function computeDifferentials(
         par: number;
         strokeIndex: number;
       }[],
-      courseHandicap: game.course_handicap,
+      // F1: fullt banehandicap, ikke spillehandicapet etter andel og tak.
+      courseHandicap: game.full_course_handicap ?? null,
       slope: rating.slope,
       courseRating: rating.courseRating,
     });

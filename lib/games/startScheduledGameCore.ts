@@ -388,11 +388,13 @@ export async function startScheduledGameCore(
       courseRating: rating.courseRating,
       par: rating.par,
     });
+    // The full course handicap (100 %), before any allowance or cap.
+    const fullCourseHandicap = Math.round(raw);
     frozenPlayers.push({
       teamNumber: row.team_number,
       withdrawnAt: row.withdrawn_at,
       // The greensome plan wants the course handicap before any allowance.
-      rawCourseHandicap: Math.round(raw),
+      rawCourseHandicap: fullCourseHandicap,
     });
     // #2210: formats with their own percentage in mode_config freeze the full
     // course handicap, also when the row was stored with a stale value.
@@ -407,7 +409,9 @@ export async function startScheduledGameCore(
       expectOne(
         await supabase
           .from('game_players')
-          .update({ course_handicap: allowed })
+          // F1 (WHS 3.1b): the score differential's net double bogey uses
+          // the full course handicap, so it is frozen next to the playing one.
+          .update({ course_handicap: allowed, full_course_handicap: fullCourseHandicap })
           .eq('game_id', gameId)
           .eq('user_id', row.user_id)
           .select('user_id'),

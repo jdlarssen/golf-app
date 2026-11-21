@@ -1,7 +1,10 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { computeScoreDifferential } from '@/lib/scoring/scoreDifferential';
-import { getRatingForGender } from '@/lib/games/teeRating';
+import {
+  computeScoreDifferential,
+  type DifferentialHole,
+} from '@/lib/scoring/scoreDifferential';
+import { getRatingForGender, type TeeGender } from '@/lib/games/teeRating';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { modeCollapsesToTeamCard, type GameMode } from '@/lib/scoring/modes/types';
 
@@ -49,7 +52,7 @@ export async function persistScoreDifferentials(gameId: string): Promise<number>
         .single(),
       admin
         .from('game_players')
-        .select('user_id, tee_gender, course_handicap')
+        .select('user_id, tee_gender, full_course_handicap')
         .eq('game_id', gameId),
       selectAllRowsResult(
         (from, to) =>
@@ -147,65 +150,26 @@ export async function persistScoreDifferentials(gameId: string): Promise<number>
       byHole.set(s.hole_number, s.strokes);
     }
 
-    // Hole lookup: hole_number → row.
-    const holeByNumber = new Map(holes.map((h) => [h.hole_number, h]));
-
     // Compute and write a differential per player. Best-effort via Promise.allSettled.
     // Each task resolves to true if a row was written, false if skipped (null differential
     // or missing data), and rejects on a DB error.
     const writes = await Promise.allSettled(
       players.map(async (player): Promise<boolean> => {
-        const gender = player.tee_gender ?? 'mens';
-        const rating = getRatingForGender(tee, gender);
-        if (!rating) {
-          // Tee box has no ratings for this gender — skip silently.
-          return false;
-        }
-
-        // Assemble the 18-hole array expected by computeScoreDifferential.
-        const playerScores = scoresByUser.get(player.user_id);
-        const differentialHoles: Array<{
-          strokes: number | null;
-          par: number;
-          strokeIndex: number;
-        } | null> = Array.from({ length: 18 }, (_, i) => {
-          const holeNumber = i + 1;
-          const hole = holeByNumber.get(holeNumber);
-          if (!hole) return null;
-
-          const par =
-            gender === 'ladies'
-              ? hole.par_ladies
-              : gender === 'juniors'
-                ? hole.par_juniors
-                : hole.par_mens;
-          if (par === null || par === undefined) return null;
-
-          return {
-            strokes: playerScores?.get(holeNumber) ?? null,
-            par,
-            strokeIndex: hole.stroke_index,
-          };
-        });
-
-        // If any hole has no metadata, the course setup is incomplete — skip.
-        if (differentialHoles.some((h) => h === null)) {
-          return false;
-        }
-
-        const differential = computeScoreDifferential({
-          holes: differentialHoles as {
-            strokes: number | null;
-            par: number;
-            strokeIndex: number;
-          }[],
-          courseHandicap: player.course_handicap,
-          slope: rating.slope,
-          courseRating: rating.courseRating,
+        const differential = computePlayerDifferential({
+          tee,
+          holes,
+          gender: player.tee_gender ?? 'mens',
+          scoresByHole: scoresByUser.get(player.user_id),
+          // F1 (NGF 3.1b, s. 31): the full course handicap (100 %) sets every
+          // net double bogey, not the playing handicap after the game's share
+          // and cap. Null (a row from before 0254, not yet backfilled) gives
+          // no differential rather than a wrong one.
+          fullCourseHandicap: player.full_course_handicap,
         });
 
         if (differential === null) {
-          // Round doesn't qualify (< 18 scored holes or missing metadata).
+          // Round doesn't qualify (< 18 scored holes, missing metadata or no
+          // frozen full course handicap).
           return false;
         }
 
@@ -248,4 +212,58 @@ export async function persistScoreDifferentials(gameId: string): Promise<number>
     console.error('[persistScoreDifferentials] failed', { gameId, err });
     return 0;
   }
+}
+
+type DifferentialHoleRow = {
+  hole_number: number;
+  par_mens: number | null;
+  par_ladies: number | null;
+  par_juniors: number | null;
+  stroke_index: number;
+};
+
+/**
+ * One player's WHS differential from the course's holes, the tee and their own
+ * strokes, or null when the round does not qualify (no rating for the tee
+ * class, a hole without par, fewer than 18 scored holes, no full course
+ * handicap). The freeze above and `scripts/backfillFullCourseHandicap.ts` both
+ * call it, so the backfill's preview is the number the freeze writes.
+ */
+export function computePlayerDifferential(input: {
+  tee: Parameters<typeof getRatingForGender>[0];
+  holes: DifferentialHoleRow[];
+  gender: TeeGender;
+  scoresByHole: Map<number, number | null> | undefined;
+  fullCourseHandicap: number | null;
+}): number | null {
+  const { tee, holes, gender, scoresByHole, fullCourseHandicap } = input;
+  const rating = getRatingForGender(tee, gender);
+  if (!rating) return null; // Tee box has no ratings for this gender.
+
+  const holeByNumber = new Map(holes.map((h) => [h.hole_number, h]));
+  const differentialHoles: DifferentialHole[] = [];
+  for (let holeNumber = 1; holeNumber <= 18; holeNumber++) {
+    const hole = holeByNumber.get(holeNumber);
+    // A hole without metadata: the course setup is incomplete.
+    if (!hole) return null;
+    const par =
+      gender === 'ladies'
+        ? hole.par_ladies
+        : gender === 'juniors'
+          ? hole.par_juniors
+          : hole.par_mens;
+    if (par === null || par === undefined) return null;
+    differentialHoles.push({
+      strokes: scoresByHole?.get(holeNumber) ?? null,
+      par,
+      strokeIndex: hole.stroke_index,
+    });
+  }
+
+  return computeScoreDifferential({
+    holes: differentialHoles,
+    courseHandicap: fullCourseHandicap,
+    slope: rating.slope,
+    courseRating: rating.courseRating,
+  });
 }
