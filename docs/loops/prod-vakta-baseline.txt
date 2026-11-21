@@ -21,6 +21,29 @@ rls_enabled_no_policy_public_product_update_digests
 rls_enabled_no_policy_public_cup_lineup_sessions
 rls_enabled_no_policy_public_cup_lineup_slots
 #
+# #2952 (owner-ordered audit 20.11, migrasjoner 0248/0250/0252) - samme
+# service-role-lockdown-mønster som over, dukket opp da klubb-roller,
+# liga/cup-lesereglene og venn-e-posten nådde prod:
+rls_enabled_no_policy_public_invitation_receipts
+rls_enabled_no_policy_public_product_update_digest_recipients
+#   invitation_receipts (0252) og product_update_digest_recipients (0246) har
+#   RLS på og alle grants tilbakekalt fra anon og authenticated - ingen rolle
+#   har tilgang en policy kunne styrt, bare service_role leser og skriver.
+#
+#   is_group_owner (0248), is_league_participant/can_view_league og
+#   is_tournament_participant/can_view_tournament (0250): search_path låst,
+#   anon og public tilbakekalt, bare authenticated og service_role utfører.
+#   Hver funksjon sjekker kalleren selv mot medlems- eller eierskapstabellen
+#   (group_members.role = 'owner', league_players.user_id, eller
+#   tournament_participants.user_id / game_players for en aktiv cup-runde) -
+#   aldri en vilkårlig parameter alene. Samme mønster som can_manage_tournament
+#   og de fire side-contest-funksjonene over.
+authenticated_security_definer_function_executable_public_is_group_owner_p_group_id uuid
+authenticated_security_definer_function_executable_public_is_league_participant_p_league_id uuid
+authenticated_security_definer_function_executable_public_can_view_league_p_league_id uuid
+authenticated_security_definer_function_executable_public_is_tournament_participant_p_tournament_id uuid
+authenticated_security_definer_function_executable_public_can_view_tournament_p_tournament_id uuid
+#
 # ───────────────────────────────────────────────────
 # #1121 - sikkerhetsherding fra prod-vaktas første kjøring (migrasjon 0137).
 # Live katalog-gjennomgang per funksjon (staging + prod read-only, 2026-07-07),
