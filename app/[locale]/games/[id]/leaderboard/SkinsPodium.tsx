@@ -213,7 +213,7 @@ export function SkinsPodium({
         </ul>
       )}
 
-      <PullQuote className="px-6 pt-4 pb-4">{tc('congratulations')}</PullQuote>
+      {!noWinner && <PullQuote className="px-6 pt-4 pb-4">{tc('congratulations')}</PullQuote>}
     </LeaderboardShell>
   );
 }
