@@ -36,13 +36,24 @@ target.
   `--admin`, no merge through the GitHub API) · changing branch protection ·
   creating git or gh aliases · changing the hook files (`.githooks/`) or
   `.git/config` from the shell · rewording commands to dodge a matcher that fired
-  correctly. bash-guard reads the command the way the shell does (quotes and
-  backslashes resolved, text handed to `bash -c`/`eval`/an interpreter read as a
-  command, a variable set in the same command put in where it is used). That is
-  best effort, not a proof: indirection the guard cannot follow can still get
-  through, and the rule itself (I7) is what binds. A hook file is changed with the
+  correctly. bash-guard reads the command the way the shell does: it splits the
+  command into its parts, resolves quotes and backslashes in each, reads text that
+  one part hands to a shell or an interpreter (`bash -c`, `eval`, `source <(…)`,
+  `node -e`) as a command, and puts a variable set in the same command in where it
+  is used. A commit message in another part stays text. That is best effort, not a
+  proof, and the rule itself (I7) is what binds. A hook file is changed with the
   editor tools in a PR, where the change shows in the diff; CI runs the same
   checks server-side.
+- What bash-guard does not follow (known limits; the rules above still apply):
+  a guarded flag or command name that reaches the command as a separate argument
+  from another program (xargs, an argument list in an interpreter, a backtick or
+  a variable holding a command's output); a value set in an earlier command or in
+  a script file; hook files changed from inside an interpreter, after `cd` into
+  the folder, or through git itself (checking out an older version, index flags);
+  a copy of `.env.local` under another name; and pushes that delete a remote
+  branch (deleting `main` is stopped by the pre-push hook and branch protection).
+  None of these is sanctioned — they are listed so nobody mistakes the guard for
+  the rule.
 - Prod firewall, what counts as a prod call: a Supabase MCP call with prod as its
   project (any tool that is not on mcp-guard's list of read tools), a shell command
   that reaches prod, a command that loads `.env.local` (it holds the prod keys:
