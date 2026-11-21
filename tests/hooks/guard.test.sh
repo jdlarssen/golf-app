@@ -13,7 +13,8 @@
 # skrev noen logglinje for den regelen (falske treff, #1303).
 # setup:"approve-prod" oppretter sentinel-filen før kjøring;
 # "approve-prod-stale" backdater den forbi 10-minutters-vinduet.
-# assert_sentinel_consumed verifiserer engangs-semantikken.
+# assert_sentinel_consumed verifiserer engangs-semantikken;
+# assert_sentinel_kept at en ren lesing lar godkjenningen stå urørt.
 #
 # Etter fixture-runden bevises i tillegg:
 #   1. Vaktloggen finnes, har linjer, og hver linje er gyldig JSON.
@@ -45,7 +46,7 @@ decide() { # hook-script <<< payload → deny|ask|context|none
 }
 
 run_fixture_file() { # fixtures.json hook-script
-  local file="$1" hook_script="$2" count i name expect setup consume payload decision ok
+  local file="$1" hook_script="$2" count i name expect setup consume kept payload decision ok
   local reason_needles no_log_rule log_before log_after needle reason
   count="$(jq 'length' "$file")"
   i=0
@@ -54,6 +55,7 @@ run_fixture_file() { # fixtures.json hook-script
     expect="$(jq -r ".[$i].expect" "$file")"
     setup="$(jq -r ".[$i].setup // empty" "$file")"
     consume="$(jq -r ".[$i].assert_sentinel_consumed // empty" "$file")"
+    kept="$(jq -r ".[$i].assert_sentinel_kept // empty" "$file")"
     payload="$(jq -c ".[$i].payload" "$file")"
     reason_needles="$(jq -r ".[$i].expect_reason_contains // [] | .[]" "$file")"
     no_log_rule="$(jq -r ".[$i].assert_no_log_rule // empty" "$file")"
@@ -112,6 +114,10 @@ run_fixture_file() { # fixtures.json hook-script
       ok=0
       decision="$decision (sentinel ikke konsumert)"
     fi
+    if [ "$kept" = "true" ] && [ ! -f "$SENTINEL" ]; then
+      ok=0
+      decision="$decision (sentinel brukt opp av en lesing)"
+    fi
     rm -f "$SENTINEL"
 
     if [ -n "$reason_needles" ]; then
@@ -146,6 +152,21 @@ echo "== bash-guard fixtures =="
 run_fixture_file "$FIXDIR/bash.json" "$ROOT/.claude/hooks/bash-guard.sh"
 echo "== mcp-guard fixtures =="
 run_fixture_file "$FIXDIR/mcp.json" "$ROOT/.claude/hooks/mcp-guard.sh"
+
+# Matcher-bevis (p09): prod-vakta klassifiserer selv, så settings.json må sende
+# ALLE MCP-verktøy til den — også verktøy som ikke fantes da lista ble skrevet.
+echo "== settings.json-matcher =="
+MCP_MATCHER="$(jq -r '.hooks.PreToolUse[] | select(.hooks[].command | contains("mcp-guard.sh")) | .matcher' "$ROOT/.claude/settings.json")"
+for tool_name in mcp__supabase__execute_sql mcp__36be25a6-2d72-41c3-a675-2352133ed510__apply_migration \
+  mcp__supabase__run_notebook mcp__supabase__create_notebook mcp__supabase__merge_branch mcp__x__some_future_tool; do
+  if [ -n "$MCP_MATCHER" ] && printf '%s' "$tool_name" | grep -Eq "$MCP_MATCHER"; then
+    pass=$((pass + 1))
+    printf 'PASS  matcher treffer %s\n' "$tool_name"
+  else
+    fail=$((fail + 1))
+    printf 'FAIL  matcher «%s» treffer ikke %s\n' "$MCP_MATCHER" "$tool_name"
+  fi
+done
 
 echo "== vaktlogg =="
 LOG="$TMP/.claude/logs/guard-events.jsonl"

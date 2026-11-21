@@ -25,8 +25,8 @@
     "payload": { "tool_name": "mcp__supabase__execute_sql", "tool_input": { "project_id": "glofubopddkjhymcbaph", "query": "WITH gone AS (DELETE FROM scores RETURNING *) SELECT count(*) FROM gone" } }
   },
   {
-    "name": "dokumentert fail-closed: skrive-nøkkelord i string-literal → deny",
-    "expect": "deny",
+    "name": "p09: skriveord bare i en tekststreng (ren lesing) → none",
+    "expect": "none",
     "payload": { "tool_name": "mcp__supabase__execute_sql", "tool_input": { "project_id": "glofubopddkjhymcbaph", "query": "SELECT * FROM games WHERE name = 'drop it like its hot'" } }
   },
   {
@@ -105,5 +105,160 @@
     "setup": "approve-prod",
     "assert_sentinel_consumed": true,
     "payload": { "tool_name": "mcp__supabase__apply_migration", "tool_input": { "project_id": "glofubopddkjhymcbaph", "name": "godkjent_0108", "query": "ALTER TABLE games ADD COLUMN sponsor text" } }
+  },
+  {
+    "name": "p09: SELECT som kaller en egen funksjon mot prod → deny (funksjoner kan skrive)",
+    "expect": "deny",
+    "expect_reason_contains": ["ANONYMIZE_USER"],
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "glofubopddkjhymcbaph", "query": "SELECT anonymize_user('00000000-0000-0000-0000-000000000000')"}}
+  },
+  {
+    "name": "p09: SELECT setval(...) mot prod → deny",
+    "expect": "deny",
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "glofubopddkjhymcbaph", "query": "select setval('games_id_seq', 1)"}}
+  },
+  {
+    "name": "p09: mellomrom mellom funksjonsnavn og parentes → deny",
+    "expect": "deny",
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "glofubopddkjhymcbaph", "query": "select setval ('games_id_seq', 1)"}}
+  },
+  {
+    "name": "p09: skjemakvalifisert funksjon → deny",
+    "expect": "deny",
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "glofubopddkjhymcbaph", "query": "select pg_catalog.set_config('role', 'postgres', false)"}}
+  },
+  {
+    "name": "p09: funksjonsnavn i doble anførselstegn → deny",
+    "expect": "deny",
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "glofubopddkjhymcbaph", "query": "select \"anonymize_user\"('00000000-0000-0000-0000-000000000000')"}}
+  },
+  {
+    "name": "p09: blokk-kommentar mellom navn og parentes → deny",
+    "expect": "deny",
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "glofubopddkjhymcbaph", "query": "select setval/**/('games_id_seq', 1)"}}
+  },
+  {
+    "name": "p09: linjekommentar mellom navn og parentes → deny",
+    "expect": "deny",
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "glofubopddkjhymcbaph", "query": "select setval -- count\n('games_id_seq', 1)"}}
+  },
+  {
+    "name": "p09: EXPLAIN ANALYZE med funksjonskall → deny",
+    "expect": "deny",
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "glofubopddkjhymcbaph", "query": "EXPLAIN ANALYZE SELECT anonymize_user('00000000-0000-0000-0000-000000000000')"}}
+  },
+  {
+    "name": "p09: SELECT ... INTO ny tabell mot prod → deny",
+    "expect": "deny",
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "glofubopddkjhymcbaph", "query": "SELECT * INTO backup_games FROM games"}}
+  },
+  {
+    "name": "p09: funksjon i FROM-leddet → deny",
+    "expect": "deny",
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "glofubopddkjhymcbaph", "query": "select * from dblink('host=x', 'select 1') as t"}}
+  },
+  {
+    "name": "p09: kjente lesefunksjoner mot prod → none",
+    "expect": "none",
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "glofubopddkjhymcbaph", "query": "select count(*), max(created_at), coalesce(sum(hcp_index), 0) from users where id in (select user_id from game_players)"}}
+  },
+  {
+    "name": "p09: date_trunc + group by mot prod → none",
+    "expect": "none",
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "glofubopddkjhymcbaph", "query": "select date_trunc('day', created_at) as d, count(*) from games group by 1 order by 1 desc limit 14"}}
+  },
+  {
+    "name": "p09: skriveord bare i en tekststreng, ren lesing → none og merket står urørt",
+    "expect": "none",
+    "setup": "approve-prod",
+    "assert_sentinel_kept": true,
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "glofubopddkjhymcbaph", "query": "select tgname, pg_get_triggerdef(oid) from pg_trigger where pg_get_triggerdef(oid) ~* 'insert into'"}}
+  },
+  {
+    "name": "p09: doblet apostrof i tekststreng, ren lesing → none",
+    "expect": "none",
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "glofubopddkjhymcbaph", "query": "select count(*) from games where name = 'it''s a delete day'"}}
+  },
+  {
+    "name": "p09: tekststreng som ikke lukkes → deny",
+    "expect": "deny",
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "glofubopddkjhymcbaph", "query": "select count(*) from games where name = 'abc"}}
+  },
+  {
+    "name": "p09: backslash foran apostrof skjuler ikke et skriv → deny",
+    "expect": "deny",
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "glofubopddkjhymcbaph", "query": "SELECT 'a\\' ; DELETE FROM games; --'"}}
+  },
+  {
+    "name": "p09: apostrof i dobbeltkvotert navn skjuler ikke et skriv → deny",
+    "expect": "deny",
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "glofubopddkjhymcbaph", "query": "select 1 as \"a'\" ; delete from games ; select 1 as \"'b\""}}
+  },
+  {
+    "name": "p09: apostrof i kommentar skjuler ikke et skriv → deny",
+    "expect": "deny",
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "glofubopddkjhymcbaph", "query": "SELECT 1 -- '\n; DELETE FROM games; --'"}}
+  },
+  {
+    "name": "p09: dollar-kvotert tekst skjuler ikke et skriv → deny",
+    "expect": "deny",
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "glofubopddkjhymcbaph", "query": "SELECT $q$'$q$ ; DELETE FROM games ; SELECT $q$'$q$"}}
+  },
+  {
+    "name": "p09: funksjonskall gjemt i tekststreng til en kjørende funksjon → deny",
+    "expect": "deny",
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "glofubopddkjhymcbaph", "query": "select query_to_xml('delete from games', true, true, '')"}}
+  },
+  {
+    "name": "p09: ukjent funksjon mot staging → none (staging er sanksjonert)",
+    "expect": "none",
+    "payload": {"tool_name": "mcp__supabase__execute_sql", "tool_input": {"project_id": "snwmueecmfqqdurxedxv", "query": "select anonymize_user('00000000-0000-0000-0000-000000000000')"}}
+  },
+  {
+    "name": "p09: run_notebook mot prod → deny (kjører lagret SQL)",
+    "expect": "deny",
+    "payload": {"tool_name": "mcp__supabase__run_notebook", "tool_input": {"project_id": "glofubopddkjhymcbaph", "notebook_id": "n1", "expected_updated_at": "2026-01-01T00:00:00Z"}}
+  },
+  {
+    "name": "p09: create_notebook mot prod → deny",
+    "expect": "deny",
+    "payload": {"tool_name": "mcp__36be25a6-2d72-41c3-a675-2352133ed510__create_notebook", "tool_input": {"project_id": "glofubopddkjhymcbaph", "name": "x", "content": {"cells": []}}}
+  },
+  {
+    "name": "p09: ukjent verktøy med prod som prosjekt → deny (standard er nei)",
+    "expect": "deny",
+    "payload": {"tool_name": "mcp__supabase__some_future_tool", "tool_input": {"project_id": "glofubopddkjhymcbaph"}}
+  },
+  {
+    "name": "p09: run_notebook mot prod med fersk approve-prod → none + konsumert",
+    "expect": "none",
+    "setup": "approve-prod",
+    "assert_sentinel_consumed": true,
+    "payload": {"tool_name": "mcp__supabase__run_notebook", "tool_input": {"project_id": "glofubopddkjhymcbaph", "notebook_id": "n1", "expected_updated_at": "2026-01-01T00:00:00Z"}}
+  },
+  {
+    "name": "p09: list_tables mot prod → none (leseverktøy)",
+    "expect": "none",
+    "payload": {"tool_name": "mcp__supabase__list_tables", "tool_input": {"project_id": "glofubopddkjhymcbaph", "schemas": ["public"]}}
+  },
+  {
+    "name": "p09: get_advisors mot prod → none (leseverktøy)",
+    "expect": "none",
+    "payload": {"tool_name": "mcp__supabase__get_advisors", "tool_input": {"project_id": "glofubopddkjhymcbaph", "type": "security"}}
+  },
+  {
+    "name": "p09: run_notebook mot staging → none",
+    "expect": "none",
+    "payload": {"tool_name": "mcp__supabase__run_notebook", "tool_input": {"project_id": "snwmueecmfqqdurxedxv", "notebook_id": "n1", "expected_updated_at": "2026-01-01T00:00:00Z"}}
+  },
+  {
+    "name": "p09: annet verktøy som bare nevner prod-ref-en i tekst → none",
+    "expect": "none",
+    "payload": {"tool_name": "mcp__github__add_issue_comment", "tool_input": {"owner": "x", "repo": "y", "issue_number": 1, "body": "prosjektet glofubopddkjhymcbaph er prod"}}
+  },
+  {
+    "name": "p09: nettleserverktøy uten prod-ref → none",
+    "expect": "none",
+    "payload": {"tool_name": "mcp__Claude_Browser__navigate", "tool_input": {"url": "http://localhost:3000"}}
   }
 ]
