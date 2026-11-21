@@ -4,6 +4,7 @@ import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
+import { expectAffected } from '@/lib/supabase/affectedRows';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { sendClubInviteNotification } from '@/lib/mail/clubInviteNotification';
 import { playerName } from '@/lib/names/playerName';
@@ -184,8 +185,8 @@ export async function decideRequest(formData: FormData) {
  * Deletes the club_invitations row directly via the request-scoped client. RLS
  * («club_invitations admin delete», migrasjon 0099) restricts deletes to group
  * admins for their own club, so authz is enforced in Postgres — a non-admin
- * delete simply affects 0 rows. Idempotent: cancelling an already-gone row is a
- * no-op. Result surfaces via the ?cancelled= query param.
+ * delete simply affects 0 rows, which the action reports as an error. Result
+ * surfaces via the ?cancelled= query param.
  */
 export async function cancelInvitation(formData: FormData) {
   const supabase = await getServerClient();
@@ -203,14 +204,25 @@ export async function cancelInvitation(formData: FormData) {
   if (!groupId) redirect({ href: '/klubber', locale });
   if (!invitationId) redirect({ href: `/klubber/${groupId}/administrer`, locale });
 
-  const { error } = await supabase
-    .from('club_invitations')
-    .delete()
-    .eq('id', invitationId)
-    .eq('group_id', groupId);
-
-  if (error) {
-    console.error('[cancelInvitation]', error);
+  // A delete RLS refuses (or one that finds nothing) matches 0 rows with
+  // error == null (trap 2); the affected rows are asserted, so «trukket
+  // tilbake» only shows when a row went (audit 2026-11-20).
+  let cancelled = true;
+  try {
+    expectAffected(
+      await supabase
+        .from('club_invitations')
+        .delete()
+        .eq('id', invitationId)
+        .eq('group_id', groupId)
+        .select('id'),
+      'cancelInvitation',
+    );
+  } catch (err) {
+    console.error('[cancelInvitation]', err);
+    cancelled = false;
+  }
+  if (!cancelled) {
     redirect({ href: `/klubber/${groupId}/administrer?cancelled=error`, locale });
   }
 
