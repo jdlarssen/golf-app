@@ -380,9 +380,22 @@ describe('executeAction: merge_pr', () => {
     expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'GET', 'PUT']);
     expect(calls[3]).toMatchObject({
       path: `/repos/${LOOP_REPO}/pulls/1112/merge`,
-      body: { merge_method: 'rebase' },
+      // p09: mergen gjelder versjonen CI-porten sjekket, ikke «det som er der nå».
+      body: { merge_method: 'rebase', sha: HEAD_SHA },
     });
     expect(msg).toContain('rebase-merget');
+  });
+
+  it('nye commits mellom CI-sjekken og mergen (409) → ikke merget, klar beskjed (p09)', async () => {
+    const { gh } = mockGh([
+      { status: 200, json: greenPr },
+      codeFiles,
+      { status: 200, json: greenCi },
+      { status: 409, json: { message: 'Head branch was modified. Review and try the merge again.' } },
+    ]);
+    const msg = await executeAction({ kind: 'merge_pr', pr: 1112 }, gh);
+    expect(msg).toContain('ikke merget');
+    expect(msg).toContain('nye commits');
   });
 
   it('draft-PR tas ut av draft via GraphQL før merge', async () => {
@@ -590,6 +603,23 @@ describe('fetchChangedFiles', () => {
   it('tom diff → [] (skilt fra null)', async () => {
     const { gh } = mockGh([{ status: 200, json: [] }]);
     expect(await fetchChangedFiles(gh, LOOP_REPO, 7)).toEqual([]);
+  });
+
+  it('omdøpt fil → både nytt og gammelt navn (p09: flytting ut av en eier-sti teller)', async () => {
+    const { gh } = mockGh([
+      {
+        status: 200,
+        json: [
+          { filename: 'lib/flyttet/client.ts', status: 'renamed', previous_filename: 'lib/supabase/client.ts' },
+          { filename: 'docs/x.md', status: 'modified' },
+        ],
+      },
+    ]);
+    expect(await fetchChangedFiles(gh, LOOP_REPO, 7)).toEqual([
+      'lib/flyttet/client.ts',
+      'lib/supabase/client.ts',
+      'docs/x.md',
+    ]);
   });
 });
 

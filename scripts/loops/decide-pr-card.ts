@@ -27,8 +27,8 @@ import { fetchChangedFiles, fetchCiRunsForSha } from '../../lib/loops/ciRuns';
 import {
   classifyAutoMerge,
   closingIssueNumbers,
-  linkedIssueNumbers,
-  NEEDS_DECISION_LABEL,
+  fetchCommitMessages,
+  linkedIssueNeedsDecision,
   ownerWaitReasons,
   withAdvisoryChecks,
   type AutoMergeInput,
@@ -86,32 +86,15 @@ async function prForSha(gh: ReturnType<typeof ghClient>, sha: string): Promise<n
   return (prs.find((p) => p.state === 'open') ?? prs[0])?.number ?? null;
 }
 
-// Commit-meldingene på PR-en (samme paginering som fetchChangedFiles) — auto-merge-
-// klassifiseringen leser dem for bruker-synlig-porten (feat|fix|perf uten
-// [no-changelog], §T7). Feiler oppslaget, behandles PR-en som ikke-bruker-synlig.
-async function fetchCommitMessages(
-  gh: ReturnType<typeof ghClient>,
-  n: number,
-): Promise<string[]> {
-  const messages: string[] = [];
-  for (let page = 1; page <= 3; page++) {
-    const res = await gh.rest('GET', `/repos/${REPO}/pulls/${n}/commits?per_page=100&page=${page}`);
-    if (res.status !== 200) break;
-    const batch = (res.json as Array<{ commit?: { message?: string } }>) ?? [];
-    for (const c of batch) if (c.commit?.message) messages.push(c.commit.message);
-    if (batch.length < 100) break;
-  }
-  return messages;
-}
-
 // Kommentarene på PR-en (`issues/{n}/comments` — PR-er ER issues her; review-
 // kommentarer på diff-linjer er en annen samling og er bevisst utenfor). Valg-
 // markøren kan stå i en kommentar, ikke bare i body-en (#1656).
 //
 // `null` = oppslaget feilet — MÅ skilles fra `[]` (ingen kommentarer), akkurat som
-// i fetchChangedFiles. Bevisst ULIK fetchCommitMessages' fail-open `break`: der
-// koster en tapt side en unødig streng staging-port, her ville den auto-merget et
-// produktvalg forbi eieren — nøyaktig hullet #1656 lukker.
+// i fetchChangedFiles: en tapt side ville auto-merget et produktvalg forbi eieren
+// — nøyaktig hullet #1656 lukker. Commit-lista og labelene på lenkede issues
+// følger samme regel (`fetchCommitMessages`, `linkedIssueNeedsDecision` i
+// lib/loops/autoMerge.ts).
 async function fetchCommentBodies(
   gh: ReturnType<typeof ghClient>,
   n: number,
@@ -128,22 +111,6 @@ async function fetchCommentBodies(
   // og en av dem kan bære markøren → behandle som mislykket oppslag, ikke som «fant
   // ingenting». Taket er teoretisk her (kort-/nattkjører-PR-er har en håndfull).
   return null;
-}
-
-// Slår opp om ett av de lenkede issue-ene har autonomy:needs-decision — den tredje
-// valg-markøren (ved siden av headingen i body og i kommentarene). Fail-open: klarer
-// vi ikke lese labelene, stoler vi på headingen (maskin-markøren sesjonene MÅ sette).
-async function anyLinkedIssueNeedsDecision(
-  gh: ReturnType<typeof ghClient>,
-  body: string | null,
-): Promise<boolean> {
-  for (const issue of linkedIssueNumbers(body)) {
-    const res = await gh.rest('GET', `/repos/${REPO}/issues/${issue}`);
-    if (res.status !== 200) continue;
-    const labels = ((res.json as { labels?: Array<{ name: string }> }).labels ?? []).map((l) => l.name);
-    if (labels.includes(NEEDS_DECISION_LABEL)) return true;
-  }
-  return false;
 }
 
 async function main(): Promise<void> {
@@ -245,12 +212,16 @@ async function main(): Promise<void> {
 
   // Tre-utfalls-klassifisering (#1406): ren PR mot main uten produktvalg/aldri-liste/
   // manglende staging-bevis → auto-merge; ellers knapp-kort som før.
-  const commitMessages = await fetchCommitMessages(gh, n);
+  // Feiler commit- eller label-oppslaget, kommer `null` tilbake, og klassifiseringen
+  // holder PR-en til eieren (knapp-kort) i stedet for å gjette.
+  const commitMessages = await fetchCommitMessages(gh, REPO, n);
+  if (commitMessages === null) console.log(`${LOG} PR #${n}: fikk ikke lest commit-meldingene`);
   // Fail-closed (#1656): uten kommentarene kan vi ikke vite om PR-en bærer et
   // produktvalg → ingen kort, ingen merge. Samme behandling som en feilet fil-liste.
   const commentBodies = await fetchCommentBodies(gh, n);
   if (commentBodies === null) return noCard(`PR #${n}: fikk ikke lest PR-kommentarene`);
-  const needsDecisionIssue = await anyLinkedIssueNeedsDecision(gh, pr.body);
+  const needsDecisionIssue = await linkedIssueNeedsDecision(gh, REPO, pr.body);
+  if (needsDecisionIssue === null) console.log(`${LOG} PR #${n}: fikk ikke lest labelene på lenket issue`);
   const gateInput: AutoMergeInput = {
     baseRef: pr.base.ref,
     title: pr.title,

@@ -5,9 +5,11 @@ import {
   closingIssueNumbers,
   deleteHeadBranch,
   dispatchMainVerify,
+  fetchCommitMessages,
   hasChoiceMarker,
   headBranchDeleteSkipReason,
   isUserVisibleByCommits,
+  linkedIssueNeedsDecision,
   linkedIssueNumbers,
   mergePullRequest,
   NEVER_AUTO_MERGE_GLOBS,
@@ -48,6 +50,23 @@ describe('touchesNeverList', () => {
     ['native/app/scripts/store-build-ios.sh', 'native/app/scripts/**'],
     ['native/ios/ios/App/App/App.entitlements', 'native/ios/**'],
     ['native/android/app/src/main/AndroidManifest.xml', 'native/android/**'],
+    // p09 (eierkort 9): kontosletting, app-innlogging og AI-samtykke manglet.
+    ['lib/users/deleteAccount.ts', 'lib/users/deleteAccount.ts'],
+    ['components/auth/DeleteAccountForm.tsx', 'components/auth/**'],
+    ['components/auth/LogoutForm.tsx', 'components/auth/**'],
+    ['components/passkey/PasskeyLoginButton.tsx', 'components/passkey/**'],
+    ['lib/cron/auth.ts', 'lib/cron/auth.ts'],
+    ['lib/api/appAuth.ts', 'lib/api/appAuth.ts'],
+    ['lib/admin/auth.ts', 'lib/admin/auth.ts'],
+    ['native/app/src/devLogin.ts', 'native/app/src/devLogin.ts'],
+    ['lib/ai/consent.ts', 'lib/ai/consent.ts'],
+    ['app/[locale]/profile/AiConsentToggle.tsx', 'app/[locale]/profile/AiConsentToggle.tsx'],
+    ['components/aiConsent/AiConsentHomeNudge.tsx', 'components/aiConsent/**'],
+    ['native/app/src/data/aiConsent.ts', 'native/app/src/data/aiConsent.ts'],
+    ['native/app/src/data/aiConsentGate.ts', 'native/app/src/data/aiConsentGate.ts'],
+    ['native/app/src/components/AiConsentGate.tsx', 'native/app/src/components/AiConsentGate.tsx'],
+    ['native/app/src/screens/AiConsentQuestion.tsx', 'native/app/src/screens/AiConsentQuestion.tsx'],
+    ['native/app/src/lib/aiConsentCopy.ts', 'native/app/src/lib/aiConsentCopy.ts'],
   ])('%s treffer aldri-lista', (file) => {
     expect(touchesNeverList([file])).toBe(true);
   });
@@ -431,6 +450,116 @@ describe('classifyAutoMerge', () => {
 });
 
 // ── ownerWaitReasons / NEVER_AUTO_MERGE_RULES (#2147) ───────────────────────
+
+describe('classifyAutoMerge — GitHub svarte ikke (p09, fail-closed)', () => {
+  const base: AutoMergeInput = {
+    baseRef: 'main',
+    title: 'Ryddig loop-endring',
+    body: 'Closes #1406\n\nEn tagline.',
+    changedFiles: ['docs/loops/x.md'],
+    commitMessages: ['chore(loops): ryddig'],
+    commentBodies: [],
+    prLabels: [],
+    needsDecisionIssue: false,
+  };
+
+  it('commit-lista kunne ikke leses → card (regnes som bruker-synlig uten bevis)', () => {
+    expect(classifyAutoMerge({ ...base, commitMessages: null })).toEqual({
+      outcome: 'card',
+      demotedReason: 'fikk ikke lest commit-meldingene',
+    });
+  });
+
+  it('commit-lista kunne ikke leses, men staging-verified er satt → auto-merge', () => {
+    expect(
+      classifyAutoMerge({ ...base, commitMessages: null, prLabels: ['staging-verified'] }).outcome,
+    ).toBe('auto-merge');
+  });
+
+  it('labelene på lenket issue kunne ikke leses → card (regnes som eierbeslutning)', () => {
+    expect(classifyAutoMerge({ ...base, needsDecisionIssue: null })).toEqual({
+      outcome: 'card',
+      demotedReason: 'fikk ikke lest labelene på lenket issue',
+    });
+  });
+
+  it('ownerWaitReasons sier hvorfor, og er aldri tom når utfallet er card', () => {
+    expect(ownerWaitReasons({ ...base, commitMessages: null })).toEqual([
+      'GitHub svarte ikke, så testbeviset kunne ikke sjekkes',
+    ]);
+    expect(ownerWaitReasons({ ...base, needsDecisionIssue: null })).toEqual([
+      'GitHub svarte ikke, så saken kunne ikke sjekkes for en ventende beslutning',
+    ]);
+  });
+});
+
+describe('fetchCommitMessages (p09)', () => {
+  const page = (n: number) => ({
+    status: 200,
+    json: Array.from({ length: n }, (_, i) => ({ commit: { message: `chore: c${i}` } })),
+  });
+
+  it('kort side → meldingene', async () => {
+    const { gh, calls } = mockGh([page(2)]);
+    expect(await fetchCommitMessages(gh, REPO, 7)).toEqual(['chore: c0', 'chore: c1']);
+    expect(calls[0].path).toBe(`/repos/${REPO}/pulls/7/commits?per_page=100&page=1`);
+  });
+
+  it('HTTP-feil → null, ikke tom liste', async () => {
+    const { gh } = mockGh([{ status: 502 }]);
+    expect(await fetchCommitMessages(gh, REPO, 7)).toBeNull();
+  });
+
+  it('HTTP-feil på side 2 → null (en halv liste er ikke et svar)', async () => {
+    const { gh } = mockGh([page(100), { status: 500 }]);
+    expect(await fetchCommitMessages(gh, REPO, 7)).toBeNull();
+  });
+
+  it('tre fulle sider → null (avkortet)', async () => {
+    const { gh } = mockGh([page(100), page(100), page(100)]);
+    expect(await fetchCommitMessages(gh, REPO, 7)).toBeNull();
+  });
+
+  it('ingen commits → [] (skilt fra null)', async () => {
+    const { gh } = mockGh([{ status: 200, json: [] }]);
+    expect(await fetchCommitMessages(gh, REPO, 7)).toEqual([]);
+  });
+});
+
+describe('linkedIssueNeedsDecision (p09)', () => {
+  const issue = (labels: string[]) => ({ status: 200, json: { labels: labels.map((name) => ({ name })) } });
+
+  it('ingen lenkede issues → false uten oppslag', async () => {
+    const { gh, calls } = mockGh([{ status: 500 }]);
+    expect(await linkedIssueNeedsDecision(gh, REPO, 'Ingen lenker her.')).toBe(false);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('lenket issue har labelen → true', async () => {
+    const { gh } = mockGh([issue(['bug', 'autonomy:needs-decision'])]);
+    expect(await linkedIssueNeedsDecision(gh, REPO, 'Closes #12')).toBe(true);
+  });
+
+  it('lenket issue uten labelen → false', async () => {
+    const { gh } = mockGh([issue(['bug'])]);
+    expect(await linkedIssueNeedsDecision(gh, REPO, 'Refs #12')).toBe(false);
+  });
+
+  it('oppslaget feiler → null, ikke false', async () => {
+    const { gh } = mockGh([{ status: 503 }]);
+    expect(await linkedIssueNeedsDecision(gh, REPO, 'Closes #12')).toBeNull();
+  });
+
+  it('ett oppslag feiler, et annet har labelen → true (labelen er sett)', async () => {
+    const { gh } = mockGh([{ status: 503 }, issue(['autonomy:needs-decision'])]);
+    expect(await linkedIssueNeedsDecision(gh, REPO, 'Refs #12\nCloses #13')).toBe(true);
+  });
+
+  it('issuet finnes ikke (404) → teller ikke som feil', async () => {
+    const { gh } = mockGh([{ status: 404 }]);
+    expect(await linkedIssueNeedsDecision(gh, REPO, 'Refs #99999')).toBe(false);
+  });
+});
 
 describe('NEVER_AUTO_MERGE_RULES', () => {
   it('hver glob har en ikke-tom ownerReason', () => {
