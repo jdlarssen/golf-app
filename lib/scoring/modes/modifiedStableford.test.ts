@@ -210,6 +210,25 @@ describe('compute — team (par) modified stableford', () => {
     expect(row.players.every((pc) => !pc.isContributor)).toBe(true);
   });
 
+  it('a partner who has not played the hole does not count as 0 against a played minus', () => {
+    // u1 double bogey (−3), u2 has not played: the team has −3, not the
+    // unplayed partner's 0, and u1 is the contributor.
+    const ctx = makeTeamCtx({
+      players: [
+        { userId: 'u1', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+        { userId: 'u2', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+      ],
+      holes: par4Holes(1),
+      scores: [{ userId: 'u1', holeNumber: 1, gross: 6 }],
+    });
+    const result = compute(ctx);
+    if (result.variant !== 'team') throw new Error('expected team');
+    const row = result.teams[0].holes[0];
+    expect(row.teamPoints).toBe(-3);
+    expect(row.contributorIds).toEqual(['u1']);
+    expect(result.teams[0].totalPoints).toBe(-3);
+  });
+
   it('lag-totalen summerer per-hull-MAX inkludert negative hull', () => {
     // Hull 1: u1 birdie (2), u2 par (0) → MAX 2
     // Hull 2: u1 bogey (−1), u2 dobbeltbogey (−3) → MAX −1

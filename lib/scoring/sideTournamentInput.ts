@@ -47,6 +47,29 @@ export function buildCourseArrays(
 }
 
 /**
+ * One player's own par per hole (18 elements, indexed by hole-1), read from the
+ * tee the player plays: ladies' and juniors' tees have their own par. The side
+ * tournament measures each player against it (`perHolePar`, audit 2026-11-20).
+ * An unknown tee falls back to the men's par, a missing hole to 4 — the same
+ * fallback as `coursePars` in {@link buildCourseArrays}.
+ */
+export function playerParsByHole(
+  holes: { holeNumber: number; parMens: number; parLadies: number; parJuniors: number }[],
+  teeGender: string | null | undefined,
+): number[] {
+  const parByHole = new Map<number, number>();
+  for (const h of holes) {
+    parByHole.set(
+      h.holeNumber,
+      teeGender === 'ladies' ? h.parLadies : teeGender === 'juniors' ? h.parJuniors : h.parMens,
+    );
+  }
+  const pars: number[] = [];
+  for (let h = 1; h <= 18; h++) pars.push(parByHole.get(h) ?? 4);
+  return pars;
+}
+
+/**
  * Maps `game_side_winners` rows to the engine's {@link SideWinner}[] shape. Only
  * the two selectable LD/CTP slots (position 1 | 2) qualify; any other position
  * is dropped. `winner_user_id` (snake_case, DB) becomes `winnerUserId` (camel).
@@ -108,6 +131,8 @@ export function buildSideTournamentInput(args: {
     userId: string;
     perHoleGross: Array<number | null>;
     perHoleNetto: Array<number | null>;
+    /** The player's own par (`pc.par`, tee/gender); course par until known. */
+    perHolePar: number[];
   };
   const playerAccum = new Map<string, PlayerHoleAccum>();
   for (const line of sortedNettoLines) {
@@ -117,6 +142,7 @@ export function buildSideTournamentInput(args: {
           userId: p.userId,
           perHoleGross: new Array<number | null>(18).fill(null),
           perHoleNetto: new Array<number | null>(18).fill(null),
+          perHolePar: [...coursePars],
         });
       }
     }
@@ -130,6 +156,7 @@ export function buildSideTournamentInput(args: {
         if (!accum) continue;
         accum.perHoleGross[idx] = pc.gross;
         accum.perHoleNetto[idx] = pc.net;
+        accum.perHolePar[idx] = pc.par;
       }
     }
   }

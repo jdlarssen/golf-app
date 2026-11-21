@@ -4,6 +4,7 @@ import type {
   SideCategoryAward,
   SideTournamentResult,
 } from '@/lib/scoring/sideTournament';
+import { rankSideStandings } from '@/lib/scoring/sideTournament';
 import {
   SIDE_TOURNAMENT_POINTS,
   type SideCategoryId,
@@ -225,7 +226,7 @@ export function SideTournamentView({
   disabledCategories,
 }: Props) {
   const t = useTranslations('leaderboard.sideTournament');
-  const sorted = rankByPoints(result.teamStandings);
+  const sorted = rankSideStandings(result.teamStandings);
   const teamById = new Map(teams.map((tm) => [tm.teamId, tm]));
   // Solo/individuelt format: hvert lag har nøyaktig ett medlem. Da er
   // lag-vs-individ-skillet meningsløst — lag-kategoriene fyrer aldri (gated på
@@ -309,27 +310,6 @@ export function SideTournamentView({
 }
 
 // --- internal helpers ---
-
-/**
- * Dense-rank teams by `totalPoints` descending. Ties share a rank — two teams
- * tied at top both receive rank 1 (and both get the gold medal); next team
- * gets rank 2. Avoids the index-based bug where a tie at top silently demotes
- * one team to silver.
- */
-function rankByPoints<T extends { totalPoints: number }>(
-  items: T[],
-): Array<T & { rank: number }> {
-  const sorted = [...items].sort((a, b) => b.totalPoints - a.totalPoints);
-  let lastTotal: number | null = null;
-  let rank = 0;
-  return sorted.map((tm) => {
-    if (tm.totalPoints !== lastTotal) {
-      rank += 1;
-      lastTotal = tm.totalPoints;
-    }
-    return { ...tm, rank };
-  });
-}
 
 type RankedStanding = SideTournamentResult['teamStandings'][number] & {
   rank: number;

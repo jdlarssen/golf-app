@@ -135,6 +135,37 @@ describe('computeCupMvp', () => {
 });
 
 describe('computeCupUnderperformer', () => {
+  it("measures each player against the par of their own tee (audit 2026-11-20)", () => {
+    // Nine holes: par 4 from the men's tee, par 5 from the ladies' tee.
+    // Kari (ladies' tee) scores 5 on every hole: even par for her. Per (men's
+    // tee) scores 4 + 1 over on one hole: +1. With men's par for everyone,
+    // Kari would be +9 and "win" the award.
+    const holes = holes9().map((h) => ({
+      ...h,
+      parByGender: { mens: 4, ladies: 5, juniors: 4 },
+    }));
+    const result = computeCupUnderperformer({
+      games: [
+        game({
+          holes,
+          players: [
+            { userId: 'p1', courseHandicap: 0, teeGender: 'mens' },
+            { userId: 'k2', courseHandicap: 0, teeGender: 'ladies' },
+          ],
+          scores: [
+            ...scoresFor('p1', [1, 2, 3, 4, 5, 6, 7, 8], 4),
+            ...scoresFor('p1', [9], 5),
+            ...scoresFor('k2', [1, 2, 3, 4, 5, 6, 7, 8, 9], 5),
+          ],
+        }),
+      ],
+      roster: roster(),
+      unknownLabel: 'Ukjent spiller',
+    });
+
+    expect(result).toEqual({ names: ['Per'], overPar: 1 });
+  });
+
   it('summerer netto mot par over de personlig førte hullene', () => {
     // Scratch-spiller (CH 0), 9 hull på par 4, brutto 5 hvert hull → +1 per
     // hull = +9 totalt.

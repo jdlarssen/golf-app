@@ -31,7 +31,9 @@ export function isWinningSummary(
     case 'matchplay':
       return summary.outcome === 'win';
     case 'skins':
-      return summary.rank === 1;
+      // A round where nobody took a skin puts everyone on rank 1 with 0:
+      // nobody won. Same rule as the result card (`finishedResultBadge`).
+      return summary.rank === 1 && summary.skins > 0;
     default:
       return false;
   }

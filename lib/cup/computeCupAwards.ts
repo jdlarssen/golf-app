@@ -44,9 +44,19 @@ export const MIN_HOLES_FOR_UNDERPERFORMER = 9;
  */
 export type CupPerformanceGame = {
   gameId: string;
-  holes: Array<{ number: number; par: number; strokeIndex: number }>;
-  /** Fullt banehandicap, IKKE allowance-justert — se `computeCupUnderperformer`. */
-  players: Array<{ userId: string; courseHandicap: number }>;
+  /** `parByGender`: par per tee; uten den gjelder `par` (herrepar) alle. */
+  holes: Array<{
+    number: number;
+    par: number;
+    strokeIndex: number;
+    parByGender?: { mens: number; ladies: number; juniors: number };
+  }>;
+  /**
+   * Fullt banehandicap, IKKE allowance-justert — se `computeCupUnderperformer`.
+   * `teeGender`: teen spilleren spiller fra, så hullene måles mot hennes eget par
+   * (revisjonen 20.11).
+   */
+  players: Array<{ userId: string; courseHandicap: number; teeGender?: string | null }>;
   scores: Array<{ userId: string; holeNumber: number; strokes: number | null }>;
 };
 
@@ -128,6 +138,7 @@ export function computeCupUnderperformer(input: {
   for (const game of games) {
     const holeByNumber = new Map(game.holes.map((h) => [h.number, h]));
     const handicapByUser = new Map(game.players.map((p) => [p.userId, p.courseHandicap]));
+    const teeByUser = new Map(game.players.map((p) => [p.userId, p.teeGender ?? null]));
 
     for (const score of game.scores) {
       // Plukket ball / ikke spilt hull teller verken i diffen eller i
@@ -144,7 +155,13 @@ export function computeCupUnderperformer(input: {
       if (courseHandicap == null) continue;
 
       const net = score.strokes - strokesForHole(courseHandicap, hole.strokeIndex);
-      diffByUser.set(score.userId, (diffByUser.get(score.userId) ?? 0) + (net - hole.par));
+      // Spillerens eget par: damer og juniorer har eget par på noen hull.
+      const tee = teeByUser.get(score.userId);
+      const par =
+        hole.parByGender && (tee === 'ladies' || tee === 'juniors' || tee === 'mens')
+          ? hole.parByGender[tee]
+          : hole.par;
+      diffByUser.set(score.userId, (diffByUser.get(score.userId) ?? 0) + (net - par));
       holesByUser.set(score.userId, (holesByUser.get(score.userId) ?? 0) + 1);
     }
   }

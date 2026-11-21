@@ -10,7 +10,7 @@ import {
   calculateSideTournament,
   type SideTournamentInput,
 } from '@/lib/scoring/sideTournament';
-import { buildCourseArrays, mapSideWinners } from '@/lib/scoring/sideTournamentInput';
+import { buildCourseArrays, mapSideWinners, playerParsByHole } from '@/lib/scoring/sideTournamentInput';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import { teamBuckets } from '@/lib/games/teamScope';
 import { LeaderboardTabs } from './LeaderboardTabs';
@@ -97,6 +97,7 @@ export async function computeSideTournament(opts: {
     userId: string;
     perHoleGross: Array<number | null>;
     perHoleNetto: Array<number | null>;
+    perHolePar: number[];
   };
   const perHolePerPlayer: PerHole[] = eligiblePlayers.map((p) => {
     const ch = p.course_handicap ?? 0;
@@ -113,7 +114,18 @@ export async function computeSideTournament(opts: {
         netto[h - 1] = grossVal - extra;
       }
     }
-    return { userId: p.user_id, perHoleGross: gross, perHoleNetto: netto };
+    // Audit 2026-11-20: every score-against-par category measures the player
+    // against the par of their own tee, not the men's par.
+    const perHolePar = playerParsByHole(
+      rawHolesRows.map((h) => ({
+        holeNumber: h.hole_number,
+        parMens: h.par_mens,
+        parLadies: h.par_ladies,
+        parJuniors: h.par_juniors,
+      })),
+      p.tee_gender,
+    );
+    return { userId: p.user_id, perHoleGross: gross, perHoleNetto: netto, perHolePar };
   });
 
   // Lag-grupperinger: par-stableford bruker eksisterende team_number; solo

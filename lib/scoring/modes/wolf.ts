@@ -129,9 +129,11 @@ function buildHoleRow(
   let outcome: WolfHoleOutcome = 'pending';
   const pointsByPlayer: Record<string, number> = {};
 
-  // Wolf-spilleren teller i wolfHolesPlayed uavhengig av outcome.
+  // Wolf-spilleren teller i wolfHolesPlayed når hullet er spilt: alle
+  // spillerne har slag på det, uansett outcome og om valget er lagret. Et hull
+  // rotasjonen bare har satt av til senere, teller ikke (audit 2026-11-20).
   const wolfState = working.get(wolfPlayer.userId);
-  if (wolfState) {
+  if (wolfState && cells.every((c) => c.effectiveScore !== null)) {
     wolfState.wolfHolesPlayed += 1;
   }
 

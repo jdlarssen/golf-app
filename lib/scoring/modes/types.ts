@@ -1863,8 +1863,8 @@ export interface WolfHoleRow {
  * Per-spiller-rad i Wolf-leaderboard. Ranking: høyest totalPoints vinner.
  * Tiebreak (v1): siste Wolf-hull poeng, så team_number ASC (deterministisk).
  *
- * `wolfHolesPlayed` = hvor mange hull spilleren var Wolf (rotation +
- * eventuelle trailing-wolf-hull). `blindWolfWins` = bragging-stat for podium.
+ * `wolfHolesPlayed` = hvor mange SPILTE hull spilleren var Wolf (rotation +
+ * eventuelle trailing-wolf-hull); et hull teller når alle spillerne har slag. `blindWolfWins` = bragging-stat for podium.
  */
 export interface WolfPlayerLine {
   userId: string;
@@ -2221,6 +2221,11 @@ export interface ShambleHoleTeamCell {
    * (< count medlemmer har gross).
    */
   teamScore: number | null;
+  /**
+   * Par for de tellende ballene: summen av hver tellende spillers eget par
+   * (`parFor`, tee/kjønn). Null når pending. Audit 2026-11-20.
+   */
+  teamPar: number | null;
   /** True når < count teammedlemmer har gross på hullet. */
   pending: boolean;
   /** Per-spiller-detalj for ALLE teammedlemmer på hullet. */

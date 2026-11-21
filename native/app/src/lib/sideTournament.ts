@@ -62,6 +62,7 @@ import {
 import {
   buildCourseArrays,
   mapSideWinners,
+  playerParsByHole,
 } from '../../../../lib/scoring/sideTournamentInput';
 import { strokesForHole } from '../../../../lib/scoring/strokeAllocation';
 import type { LocalScore } from '../data/db';
@@ -213,6 +214,8 @@ interface PlayerHoleScores {
   userId: string;
   perHoleGross: Array<number | null>;
   perHoleNetto: Array<number | null>;
+  /** Spillerens eget par per hull (teen hun spiller fra). Revisjonen 20.11. */
+  perHolePar: number[];
 }
 
 /** Ett lag før navnene settes på: hvem er med, og hva heter raden. */
@@ -352,7 +355,10 @@ export function buildSideTournament(opts: {
           gross - strokesForHole(courseHandicap, strokeIndex);
       }
     }
-    return { userId: player.userId, perHoleGross, perHoleNetto };
+    // Revisjonen 20.11: kategoriene mot par måler spilleren mot sitt eget par,
+    // som webben, ikke herrepar.
+    const perHolePar = playerParsByHole(bundle.holes, player.teeGender);
+    return { userId: player.userId, perHoleGross, perHoleNetto, perHolePar };
   });
 
   const teamGrouping = resolveTeamGrouping(bundle.game.gameMode, result);

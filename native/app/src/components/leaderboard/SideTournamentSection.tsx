@@ -33,6 +33,7 @@ import type {
   SideCategoryAward,
   SideTournamentResult,
 } from '../../../../../lib/scoring/sideTournament';
+import { rankSideStandings } from '../../../../../lib/scoring/sideTournament';
 import { SIDE_TOURNAMENT_POINTS } from '../../../../../lib/scoring/sideTournamentConfig';
 import type {
   SideTournamentData,
@@ -250,7 +251,7 @@ export function SideTournamentSection({
     [teams],
   );
 
-  const standings = useMemo(() => rankByPoints(result.teamStandings), [result]);
+  const standings = useMemo(() => rankSideStandings(result.teamStandings), [result]);
 
   const headlineLines = useMemo(
     () => buildHeadlineLines(teams, sideWinners, ldCount, ctpCount),
@@ -504,26 +505,6 @@ function TeamAwards({
 }
 
 // --- interne hjelpere ---
-
-/**
- * Tett rangering på totalpoeng, synkende. Uavgjort DELER plass: to lag på topp
- * får begge plass 1 (og begge gullet), neste lag får plass 2. Indeks-basert
- * rangering ville stille degradert det ene til sølv.
- */
-function rankByPoints<T extends { totalPoints: number }>(
-  items: readonly T[],
-): Array<T & { rank: number }> {
-  const sorted = [...items].sort((a, b) => b.totalPoints - a.totalPoints);
-  let lastTotal: number | null = null;
-  let rank = 0;
-  return sorted.map((item) => {
-    if (item.totalPoints !== lastTotal) {
-      rank += 1;
-      lastTotal = item.totalPoints;
-    }
-    return { ...item, rank };
-  });
-}
 
 /**
  * Én linje per KÅRET LD-/CTP-slot.

@@ -20,6 +20,8 @@ export type SideTournamentPlayer = {
   users: { name: string | null; nickname: string | null } | null;
   course_handicap: number | null;
   withdrawn_at?: string | null;
+  /** The tee the player plays: the side tournament reads their own par. */
+  tee_gender?: string | null;
 };
 
 export type CourseHoleRow = {

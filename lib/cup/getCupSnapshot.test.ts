@@ -297,12 +297,16 @@ describe('getCupSnapshot — splittet cup-dag (#1441)', () => {
     expect(snap!.performanceInputs.map((p) => p.gameId)).toEqual(['g1']);
     const perf = snap!.performanceInputs[0];
     // Segment-filtrert (back9): hull 1 er med i course_holes, men ikke i scope.
-    expect(perf.holes).toEqual([{ number: 10, par: 4, strokeIndex: 1 }]);
+    // Revisjonen 20.11: par per tee følger med, så «dro ned mest» måler hver
+    // spiller mot sitt eget par.
+    expect(perf.holes).toEqual([
+      { number: 10, par: 4, strokeIndex: 1, parByGender: { mens: 4, ladies: 5, juniors: 4 } },
+    ]);
     expect(perf.players).toEqual([
-      { userId: 'p1', courseHandicap: 0 },
-      { userId: 'p2', courseHandicap: 0 },
-      { userId: 'p3', courseHandicap: 0 },
-      { userId: 'p4', courseHandicap: 0 },
+      { userId: 'p1', courseHandicap: 0, teeGender: null },
+      { userId: 'p2', courseHandicap: 0, teeGender: null },
+      { userId: 'p3', courseHandicap: 0, teeGender: null },
+      { userId: 'p4', courseHandicap: 0, teeGender: null },
     ]);
     expect(perf.scores).toHaveLength(4);
     expect(perf.scores[0]).toEqual({ userId: 'p1', holeNumber: 10, strokes: 4 });

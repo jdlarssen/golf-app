@@ -760,6 +760,46 @@ describe('shamble.compute — ranking: net_to_par (#2625)', () => {
     expect(teamLine(result, 2).toPar).toBeNull();
   });
 
+  it("measures each counted ball against its player's own par (audit 2026-11-20)", () => {
+    // Hole 1 is par 5 from the men's tee and par 4 from the ladies' tee.
+    // Team 1: two ladies score 4 and 4 → 8 against their par 4 + 4 = E.
+    // Team 2: two men score 5 and 5 → 10 against their par 5 + 5 = E.
+    // With men's par for everyone, team 1 would show −2 and win.
+    const hole: ScoringHole = {
+      number: 1,
+      par: 5,
+      strokeIndex: 1,
+      parByGender: { mens: 5, ladies: 4, juniors: 5 },
+    };
+    const ladies = (id: string, team: number): ScoringPlayer => ({
+      ...makePlayer(id, team),
+      teeGender: 'ladies',
+    });
+    const result = compute(
+      makeCtx({
+        players: [
+          ladies('a1', 1),
+          ladies('a2', 1),
+          ladies('a3', 1),
+          makePlayer('b1', 2),
+          makePlayer('b2', 2),
+          makePlayer('b3', 2),
+        ],
+        holes: [hole],
+        scores: [
+          ...holeScores(1, [['a1', 4], ['a2', 4], ['a3', 7]]),
+          ...holeScores(1, [['b1', 5], ['b2', 5], ['b3', 7]]),
+        ],
+        modeConfigOverride: config(2, true),
+      }),
+    );
+    expect(teamLine(result, 1).toPar).toBe(0);
+    expect(teamLine(result, 2).toPar).toBe(0);
+    expect(result.teams.map((t) => t.rank)).toEqual([1, 1]);
+    // The hole cell carries the par of its counted balls for the board's tone.
+    expect(result.holes[0].teams.find((c) => c.teamNumber === 1)!.teamPar).toBe(8);
+  });
+
   it('a team without a single hole still ranks last with the flag (#635)', () => {
     const result = compute(ctx(2, true, teamCard(['a1', 'a2', 'a3'], [10, 10, 10])));
     expect(result.teams.map((t) => [t.teamNumber, t.rank, t.toPar])).toEqual([
