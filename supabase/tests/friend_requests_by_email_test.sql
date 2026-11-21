@@ -52,6 +52,21 @@
 --   39    the lookup when the other person asked first  → accepted
 --   40    the lookup for a deleted account              → unknown
 --
+-- The receipt mark, and who writes invitations:
+--   41    a receipt for a person with an account is marked; one for an
+--         address without an account is not
+--   42    the lookup holds a lock for its sender and address until the
+--         transaction ends
+--   43    a user session and anon have no privilege on the marks
+--   44    a player reads the marks                      → 42501
+--   45    a player inserts a game-less invitation       → 42501
+--   46    the same with a back-dated created_at         → 42501
+--   47    a player invites to an own game with crafted created_at,
+--         opened_at and accepted_at                     → ok
+--   48    and the database set all three itself
+--   49    a global admin inserts a game-less invitation through a user
+--         session (the admin door)                      → ok
+--
 -- Rig writes and assertions never share a statement (#1910).
 --
 -- Run via:  supabase test db   (see supabase/tests/README.md)
@@ -61,7 +76,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(40);
+select plan(49);
 
 \ir fixtures/rls_helpers.psql
 
@@ -278,6 +293,60 @@ select is(
   torny_rls.fr_lookup('rls-submitted@example.test', 'fr-tok-10')->>'outcome',
   'unknown',
   '40: a deleted account → unknown');
+
+-- ── 41–49: the receipt mark, and who writes invitations ─────────────────────
+select is(
+  (select array_agg(i.email || ':' || (r.invitation_id is not null)::text order by i.email, i.created_at)
+     from public.invitations i
+     left join public.invitation_receipts r on r.invitation_id = i.id
+    where i.invited_by = torny_rls.active_id() and i.game_id is null),
+  array[
+    'rls-flightmate@example.test:true',
+    'rls-outsider@example.test:true',
+    'rls-outsider@example.test:true',
+    'rls-submitted@example.test:false'
+  ],
+  '41: a receipt for a person with an account is marked, one for an address without an account is not');
+select ok(
+  (select count(*) from pg_locks where locktype = 'advisory' and pid = pg_backend_pid()) >= 1,
+  '42: the lookup holds a lock for its sender and address until the transaction ends');
+select ok(not has_table_privilege('authenticated', 'public.invitation_receipts', 'SELECT')
+      and not has_table_privilege('authenticated', 'public.invitation_receipts', 'INSERT')
+      and not has_table_privilege('anon', 'public.invitation_receipts', 'SELECT')
+      and not has_table_privilege('anon', 'public.invitation_receipts', 'INSERT'),
+  '43: a user session and anon have no privilege on the marks');
+
+select torny_rls.as_user(torny_rls.active_id());
+select throws_ok(
+  $$ select count(*) from public.invitation_receipts $$,
+  '42501', null,
+  '44: a player cannot read the marks');
+select throws_ok(
+  $$ insert into public.invitations (email, token, invited_by, game_id, expires_at)
+     values ('rls-withdrawn@example.test', 'fr-hostile-1', torny_rls.active_id(), null, now() + interval '7 days') $$,
+  '42501', null,
+  '45: a player cannot insert a game-less invitation');
+select throws_ok(
+  $$ insert into public.invitations (email, token, invited_by, game_id, expires_at, created_at)
+     values ('rls-withdrawn@example.test', 'fr-hostile-2', torny_rls.active_id(), null, now() + interval '7 days', '2000-01-01') $$,
+  '42501', null,
+  '46: nor one with a back-dated created_at');
+select lives_ok(
+  $$ insert into public.invitations (email, token, invited_by, game_id, expires_at, created_at, opened_at, accepted_at)
+     values ('rls-withdrawn@example.test', 'fr-hostile-3', torny_rls.active_id(), torny_rls.fr_own_game(),
+             now() + interval '7 days', '2000-01-01', '2000-01-02', '2000-01-03') $$,
+  '47: a player invites to an own game, with crafted created_at, opened_at and accepted_at');
+select torny_rls.as_service();
+select is(
+  (select (created_at > now() - interval '1 hour')::text || ':' || (opened_at is null)::text || ':' || (accepted_at is null)::text
+     from public.invitations where token = 'fr-hostile-3'),
+  'true:true:true',
+  '48: the database set created_at itself and left opened_at and accepted_at empty');
+select torny_rls.as_user(torny_rls.admin_id());
+select lives_ok(
+  $$ insert into public.invitations (email, token, invited_by, game_id, expires_at)
+     values ('rls-new-player@example.test', 'fr-admin-1', torny_rls.admin_id(), null, now() + interval '7 days') $$,
+  '49: a global admin inserts a game-less invitation through a user session');
 
 select * from finish();
 

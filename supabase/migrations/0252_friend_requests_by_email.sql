@@ -21,6 +21,15 @@
 --      the service role calls them, a user session does not.
 --   5. When a request sent by e-mail is accepted, the sender's receipt is
 --      marked accepted, as it is when an invited person joins.
+--   6. A receipt written for a person who already had an account is marked in
+--      `invitation_receipts`, which only the service role reads and writes.
+--      The login and the code request leave a marked row alone
+--      (lib/auth/invitationConsume.ts). The mark is set by
+--      `friend_request_by_email` and by nothing else.
+--   7. A game-less invitation is written by the server or by a global admin.
+--      A signed-in player writes game invitations for own games, as before.
+--      On every insert through a user session the database sets `created_at`
+--      and leaves `opened_at` and `accepted_at` empty.
 --
 -- Order: apply this first, then deploy the code. The code before this change
 -- calls `send_friend_request_by_email` and the two helpers through a user
@@ -44,6 +53,45 @@ create policy "friendships view own" on public.friendships
       and (status = 'accepted' or not by_email)
     )
   );
+
+-- ── 1b. Who writes invitations, and the receipt mark ────────────────────────
+drop policy if exists "invitations player friend-invite insert" on public.invitations;
+create policy "invitations admin insert" on public.invitations
+  for insert to authenticated
+  with check ((select public.is_admin()));
+
+create function public.guard_invitations_insert()
+  returns trigger
+  language plpgsql
+  security definer
+  set search_path = ''
+as $$
+  begin
+    -- A user session never chooses these three. The server (no JWT) does.
+    if auth.uid() is not null then
+      new.created_at := now();
+      new.opened_at := null;
+      new.accepted_at := null;
+    end if;
+    return new;
+  end $$;
+
+revoke all on function public.guard_invitations_insert() from public, anon, authenticated;
+
+create trigger guard_invitations_insert
+  before insert on public.invitations
+  for each row execute function public.guard_invitations_insert();
+
+create table public.invitation_receipts (
+  invitation_id uuid primary key references public.invitations(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+comment on table public.invitation_receipts is
+  'Marks an invitation row as the sender''s receipt for a friend request by e-mail to a person who already had an account (0252). Service role only.';
+
+alter table public.invitation_receipts enable row level security;
+revoke all on table public.invitation_receipts from public, anon, authenticated;
 
 -- ── 2. The lookup: service role only ────────────────────────────────────────
 drop function if exists public.send_friend_request_by_email(text);
@@ -84,10 +132,15 @@ as $$
     v_email   text := lower(trim(coalesce(p_email, '')));
     v_target  uuid;
     v_outcome text;
+    v_receipt uuid;
   begin
     if p_requester is null then raise exception 'requester_required'; end if;
     if length(v_email) = 0 then raise exception 'email_required'; end if;
     if p_token is null or p_expires_at is null then raise exception 'receipt_required'; end if;
+
+    -- One call at a time for a sender and an address: two calls that arrive
+    -- together write one receipt, not two.
+    perform pg_advisory_xact_lock(hashtextextended(p_requester::text || ':' || v_email, 0));
 
     select id into v_target
       from public.users
@@ -136,9 +189,14 @@ as $$
       end if;
     end if;
 
-    -- The receipt: one row for every address, in the same transaction.
+    -- The receipt: one row for every address, in the same transaction. For
+    -- a person who already had an account it gets its mark (rule 6).
     insert into public.invitations (email, token, invited_by, game_id, expires_at)
-    values (v_email, p_token, p_requester, null, p_expires_at);
+    values (v_email, p_token, p_requester, null, p_expires_at)
+    returning id into v_receipt;
+    if v_target is not null then
+      insert into public.invitation_receipts (invitation_id) values (v_receipt);
+    end if;
 
     return jsonb_build_object('outcome', v_outcome, 'target_id', v_target);
   end $$;

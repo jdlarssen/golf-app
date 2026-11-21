@@ -1432,6 +1432,29 @@ export type Database = {
           },
         ]
       }
+      invitation_receipts: {
+        Row: {
+          created_at: string
+          invitation_id: string
+        }
+        Insert: {
+          created_at?: string
+          invitation_id: string
+        }
+        Update: {
+          created_at?: string
+          invitation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitation_receipts_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: true
+            referencedRelation: "invitations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           accepted_at: string | null
