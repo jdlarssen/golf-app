@@ -6,6 +6,8 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
 import { displayNameForOthers } from '@/lib/users/displayName';
+import { expectAffected } from '@/lib/supabase/affectedRows';
+import type { Enums } from '@/lib/database.types';
 
 /**
  * Sjekk om PG-error er UNIQUE-violation (23505) eller inneholder "duplicate"
@@ -38,6 +40,56 @@ async function getRequesterName(userId: string): Promise<string | null> {
   // null → the inbox card shows the fallback in the reader's language.
   if (!data) return null;
   return displayNameForOthers(data) ?? null;
+}
+
+/**
+ * The old request row behind a duplicate insert: still pending (nothing to
+ * do), or decided/withdrawn and now reopened as a fresh pending request.
+ *
+ * Runs on the service role: RLS lets the requester only withdraw their own
+ * pending row, and the guard trigger (0107) keeps the decision columns for
+ * the admin path. The caller is the signed-in requester (checked in the
+ * action) and is not a member (checked before the insert). The status filter
+ * makes the reopen match only the row that was read, and the affected rows
+ * are asserted (trap 2).
+ */
+async function reopenOldRequest(
+  groupId: string,
+  userId: string,
+): Promise<'already_pending' | 'reopened' | 'failed'> {
+  const admin = getAdminClient();
+  const { data: old, error: readError } = await admin
+    .from('group_join_requests')
+    .select('id, status')
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+    .maybeSingle<{ id: string; status: Enums<'registration_request_status'> }>();
+  if (readError || !old) {
+    console.error('[requestToJoin] old request read failed', readError ?? 'no row');
+    return 'failed';
+  }
+  if (old.status === 'pending') return 'already_pending';
+  try {
+    expectAffected(
+      await admin
+        .from('group_join_requests')
+        .update({
+          status: 'pending',
+          message: null,
+          decided_at: null,
+          decided_by_user_id: null,
+          created_at: new Date().toISOString(),
+        })
+        .eq('id', old.id)
+        .eq('status', old.status)
+        .select('id'),
+      'requestToJoin.reopen',
+    );
+  } catch (err) {
+    console.error('[requestToJoin] reopen failed', err);
+    return 'failed';
+  }
+  return 'reopened';
 }
 
 /**
@@ -84,12 +136,18 @@ export async function requestToJoin(formData: FormData) {
   if (!group) redirect({ href: '/klubber', locale });
 
   // Check if already a member — redirect to club page.
-  const { data: existingMembership } = await admin
+  const { data: existingMembership, error: membershipError } = await admin
     .from('group_members')
     .select('role')
     .eq('group_id', group.id)
     .eq('user_id', user.id)
     .maybeSingle();
+  // A failed read must not count as «not a member»: the reopen below relies
+  // on this check.
+  if (membershipError) {
+    console.error('[requestToJoin] membership read failed', membershipError);
+    redirect({ href: `/klubber/bli-med/${shortId}?error=unknown`, locale });
+  }
 
   if (existingMembership) {
     redirect({ href: `/klubber/${group.id}`, locale });
@@ -105,12 +163,22 @@ export async function requestToJoin(formData: FormData) {
     });
 
   if (insertError) {
-    if (isDuplicateError(insertError)) {
-      // Already has a pending (or old) request — show the "already sent" state.
+    if (!isDuplicateError(insertError)) {
+      console.error('[requestToJoin] insert failed', insertError);
+      redirect({ href: `/klubber/bli-med/${shortId}?error=unknown`, locale });
+    }
+    // One row per (club, user) across every status (UNIQUE in 0075). A
+    // pending row means the request is already out; a decided or withdrawn
+    // one (rejected, or approved and then left or removed) is reopened, so a
+    // new request is stored and the admins hear about it (audit 2026-11-20:
+    // it used to say «sent» and store nothing).
+    const outcome = await reopenOldRequest(group.id, user.id);
+    if (outcome === 'already_pending') {
       redirect({ href: `/klubber/bli-med/${shortId}?sent=1`, locale });
     }
-    console.error('[requestToJoin] insert failed', insertError);
-    redirect({ href: `/klubber/bli-med/${shortId}?error=unknown`, locale });
+    if (outcome === 'failed') {
+      redirect({ href: `/klubber/bli-med/${shortId}?error=unknown`, locale });
+    }
   }
 
   // Best-effort notify all owners/admins of the club.

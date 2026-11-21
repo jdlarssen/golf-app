@@ -4,6 +4,7 @@ import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
+import { expectAffected } from '@/lib/supabase/affectedRows';
 import { getAdminClient } from '@/lib/supabase/admin';
 
 /**
@@ -53,14 +54,24 @@ export async function leaveClub(formData: FormData) {
   }
 
   // Self-delete via request-scoped client (RLS: user_id = auth.uid()).
-  const { error } = await supabase
-    .from('group_members')
-    .delete()
-    .eq('group_id', groupId)
-    .eq('user_id', user.id);
-
-  if (error) {
-    console.error('[leaveClub]', error);
+  // 0 rows (not a member any more, or RLS refused) is a failure, not «left»
+  // (trap 2, audit 2026-11-20).
+  let left = true;
+  try {
+    expectAffected(
+      await supabase
+        .from('group_members')
+        .delete()
+        .eq('group_id', groupId)
+        .eq('user_id', user.id)
+        .select('user_id'),
+      'leaveClub',
+    );
+  } catch (err) {
+    console.error('[leaveClub]', err);
+    left = false;
+  }
+  if (!left) {
     redirect({ href: `/klubber/${groupId}/forlat?error=leave_failed`, locale });
   }
 
