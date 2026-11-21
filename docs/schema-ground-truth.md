@@ -50,8 +50,10 @@ Typed clients (#672) make wrong column names a compile error — treat a red squ
   (nullable `int`, migration 0254, audit 20.11 F1) is the full course handicap (100 %), frozen
   next to it by `startScheduledGameCore` and `recomputeCourseHandicapForUser`. The score
   differential's net double bogey reads `full_course_handicap` (WHS 3.1b); null = not frozen
-  (rows from before 0254 until `scripts/backfillFullCourseHandicap.ts` has run) → no
-  differential. Guard: `guard_game_players_system_columns` refuses a signed-in non-admin a
+  (rows from before 0254, or a round started by an app build from before #2215). The finish
+  recovers it when exactly one full number fits the frozen playing handicap
+  (`planFullCourseHandicap`); otherwise no differential until
+  `scripts/backfillFullCourseHandicap.ts` runs again. Guard: `guard_game_players_system_columns` refuses a signed-in non-admin a
   non-null value on INSERT and any change unless the round is `scheduled` (a league flight
   starts with the player's own client).
 

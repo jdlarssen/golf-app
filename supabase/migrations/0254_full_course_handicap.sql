@@ -25,8 +25,10 @@
 -- null as «unknown» and freezes no differential from it.
 --
 -- App builds from before #2215 start rounds with their bundled code and leave
--- the column null: those rounds get no differential until the backfill script
--- runs again (it is safe to re-run at any time).
+-- the column null. At the finish, persistScoreDifferentials recovers the full
+-- number when exactly one fits the frozen playing handicap; otherwise the row
+-- has no differential until the backfill script runs again (it is safe to
+-- re-run at any time).
 --
 -- Order against prod: BEFORE the app code that reads and writes the column.
 -- The new start writes it and the history pages select it, so code running
