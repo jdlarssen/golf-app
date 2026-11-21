@@ -24,11 +24,13 @@
 # Workflow-triggerne leses fra kommandoen slik skallet ville lest den (p09):
 # anførselstegn og backslash løses opp, så et flagg er et flagg uansett hvordan
 # det er skrevet, mens tekst med mellomrom i anførselstegn (en commit-melding, en
-# PR-body) står igjen som «Q» og aldri utløser noe (#1074 defekt a). Sender
-# kommandoen tekst videre til et skall eller en tolk (bash -c, eval, | sh,
-# node -e), leses også teksten som kommando, i flere lag. En variabel som settes
-# i samme kommando, settes inn der den brukes. Dette er beste evne, ikke et
-# bevis: omveier vakta ikke kan følge, finnes — regelen (I7) gjelder uansett.
+# PR-body) står igjen som «Q» og aldri utløser noe (#1074 defekt a). Kommandoen
+# deles i ledd, og hvert ledd leses for seg: sender et ledd tekst videre til et
+# skall eller en tolk (bash -c, eval, | sh, source <(…), node -e), leses teksten
+# i DET leddet som kommando, i flere lag — en commit-melding i et annet ledd er
+# fortsatt tekst. En variabel som settes i samme kommando, settes inn der den
+# brukes. Dette er beste evne, ikke et bevis: omveier vakta ikke kan følge,
+# finnes (bindings §Enforcement lister dem) — regelen (I7) gjelder uansett.
 # Prod-reglene leses både mot kommandoen som skrevet (der er ref-en i en quotet
 # URL nettopp det vi vil fange) og mot den oppløste; bruk --body-file for prosa
 # som må nevne prod-detaljer.
@@ -49,45 +51,80 @@ cmd="$(jq -r '.tool_input.command // empty' 2>/dev/null)"
 cmd_stripped="$(printf '%s' "$cmd" | tr '\n' ' ' | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g")"
 
 # ── Kommandoen slik skallet leser den (p09) ──────────────────────────────────
+# Tre trinn: strip_heredocs → read_command → expand_simple. Resultatet er
+# cmd_norm: ett ledd per linje, med anførselstegn og backslash løst opp.
+#
 # strip_heredocs: heredoc-kropper ut (tekst, ikke kommando) — og FØR anførsels-
 # tegnene løses opp, ellers åpner en apostrof i teksten («don't») et sitat som
-# sluker kommandoene etter heredoc-en.
+# sluker kommandoene etter heredoc-en. Unntak: sendes heredoc-en til et skall
+# eller en tolk (bash <<EOF, cat <<EOF | sh, node <<EOF), ER kroppen kommando.
+# Da står linjene igjen, uten anførselstegn og backslash, så ingenting skjules.
 strip_heredocs() {
   awk '
-    skip { t=$0; sub(/^[ \t]+/, "", t); if (t == word) skip=0; next }
-    match($0, /<<-?[ \t]*["'"'"']?[A-Za-z_][A-Za-z0-9_]*/) {
-      w=substr($0, RSTART, RLENGTH); sub(/^<<-?[ \t]*["'"'"']?/, "", w)
-      word=w; skip=1; print substr($0, 1, RSTART-1); next
+    skip {
+      t = $0; sub(/^[ \t]+/, "", t)
+      if (t == word) { skip = 0; next }
+      if (code) { gsub(/["\047\\]/, ""); print }
+      next
+    }
+    # `<<<` er en here-string (tekst på samme linje), ikke en heredoc: den
+    # maskeres i en kopi før heredoc-starten letes opp (samme lengde, så
+    # posisjonene stemmer med linja).
+    { probe = $0; gsub(/<<</, "\004\004\004", probe) }
+    match(probe, /<<-?[ \t]*["\047]?[A-Za-z_][A-Za-z0-9_]*/) {
+      w = substr($0, RSTART, RLENGTH); sub(/^<<-?[ \t]*["\047]?/, "", w)
+      word = w; skip = 1
+      code = ($0 ~ /(^|[^A-Za-z0-9_.-])((ba|z|da|k)?sh|node|tsx|python[0-9.]*|perl|ruby|deno|bun|php)[ \t]*(-[A-Za-z]*[ \t]*)*<</ \
+        || $0 ~ /\|[ \t]*(sudo[ \t]+)?((ba|z|da|k)?sh|node|python[0-9.]*|perl|ruby)([ \t]|$)/)
+      print substr($0, 1, RSTART - 1); next
     }
     { print }'
 }
 
-# shell_words <keep>: løser opp '…', "…" og backslash tegn for tegn. Et sitat
-# uten mellomrom og skalltegn limes inn som det er ("--force" → --force,
-# --no-ver""ify → --no-verify, "+$B" → +$B). Et sitat med mellomrom eller skalltegn er tekst
-# og blir «Q» — unntatt når det inneholder $( eller `, som skallet kjører. Med
-# keep=1 limes ALT inn: da er ingenting skjult. Mellomrom og tab slås sammen til
-# ett mellomrom; linjeskift står. $'…' leses som skallet leser det (\x2d, \055
-# og vanlige escapes dekodes); $"…" er et vanlig "…".
-shell_words() {
-  awk -v keep="$1" '
-    function emit(code) {
-      if (keep || code || span ~ /^[A-Za-z0-9_@%+=:,.\/${}-]*$/) add(span); else add("Q")
-    }
-    function add(str) { out = out str; if (str != "") last = substr(str, length(str), 1) }
+# read_command: deler kommandoen i ledd (ved ; & | og linjeskift utenfor
+# anførselstegn; `>|` er en omdirigering, ikke et rør) og leser hvert ledd for
+# seg. Hvert ledd skrives ut som én linje med prefikset «N:».
+#
+#   Vanlig ledd:  et sitat uten mellomrom og skalltegn limes inn som det er
+#                 ("--force" → --force, --no-ver""ify → --no-verify, "+$B" → +$B).
+#                 Et sitat med mellomrom eller skalltegn er tekst og blir «Q» —
+#                 unntatt når det inneholder $( eller `, som skallet kjører.
+#   Ledd som sender tekst videre til et skall eller en tolk (bash -c, eval,
+#   env -S, source <(…), bash < <(…), node -e, python -c, tekst i rør til sh,
+#   $(…) som kommando): teksten ER kommando. Alle sitater limes inn, i tre lag,
+#   så et flagg i anførselstegn inni teksten også står igjen som et flagg.
+#   Skall-leddene skrives i tillegg ut med prefikset «W:» (bakgrunnsregelen).
+#   Ledd som kaller GitHubs API (gh api, curl, wget): innholdet limes inn, så
+#   reglene for API-merge kan lese det. Et $ eller ` som skallet IKKE løser opp
+#   (i apostrofer, eller etter backslash) merkes \002/\003, så en GraphQL-
+#   variabel ($n) kan skilles fra en skallvariabel.
+#
+# Bare leddet som sender teksten videre leses slik — en commit-melding i et
+# annet ledd er fortsatt tekst. $'…' leses som skallet leser det (\x2d, \055 og
+# vanlige escapes dekodes); $"…" er et vanlig "…". Regexene bruker eksplisitte
+# tegnklasser ([A-Za-z0-9]), ikke [[:alnum:]], så eldre mawk leser dem likt.
+read_command() {
+  awk '
     function numval(digits, base,   j, v) {
       v = 0
       for (j = 1; j <= length(digits); j++)
         v = v * base + index("0123456789abcdef", tolower(substr(digits, j, 1))) - 1
       return v
     }
-    BEGIN { RS = "\001"; ORS = "" }
-    {
-      s = $0; n = length(s); out = ""; q = ""; span = ""; last = ""
+    function piece(span, keep, code) {
+      return (keep || code || span ~ /^[A-Za-z0-9_@%+=:,.\/${}-]*$/) ? span : "Q"
+    }
+    # Løser opp ett lag med anførselstegn. keep=1: alt limes inn. lit=1: $ og `
+    # som skallet ikke løser opp, merkes.
+    function unq(s, keep, lit,   n, i, c, q, span, out, last, e, num) {
+      n = length(s); out = ""; q = ""; span = ""
       for (i = 1; i <= n; i++) {
         c = substr(s, i, 1)
         if (q == "s") {
-          if (c == "\047") { emit(0); q = "" } else span = span c
+          if (c == "\047") { out = out piece(span, keep, 0); q = "" }
+          else if (lit && c == "$") span = span "\002"
+          else if (lit && c == "`") span = span "\003"
+          else span = span c
           continue
         }
         if (q == "a") {
@@ -105,25 +142,115 @@ shell_words() {
             else span = span e
             continue
           }
-          if (c == "\047") { emit(0); q = "" } else span = span c
+          if (c == "\047") { out = out piece(span, keep, 0); q = "" }
+          else if (lit && c == "$") span = span "\002"
+          else if (lit && c == "`") span = span "\003"
+          else span = span c
           continue
         }
         if (q == "d") {
-          if (c == "\\" && i < n) { i++; span = span substr(s, i, 1); continue }
-          if (c == "\"") { emit(span ~ /\$\(|`/); q = "" } else span = span c
+          if (c == "\\" && i < n) {
+            i++; e = substr(s, i, 1)
+            if (lit && e == "$") span = span "\002"
+            else if (lit && e == "`") span = span "\003"
+            else span = span e
+            continue
+          }
+          if (c == "\"") { out = out piece(span, keep, span ~ /\$\(|`/); q = "" } else span = span c
           continue
         }
-        if (c == "\\" && i < n) { i++; c2 = substr(s, i, 1); if (c2 != "\n") add(c2); continue }
+        if (c == "\\" && i < n) {
+          i++; e = substr(s, i, 1)
+          if (lit && e == "$") out = out "\002"
+          else if (lit && e == "`") out = out "\003"
+          else if (e != "\n") out = out e
+          continue
+        }
         if (c == "$" && i < n && substr(s, i + 1, 1) == "\047") { i++; q = "a"; span = ""; continue }
         if (c == "$" && i < n && substr(s, i + 1, 1) == "\"") continue
         if (c == "\047") { q = "s"; span = ""; continue }
         if (c == "\"") { q = "d"; span = ""; continue }
-        if (c == " " || c == "\t") { if (last != " " && last != "\n" && last != "") add(" "); continue }
-        add(c)
+        if (c == " " || c == "\t") {
+          last = substr(out, length(out), 1)
+          if (out != "" && last != " " && last != "\n") out = out " "
+          continue
+        }
+        out = out c
       }
-      if (q == "s" || q == "a") emit(0)
-      if (q == "d") emit(span ~ /\$\(|`/)
-      print out
+      if (q == "s" || q == "a") out = out piece(span, keep, 0)
+      if (q == "d") out = out piece(span, keep, span ~ /\$\(|`/)
+      return out
+    }
+    function deep(s, lit,   d) {
+      d = unq(unq(unq(s, 1, lit), 1, lit), 1, lit)
+      gsub(/\n/, " ; ", d)
+      return d
+    }
+    # Et skall som leser kommandoer fra stdin: `sh`, `bash -s`, `sudo sh -`.
+    function bare_shell(r) {
+      return r ~ /^[ \t]*(sudo[ \t]+)?([^ \t]*\/)?(ba|z|da|k)?sh([ \t]+-[A-Za-z-]*)*[ \t]*$/
+    }
+    function shell_wrapper(r) {
+      return r ~ /(^|[^A-Za-z0-9_.-])(ba|z|da|k|fi)?sh[ \t]+([^ \t]+[ \t]+)*-[A-Za-z]*c([ \t]|$)/ \
+        || r ~ /(^|[^A-Za-z0-9_.-])eval[ \t]/ \
+        || r ~ /(^|[^A-Za-z0-9_.-])env[ \t]+([^ \t]+[ \t]+)*(-[A-Za-z]*S|--split-string)/ \
+        || r ~ /(^|[^A-Za-z0-9_.-])su[ \t]+([^ \t]+[ \t]+)*-c([ \t]|$)/ \
+        || r ~ /(^|[^A-Za-z0-9_.-])(source|\.)[ \t]+<\(/ \
+        || r ~ /(^|[^A-Za-z0-9_.-])(ba|z|da|k)?sh[ \t]*(-[A-Za-z]*[ \t]*)*<[ \t]*<\(/ \
+        || r ~ /(^|[^A-Za-z0-9_.-])(ba|z|da|k)?sh[ \t]*(-[A-Za-z]*[ \t]*)*<<</
+    }
+    function code_wrapper(r) {
+      return r ~ /(^|[^A-Za-z0-9_.-])(node|tsx|ts-node|python[0-9.]*|perl|ruby|deno|bun|php)[ \t]+([^ \t]+[ \t]+)*(-e|-c|-p|-r|--eval|--print)([ \t=]|$)/
+    }
+    # $(…) eller `…` der kommandonavnet skulle stått (ev. etter NAVN=verdi).
+    function substituted_command(r) {
+      return r ~ /^[ \t]*([A-Za-z_][A-Za-z0-9_]*=[^ \t]*[ \t]+)*(\$\(|`)/
+    }
+    function api_call(r) {
+      return r ~ /(^|[^A-Za-z0-9_.-])(gh[ \t]+api|curl|wget)([ \t]|$)/
+    }
+    function push_segment() { segs[++count] = seg; seps[count] = sep; seg = "" }
+    BEGIN { RS = "\001"; ORS = "" }
+    {
+      s = $0; n = length(s); seg = ""; sep = ""; q = ""; count = 0
+      for (i = 1; i <= n; i++) {
+        c = substr(s, i, 1)
+        if (q == "s") { seg = seg c; if (c == "\047") q = ""; continue }
+        if (q == "a" || q == "d") {
+          seg = seg c
+          if (c == "\\" && i < n) { i++; seg = seg substr(s, i, 1); continue }
+          if ((q == "a" && c == "\047") || (q == "d" && c == "\"")) q = ""
+          continue
+        }
+        if (c == "\\" && i < n) { i++; seg = seg c substr(s, i, 1); continue }
+        if (c == "$" && i < n && substr(s, i + 1, 1) == "\047") { i++; seg = seg "$\047"; q = "a"; continue }
+        if (c == "\047") { q = "s"; seg = seg c; continue }
+        if (c == "\"") { q = "d"; seg = seg c; continue }
+        # `>|` (overskriv selv med noclobber) er en omdirigering, ikke et rør.
+        if (c == ">" && i < n && substr(s, i + 1, 1) == "|") { i++; seg = seg ">"; continue }
+        # `&>` og `>&` er omdirigeringer, ikke bakgrunn.
+        if (c == "&" && ((i < n && substr(s, i + 1, 1) == ">") || (i > 1 && substr(s, i - 1, 1) == ">"))) { seg = seg c; continue }
+        if (c == ";" || c == "&" || c == "|" || c == "\n") { push_segment(); sep = c; continue }
+        seg = seg c
+      }
+      push_segment()
+      for (k = 1; k <= count; k++) plain[k] = unq(segs[k], 0, 0)
+      for (k = 1; k <= count; k++) {
+        r = plain[k]
+        piped_to_shell = (k < count && seps[k + 1] == "|" && bare_shell(plain[k + 1]))
+        if (shell_wrapper(r) || piped_to_shell) {
+          d = deep(segs[k], 0); print "N:" d "\n"; print "W:" d "\n"
+        } else if (substituted_command(r)) {
+          d = deep(segs[k], 0); gsub(/\$\(|`|\)/, " ", d)
+          print "N:" d "\n"; print "W:" d "\n"
+        } else if (code_wrapper(r)) {
+          print "N:" deep(segs[k], 0) "\n"
+        } else if (api_call(r)) {
+          print "N:" deep(segs[k], 1) "\n"
+        } else {
+          print "N:" r "\n"
+        }
+      }
     }'
 }
 
@@ -167,33 +294,13 @@ expand_simple() {
     }'
 }
 
-# Alt innhold synlig: anførselstegn løses opp i tre runder, så et flagg i
-# anførselstegn INNI tekst som sendes til et skall (bash -c '… "-f" …') også
-# står igjen som et flagg.
-cmd_all="$(printf '%s' "$cmd" | shell_words 1 | shell_words 1 | shell_words 1 | expand_simple)"
-
-# Sender kommandoen tekst videre til et skall (bash -c, eval, | sh, bash <<EOF,
-# env -S) eller en tolk (node -e, python -c)? Da er teksten kommando, og alt
-# leses. Mønsteret tåler flagg mellom navnet og -c (bash --norc -c, bash -o
-# pipefail -c) og leses både fra kommandoen som skrevet og med anførselstegn
-# løst opp ("bash" -c).
-cmd_flat="$(printf '%s' "$cmd" | tr '\n' ' ')"
-cmd_all_flat="$(printf '%s' "$cmd_all" | tr '\n' ' ')"
-SHELL_WRAP_RE='(^|[^[:alnum:]_.-])(ba|z|da|k|fi)?sh[[:space:]]+([^[:space:];&|]+[[:space:]]+)*-[A-Za-z]*c([[:space:]]|$)|(^|[^[:alnum:]_.-])eval[[:space:]]|\|[[:space:]]*(ba|z|da|k)?sh([[:space:]]|$)|(^|[^[:alnum:]_.-])(ba|z|da|k)?sh[[:space:]]*(-s[[:space:]]*)?<<|(^|[^[:alnum:]_.-])env[[:space:]]+([^[:space:];&|]+[[:space:]]+)*(-[A-Za-z]*S|--split-string)|(^|[^[:alnum:]_.-])su[[:space:]]+([^[:space:];&|]+[[:space:]]+)*-c([[:space:]]|$)'
-CODE_WRAP_RE='(^|[^[:alnum:]_.-])(node|tsx|ts-node|python[0-9.]*|perl|ruby|deno|bun|php)[[:space:]]+([^[:space:];&|]+[[:space:]]+)*(-e|-c|-p|-r|--eval|--print)([[:space:]=]|$)'
-shell_wrap=""
-code_wrap=""
-if printf '%s' "$cmd_flat" | grep -Eq "$SHELL_WRAP_RE" || printf '%s' "$cmd_all_flat" | grep -Eq "$SHELL_WRAP_RE"; then
-  shell_wrap=1
-fi
-if printf '%s' "$cmd_flat" | grep -Eq "$CODE_WRAP_RE" || printf '%s' "$cmd_all_flat" | grep -Eq "$CODE_WRAP_RE"; then
-  code_wrap=1
-fi
-if [ -n "$shell_wrap" ] || [ -n "$code_wrap" ]; then
-  cmd_norm="$cmd_all"
-else
-  cmd_norm="$(printf '%s\n' "$cmd" | strip_heredocs | shell_words 0 | expand_simple)"
-fi
+read_out="$(printf '%s\n' "$cmd" | strip_heredocs | read_command)"
+# cmd_marked har \002/\003 der et $ eller ` er bokstavelig (bare i API-ledd);
+# cmd_norm har dem som vanlige tegn igjen. wrap_text er leddene som sender
+# tekst til et skall.
+cmd_marked="$(printf '%s\n' "$read_out" | sed -n 's/^N://p' | expand_simple)"
+cmd_norm="$(printf '%s' "$cmd_marked" | tr '\002\003' '$`')"
+wrap_text="$(printf '%s\n' "$read_out" | sed -n 's/^W://p' | expand_simple)"
 # Ett ledd per linje (; & | og linjeskift skiller ledd).
 norm_segments="$(printf '%s\n' "$cmd_norm" | sed -E 's/[0-9]*>&[0-9-]*/ /g; s/&>/ /g' | tr ';&|' '\n\n\n')"
 # `git <globale flagg> <underkommando>` — også med full sti (/usr/bin/git).
@@ -275,7 +382,7 @@ prod_classify() { # tekst → setter prod_rule/prod_extra
   fi
 }
 prod_classify "$cmd"
-[ -z "$prod_rule" ] && prod_classify "$cmd_all"
+[ -z "$prod_rule" ] && prod_classify "$cmd_norm"
 if [ -n "$prod_rule" ]; then
   if approved; then
     log_event "$prod_rule" "allow-prod-approved"
@@ -360,8 +467,8 @@ case "$detach_scan" in
 esac
 printf '%s' "$detach_scan" | grep -Eq '(^|[[:space:];&|(])(nohup|setsid|disown)([[:space:];)]|$)' && detached=1
 # Tekst som sendes til et skall (bash -c "… &") er kommando: samme regel på den.
-if [ -n "$shell_wrap" ]; then
-  wrap_scan="$(printf '%s' "$cmd_all" | tr '\n' ' ' | sed -E 's/&&/ /g; s/[0-9]*>&[0-9-]*/ /g; s/&>/ /g; s/\|&/ /g')"
+if [ -n "$wrap_text" ]; then
+  wrap_scan="$(printf '%s' "$wrap_text" | tr '\n' ' ' | sed -E 's/&&/ /g; s/[0-9]*>&[0-9-]*/ /g; s/&>/ /g; s/\|&/ /g')"
   case "$wrap_scan" in
     *"&"*) printf '%s' "$wrap_scan" | grep -Eq '(^|[[:space:];&|])wait([[:space:];]|$)' || detached=1 ;;
   esac
@@ -420,8 +527,18 @@ PR_MERGE_REMIND_TEXT="Stagingbevis-porten (#1076/#1303): er PR-en bruker-synlig 
 # under ser den. Samme merge via GitHubs API (gh api / curl mot …/pulls/N/merge
 # eller …/merges, GraphQL-mutasjonene) går forbi begge og nektes. Det samme
 # gjelder endring av beskyttelsen på en gren. Lesing (GET uten felt) er lov.
-if printf '%s' "$cmd_all" | grep -Eq '(^|[^[:alnum:]_.-])(gh[[:space:]]+api|curl|wget)([[:space:]]|$)'; then
-  api_flat="$(printf '%s' "$cmd_all" | tr '\n' ' ')"
+API_CALL_RE='(^|[^[:alnum:]_.-])(gh[[:space:]]+api|curl|wget)([[:space:]]|$)'
+if printf '%s\n' "$cmd_norm" | grep -Eq "$API_CALL_RE"; then
+  # Bare leddene som kaller API-et — en commit-melding i et annet ledd er tekst.
+  api_flat="$(printf '%s\n' "$cmd_norm" | grep -E "$API_CALL_RE" | tr '\n' ' ')"
+  # GraphQL der spørringen ikke står i kommandoen — den hentes med $(…), `…`
+  # eller en variabel vakta ikke kjenner — kan vakta ikke lese. Et $ i apostrofer
+  # eller etter backslash er GraphQLs egen variabel ($n) og er merket \002.
+  graphql_query="$(printf '%s\n' "$cmd_marked" | tr '\003' '\002' | grep -E "$API_CALL_RE" | grep -E '(^|[^[:alnum:]_])graphql([^[:alnum:]_]|$)' \
+    | grep -oE 'query=.*' | sed -E 's/[[:space:]]-(-?[A-Za-z]).*//')"
+  if printf '%s' "$graphql_query" | grep -Eq '\$\(|`|\$[A-Za-z_{]'; then
+    emit_deny "api-graphql-file" "GraphQL-kall der spørringen hentes med \$(…), backtick eller en variabel, er sperret: vakta kan ikke se om kallet er en merge. Skriv spørringen rett i kommandoen (-f query='…'); GraphQLs egne variabler (\$n) i apostrofer er lov."
+  fi
   api_write=""
   printf '%s' "$api_flat" | grep -Eiq -- '(-X|--method|--request)[[:space:]=]*(PUT|POST|PATCH|DELETE)|(^|[[:space:]])(-f|-F|--field|--raw-field|--input|-d|--data[a-z-]*|--json)([[:space:]=]|$)' && api_write=1
   if printf '%s' "$api_flat" | grep -Eq 'mergePullRequest|enablePullRequestAutoMerge|enqueuePullRequest'; then
