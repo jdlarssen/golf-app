@@ -111,6 +111,12 @@ vi.mock('@/lib/games/createGuestPlayer', () => ({
   findGuestIds: vi.fn(async () => new Set<string>()),
 }));
 
+// 0251: whose guest it is. No fixture has another organiser's guest unless
+// the test says so.
+vi.mock('@/lib/games/guestOwnership', () => ({
+  findForeignGuestIds: vi.fn(async () => new Set<string>()),
+}));
+
 // #1009: rollback-re-insertet går via service-role (snapshotet kan inneholde
 // gjeste-rader som 0115-guarden ville avvist på request-klienten). Testene
 // deler mock-klient så insert-kallene fortsatt telles i __fromCalls.
@@ -1722,6 +1728,42 @@ describe('updateGameInternal — lagrer bare endringene i rosteret (#2210)', () 
     );
 
     expect(lastRedirect()).toBe('/games/game-1/rediger?error=cup_roster_locked');
+    expect(
+      supabaseMock.__fromCalls.filter((c) =>
+        ['update', 'insert', 'delete'].includes(c.method),
+      ),
+    ).toEqual([]);
+  });
+
+  it('arrangør (ikke admin) som legger til en annen arrangørs gjest får db_players før noe skrives (0251)', async () => {
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: false }, error: null }, // loadRole
+        { data: { created_by: 'creator-1' }, error: null }, // gate owner-check
+        {
+          data: { status: 'scheduled', game_mode: 'best_ball', tournament_id: null },
+          error: null,
+        }, // existing
+        // u7 is not on the roster yet: the form adds them.
+        { data: BEST_BALL_IDS.slice(0, 7).map((_, i) => storedBestBallRow(i)), error: null },
+      ],
+    );
+    signIn('creator-1');
+    const { findGuestIds } = await import('@/lib/games/createGuestPlayer');
+    vi.mocked(findGuestIds).mockResolvedValueOnce(new Set(['u7']));
+    const { findForeignGuestIds } = await import('@/lib/games/guestOwnership');
+    vi.mocked(findForeignGuestIds).mockResolvedValueOnce(new Set(['u7']));
+
+    const form = fullBestBallFormData();
+    form.set('roster_loaded_ids', BEST_BALL_IDS.slice(0, 7).join(','));
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(updateScheduledAction('game-1', form)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(findForeignGuestIds).toHaveBeenLastCalledWith('creator-1', ['u7']);
+    expect(lastRedirect()).toBe('/games/game-1/rediger?error=db_players');
     expect(
       supabaseMock.__fromCalls.filter((c) =>
         ['update', 'insert', 'delete'].includes(c.method),

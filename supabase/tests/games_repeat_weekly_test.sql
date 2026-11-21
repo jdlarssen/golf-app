@@ -13,6 +13,8 @@
 --   8. a second successor for the same round                         → 23505
 --   9. repeat_weekly on a cup match (games_repeat_weekly_standalone) → 23514
 --  10. the organiser deletes the round the successor came from       → ok
+--      (set back to scheduled first: after 0251 an organiser deletes their
+--      own round only before it starts)
 --  11. …and ON DELETE SET NULL cleared the successor's link
 --
 -- Every probe and its check are separate statements (#1910).
@@ -141,6 +143,12 @@ select throws_ok(
 -- ═════════════════════════════════════════════════════════════════════════════
 -- ON DELETE SET NULL passes the guard
 -- ═════════════════════════════════════════════════════════════════════════════
+-- 0251: an organiser deletes their own round only before it starts. The
+-- source is set back to scheduled here, so the delete is still the
+-- organiser's own and the SET NULL meets the guard as a signed-in non-admin.
+select torny_rls.as_service();
+update public.games set status = 'scheduled', started_at = null, ended_at = null
+ where id = torny_rls.rw_source();
 select torny_rls.as_user(torny_rls.active_id());
 
 select lives_ok(

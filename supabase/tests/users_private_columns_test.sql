@@ -17,6 +17,8 @@
 --  10. anon selects id, name                                     → ok (0 rows)
 --  11–12. catalog: every other users column is SELECT-able for
 --      authenticated and anon — a new column without a grant goes red here
+--      (users.guest_created_by, 0251, is service-role only on purpose: who
+--      made a guest is not for other players)
 --  13. catalog: email and friend_code are not
 --
 -- Depends on 0186. Run via: supabase test db (see supabase/tests/README.md)
@@ -117,20 +119,20 @@ select is(
   (select array_agg(a.attname::text order by a.attname)
      from pg_attribute a
     where a.attrelid = 'public.users'::regclass and a.attnum > 0 and not a.attisdropped
-      and a.attname not in ('email', 'friend_code')
+      and a.attname not in ('email', 'friend_code', 'guest_created_by')
       and not has_column_privilege('authenticated', 'public.users'::regclass, a.attnum, 'SELECT')),
   null::text[],
-  'authenticated can SELECT every users column except email and friend_code (a new column needs its own grant)'
+  'authenticated can SELECT every users column except email, friend_code and guest_created_by (a new column needs its own grant)'
 );
 
 select is(
   (select array_agg(a.attname::text order by a.attname)
      from pg_attribute a
     where a.attrelid = 'public.users'::regclass and a.attnum > 0 and not a.attisdropped
-      and a.attname not in ('email', 'friend_code')
+      and a.attname not in ('email', 'friend_code', 'guest_created_by')
       and not has_column_privilege('anon', 'public.users'::regclass, a.attnum, 'SELECT')),
   null::text[],
-  'anon can SELECT every users column except email and friend_code'
+  'anon can SELECT every users column except email, friend_code and guest_created_by'
 );
 
 select is(

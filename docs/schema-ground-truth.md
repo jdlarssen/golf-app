@@ -77,7 +77,7 @@ Typed clients (#672) make wrong column names a compile error — treat a red squ
 
 ## `users`
 
-- **Private columns** (migration 0186, #2207): `authenticated` and `anon` have column-level SELECT on every column **except `email` and `friend_code`**; there is no table-level SELECT grant. RLS still decides which rows. A new column needs its own `grant select (column)`, or the app cannot read it (`supabase/tests/users_private_columns_test.sql` guards this). The server reads the two with the service role: `lib/users/privateUserFields.ts`, admin pages behind `requireAdmin`, mail sends.
+- **Private columns** (migration 0186, #2207): `authenticated` and `anon` have column-level SELECT on every column **except `email` and `friend_code`**; there is no table-level SELECT grant. RLS still decides which rows. `guest_created_by` (0251, who made a guest) has no client grant either, on purpose. A new column needs its own `grant select (column)`, or the app cannot read it (`supabase/tests/users_private_columns_test.sql` guards this). The server reads the two with the service role: `lib/users/privateUserFields.ts`, admin pages behind `requireAdmin`, mail sends.
 - **Guard trigger `guard_users_self_update`** (0107, last redefined in 0185): a non-admin cannot change `is_admin`, `is_guest`, `deleted_at` or `email` on their own row (42501). The service role and global admins pass.
 - **Guard trigger `guard_users_admin_delete`** (migration 0179, #1903): `BEFORE DELETE` refuses any row with `is_admin = true`, service-role included (no `auth.uid() is null` escape). The `auth.users` cascade rolls back with it, so `auth.admin.deleteUser(adminId)` returns an error. To retire an admin: `update public.users set is_admin = false` first.
 

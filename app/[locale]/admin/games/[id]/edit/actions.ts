@@ -8,6 +8,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { findGuestIds } from '@/lib/games/createGuestPlayer';
+import { findForeignGuestIds } from '@/lib/games/guestOwnership';
 import { asTeeChoice, teeChoiceToDb } from '@/lib/games/teeChoice';
 import {
   buildGameInsertPayload,
@@ -306,6 +307,21 @@ async function updateGameInternal(
   const guestIds = await findGuestIds(
     plannedInsertIds(priorRosterRows, desiredRoster, loadedRoster),
   );
+  // Audit 20.11 (0251): the same rule as createGameInternal. A guest the
+  // plan adds goes in with the service role, so a non-admin's guest is
+  // checked here: one they made, or one already in a round of their own.
+  if (!ctx.isAdmin && guestIds.size > 0) {
+    let foreignGuests: Set<string>;
+    try {
+      foreignGuests = await findForeignGuestIds(userId, [...guestIds]);
+    } catch (lookupError) {
+      console.error('[updateGameInternal] guest lookup failed', lookupError);
+      foreignGuests = guestIds;
+    }
+    if (foreignGuests.size > 0) {
+      redirect({ href: editHref({ error: 'db_players' }), locale });
+    }
+  }
   const plan = planRosterEdit({
     prior: priorRosterRows,
     desired: desiredRoster,

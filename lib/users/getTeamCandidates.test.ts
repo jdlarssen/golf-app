@@ -27,6 +27,20 @@ vi.mock('@/lib/supabase/admin', () => ({
   }),
 }));
 
+// 0251: whose guest it is. The real helper, on top of a lookup the test owns.
+const foreignGuestIds = vi.fn<() => Promise<Set<string>>>(async () => new Set());
+vi.mock('@/lib/games/guestOwnership', async () => {
+  return {
+    withoutForeignGuests: async <T extends { id: string; isGuest?: boolean }>(
+      _actor: string,
+      rows: T[],
+    ) => {
+      const foreign = await foreignGuestIds();
+      return rows.filter((r) => !foreign.has(r.id));
+    },
+  };
+});
+
 import { getTeamCandidates } from './getTeamCandidates';
 
 beforeEach(() => {
@@ -89,6 +103,26 @@ describe('getTeamCandidates (venner ∪ co-players, #408)', () => {
 
     const res = await getTeamCandidates('me');
     expect(res.map((u) => u.name)).toEqual(['Anne', 'Øyvind']);
+  });
+});
+
+describe('guests (0251)', () => {
+  it('offers the guest you may use and leaves out another organiser\'s', async () => {
+    friendIds.mockReturnValue([]);
+    coPlayerIds.mockReturnValue(['g-mine', 'g-theirs', 'c1']);
+    usersRows.mockReturnValue({
+      data: [
+        { id: 'g-mine', name: 'Gjest A', nickname: null, email: 'gjest-a@example.test', is_guest: true },
+        { id: 'g-theirs', name: 'Gjest B', nickname: null, email: 'gjest-b@example.test', is_guest: true },
+        { id: 'c1', name: 'Ola', nickname: null, email: 'ola@example.test', is_guest: false },
+      ],
+      error: null,
+    });
+    foreignGuestIds.mockResolvedValueOnce(new Set(['g-theirs']));
+
+    const res = await getTeamCandidates('me');
+
+    expect(res.map((u) => u.id)).toEqual(['g-mine', 'c1']);
   });
 });
 

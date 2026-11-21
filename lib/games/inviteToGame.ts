@@ -6,6 +6,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { gameInviteExpiresAtFromNow } from '@/lib/auth/inviteExpiry';
 import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { getInviteEligibleIds } from '@/lib/games/inviteEligibility';
+import { findForeignGuestIds } from '@/lib/games/guestOwnership';
 import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { sendInviteNotification } from '@/lib/mail/inviteNotification';
@@ -336,7 +337,18 @@ async function mayAddExistingUser(args: {
   const { inviterUserId, isAdmin, recipientUserId, groupId } = args;
   if (isAdmin || recipientUserId === inviterUserId) return true;
   const eligible = await getInviteEligibleIds(inviterUserId, groupId);
-  return eligible.has(recipientUserId);
+  if (!eligible.has(recipientUserId)) return false;
+  // Audit 20.11 (0251): sharing a round with a guest is not enough. A guest
+  // is added only by the one who made it, or who already has it in a round
+  // of their own. The app's route writes with the service role, so the
+  // database guard does not cover it. A failed lookup refuses.
+  try {
+    const foreign = await findForeignGuestIds(inviterUserId, [recipientUserId]);
+    return !foreign.has(recipientUserId);
+  } catch (error) {
+    console.error('[mayAddExistingUser] guest lookup failed', error);
+    return false;
+  }
 }
 
 /**

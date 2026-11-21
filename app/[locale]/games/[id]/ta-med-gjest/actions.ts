@@ -283,7 +283,7 @@ export async function bringGuest(gameId: string, formData: FormData): Promise<Br
   const profile = { ...parsed.profile, tee };
 
   // (4) The shadow user.
-  const created = await createGuestUser(profile);
+  const created = await createGuestUser(profile, { createdBy: hostId });
   if (!created.ok) return { ok: false, error: created.error };
   const guestId = created.userId;
 

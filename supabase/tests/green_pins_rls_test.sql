@@ -229,18 +229,21 @@ select ok(
 -- ═════════════════════════════════════════════════════════════════════════════
 -- Gate backstop — green_pins_gate (trap #4: the DB is the outer guard)
 -- ═════════════════════════════════════════════════════════════════════════════
+-- 0251: one pin per player and hole inside the window, so the three pins come
+-- from three players in the round (who may pin: round_and_own_row_rules_test).
 select torny_rls.as_user(torny_rls.active_id());
-
 select ok(torny_rls.try_insert_pin(torny_rls.active_id(), 5), 'gate: pin #1 on hole 5 lands');
-select ok(torny_rls.try_insert_pin(torny_rls.active_id(), 5), 'gate: pin #2 on hole 5 lands');
-select ok(torny_rls.try_insert_pin(torny_rls.active_id(), 5), 'gate: pin #3 on hole 5 lands');
-
--- Pin #4 — from a DIFFERENT user, proving the gate counts per hole, not per
--- user — trips the trigger with check_violation (23514).
 select torny_rls.as_user(torny_rls.flightmate_id());
+select ok(torny_rls.try_insert_pin(torny_rls.flightmate_id(), 5), 'gate: pin #2 on hole 5 lands');
+select torny_rls.as_user(torny_rls.submitted_id());
+select ok(torny_rls.try_insert_pin(torny_rls.submitted_id(), 5), 'gate: pin #3 on hole 5 lands');
+
+-- Pin #4 — from a FOURTH player, proving the gate counts per hole, not per
+-- user — trips the trigger with check_violation (23514).
+select torny_rls.as_user(torny_rls.admin_id());
 select throws_ok(
   $$ insert into public.green_pins (course_id, hole_number, lat, lng, accuracy_m, user_id)
-       values (torny_rls.course_id(), 5, 59.9139, 10.7522, 8, torny_rls.flightmate_id()) $$,
+       values (torny_rls.course_id(), 5, 59.9139, 10.7522, 8, torny_rls.admin_id()) $$,
   '23514',
   null,
   'gate: pin #4 on the same hole inside the window is REJECTED by green_pins_gate'

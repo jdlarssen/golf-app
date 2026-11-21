@@ -123,7 +123,10 @@ insert into fk_coverage (tbl, col, handling) values
   ('leagues',                    'created_by',                          'kept_no_pii'),
   ('product_update_digests',     'sent_by',                             'kept_no_pii'),
   ('product_updates',            'created_by',                          'kept_no_pii'),
-  ('tournaments',                'created_by',                          'kept_no_pii');
+  ('tournaments',                'created_by',                          'kept_no_pii'),
+  -- 0251: who made a guest. The guest row keeps the pointer; nothing but the
+  -- service role reads the column.
+  ('users',                      'guest_created_by',                    'kept_no_pii');
 
 -- ═════════════════════════════════════════════════════════════════════════════
 -- 1. The list is exactly the FK columns pointing at public.users

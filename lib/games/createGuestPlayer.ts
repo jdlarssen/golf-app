@@ -135,6 +135,13 @@ type CreateGuestOpts = {
   retryDelayMs?: number;
 };
 
+/**
+ * Who makes the guest. Stored as `users.guest_created_by` (0251): a guest goes
+ * on a non-admin's roster only when that person made the guest, or already
+ * has the guest in a round of their own (`lib/games/guestOwnership.ts`).
+ */
+type GuestCreator = { createdBy: string };
+
 const PROFILE_UPDATE_ATTEMPTS = 5;
 
 /**
@@ -152,6 +159,7 @@ const PROFILE_UPDATE_ATTEMPTS = 5;
  */
 export async function createGuestUser(
   profile: GuestProfile,
+  creator: GuestCreator,
   opts?: CreateGuestOpts,
 ): Promise<CreateGuestUserResult> {
   const admin = getAdminClient();
@@ -185,6 +193,7 @@ export async function createGuestUser(
         gender: guestTeeToUserGender(profile.tee),
         level: guestTeeToLevel(profile.tee),
         is_guest: true,
+        guest_created_by: creator.createdBy,
         profile_completed_at: nowIso,
       })
       .eq('id', userId)
@@ -233,9 +242,10 @@ export type CreateGuestPlayerResult = CreateGuestUserResult;
 export async function createGuestPlayer(
   gameId: string,
   profile: GuestProfile,
+  creator: GuestCreator,
   opts?: CreateGuestOpts,
 ): Promise<CreateGuestPlayerResult> {
-  const created = await createGuestUser(profile, opts);
+  const created = await createGuestUser(profile, creator, opts);
   if (!created.ok) return created;
 
   const admin = getAdminClient();
