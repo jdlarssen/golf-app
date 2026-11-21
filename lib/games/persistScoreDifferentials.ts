@@ -323,7 +323,18 @@ async function recoverFullCourseHandicaps(
   const userIds = missing.map((p) => p.user_id);
   const [usersRes, historyRes] = await Promise.all([
     admin.from('users').select('id, hcp_index').in('id', userIds),
-    admin.from('handicap_history').select('user_id, hcp_index, recorded_at').in('user_id', userIds),
+    // Every page: a disagreeing index cut off at PostgREST's row limit would
+    // let the finish freeze a number the full history rules out.
+    selectAllRowsResult(
+      (from, to) =>
+        admin
+          .from('handicap_history')
+          .select('user_id, hcp_index, recorded_at')
+          .in('user_id', userIds)
+          .order('id')
+          .range(from, to),
+      'persistScoreDifferentials handicap_history',
+    ),
   ]);
   if (usersRes.error || historyRes.error) {
     console.error('[persistScoreDifferentials] full course handicap lookup failed', {

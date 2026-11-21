@@ -129,6 +129,8 @@ describe('persistScoreDifferentials — netto dobbeltbogey av fullt banehandicap
     lookup: {
       users?: Array<{ id: string; hcp_index: number | string | null }>;
       history?: Array<{ user_id: string; hcp_index: number | string; recorded_at: string }>;
+      /** One entry per page the history read returns, in order. */
+      historyPages?: Array<Array<{ user_id: string; hcp_index: number | string; recorded_at: string }>>;
     } = {},
   ) {
     adminMock = buildSupabaseMock([], {}, {
@@ -170,7 +172,9 @@ describe('persistScoreDifferentials — netto dobbeltbogey av fullt banehandicap
         course_holes: [{ data: HOLES, error: null }],
         tee_boxes: [{ data: LEAGUE_TEE, error: null }],
         users: [{ data: lookup.users ?? [], error: null }],
-        handicap_history: [{ data: lookup.history ?? [], error: null }],
+        handicap_history: lookup.historyPages
+          ? lookup.historyPages.map((page) => ({ data: page, error: null }))
+          : [{ data: lookup.history ?? [], error: null }],
       },
     });
   }
@@ -227,5 +231,24 @@ describe('persistScoreDifferentials — netto dobbeltbogey av fullt banehandicap
 
     expect(written).toBe(0);
     expect(updates()).toHaveLength(0);
+  });
+  it('reads every page of the history: a disagreeing index past row 1000 still blocks the freeze', async () => {
+    // Page 1: 1000 rows of index 54 (full 58, freezes as 32 under the cap).
+    // Page 2: index 50 (full 53), which also freezes as 32. Read only page 1
+    // and the finish would freeze 58; read both and the indexes disagree.
+    const row = (hcp_index: number, recorded_at: string) => ({ user_id: CAPTAIN, hcp_index, recorded_at });
+    mockLeagueGame([{ user_id: CAPTAIN, full_course_handicap: null, course_handicap: 32 }], {
+      historyPages: [
+        Array.from({ length: 1000 }, () => row(54, '2026-09-01T10:00:00Z')),
+        [row(50, '2026-08-01T10:00:00Z')],
+      ],
+    });
+
+    const written = await persistScoreDifferentials(GAME_ID);
+
+    expect(written).toBe(0);
+    expect(updates()).toHaveLength(0);
+    const historyCalls = adminMock.__fromCalls.filter((c) => c.table === 'handicap_history');
+    expect(historyCalls.some((c) => c.method === 'order' && c.args[0] === 'id')).toBe(true);
   });
 });
