@@ -61,9 +61,14 @@ export function computeLeagueStandings(
   const usePlacementPoints = config.standingsModel === 'points';
 
   // #2214: one entry per player per round, the earliest finished flight.
+  // Only the league's current participants count: a player removed from the
+  // league keeps their flight history, but their score must not set anyone
+  // else's penalty, placement points or make a round count (audit 2026-11-20).
+  const participants = new Set(playerIds);
   const roundMaps = rounds.map((r) => {
     const byUser = new Map<string, LeagueRoundPlayerScore>();
     for (const s of r.scores) {
+      if (!participants.has(s.userId)) continue;
       const existing = byUser.get(s.userId);
       if (!existing || finishedBefore(s, existing)) byUser.set(s.userId, s);
     }

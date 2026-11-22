@@ -365,6 +365,7 @@ export async function updateLeagueRound(formData: FormData): Promise<LeagueActio
         .select('id');
       // #2638: the database guard (0215) gives the same code as the check above.
       if (result.error?.message?.includes(ROUND_LOCKED_MESSAGE)) return { error: 'round_settings_locked' };
+      if (isRoundWindowViolation(result.error)) return { error: 'window' };
       expectAffected(result, 'updateLeagueRound');
     } catch (err) {
       console.error('[league] updateLeagueRound failed', { roundId, err });
@@ -379,6 +380,16 @@ export async function updateLeagueRound(formData: FormData): Promise<LeagueActio
 // ── simulator round settings (#2638) ───────────────────────────────────────────
 
 const ROUND_LOCKED_MESSAGE = 'locked once a player has started the round';
+
+/**
+ * Audit 2026-11-20: a round whose close lands on or before its open breaks the
+ * CHECK `closes_at > opens_at` (0080, `league_rounds_check`). The database is
+ * the rule's home; this turns the refusal into the same «window» code
+ * addLeagueRound gives, instead of «could not save».
+ */
+function isRoundWindowViolation(error: { code?: string; message?: string } | null): boolean {
+  return error?.code === '23514' && (error.message ?? '').includes('league_rounds_check');
+}
 
 /**
  * #2638: in a simulator league a started round keeps its course and tee. The
@@ -634,15 +645,14 @@ export async function overrideRoundWindow(formData: FormData): Promise<LeagueAct
 
   // #727: assert the override touched a row (bug-prevention #2).
   try {
-    expectAffected(
-      await supabase
-        .from('league_rounds')
-        .update(patch)
-        .eq('id', roundId)
-        .eq('league_id', leagueId)
-        .select('id'),
-      'overrideRoundWindow',
-    );
+    const result = await supabase
+      .from('league_rounds')
+      .update(patch)
+      .eq('id', roundId)
+      .eq('league_id', leagueId)
+      .select('id');
+    if (isRoundWindowViolation(result.error)) return { error: 'window' };
+    expectAffected(result, 'overrideRoundWindow');
   } catch (err) {
     console.error('[league] overrideRoundWindow failed', { roundId, err });
     return { error: 'update_failed' };
@@ -669,11 +679,18 @@ export async function addLeaguePlayers(formData: FormData): Promise<LeagueAction
   // Klubb-liga (#483): behold kun klubbmedlemmer (speiler createLeagueDraft-
   // guardrailen, så en manipulert post ikke smugler ikke-medlemmer inn).
   if (ids.length > 0) {
-    const { data: league } = await supabase
+    const { data: league, error: leagueError } = await supabase
       .from('leagues')
-      .select('group_id')
+      .select('group_id, status')
       .eq('id', leagueId)
       .maybeSingle();
+    if (leagueError) {
+      console.error('[league] addLeaguePlayers league read failed', { leagueId, leagueError });
+      return { error: 'players_failed' };
+    }
+    // Audit 2026-11-20: a finished league's table is the season record, so its
+    // roster is locked (the same ruling as removeLeaguePlayer, #2244).
+    if (league?.status === 'finished') return { error: 'league_finished' };
     const groupId = (league?.group_id as string | null | undefined) ?? null;
     if (groupId) {
       const { data: memberRows } = await supabase
@@ -833,25 +850,47 @@ export async function leaveClubLeague(formData: FormData): Promise<void> {
   redirect(`/liga/${leagueId}/meld-av?error=${data}`);
 }
 
-async function setLeagueStatus(
+/**
+ * Audit 2026-11-20: a status change carries the status it expects, so a
+ * replayed or double-tapped post cannot start a league twice or reopen a
+ * finished one. The write is `.eq('status', from)`; 0 rows → the league's
+ * actual status decides. Already at `to` (the second tap) is a quiet success;
+ * anything else is `wrong_status`.
+ */
+async function flipLeagueStatus(
+  supabase: ServerClient,
   leagueId: string,
-  next: 'active' | 'finished',
+  from: 'draft' | 'active',
+  to: 'active' | 'finished',
+  label: string,
 ): Promise<LeagueActionError> {
-  const supabase = await getServerClient();
-  await requireAdminOrClubAdminOfLeague(supabase, leagueId);
-  const patch: TablesUpdate<'leagues'> = { status: next };
-  if (next === 'active') patch.started_at = new Date().toISOString();
-  if (next === 'finished') patch.finished_at = new Date().toISOString();
-  // #727: assert the status update touched a row (bug-prevention #2). Covers the
-  // finishLeague path, which routes through here (sibling of startLeague).
-  try {
-    expectAffected(
-      await supabase.from('leagues').update(patch).eq('id', leagueId).select('id'),
-      'setLeagueStatus',
-    );
-  } catch (err) {
-    console.error('[league] setLeagueStatus failed', { leagueId, next, err });
+  const patch: TablesUpdate<'leagues'> = { status: to };
+  if (to === 'active') patch.started_at = new Date().toISOString();
+  if (to === 'finished') patch.finished_at = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from('leagues')
+    .update(patch)
+    .eq('id', leagueId)
+    .eq('status', from)
+    .select('id');
+  if (error) {
+    console.error(`[league] ${label} failed`, { leagueId, error });
     return { error: 'status_failed' };
+  }
+  if ((data ?? []).length === 0) {
+    // #727 trap 2: 0 rows is not success. The admin client reads the real
+    // status, since the caller's RLS view could hide the row.
+    const { data: current, error: readError } = await getAdminClient()
+      .from('leagues')
+      .select('status')
+      .eq('id', leagueId)
+      .maybeSingle();
+    if (readError || !current) {
+      console.error(`[league] ${label} touched no row`, { leagueId, readError });
+      return { error: 'status_failed' };
+    }
+    if (current.status !== to) return { error: 'wrong_status' };
   }
   revalidatePath(`/admin/liga/${leagueId}`);
   revalidatePath(`/liga/${leagueId}`);
@@ -873,29 +912,15 @@ export async function startLeague(formData: FormData): Promise<LeagueActionError
   if ((roundsCount.count ?? 0) < 1) return { error: 'no_rounds' };
   if ((playersCount.count ?? 0) < 2) return { error: 'too_few_players' };
 
-  // #727: assert the start flip touched a row (bug-prevention #2).
-  try {
-    expectAffected(
-      await supabase
-        .from('leagues')
-        .update({ status: 'active', started_at: new Date().toISOString() })
-        .eq('id', leagueId)
-        .select('id'),
-      'startLeague',
-    );
-  } catch (err) {
-    console.error('[league] startLeague failed', { leagueId, err });
-    return { error: 'status_failed' };
-  }
-  revalidatePath(`/admin/liga/${leagueId}`);
-  revalidatePath(`/liga/${leagueId}`);
-  return { error: '' };
+  return flipLeagueStatus(supabase, leagueId, 'draft', 'active', 'startLeague');
 }
 
 export async function finishLeague(formData: FormData): Promise<LeagueActionError> {
   const leagueId = str(formData, 'league_id');
   if (!leagueId) return { error: 'missing' };
-  return setLeagueStatus(leagueId, 'finished');
+  const supabase = await getServerClient();
+  await requireAdminOrClubAdminOfLeague(supabase, leagueId);
+  return flipLeagueStatus(supabase, leagueId, 'active', 'finished', 'finishLeague');
 }
 
 export async function deleteLeague(formData: FormData): Promise<LeagueActionError> {

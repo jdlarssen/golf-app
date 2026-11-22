@@ -38,7 +38,9 @@ export function LigaStatusActions({ leagueId, status, canStart, canFinish, start
             <Banner tone="info">{startHint}</Banner>
           )}
           {startState.error && startState.error !== '' && (
-            <Banner tone="error">{t('startError')}</Banner>
+            <Banner tone="error">
+              {t(startState.error === 'wrong_status' ? 'wrongStatus' : 'startError')}
+            </Banner>
           )}
           <form action={startAction}>
             <input type="hidden" name="league_id" value={leagueId} />
@@ -56,7 +58,9 @@ export function LigaStatusActions({ leagueId, status, canStart, canFinish, start
       {status === 'active' && (
         <>
           {finishState.error && finishState.error !== '' && (
-            <Banner tone="error">{t('finishError')}</Banner>
+            <Banner tone="error">
+              {t(finishState.error === 'wrong_status' ? 'wrongStatus' : 'finishError')}
+            </Banner>
           )}
           <form action={finishAction}>
             <input type="hidden" name="league_id" value={leagueId} />

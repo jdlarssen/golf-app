@@ -74,7 +74,13 @@ export default async function EmbedLigaPage({
       <EmbedFooter
         href="https://tornygolf.no"
         live={live}
-        statusLabel={live ? t('seasonRunning') : t('seasonDone')}
+        statusLabel={
+          live
+            ? t('seasonRunning')
+            : league.status === 'draft'
+              ? t('seasonNotStarted')
+              : t('seasonDone')
+        }
       />
       {/* 60 s poll — a season table changes per delivered round, not per stroke. */}
       <SpectatePoller live={live} intervalMs={60_000} />

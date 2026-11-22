@@ -584,3 +584,38 @@ describe('computeLeagueStandings — a round whose window is still open', () => 
     },
   );
 });
+
+describe('computeLeagueStandings — a removed participant (audit 2026-11-20)', () => {
+  it("a removed player's score does not set others' worst+1 penalty", () => {
+    // X was removed from the league after shooting +20 in r2. B missed r2.
+    // Without X the worst counted score in r2 is A's +3, so B's penalty is 4.
+    const rounds = [
+      round('r1', 1, [score('A', 2), score('B', 5)]),
+      round('r2', 2, [score('A', 3), score('X', 20)]),
+    ];
+    const res = computeLeagueStandings(cfg(), rounds, ['A', 'B']);
+
+    expect(rowOf(res, 'B').value).toBe(9); // 5 + (3 + 1), not 5 + 21
+    expect(res.rows.map((r) => r.userId)).toEqual(['A', 'B']);
+  });
+
+  it('a round only the removed player played does not count, so nobody is penalised for it', () => {
+    const rounds = [
+      round('r1', 1, [score('A', 2), score('B', 5)]),
+      round('r2', 2, [score('X', 4)]),
+    ];
+    const res = computeLeagueStandings(cfg(), rounds, ['A', 'B']);
+
+    expect(rowOf(res, 'A').value).toBe(2);
+    expect(rowOf(res, 'B').value).toBe(5);
+  });
+
+  it("a removed player does not take placement points from the field (points model)", () => {
+    // With X the field is three and A wins 3 points; without X, A wins 2.
+    const rounds = [round('r1', 1, [score('A', -1), score('X', 1), score('B', 4)])];
+    const res = computeLeagueStandings(cfg({ standingsModel: 'points' }), rounds, ['A', 'B']);
+
+    expect(rowOf(res, 'A').value).toBe(2);
+    expect(rowOf(res, 'B').value).toBe(1);
+  });
+});

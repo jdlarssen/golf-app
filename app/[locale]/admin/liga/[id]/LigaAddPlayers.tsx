@@ -108,11 +108,12 @@ export function LigaAddPlayers({ leagueId, players, participantIds, isClubLeague
       </ul>
 
       {(() => {
+        type Known = 'missing' | 'players' | 'players_failed' | 'league_finished';
         const error = state.error
-          ? (['missing', 'players', 'players_failed'] as const).includes(
-              state.error as 'missing' | 'players' | 'players_failed',
+          ? (['missing', 'players', 'players_failed', 'league_finished'] as const).includes(
+              state.error as Known,
             )
-            ? t(`errors.${state.error as 'missing' | 'players' | 'players_failed'}`)
+            ? t(`errors.${state.error as Known}`)
             : t('errors.fallback')
           : null;
         return error ? (
