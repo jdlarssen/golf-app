@@ -5471,6 +5471,7 @@
       "sentBanner": "Forespørselen er sendt. Eieren må godkjenne den før du er med.",
       "submitButton": "Be om å bli med",
       "submitPending": "Sender forespørsel …",
+      "waitBanner": "Du kan be om å bli med igjen fra {date} kl. {time}.",
       "errors": {
         "unknown": "Noe gikk galt. Prøv igjen.",
         "fallback": "Noe gikk galt. Prøv igjen."

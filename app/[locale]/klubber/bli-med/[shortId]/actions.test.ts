@@ -8,8 +8,10 @@ import {
 /**
  * A new club request after a rejection, a leave or a removal (audit
  * 2026-11-20). One row per (club, user) across every status (UNIQUE in 0075),
- * so the insert hits a duplicate. The old row is reopened as pending and the
- * admins are told; before, the page said «sent» and nothing was stored.
+ * so the insert hits a duplicate. Once 7 days have passed since the close
+ * (the owner's «Etter 7 dager»), the old row is reopened as pending and the
+ * admins are told; within 7 days nothing is stored and nobody is told.
+ * Before, the page said «sent» and nothing was stored.
  */
 
 const redirectMock = makeLocaleRedirectMock();
@@ -29,6 +31,8 @@ import { requestToJoin } from './actions';
 
 const SHORT = 'abc123';
 const GROUP = { id: 'g-1', name: 'Solnedgang GK' };
+const DAY = 24 * 60 * 60 * 1000;
+const EIGHT_DAYS_AGO = new Date(Date.now() - 8 * DAY).toISOString();
 const DUPLICATE = { data: null, error: { code: '23505', message: 'duplicate key value' } };
 
 function form(): FormData {
@@ -69,7 +73,7 @@ describe('requestToJoin', () => {
         [
           { data: GROUP, error: null }, // groups
           { data: null, error: null }, // not a member
-          { data: { id: 'req-1', status }, error: null }, // the old row
+          { data: { id: 'req-1', status, decided_at: EIGHT_DAYS_AGO }, error: null }, // closed 8 days ago
           { data: [{ id: 'req-1' }], error: null }, // reopen hit the row
           ADMINS,
           REQUESTER,
@@ -89,6 +93,23 @@ describe('requestToJoin', () => {
       expect(notifyMock).toHaveBeenCalledTimes(1);
     },
   );
+
+  it.each([
+    ['rejected', 1],
+    ['withdrawn', 6.9],
+  ])('old %s row closed %s day(s) ago → wait: nothing stored, nobody told', async (status, days) => {
+    setup(
+      [
+        { data: GROUP, error: null },
+        { data: null, error: null },
+        { data: { id: 'req-1', status, decided_at: new Date(Date.now() - days * DAY).toISOString() }, error: null },
+      ],
+      DUPLICATE,
+    );
+    expect(await run()).toBe(`/klubber/bli-med/${SHORT}`);
+    expect(adminMock.__fromCalls.some((c) => c.method === 'update')).toBe(false);
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
 
   it('old pending row → «sent», nothing written, nobody told twice', async () => {
     setup(
@@ -112,7 +133,7 @@ describe('requestToJoin', () => {
       [
         { data: GROUP, error: null },
         { data: null, error: null },
-        { data: { id: 'req-1', status: 'rejected' }, error: null },
+        { data: { id: 'req-1', status: 'rejected', decided_at: EIGHT_DAYS_AGO }, error: null },
         reopen,
       ],
       DUPLICATE,

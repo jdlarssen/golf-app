@@ -23,6 +23,10 @@ let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/server', () => ({ getServerClient: async () => supabaseMock }));
 let adminMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/admin', () => ({ getAdminClient: () => adminMock }));
+const stampMock = vi.fn(async (_g: string, _u: string, _a: string) => true);
+vi.mock('@/lib/clubs/stampMembershipClosed', () => ({
+  stampMembershipClosed: (g: string, u: string, a: string) => stampMock(g, u, a),
+}));
 
 import { removeMember } from './actions';
 
@@ -94,5 +98,18 @@ describe('removeMember', () => {
         { data: [{ user_id: TARGET }], error: null },
       ),
     ).toBe(`/klubber/${GROUP}/medlemmer`);
+  });
+
+  it('the removal is stamped before the delete; a failed stamp stops it', async () => {
+    const admin = () => [
+      { data: { role: 'admin' }, error: null },
+      { data: { role: 'member' }, error: null },
+    ];
+    expect(await run(admin(), { data: [{ user_id: TARGET }], error: null })).toBe(`/klubber/${GROUP}/medlemmer`);
+    expect(stampMock).toHaveBeenCalledWith(GROUP, TARGET, 'u-1');
+
+    stampMock.mockResolvedValueOnce(false);
+    expect(await run(admin())).toBe(FAILED);
+    expect(supabaseMock.__fromCalls.some((c) => c.method === 'delete')).toBe(false);
   });
 });

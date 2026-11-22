@@ -13,6 +13,9 @@ import { Banner } from '@/components/ui/Banner';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { requestToJoin } from './actions';
+import { joinRequestWaitUntil } from '@/lib/clubs/joinRequestCooldown';
+import { formatHHMMOslo, formatLongDateOsloLocale } from '@/lib/i18n/format';
+import type { AppLocale } from '@/i18n/routing';
 
 type Params = Promise<{ shortId: string }>;
 type SearchParams = Promise<{
@@ -101,13 +104,20 @@ export default async function BliMedPage({
   // Check for existing pending request (to show correct state without ?sent=1).
   const { data: existingRequest } = await admin
     .from('group_join_requests')
-    .select('id, status')
+    .select('id, status, decided_at')
     .eq('group_id', group.id)
     .eq('user_id', user.id)
-    .maybeSingle<{ id: string; status: string }>();
+    .maybeSingle<{ id: string; status: string; decided_at: string | null }>();
 
   const hasPendingRequest = existingRequest?.status === 'pending';
   const showSentState = sent || hasPendingRequest;
+  // The owner's «Etter 7 dager»: within 7 days of a rejection, a leave or a
+  // removal, the page says from when the person may ask again instead of
+  // offering the form (the action refuses the same request).
+  const waitUntil =
+    !showSentState && existingRequest
+      ? joinRequestWaitUntil(existingRequest.decided_at)
+      : null;
 
   return (
     <AppShell>
@@ -137,7 +147,18 @@ export default async function BliMedPage({
         </div>
       )}
 
-      {!showSentState && (
+      {waitUntil && (
+        <div className="mb-6" data-testid="join-wait-banner">
+          <Banner tone="info">
+            {t('waitBanner', {
+              date: formatLongDateOsloLocale(waitUntil, locale as AppLocale),
+              time: formatHHMMOslo(waitUntil),
+            })}
+          </Banner>
+        </div>
+      )}
+
+      {!showSentState && !waitUntil && (
         <Card>
           <form action={requestToJoin} className="space-y-4" data-testid="join-request-form">
             <input type="hidden" name="shortId" value={shortId} />
