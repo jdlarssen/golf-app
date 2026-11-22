@@ -164,7 +164,7 @@ describe('sendRegistrationRejectedMail', () => {
                     Kanskje neste runde. Lykke til på banen uansett.
                   </p>
                   <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E5E0D3;padding-top:24px;">
-                    Spørsmål? Snakk med arrangøren direkte — Tørny formidler ingen meldinger på vegne av admin.
+                    Spørsmål? Snakk med arrangøren direkte. Tørny formidler ingen meldinger.
                   </p>
                 </td></tr>
               </table>

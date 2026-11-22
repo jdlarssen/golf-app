@@ -39,9 +39,9 @@ export function describeCreateGameFailure(error: CreateGameFailure): string {
     case 'unsupported_mode_size_combo':
       return 'Den valgte lagstørrelsen er ikke støttet for denne spillformen ennå.';
     case 'mode_locked_after_publish':
-      return 'Spillform kan ikke endres etter at spillet er publisert. Slett spillet og opprett et nytt hvis du vil bytte modus.';
+      return 'Spillformen kan ikke endres etter at spillet er publisert. Slett spillet og opprett et nytt hvis du vil bytte spillform.';
     case 'invalid_game_mode':
-      return 'Den valgte spillformen er ikke tilgjengelig. Velg en annen modus og prøv igjen.';
+      return 'Den valgte spillformen er ikke tilgjengelig. Velg en annen spillform og prøv igjen.';
     case 'bad_registration_mode':
       return 'Valget for hvem som kan melde seg på er ugyldig. Sett det på nytt under «Hvem kan melde seg på?».';
     case 'bad_registration_type':
