@@ -469,8 +469,12 @@ export async function deleteCupLineupSessionCore(
  * SK3 — kapteinen leverer uttaket for eget lag (SK6: arrangøren kan levere på
  * vegne av begge).
  *
- * Levert = låst for kapteinen. Er BEGGE lag inne etterpå, avdekkes økta i
- * samme kall: matchene opprettes og alle varsles.
+ * Levert = låst for kapteinen. Rekkefølgen (audit 2026-11-20): stempelet
+ * settes først (betinget på at det var tomt), så skrives plassene; feiler
+ * plassene, tas stempelet tilbake. Er BEGGE lag inne etter at plassene er
+ * skrevet, avdekkes økta i samme kall: matchene opprettes og alle varsles.
+ * Feiler bare avdekkingen, er uttaket likevel levert: kallet svarer OK, og
+ * arrangøren har «Prøv igjen» (#1901).
  */
 export async function submitCupLineupCore(
   loadAccess: LoadCupLineupAccess,
@@ -595,7 +599,16 @@ export async function submitCupLineupCore(
 
   if (bothIn) {
     const revealError = await revealCupLineupSession(tournamentId, sessionId);
-    if (revealError) return revealError;
+    // The lineup is saved and stamped whatever the reveal does. A failed reveal
+    // (also the other team's half-written slots in a race) is not this
+    // captain's error: log it, and the organiser's «Prøv igjen» runs it again.
+    if (revealError) {
+      console.error('[cup] submitCupLineup reveal failed after a saved lineup', {
+        tournamentId,
+        sessionId,
+        error: revealError.error,
+      });
+    }
     revalidateCup(tournamentId, access.groupId);
   }
 
