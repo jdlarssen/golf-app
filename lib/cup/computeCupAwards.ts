@@ -11,6 +11,7 @@
 // noe å kåre (eierbeslutninger, kontrakt #1508).
 
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
+import { asScoringGender, parFor } from '@/lib/scoring/modes/parResolver';
 import { preferredName, type CupPlayerPointsResult } from './computeCupPlayerPoints';
 import type { CupRoster } from './cupRoster';
 
@@ -156,11 +157,7 @@ export function computeCupUnderperformer(input: {
 
       const net = score.strokes - strokesForHole(courseHandicap, hole.strokeIndex);
       // Spillerens eget par: damer og juniorer har eget par på noen hull.
-      const tee = teeByUser.get(score.userId);
-      const par =
-        hole.parByGender && (tee === 'ladies' || tee === 'juniors' || tee === 'mens')
-          ? hole.parByGender[tee]
-          : hole.par;
+      const par = parFor(hole, asScoringGender(teeByUser.get(score.userId)));
       diffByUser.set(score.userId, (diffByUser.get(score.userId) ?? 0) + (net - par));
       holesByUser.set(score.userId, (holesByUser.get(score.userId) ?? 0) + 1);
     }
