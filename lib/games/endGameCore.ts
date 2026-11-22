@@ -1,5 +1,6 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { after } from 'next/server';
 import type { Database } from '@/lib/database.types';
 import { expireGameCache } from './expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
@@ -134,6 +135,19 @@ export type EndGameCoreResult =
  * lock on the flip (a concurrent second finish is now a no-op success instead
  * of a duplicate mail blast).
  */
+/**
+ * Runs `task` after the response (Next's `after()`). Outside a request scope
+ * (`after()` throws there: scripts, unit tests) it runs the task now, so the
+ * finish never loses its tail.
+ */
+function deferAfterResponse(task: () => Promise<void>): void | Promise<void> {
+  try {
+    after(task);
+  } catch {
+    return task();
+  }
+}
+
 export async function endGameCore(
   supabase: SupabaseClient<Database>,
   gameId: string,
@@ -283,6 +297,12 @@ export async function endGameCore(
   // could not double-run it — belt and braces, cheap.)
   if (flipWon) {
     await runFinishPipeline(supabase, {
+      // Audit 2026-11-20: the slow, best-effort part (round report, notices,
+      // mail) runs after the response. Next flushes `revalidateTag` only when
+      // the action returns, so waiting for it kept every open board on the
+      // cached «active» game. The cache is expired again when it is done.
+      defer: deferAfterResponse,
+      onTailDone: () => expireGameCache(gameId),
       game: {
         id: gameId,
         name: game.name,

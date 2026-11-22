@@ -325,6 +325,79 @@ describe('runFinishPipeline — the finish-pipeline claim', () => {
 
 // ─── The tail itself ────────────────────────────────────────────────────────
 
+describe('runFinishPipeline — the slow tail after the response (audit 2026-11-20)', () => {
+  // A finish expires the game cache only when the server action returns
+  // (Next queues revalidateTag until then). The web finish therefore hands the
+  // slow, best-effort part to `defer` (Next's after()), so the action returns
+  // right after the persistence steps and the boards can show the result.
+  it('runs the persistence steps now and the slow part only when the deferred task runs', async () => {
+    const client = buildSupabaseMock([]);
+    const deferred: Array<() => Promise<void>> = [];
+    const onTailDone = vi.fn();
+
+    const result = await runFinishPipeline(client as never, {
+      ...input(),
+      defer: (task) => {
+        deferred.push(task);
+      },
+      onTailDone,
+    });
+
+    expect(result).toEqual({ ran: true });
+    expect(finishDerivedGamesMock).toHaveBeenCalledTimes(1);
+    expect(persistResultSummariesMock).toHaveBeenCalledTimes(1);
+    expect(persistScoreDifferentialsMock).toHaveBeenCalledTimes(1);
+    for (const slow of [
+      notifyAchievementUnlocksMock,
+      notifyFriendsOfAchievementsMock,
+      generateAndPersistRoundReportMock,
+      logAdminEventMock,
+      notifyPlayersGameFinishedMock,
+      sendGameFinishedNotificationMock,
+      spawnWeeklyRepeatMock,
+    ]) {
+      expect(slow).not.toHaveBeenCalled();
+    }
+    expect(onTailDone).not.toHaveBeenCalled();
+    expect(deferred).toHaveLength(1);
+
+    await deferred[0]!();
+
+    expect(generateAndPersistRoundReportMock).toHaveBeenCalledTimes(1);
+    expect(sendGameFinishedNotificationMock).toHaveBeenCalledTimes(2);
+    expect(spawnWeeklyRepeatMock).toHaveBeenCalledTimes(1);
+    expect(onTailDone).toHaveBeenCalledTimes(1);
+    expect(firstCallOrder(onTailDone)).toBeGreaterThan(firstCallOrder(spawnWeeklyRepeatMock));
+  });
+
+  it('a throwing step in the deferred part is logged, never thrown, and still calls onTailDone', async () => {
+    const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    generateAndPersistRoundReportMock.mockRejectedValueOnce(new Error('sdk down'));
+    const deferred: Array<() => Promise<void>> = [];
+    const onTailDone = vi.fn();
+
+    await runFinishPipeline(buildSupabaseMock([]) as never, {
+      ...input(),
+      defer: (task) => {
+        deferred.push(task);
+      },
+      onTailDone,
+    });
+    await expect(deferred[0]!()).resolves.toBeUndefined();
+
+    expect(consoleErr).toHaveBeenCalled();
+    expect(onTailDone).toHaveBeenCalledTimes(1);
+    consoleErr.mockRestore();
+  });
+
+  it('without defer (the sweep) the whole tail runs before it returns', async () => {
+    const onTailDone = vi.fn();
+    await runFinishPipeline(buildSupabaseMock([]) as never, { ...input(), onTailDone });
+    expect(spawnWeeklyRepeatMock).toHaveBeenCalledTimes(1);
+    expect(onTailDone).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('runFinishPipeline — the tail', () => {
   it('runs the eleven steps in their documented order', async () => {
     const client = buildSupabaseMock([]);

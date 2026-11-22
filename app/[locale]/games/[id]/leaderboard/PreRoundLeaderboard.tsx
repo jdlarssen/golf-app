@@ -7,16 +7,15 @@ import { subscribeRealtimeChannel } from '@/lib/sync/realtimeChannel';
 type Props = { gameId: string };
 
 /**
- * Audit 2026-11-20: the finish flips the game row first, but the server
- * expires the game cache only when the whole finish action is done (Next
- * queues `revalidateTag` inside a server action until the action ends, and the
- * finish also writes the round report and sends mail). The refresh at the flip
- * therefore reads the cached «active» game. After a flip to finished the
- * listener refreshes every few seconds until the view changes (this component
- * unmounts with the blind view) or the follow-up runs out.
+ * Audit 2026-11-20: the finish flips the game row before its server action
+ * returns, and Next expires the game cache only when the action returns (it
+ * queues `revalidateTag` until then; the slow tail runs in `after()`). The
+ * refresh at the flip can still read the cached «active» game, and no new
+ * event comes once the action has returned. After a flip to finished the
+ * listener refreshes a few more times with backoff, and stops as soon as the
+ * view changes: this component unmounts with the blind view.
  */
-export const FINISH_FOLLOW_UP_MS = 3_000;
-export const FINISH_FOLLOW_UP_TRIES = 40;
+export const FINISH_FOLLOW_UP_DELAYS_MS = [2_000, 4_000, 8_000, 16_000, 32_000] as const;
 
 /**
  * Subscribes to three realtime channels for this game and triggers a route
@@ -37,15 +36,19 @@ export const FINISH_FOLLOW_UP_TRIES = 40;
 export function PreRoundLeaderboardRealtime({ gameId }: Props) {
   const router = useRouter();
   useEffect(() => {
-    let followUp: ReturnType<typeof setInterval> | null = null;
+    let followUp: ReturnType<typeof setTimeout> | null = null;
+    let followUpStarted = false;
     const followUpFinish = () => {
-      if (followUp) return;
-      let tries = 0;
-      followUp = setInterval(() => {
-        tries += 1;
-        router.refresh();
-        if (tries >= FINISH_FOLLOW_UP_TRIES && followUp) clearInterval(followUp);
-      }, FINISH_FOLLOW_UP_MS);
+      if (followUpStarted) return;
+      followUpStarted = true;
+      const step = (i: number) => {
+        if (i >= FINISH_FOLLOW_UP_DELAYS_MS.length) return;
+        followUp = setTimeout(() => {
+          router.refresh();
+          step(i + 1);
+        }, FINISH_FOLLOW_UP_DELAYS_MS[i]);
+      };
+      step(0);
     };
     const unsubscribe = subscribeRealtimeChannel(`leaderboard-prerun:${gameId}`, (channel) =>
       channel
@@ -86,7 +89,7 @@ export function PreRoundLeaderboardRealtime({ gameId }: Props) {
       { onResubscribed: () => router.refresh() },
     );
     return () => {
-      if (followUp) clearInterval(followUp);
+      if (followUp) clearTimeout(followUp);
       unsubscribe();
     };
   }, [gameId, router]);

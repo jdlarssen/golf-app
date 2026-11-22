@@ -152,6 +152,17 @@ vi.mock('next/cache', () => ({
   revalidatePath: (...args: unknown[]) => revalidatePathMock(...args),
 }));
 
+// Outside a request scope Next's after() throws; endGameCore then runs the
+// tail inline. The default mock mimics that, so the tail tests stay as they
+// are. The «after the response» test swaps in a capturing implementation.
+const afterMock = vi.fn((task: () => Promise<void>): void => {
+  void task;
+  throw new Error('after() outside a request scope');
+});
+vi.mock('next/server', () => ({
+  after: (task: () => Promise<void>) => afterMock(task),
+}));
+
 import { endGameCore } from './endGameCore';
 import type { EndGameSideWinner } from './endGameCore';
 
@@ -750,6 +761,31 @@ describe('endGameCore — post-flip tail', () => {
       expect(step).toHaveBeenCalledTimes(1);
       expect(firstCallOrder(step)).toBeGreaterThan(flip);
     }
+  });
+
+  it('hands the slow tail to after() and expires the game cache again when it is done (audit 2026-11-20)', async () => {
+    const deferred: Array<() => Promise<void>> = [];
+    afterMock.mockImplementationOnce((task) => {
+      deferred.push(task);
+    });
+    const client = happyClient();
+
+    const result = await endGameCore(client as never, GAME_ID, ACTOR);
+
+    expect(result).toEqual({ ok: true, gameName: 'Vinter-cup', alreadyFinished: false });
+    // The action returns after the persistence steps, with the expiry queued.
+    expect(persistResultSummariesMock).toHaveBeenCalledTimes(1);
+    expect(generateAndPersistRoundReportMock).not.toHaveBeenCalled();
+    expect(notifyPlayersGameFinishedMock).not.toHaveBeenCalled();
+    const gameTag = () =>
+      revalidateTagMock.mock.calls.filter((args) => args[0] === `game-${GAME_ID}`).length;
+    expect(gameTag()).toBe(1);
+
+    await deferred[0]!();
+
+    expect(generateAndPersistRoundReportMock).toHaveBeenCalledTimes(1);
+    expect(notifyPlayersGameFinishedMock).toHaveBeenCalledTimes(1);
+    expect(gameTag()).toBe(2);
   });
 
   it('claims the finish marker on the ADMIN client, after the flip and before the first tail step', async () => {
