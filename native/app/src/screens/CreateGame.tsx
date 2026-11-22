@@ -442,6 +442,23 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
     [gameMode, registration, setup],
   );
 
+  // A new team size makes the chosen teams wrong (a pair is not a four-ball),
+  // so the team choices are cleared, as a new format clears them. The players
+  // stay.
+  const changeSetup = useCallback(
+    (patch: Partial<ModeSetup>) => {
+      if (
+        gameMode &&
+        patch.teamSize !== undefined &&
+        patch.teamSize !== effectiveTeamSize(gameMode, setup)
+      ) {
+        setPicked((prev) => prev.map((p) => ({ ...p, teamNumber: null })));
+      }
+      setSetup((prev) => ({ ...prev, ...patch }));
+    },
+    [gameMode, setup],
+  );
+
   const assignTeam = useCallback((playerId: string, teamNumber: number) => {
     setPicked((prev) =>
       prev.map((p) => (p.userId === playerId ? { ...p, teamNumber } : p)),
@@ -660,7 +677,7 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
             setCommon((prev) => ({ ...prev, ...patch }));
           }}
           setup={setup}
-          onSetup={(patch) => setSetup((prev) => ({ ...prev, ...patch }))}
+          onSetup={changeSetup}
           text={setupText}
           onText={(patch) => setSetupText((prev) => ({ ...prev, ...patch }))}
           fee={fee}
