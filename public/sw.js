@@ -212,12 +212,10 @@ self.addEventListener('fetch', (event) => {
         // The trim below drops the oldest entries first (insertion order), so
         // an asset still in use moves to the end on every hit. Otherwise a
         // chunk that survives many deploys unchanged would be dropped while
-        // the page still loads it.
-        const copy = cached.clone();
-        afterServe = cache
-          .delete(request)
-          .then(() => cache.put(request, copy))
-          .catch(() => {});
+        // the page still loads it. `put` replaces the entry and appends it
+        // (Cache API: matching entries are removed, the new one is added
+        // last), so there is no gap where the asset is missing.
+        afterServe = cache.put(request, cached.clone()).catch(() => {});
         return cached;
       }
       let fresh;
