@@ -1,7 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
-import { getFriendIds } from '@/lib/friends/getFriendIds';
+import { readFriendIds } from '@/lib/friends/getFriendIds';
 import { getUpcomingClubGames } from './getUpcomingClubGames';
 import type {
   DiscoverableClubGame,
@@ -50,9 +50,11 @@ export async function getDiscoverableGames(userId: string): Promise<{
 
   const [playerRowsRes, requestRowsRes, myClubsRes, friendIds] =
     await Promise.all([
+      // The game's status rides along so only scheduled rounds go into the
+      // NOT IN lists below (audit 2026-11-20, URL length).
       admin
         .from('game_players')
-        .select('game_id')
+        .select('game_id, games(status)')
         .eq('user_id', userId),
       admin
         .from('game_registration_requests')
@@ -65,16 +67,29 @@ export async function getDiscoverableGames(userId: string): Promise<{
         .from('group_members')
         .select('group_id, groups(valid_until)')
         .eq('user_id', userId),
-      getFriendIds(userId),
+      readFriendIds(userId),
     ]);
+
+  // Audit 2026-11-20: a failed read throws instead of looking like «no
+  // tournaments» (or, worse, offering rounds the player already joined).
+  // /finn-turneringer shows its error screen, the app route answers 500.
+  if (playerRowsRes.error) throw playerRowsRes.error;
+  if (requestRowsRes.error) throw requestRowsRes.error;
+  if (myClubsRes.error) throw myClubsRes.error;
 
   const joinedIds = new Set(
     (playerRowsRes.data ?? []).map((r) => r.game_id as string),
   );
-  const requestedIds = new Set(
-    (requestRowsRes.data ?? []).map((r) => r.game_id as string),
-  );
-  const excludedIds = new Set([...joinedIds, ...requestedIds]);
+  // Audit 2026-11-20: the NOT IN lists travel in the request URL, which
+  // PostgREST refuses past roughly 200–400 ids (#2214). Every list below only
+  // holds scheduled rounds, so finished and running ones stay out of it and the
+  // URL no longer grows with every round the player has played.
+  const stillOpen = (r: { games?: { status?: string | null } | null }) =>
+    r.games?.status == null || r.games.status === 'scheduled';
+  const excludedIds = new Set([
+    ...(playerRowsRes.data ?? []).filter(stillOpen).map((r) => r.game_id as string),
+    ...(requestRowsRes.data ?? []).filter(stillOpen).map((r) => r.game_id as string),
+  ]);
 
   // Ekskluder utløpte klubber (#50): en frossen avtale tar ikke imot nye
   // medlemmer/spill og skal være borte fra «Finn turneringer». null valid_until
@@ -102,6 +117,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
 
     // #2276: membership replaces the invitation, not the signup window — a
     // closed club game is closed for members too.
+    if (clubRes.error) throw clubRes.error;
     clubGames = (clubRes.data ?? [])
       .filter((row) => isSignupWindowOpen(row) && !isOrganisedBy(row, userId))
       .map((row) => {
@@ -158,6 +174,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
     }
 
     const friendRes = await friendQuery.overrideTypes<Array<DiscoverableFormat>>();
+    if (friendRes.error) throw friendRes.error;
     friendGames = (friendRes.data ?? [])
       .filter((row) => isPubliclyViewable(row) && !isOrganisedBy(row, userId))
       .map((row) => {
@@ -215,6 +232,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
 
   const openGamesRes = await openQuery.overrideTypes<Array<DiscoverableFormat>>();
 
+  if (openGamesRes.error) throw openGamesRes.error;
   const openGames: DiscoverableOpenGame[] = (openGamesRes.data ?? [])
     .filter((row) => isPubliclyViewable(row) && !isOrganisedBy(row, userId))
     .map((row) => {

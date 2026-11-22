@@ -34,6 +34,11 @@ type GameRow = {
   courses: { name: string } | null;
 };
 
+/** Audit 2026-11-20: the first read error, thrown to the route's error screen. */
+function throwOnReadError(...results: { error: unknown }[]): void {
+  for (const r of results) if (r.error) throw r.error;
+}
+
 export default async function DeleteGamePage({
   params,
   searchParams,
@@ -88,6 +93,9 @@ export default async function DeleteGamePage({
       .eq('game_id', id),
   ]);
 
+  // Audit 2026-11-20: the counts are the confirmation copy; a failed read
+  // throws instead of saying «0 spillere, 0 slag».
+  throwOnReadError(gpRes, scoresRes, invRes);
   const playerCount = gpRes.count ?? 0;
   const scoreCount = scoresRes.count ?? 0;
   const invitationCount = invRes.count ?? 0;

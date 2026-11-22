@@ -55,7 +55,7 @@ export default async function AvsluttPage({
   // auth.getUser + users.is_admin round-trip inline.
   await requireAdmin(supabase);
 
-  const { data: game } = await supabase
+  const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
       'id, name, status, require_peer_approval, game_mode, mode_config, side_tournament_enabled, side_ld_count, side_ctp_count, side_ld_holes, side_ctp_holes, courses(name)',
@@ -78,6 +78,8 @@ export default async function AvsluttPage({
       courses: { name: string } | null;
     }>();
 
+  // Audit 2026-11-20: error ≠ absence (#1445) — a failed read is not a 404.
+  if (gameError) throw gameError;
   if (!game) notFound();
 
   if (game.status !== 'active') {
@@ -90,7 +92,7 @@ export default async function AvsluttPage({
     redirect({ href: `/admin/games/${gameId}`, locale });
   }
 
-  const { data: gamePlayers } = await supabase
+  const { data: gamePlayers, error: gamePlayersError } = await supabase
     .from('game_players')
     .select(
       'user_id, flight_number, submitted_at, approved_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname)',
@@ -107,6 +109,8 @@ export default async function AvsluttPage({
         users: { name: string | null; nickname: string | null } | null;
       }[]
     >();
+  // Audit 2026-11-20: a failed roster read is not «nobody missing».
+  if (gamePlayersError) throw gamePlayersError;
 
   // #2284: withdrawn players are neither missing nor winner candidates. The
   // lists come from the finish gate (`finishGate`, #2222); this page reads only

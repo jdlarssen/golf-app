@@ -286,3 +286,32 @@ describe('removePlayerFromGame — laget etter forfallet (#2569)', () => {
     expect(await runRemove()).toBe(`/games/${GAME_ID}/spillere?status=player_removed`);
   });
 });
+
+// Audit 2026-11-20: a delete RLS refuses (or one that finds nothing) answers
+// `error: null` with 0 rows. The page must not say «invitasjonen er avbrutt».
+describe('cancelGameInvitation — row check', () => {
+  async function runCancel(): Promise<string> {
+    const { cancelGameInvitation } = await import('./actions');
+    const fd = new FormData();
+    fd.set('invitation_id', 'inv-1');
+    const err = await cancelGameInvitation(GAME_ID, fd).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(RedirectError);
+    return (err as RedirectError).url;
+  }
+
+  it('a delete that removed the invitation says invite_cancelled', async () => {
+    isAdmin = false;
+    serverMock = buildSupabaseMock([{ data: [{ id: 'inv-1' }], error: null }]);
+
+    expect(await runCancel()).toBe(`/games/${GAME_ID}/spillere?status=invite_cancelled`);
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+  });
+
+  it('a delete that removed 0 rows says cancel_failed', async () => {
+    isAdmin = false;
+    serverMock = buildSupabaseMock([{ data: [], error: null }]);
+
+    expect(await runCancel()).toBe(`/games/${GAME_ID}/spillere?error=cancel_failed`);
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+});

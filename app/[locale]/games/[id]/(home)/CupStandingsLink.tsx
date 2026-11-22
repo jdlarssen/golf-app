@@ -13,16 +13,13 @@ import { ChevronRightIcon } from '@/components/icons';
  * here, so it streams behind Suspense and the shared `getGameWithPlayers`
  * cache helper stays untouched. Returns null for non-cup games and for cups
  * that no longer exist (so we never link to a deleted cup → 404).
+ *
+ * Audit 2026-11-20: the page passes `tournament_id` from the game row it has
+ * already read, instead of this section reading the game row once more.
  */
-export async function CupStandingsLink({ gameId }: { gameId: string }) {
-  const { supabase } = await getGameContext();
-  const { data: row } = await supabase
-    .from('games')
-    .select('tournament_id')
-    .eq('id', gameId)
-    .maybeSingle<{ tournament_id: string | null }>();
-  const tournamentId = row?.tournament_id ?? null;
+export async function CupStandingsLink({ tournamentId }: { tournamentId: string | null }) {
   if (!tournamentId) return null;
+  const { supabase } = await getGameContext();
 
   const { data: cup } = await supabase
     .from('tournaments')

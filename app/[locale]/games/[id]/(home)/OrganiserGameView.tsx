@@ -161,7 +161,7 @@ export async function OrganiserGameView({
           <CreatorControls gameId={id} status={game.status} hasTeeOff={game.scheduled_tee_off_at != null} />
 
           <Suspense fallback={null}>
-            <CupStandingsLink gameId={id} />
+            <CupStandingsLink tournamentId={game.tournament_id} />
           </Suspense>
 
           <div className="pt-2">

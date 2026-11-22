@@ -61,6 +61,14 @@ import { routing, type AppLocale } from '@/i18n/routing';
 import { appLaunchFlag, appLaunchKey } from '@/lib/app/appLaunch';
 import { ChevronRightIcon } from '@/components/icons';
 
+/** Audit 2026-11-20: what the home page shows when the discovery read fails. */
+const EMPTY_DISCOVERY: Awaited<ReturnType<typeof getDiscoverableGames>> = {
+  clubGames: [],
+  openGames: [],
+  friendGames: [],
+  pendingRequests: [],
+};
+
 type SearchParams = Promise<{
   profile?: string | string[];
   // #428: set by the creator delete-flow (`/?deleted=<spillnavn>`) so we can
@@ -229,7 +237,14 @@ async function HomeBody() {
       getFinishedGamesForUser(supabase, userId!),
       // #879: funn-feeden hentes for ALLE innloggede (ikke lenger gated på tom-
       // tilstand) og parallelt her, så den ikke legger til seriell latens.
-      getDiscoverableGames(userId!),
+      // Audit 2026-11-20: the discovery read now throws on a failed read (so
+      // /finn-turneringer shows its error screen). Here it is a side section
+      // of the home page, so a failure leaves the section empty, logged, and
+      // the rest of the page stands.
+      getDiscoverableGames(userId!).catch((err: unknown) => {
+        console.error('[home] discovery read failed', err);
+        return EMPTY_DISCOVERY;
+      }),
       // #1194: ukentlig streak for hjem-chippen — samme «runde»-definisjon som
       // historikk. Best-effort: en dekorativ chip skal aldri velte hjem-siden,
       // så en feil degraderer til «ingen chip» (jf. #877 — men det gjaldt den

@@ -127,4 +127,17 @@ describe('remindUnpaidPlayers', () => {
     expect(await remindUnpaidPlayers(client, 'g')).toEqual({ count: 0 });
     expect(sendPaymentReminder).not.toHaveBeenCalled();
   });
+
+  // Audit 2026-11-20: a failed read is not «nobody owes». Both callers turn the
+  // throw into the button's error line or a 500.
+  it.each(['games', 'game_players'])('a failed %s read throws instead of answering 0', async (table) => {
+    respond = (op) =>
+      op.table === table
+        ? { data: null, error: { message: 'read failed' } }
+        : op.table === 'games'
+          ? { data: { id: 'g', name: 'R', status: 'scheduled', entry_fee_kr: 250, payment_link: null } }
+          : { data: [] };
+    await expect(remindUnpaidPlayers(client, 'g')).rejects.toThrow();
+    expect(sendPaymentReminder).not.toHaveBeenCalled();
+  });
 });

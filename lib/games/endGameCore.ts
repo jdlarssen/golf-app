@@ -167,7 +167,7 @@ export async function endGameCore(
   // #1441: hole_segment også — persistResultSummaries trenger den for at et
   // segment-HOST-spills (front9/back9) eget resultatsammendrag skal regnes
   // over de riktige 9 hullene, ikke alle 18.
-  const { data: game } = await supabase
+  const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
       'id, name, status, require_peer_approval, course_id, game_mode, mode_config, hole_segment, league_round_id',
@@ -184,6 +184,12 @@ export async function endGameCore(
       hole_segment: HoleSegment;
       league_round_id: string | null;
     }>();
+  // Audit 2026-11-20: error ≠ absence (#1445). A failed read is not «the game
+  // is not active»; db_finish says «Prøv igjen».
+  if (gameError) {
+    console.error(`[${logContext}] game read failed`, gameError);
+    return { ok: false, reason: 'db_finish' };
+  }
   if (!game || game.status !== 'active') {
     return { ok: false, reason: 'not_active' };
   }
@@ -196,7 +202,7 @@ export async function endGameCore(
   // builds its own recipient list (buildGameFinishedRecipients), so no
   // e-post is read here (#2207: users.email is not readable through the
   // caller's session anyway).
-  const { data: players } = await supabase
+  const { data: players, error: playersError } = await supabase
     .from('game_players')
     .select('user_id, submitted_at, approved_at, withdrawn_at')
     .eq('game_id', gameId)
@@ -212,6 +218,11 @@ export async function endGameCore(
   // A no-show skipped by «avslutt likevel» keeps submitted_at null — they show
   // as «ikke levert», never a false levering; their registered scores still
   // count in the leaderboard.
+  // Audit 2026-11-20: a failed roster read is not «no players».
+  if (playersError) {
+    console.error(`[${logContext}] roster read failed`, playersError);
+    return { ok: false, reason: 'db_finish' };
+  }
   const roster = players ?? [];
   const gate = finishGate(roster, stampsFromRow, {
     requirePeerApproval: game.require_peer_approval,

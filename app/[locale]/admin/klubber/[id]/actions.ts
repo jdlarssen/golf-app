@@ -5,6 +5,7 @@ import { getLocale } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { expectAffected } from '@/lib/supabase/affectedRows';
 
 /**
  * updateClubTerms — server action for /admin/klubber/[id].
@@ -54,16 +55,24 @@ export async function updateClubTerms(formData: FormData) {
       ? `${sluttdato}T23:59:59Z`
       : null;
 
+  // Audit 2026-11-20 (AGENTS.md trap 2): counted, so a club id that matches
+  // nothing never says «lagret».
   const admin = getAdminClient();
-  const { error } = await admin
-    .from('groups')
-    .update({ member_cap: memberCap, valid_until: validUntil })
-    .eq('id', groupId);
-
-  if (error) {
-    console.error('[updateClubTerms]', error);
-    redirect({ href: `/admin/klubber/${groupId}?error=unknown`, locale });
+  let saved = false;
+  try {
+    expectAffected(
+      await admin
+        .from('groups')
+        .update({ member_cap: memberCap, valid_until: validUntil })
+        .eq('id', groupId)
+        .select('id'),
+      '[updateClubTerms]',
+    );
+    saved = true;
+  } catch (err) {
+    console.error('[updateClubTerms]', err);
   }
+  if (!saved) redirect({ href: `/admin/klubber/${groupId}?error=unknown`, locale });
 
   revalidatePath(`/admin/klubber/${groupId}`);
   revalidatePath('/admin/klubber');

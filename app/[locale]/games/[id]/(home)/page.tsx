@@ -112,6 +112,20 @@ import { ChevronRightIcon } from '@/components/icons';
 import { playerName } from '@/lib/names/playerName';
 import { embedSnippetHeight } from '@/lib/embed/embedHeight';
 
+/**
+ * Audit 2026-11-20: the page's one uncached games read (see the Promise.all
+ * in the page): the joins plus the columns that used to cost four more reads.
+ */
+type GameHomeJoins = Pick<GameRow, 'courses' | 'tee_boxes'> & {
+  spectate_token: string | null;
+  hcp_allowance_pct: number;
+  hcp_max_strokes: number | null;
+  registration_mode: string;
+  registration_type: string;
+  signups_closed_at: string | null;
+  signup_deadline: string | null;
+};
+
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
   status?: string | string[];
@@ -271,21 +285,20 @@ export default async function GameHomePage({
   // require cross-game fan-out on course-edits), so they ride a slim
   // direct fetch in parallel. Authorization stays at the call-site via
   // `me = players.find(...)` and, without a roster row, nonPlayerGameDoor below.
-  const [gwp, joinsRes, spectateRes, ownProfileRes] = await Promise.all([
+  //
+  // Audit 2026-11-20: this one uncached read also carries the columns the page
+  // used to fetch in four more games reads (live-follow token, handicap share
+  // and cap, the sign-up columns). None of them changes on the auto-start
+  // flip below, so they are read once here.
+  const [gwp, joinsRes, ownProfileRes] = await Promise.all([
     getGameWithPlayers(id),
     supabase
       .from('games')
       .select(
-        'courses(name), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+        'spectate_token, hcp_allowance_pct, hcp_max_strokes, registration_mode, registration_type, signups_closed_at, signup_deadline, courses(name), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
       )
       .eq('id', id)
-      .maybeSingle<Pick<GameRow, 'courses' | 'tee_boxes'>>(),
-    // #938: live-follow token, read server-side to feed the creator/admin UI.
-    getAdminClient()
-      .from('games')
-      .select('spectate_token')
-      .eq('id', id)
-      .maybeSingle(),
+      .maybeSingle<GameHomeJoins>(),
     // #1176: slim egen-profil-sjekk for den myke profil-stripa. Ligger utenfor
     // getGameWithPlayers (som bevisst dropper profile_completed_at) — egen rad,
     // RLS tillater lesing. #2202: is_admin rides along for the door below.
@@ -335,8 +348,7 @@ export default async function GameHomePage({
       : false;
 
   // #938: current spectate_token (null = live-follow disabled).
-  const spectateToken: string | null =
-    spectateRes.data?.spectate_token ?? null;
+  const spectateToken: string | null = joinsRes.data.spectate_token ?? null;
 
   const me = gwp.players.find((p) => p.user_id === userId);
   if (!me) {
@@ -592,13 +604,13 @@ export default async function GameHomePage({
   // so they are read for every render, not only before the freeze. Wrapped in
   // a real promise: a PostgREST builder fetches again on every await, and this
   // one is awaited twice.
-  const allowancePromise = Promise.resolve(
-    supabase
-      .from('games')
-      .select('hcp_allowance_pct, hcp_max_strokes')
-      .eq('id', id)
-      .single<{ hcp_allowance_pct: number; hcp_max_strokes: number | null }>(),
-  );
+  // Audit 2026-11-20: read with the joins above, not a games read of its own.
+  const allowancePromise = Promise.resolve({
+    data: {
+      hcp_allowance_pct: joinsRes.data.hcp_allowance_pct,
+      hcp_max_strokes: joinsRes.data.hcp_max_strokes,
+    },
+  });
   if (displayedCourseHandicap == null && playerRating) {
     const [meHcpRes, allowanceRes] = await Promise.all([
       supabase
@@ -711,23 +723,18 @@ export default async function GameHomePage({
     // trade-off as for the courses(...)/tee_boxes(...) joins above.
     // #2607: «Ta med en gjest». The sign-up columns are not in the cached
     // row (GAME_HOME_SELECT), so they are read here, slim, next to meUser.
-    const [{ data: meUser }, { data: signupCols }] = await Promise.all([
-      supabase
-        .from('users')
-        .select('hcp_index, handicap_updated_at')
-        .eq('id', userId)
-        .single<{ hcp_index: number; handicap_updated_at: string }>(),
-      supabase
-        .from('games')
-        .select('registration_mode, registration_type, signups_closed_at, signup_deadline')
-        .eq('id', id)
-        .maybeSingle<{
-          registration_mode: string;
-          registration_type: string;
-          signups_closed_at: string | null;
-          signup_deadline: string | null;
-        }>(),
-    ]);
+    const { data: meUser } = await supabase
+      .from('users')
+      .select('hcp_index, handicap_updated_at')
+      .eq('id', userId)
+      .single<{ hcp_index: number; handicap_updated_at: string }>();
+    // Audit 2026-11-20: the sign-up columns come with the joins read above.
+    const signupCols = {
+      registration_mode: joinsRes.data.registration_mode,
+      registration_type: joinsRes.data.registration_type,
+      signups_closed_at: joinsRes.data.signups_closed_at,
+      signup_deadline: joinsRes.data.signup_deadline,
+    };
     // The row shows only where the player may bring a guest; a failed read
     // shows no row (the page itself gates again).
     const canBringGuest =
@@ -1116,7 +1123,7 @@ export default async function GameHomePage({
             tilhører en cup (#347). */}
         <div className="mx-4 mt-4">
           <Suspense fallback={null}>
-            <CupStandingsLink gameId={id} />
+            <CupStandingsLink tournamentId={game.tournament_id} />
           </Suspense>
         </div>
 
@@ -1756,7 +1763,7 @@ export default async function GameHomePage({
         {/* Cup-stilling — for spill som tilhører en cup (#347). Self-gated:
             renderer null for ikke-cup-spill. */}
         <Suspense fallback={null}>
-          <CupStandingsLink gameId={id} />
+          <CupStandingsLink tournamentId={game.tournament_id} />
         </Suspense>
 
         {isDraft && showWithdrawLink && (

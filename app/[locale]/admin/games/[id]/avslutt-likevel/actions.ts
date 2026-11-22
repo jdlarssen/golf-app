@@ -165,6 +165,10 @@ export async function endGameMarkingWithdrawals(
       if (withdrawnCount > 0) expireGameCache(gameId);
       redirect({ href: rosterChangedPath, locale });
     }
+    // Audit 2026-11-20: the withdrawals are committed. endGame may still
+    // refuse (not_all_submitted, db_finish…) and then expires nothing, so the
+    // cached game goes here, before it decides.
+    expireGameCache(gameId);
   }
 
   // Delegate to endGame with allowMissing=true. It skips withdrawn players

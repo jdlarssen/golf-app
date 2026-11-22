@@ -215,4 +215,24 @@ describe('endGameMarkingWithdrawals', () => {
       expect(revalidateTagMock.mock.calls).toEqual(expectedRevalidations);
     },
   );
+
+  // Audit 2026-11-20: the withdrawals are committed before endGame runs. When
+  // endGame then refuses (not_all_submitted, db_finish…), nothing else expires
+  // the cached game, so the pages kept showing those players as playing.
+  it('expires the cached game after the withdrawals, before endGame decides', async () => {
+    const endGameMarkingWithdrawals = await asAdmin([
+      { data: [unsubmitted('user-a')], error: null }, // pre-read
+      { data: [{ user_id: 'user-a' }], error: null }, // update
+    ]);
+    endGameMock.mockImplementationOnce(async () => {
+      // endGame refused: the cache must already be expired at this point.
+      expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+      throw new RedirectError(`/admin/games/${GAME_ID}?error=not_all_submitted`);
+    });
+
+    await expect(
+      endGameMarkingWithdrawals(GAME_ID, tickedForm('user-a')),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(endGameMock).toHaveBeenCalledTimes(1);
+  });
 });

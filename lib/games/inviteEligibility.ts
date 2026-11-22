@@ -2,6 +2,7 @@ import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
 import { getCoPlayerIds } from '@/lib/users/getCoPlayerIds';
+import { readInChunks } from '@/lib/notifications/inboxReads';
 
 /**
  * Bruker-ider en IKKE-admin oppretter har lov til å legge til på et spill-roster
@@ -46,20 +47,23 @@ export async function getInviteEligibleIds(
   // ved anonymisering. Uten dette kunne en creator poste en slettet brukers id
   // direkte (pickerne viser dem aldri). Best-effort samme vei som komponent-
   // reads: feiler oppslaget krymper settet til tomt (fail-safe, avviser).
+  // Audit 2026-11-20: in slices. One `.in()` with the whole union passed the
+  // URL limit (#2214) at club scale, and the failure emptied the set.
   const admin = getAdminClient();
-  const { data, error } = await admin
-    .from('users')
-    .select('id')
-    .in('id', union)
-    .is('deleted_at', null)
-    .returns<{ id: string }[]>();
-  if (error || !data) {
-    if (error) {
-      console.error('[getInviteEligibleIds] deleted-filter lookup failed', error);
-    }
+  try {
+    const rows = await readInChunks<{ id: string }>(union, (slice) =>
+      admin
+        .from('users')
+        .select('id')
+        .in('id', slice)
+        .is('deleted_at', null)
+        .returns<{ id: string }[]>(),
+    );
+    return new Set(rows.map((r) => r.id));
+  } catch (error) {
+    console.error('[getInviteEligibleIds] deleted-filter lookup failed', error);
     return new Set();
   }
-  return new Set(data.map((r) => r.id));
 }
 
 /**

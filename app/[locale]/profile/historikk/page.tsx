@@ -74,6 +74,7 @@ import type {
 } from '@/lib/scoring/modes/types';
 import type { AppLocale } from '@/i18n/routing';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
+import { readInChunks } from '@/lib/notifications/inboxReads';
 
 /** En komplett 18-hulls-runde (alle 18 hull registrert). */
 const COMPLETE_ROUND_HOLES = 18;
@@ -198,29 +199,52 @@ export default async function HistorikkPage() {
   // #941 — tee_box_id → kjønns-ratinger, for live differensial-beregning.
   const teeById = new Map<string, TeeBoxRatings>();
   if (gameIds.length > 0) {
+    // Audit 2026-11-20: every id list goes in slices (`readInChunks`), since
+    // one `.in()` past roughly 200 ids fails in the URL (#2214). The course
+    // holes go 50 courses at a time (≤ 900 rows, under PostgREST's 1 000 cap).
+    const settle = <T,>(p: Promise<T[]>) =>
+      p.then(
+        (data) => ({ data, error: null }),
+        (error: unknown) => ({ data: null, error }),
+      );
     const [scoresRes, holesRes, teeRes] = await Promise.all([
-      selectAllRowsResult(
-        (from, to) =>
-          supabase
-            .from('scores')
-            .select('game_id, hole_number, strokes, putts')
-            .eq('user_id', userId)
-            .in('game_id', gameIds)
-            .not('strokes', 'is', null)
-            .order('id')
-            .range(from, to),
-        'historikk scores',
+      settle(
+        readInChunks(gameIds, (slice) =>
+          selectAllRowsResult(
+            (from, to) =>
+              supabase
+                .from('scores')
+                .select('game_id, hole_number, strokes, putts')
+                .eq('user_id', userId)
+                .in('game_id', slice)
+                .not('strokes', 'is', null)
+                .order('id')
+                .range(from, to),
+            'historikk scores',
+          ),
+        ),
       ),
-      supabase
-        .from('course_holes')
-        .select(`course_id, ${COURSE_HOLES_SELECT}`)
-        .in('course_id', courseIds),
-      supabase
-        .from('tee_boxes')
-        .select(
-          'id, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors',
-        )
-        .in('id', teeBoxIds),
+      settle(
+        readInChunks(
+          courseIds,
+          (slice) =>
+            supabase
+              .from('course_holes')
+              .select(`course_id, ${COURSE_HOLES_SELECT}`)
+              .in('course_id', slice),
+          50,
+        ),
+      ),
+      settle(
+        readInChunks(teeBoxIds, (slice) =>
+          supabase
+            .from('tee_boxes')
+            .select(
+              'id, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors',
+            )
+            .in('id', slice),
+        ),
+      ),
     ]);
 
     if (scoresRes.error) throw scoresRes.error;

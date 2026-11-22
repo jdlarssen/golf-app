@@ -203,11 +203,18 @@ async function RoomBody({ userId }: { userId: string }) {
  * list has a round you can sign up for (owner's answer 05.10, O1 B):
  * `hasOpenRounds` over the list's own rows and seats, read the way
  * /finn-turneringer reads them; a pending request is no open round.
- * `getDiscoverableGames` swallows its read errors, so a failed read hides the
- * row too; /finn-turneringer reads the same function and would show nothing.
+ * `getDiscoverableGames` throws on a failed read (audit 2026-11-20);
+ * /finn-turneringer shows its error screen, and here the row is left out,
+ * logged, so the rest of the Klubbhus stands.
  */
 async function JoinSection({ userId }: { userId: string }) {
-  const data = await getDiscoverableGames(userId);
+  let data: Awaited<ReturnType<typeof getDiscoverableGames>>;
+  try {
+    data = await getDiscoverableGames(userId);
+  } catch (err) {
+    console.error('[PlayerKlubbhus] discovery read failed', err);
+    return null;
+  }
   const seats = await getRegistrationSeats([...data.clubGames, ...data.friendGames, ...data.openGames]);
   return <JoinView hasOpenRounds={hasOpenRounds(data, seats)} />;
 }

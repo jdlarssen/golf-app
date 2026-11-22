@@ -372,7 +372,15 @@ async function AnonOpenGames({
   heading: string;
   linkLabel: string;
 }) {
-  const games = await getPublicDiscoverableGames();
+  // Audit 2026-11-20: the read throws on failure. On a sales page a failed
+  // read hides the block, like an empty list (logged).
+  let games: Awaited<ReturnType<typeof getPublicDiscoverableGames>>;
+  try {
+    games = await getPublicDiscoverableGames();
+  } catch (err) {
+    console.error('[AnonLanding] open games read failed', err);
+    return null;
+  }
   if (games.length === 0) return null;
   // #2258: plass-linja per rad (et tall, aldri navn). `now` etter oppslagene.
   const seats = await getRegistrationSeats(games);
