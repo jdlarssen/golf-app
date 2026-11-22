@@ -225,7 +225,7 @@ describe('NassauBoard', () => {
     it('har et skoggrønt hode med live-pille mens runden pågår', async () => {
       await show(AFTER_13);
       expect(screen.getByTestId('nassau-hero')).toBeTruthy();
-      expect(screen.getByText('Tre kamper i én')).toBeTruthy();
+      expect(screen.getByText('Tre oppgjør i ett')).toBeTruthy();
       expect(textOf('nassau-pill')).toBe('Live · etter 13 hull');
       expect(screen.getByText('Nassau · netto')).toBeTruthy();
     });
@@ -233,7 +233,7 @@ describe('NassauBoard', () => {
     it('har ikke hodet i et ferdig spill, men sier scoringen', async () => {
       await show({ a: fours(18), b: fours(18) }, { status: 'finished', viewer: null });
       expect(screen.queryByTestId('nassau-hero')).toBeNull();
-      expect(screen.queryByText('Tre kamper i én')).toBeNull();
+      expect(screen.queryByText('Tre oppgjør i ett')).toBeNull();
       expect(screen.getByText('Spilles på netto.')).toBeTruthy();
     });
   });

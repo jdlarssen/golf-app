@@ -34,7 +34,7 @@ describe('NassauView — three matches as three cards (#2327)', () => {
   it('shows a card per match and opens the list of the match being played', () => {
     render(<NassauView {...props({ viewerUserId: 'meg' })} />);
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Tre kamper i én' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Tre oppgjør i ett' })).toBeInTheDocument();
     const tabs = within(screen.getByRole('tablist', { name: 'Tre kamper' })).getAllByRole('tab');
     expect(tabs).toHaveLength(3);
     expect(card('front9')).toHaveTextContent('Avgjort');
@@ -136,7 +136,7 @@ describe('NassauView — three matches as three cards (#2327)', () => {
     );
     expect(card('total18')).toHaveAttribute('aria-selected', 'true');
     expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
-    expect(screen.getByRole('heading', { level: 2, name: 'Tre kamper i én' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Tre oppgjør i ett' })).toBeInTheDocument();
     expect(screen.queryByTestId('nassau-sweep-line')).toBeNull();
   });
 

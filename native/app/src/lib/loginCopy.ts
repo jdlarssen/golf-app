@@ -73,7 +73,7 @@ export const LOGIN_TEXT = {
   emailLabel: 'E-postadresse',
   sendButton: 'Send meg kode',
   sendPending: 'Sender …',
-  codeHeading: 'Skriv inn koden fra mailen',
+  codeHeading: 'Skriv inn koden fra e-posten',
   /** «Vi sendte den til <adressen>. Feil adresse?» — adressen settes inn mellom. */
   sentToPrefix: 'Vi sendte den til ',
   sentToSuffix: '.',
@@ -83,7 +83,7 @@ export const LOGIN_TEXT = {
   codeHint: 'Koden har åtte siffer. På iPhone kan du trykke på koden over tastaturet.',
   verifyButton: 'Logg inn',
   verifyPending: 'Sjekker …',
-  noMailTitle: 'Kom ikke mailen?',
+  noMailTitle: 'Kom ikke e-posten?',
   spamHint: 'Se i søppelposten. Den kommer fra Tørny og kan ta et par minutter.',
   resendInPrefix: 'Ny kode om ',
   resendButton: 'Send ny kode',
@@ -201,7 +201,7 @@ export function describeLoginError(code: LoginErrorCode): string {
     case 'disposable_email':
       return 'Engangs-e-post går ikke. Bruk en vanlig e-postadresse, så er du i gang.';
     case 'code_invalid':
-      return 'Feil kode. Sjekk mailen og prøv igjen.';
+      return 'Feil kode. Sjekk e-posten og prøv igjen.';
     case 'code_expired':
       return 'Koden stemmer ikke, eller den er gått ut. Sjekk at du skrev den riktig. Du kan også be om en ny kode.';
     case 'network':

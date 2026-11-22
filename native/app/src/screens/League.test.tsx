@@ -158,7 +158,7 @@ describe('når «Spill runden» ikke vises', () => {
     await renderLeague();
     expect(screen.queryByTestId('league-play-round')).toBeNull();
     expect(screen.getByTestId('league-round-note')).toHaveTextContent(
-      'Runden mangler bane eller tee — admin fullfører oppsettet snart.',
+      'Runden mangler bane eller tee — arrangøren fullfører oppsettet snart.',
     );
   });
 

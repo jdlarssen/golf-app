@@ -1048,7 +1048,7 @@ describe('GameHome — en spiller trekker seg (#1954 A1)', () => {
     await fireEvent.press(screen.getByTestId('player-withdraw'));
     expect(alert).toHaveBeenCalledWith(
       'Trekk deg fra «Torsdagsrunden»?',
-      'Du forsvinner fra påmeldings-lista og scorekortet åpner ikke for deg ved tee-off. Arrangøren får automatisk beskjed hvis du var på lag.',
+      'Du forsvinner fra påmeldingslista og scorekortet åpner ikke for deg ved tee-off. Arrangøren får automatisk beskjed hvis du var på lag.',
       expect.any(Array),
     );
     expect(withdrawSelf).not.toHaveBeenCalled();

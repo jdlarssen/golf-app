@@ -1289,7 +1289,7 @@ describe('GameWizard — Cup-intent flow', () => {
 
     // Wizard-en er nå i cup-creation-flyt: bare 2 steg vises, og CupSetup
     // sin form er på skjermen.
-    expect(screen.getByLabelText(/cup-navn/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/cupnavn/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/lag 1/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/lag 2/i)).toBeInTheDocument();
     // #1472: format-multiselecten er fjernet fra opprettelsen (format velges i

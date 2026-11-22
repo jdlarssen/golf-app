@@ -60,7 +60,7 @@ describe('sendGuestClaimNotification', () => {
 
       Jørgen la deg inn som gjest i Sommercup 2026. Runden er ferdig, og scorekortet ditt ligger klart på en egen Tørny-konto.
 
-      Logg inn med denne e-postadressen, så er kontoen din. Du får en engangskode på mail i stedet for passord.
+      Logg inn med denne e-postadressen, så er kontoen din. Du får en engangskode på e-post i stedet for passord.
 
       Logg inn: https://tornygolf.no/login
 
@@ -79,7 +79,7 @@ describe('sendGuestClaimNotification', () => {
 
       Jørgen la deg inn som gjest i Sommercup 2026. Runden er ferdig, og scorekortet ditt ligger klart på en egen Tørny-konto.
 
-      Logg inn med denne e-postadressen, så er kontoen din. Du får en engangskode på mail i stedet for passord.
+      Logg inn med denne e-postadressen, så er kontoen din. Du får en engangskode på e-post i stedet for passord.
 
       Logg inn: https://tornygolf.no/login
 
@@ -130,7 +130,7 @@ describe('sendGuestClaimNotification', () => {
                     <strong>Jørgen</strong> la deg inn som gjest i <strong>Sommercup 2026</strong>. Runden er ferdig, og scorekortet ditt ligger klart på en egen Tørny-konto.
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 24px;">
-                    Logg inn med denne e-postadressen, så er kontoen din. Du får en engangskode på mail i stedet for passord.
+                    Logg inn med denne e-postadressen, så er kontoen din. Du får en engangskode på e-post i stedet for passord.
                   </p>
                   <div style="margin:32px 0;">
                     <a href="https://tornygolf.no/login" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:9999px;font-weight:600;font-size:15px;">
@@ -138,7 +138,7 @@ describe('sendGuestClaimNotification', () => {
                     </a>
                   </div>
                   <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E5E0D3;padding-top:24px;">
-                    Du får denne mailen fordi Jørgen la deg til som gjest i en runde på Tørny. Er ikke dette deg, kan du se bort fra den.
+                    Du får denne e-posten fordi Jørgen la deg til som gjest i en runde på Tørny. Er ikke dette deg, kan du se bort fra den.
                   </p>
                 </td></tr>
               </table>

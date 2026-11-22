@@ -42,7 +42,7 @@ export const TICKET_TEXT = {
   /** Webbens `game.home.ctaReviewAndSubmit`. */
   reviewAndSubmit: 'Gjennomgå og lever',
   /** Webbens `game.home.draftBanner`. */
-  draft: 'Utkast — admin planlegger fortsatt. Detaljer kan endre seg.',
+  draft: 'Utkast — arrangøren planlegger fortsatt. Detaljer kan endre seg.',
   finishedNoResult: 'Runden er avsluttet.',
   notPlayer: 'Du står ikke oppført som spiller her.',
   submittedPending: 'Kortet er levert. Nå venter det på en makker.',

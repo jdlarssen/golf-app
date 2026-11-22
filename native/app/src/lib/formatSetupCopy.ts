@@ -37,7 +37,7 @@ export const NASSAU_SETUP_TEXT = {
   legend: 'Nassau-oppsett',
   scoringLabel: 'Scoring',
   scoringDescription:
-    'Nassau er tre konkurranser i én — front 9, back 9, og totalt 18. Velger om handicap eller brutto avgjør hver del.',
+    'Nassau er tre oppgjør i ett: de første ni hullene, de siste ni og alle 18 samlet. Her velger du om handicap eller brutto avgjør hvert oppgjør.',
   scoringNet: 'Med handicap (netto)',
   scoringGross: 'Brutto',
   scoringAriaLabel: 'Nassau-scoring',
@@ -48,7 +48,7 @@ export const WOLF_SETUP_TEXT = {
   legend: 'Wolf-oppsett',
   scoringLabel: 'Scoring',
   scoringDescription:
-    'Velger om Wolf-scoringen bruker spillernes handicap-slag, eller om beste rene bruttoslag avgjør hvert hull.',
+    'Her velger du om Wolf-scoringen bruker spillernes handicap-slag, eller om beste rene bruttoslag avgjør hvert hull.',
   scoringNet: 'Med handicap (netto)',
   scoringGross: 'Brutto',
   scoringAriaLabel: 'Wolf-scoring',
@@ -73,17 +73,17 @@ export const TEAM_SIZE_TEXT = {
   hints: { 2: '2 spillere', 3: '3 spillere', 4: '4 spillere' } as Record<2 | 3 | 4, string>,
 } as const;
 
-/** Formatene med lag-handicap i prosent av lagets snitt (`TeamHandicapField`). */
+/** Formatene med laghandicap i prosent av lagets snitt (`TeamHandicapField`). */
 export type ScrambleMode = 'texas_scramble' | 'ambrose' | 'florida_scramble';
 
 /** `wizard.allowanceProps.texas|ambrose|florida`, og `sumEquivalent`. */
 export const TEAM_HANDICAP_TEXT = {
-  legend: 'Lag-handicap',
+  legend: 'Laghandicap',
   description:
     'Laget spiller på en andel av snittet av spillernes banehandicap. 100 = hele snittet, 50 = halve. Tørny regner det om til slag per hull.',
   bruttoHelper:
-    'Ingen lag-handicap — laveste bruttoscore per hull per lag vinner. Scratch-format.',
-  inputLabel: 'Prosent av lagets snitt-handicap',
+    'Ingen laghandicap — laveste bruttoscore per hull per lag vinner. Scratch-format.',
+  inputLabel: 'Prosent av lagets snitthandicap',
   nettoHelper: {
     texas_scramble: {
       2: 'NGF-standard for 2-mannslag: 50 (25\u00a0% av summen).',
@@ -116,7 +116,7 @@ export const SHAMBLE_TEXT = {
   teamSizeDesc: { 3: '3 spillere per lag', 4: '4 spillere per lag' } as Record<3 | 4, string>,
   variantLabel: 'Variant',
   variantShamble: 'Shamble',
-  variantShambleDesc: 'Best 2 teller',
+  variantShambleDesc: 'De 2 beste teller',
   variantChampagne: 'Champagne Scramble',
   variantChampagneDesc: 'Velg antall',
   countLabel: 'Antall som teller',

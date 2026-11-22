@@ -10,8 +10,8 @@ import type { NassauSectionKey } from '../../../../lib/leaderboard/nassauBoard';
 
 /** `leaderboard.nassau.board` (de rene strengene) og overskriftene på kortene. */
 export const NASSAU_BOARD_TEXT = {
-  title: 'Tre kamper i én',
-  subtitle: 'Front 9, back 9 og hele runden',
+  title: 'Tre oppgjør i ett',
+  subtitle: 'Ut, inn og hele runden',
   stateDecided: 'Avgjort',
   stateWaiting: 'Ikke startet',
   tiedLead: 'Delt ledelse',
@@ -27,10 +27,10 @@ export const NASSAU_BOARD_TEXT = {
 
 /** `leaderboard.nassau`: kortenes kickere og tekstene i lista. */
 export const NASSAU_TEXT = {
-  front9Heading: 'Front 9',
-  back9Heading: 'Back 9',
+  front9Heading: 'Ut',
+  back9Heading: 'Inn',
   totalLabel: 'Totalt',
-  sectionTied: 'Delt 1.-plass',
+  sectionTied: 'Delt 1. plass',
   sectionsPending: 'Venter på spilte hull',
   sectionsPendingNote: 'Kampen er avgjort når alle har spilt hullene.',
 } as const;
@@ -47,7 +47,7 @@ export const NASSAU_CARD_KICKER: Record<NassauSectionKey, string> = {
  */
 export const NASSAU_ICU_SOURCE = {
   stateLive: '{done} av {total} hull',
-  viewerRank: 'Du: {tied, select, true {delt } other {}}{rank}.',
+  viewerRank: 'Du: {tied, select, true {delt } other {}}plass {rank}',
   viewerRankGap: 'Du: {tied, select, true {delt } other {}}{rank}. · {gap} bak',
   viewerLeadBy: 'Du leder med {lead}',
   viewerSr: 'Du er {tied, select, true {delt } other {}}nummer {rank}',
@@ -66,7 +66,7 @@ export const NASSAU_KICKER_SOURCE = '{game} · Nassau · {scoring, select, gross
 
 export const nassauBoardCopy = {
   stateLive: (done: number, total: number) => `${done} av ${total} hull`,
-  viewerRank: (tied: boolean, rank: number) => `Du: ${tied ? 'delt ' : ''}${rank}.`,
+  viewerRank: (tied: boolean, rank: number) => `Du: ${tied ? 'delt ' : ''}plass ${rank}`,
   viewerRankGap: (tied: boolean, rank: number, gap: number) =>
     `Du: ${tied ? 'delt ' : ''}${rank}. · ${gap} bak`,
   viewerLeadBy: (lead: number) => `Du leder med ${lead}`,

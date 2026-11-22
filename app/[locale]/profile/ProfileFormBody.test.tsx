@@ -77,7 +77,7 @@ describe('ProfileFormBody — a refused save keeps the typed values (audit 2026-
     fireEvent.submit(screen.getByRole('button', { name: 'Lagre' }).closest('form')!);
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Handicap-index må være et tall mellom 0 og 54.',
+      'Handicapindeks må være et tall mellom 0 og 54.',
     );
     expect(action).toHaveBeenCalledTimes(1);
     expect(screen.getByLabelText('Navn')).toHaveValue('Per Ny');

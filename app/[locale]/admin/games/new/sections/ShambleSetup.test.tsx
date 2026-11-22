@@ -27,7 +27,7 @@ describe('ShambleSetup', () => {
     // Lagstørrelse-, variant- og scoring-radios vises, med riktige defaults.
     expect(screen.getByRole('radio', { name: /3-mannslag/i })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /4-mannslag/i })).toBeChecked();
-    expect(screen.getByRole('radio', { name: /shamble.*best 2/i })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /shamble.*2 beste/i })).toBeChecked();
     expect(screen.getByRole('radio', { name: /champagne scramble/i })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /netto/i })).toBeChecked();
     expect(screen.getByText('Brutto')).toBeInTheDocument();

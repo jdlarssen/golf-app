@@ -19,7 +19,7 @@ import { WEB_LINK_TEXT } from './webLink';
 export const TERMIN_TEXT = {
   // --- Nettsidens ordlyd (`discover`, `discover.termin`) ----------------------
   kicker: 'Finn turneringer',
-  pageTitle: 'Terminlista',
+  pageTitle: 'Finn turneringer',
   subtitle: 'Åpne runder du kan bli med på',
   filterLabel: 'Filtrer runder',
   filterAll: 'Alle',

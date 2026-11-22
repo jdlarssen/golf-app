@@ -498,7 +498,7 @@ describe('buildNotificationText — game_cancelled (#2481)', () => {
   it('without a date or a name', () => {
     const payload = { game_name: 'Lørdagsrunden', tee_off_at: null } as NotificationPayload;
     expect(buildNotificationText('game_cancelled', payload, real('no')).detail).toBe('Arrangøren har avlyst runden');
-    expect(buildNotificationText('game_cancelled', payload, real('en')).detail).toBe('The organizer cancelled the round');
+    expect(buildNotificationText('game_cancelled', payload, real('en')).detail).toBe('The organiser cancelled the round');
   });
 });
 

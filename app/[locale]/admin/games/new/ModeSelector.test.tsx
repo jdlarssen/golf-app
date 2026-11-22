@@ -7,7 +7,7 @@ describe('ModeSelector', () => {
     render(<ModeSelector value="best_ball" onChange={() => {}} />);
 
     expect(
-      screen.getByRole('group', { name: /velg spillmodus/i }),
+      screen.getByRole('group', { name: /velg spillform/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /stableford/i })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /best ball/i })).toBeInTheDocument();

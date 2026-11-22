@@ -244,7 +244,7 @@ describe('describeLeagueStartRefusal', () => {
       'Runden er ikke åpen for spill nå.',
       'Du har allerede spilt denne runden.',
       'Du er allerede med i en flight i denne runden. Spill den ferdig eller trekk deg fra den først.',
-      'Runden mangler bane eller tee — si fra til admin.',
+      'Runden mangler bane eller tee — si fra til arrangøren.',
     ]);
   });
 

@@ -162,7 +162,7 @@ describe('RoundRobinView', () => {
     // Segment 1: med Bjørnen mot Camilla + David
     expect(aliceCard.textContent).toContain('Bjørnen');
     // Slot-label vises i leaderboard-raden.
-    expect(rows[0].textContent).toContain('Slot A');
+    expect(rows[0].textContent).toContain('Del A');
   });
 
   it('skjuler totaler og viser venterom-melding i reveal-modus midt-runde', () => {

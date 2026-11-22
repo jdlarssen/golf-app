@@ -41,7 +41,7 @@ export const WITHDRAW_TEXT = {
   withdrawButtonSelf: 'Trekk meg',
   withdrawPending: 'Registrerer …',
   cancelButton: 'Avbryt',
-  selfNote: 'Arrangøren ser trekket på cup-siden med en gang.',
+  selfNote: 'Arrangøren ser trekket på cupsiden med en gang.',
   undoHeading: 'Angre trekket for {name}?',
   undoBody:
     'Kampene som ennå ikke har startet spilles som normalt igjen. Har tee-tiden passert, starter de i løpet av et minutt.',

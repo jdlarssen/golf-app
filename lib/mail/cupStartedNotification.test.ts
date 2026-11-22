@@ -57,11 +57,11 @@ const baseParams = {
 describe('sendCupStartedNotification', () => {
   it('default: personlig salutation + lag-oppstilling + heltall-point', async () => {
     const payload = await send(baseParams);
-    expect(payload.subject).toMatchInlineSnapshot(`"Cup-en har startet — Høst-cup 2026"`);
+    expect(payload.subject).toMatchInlineSnapshot(`"Cupen har startet — Høst-cup 2026"`);
     expect(payload.text).toMatchInlineSnapshot(`
       "Hei Per!
 
-      Cup-en «Høst-cup 2026» har startet.
+      Cupen «Høst-cup 2026» har startet.
 
       Bjørketrærne møter Granskogen. Først til 10 poeng vinner.
 
@@ -71,7 +71,7 @@ describe('sendCupStartedNotification', () => {
       "
     `);
     expect(bodyHtml(payload.html)).toMatchInlineSnapshot(`
-      "Cup-en <strong>Høst-cup 2026</strong> har startet.
+      "Cupen <strong>Høst-cup 2026</strong> har startet.
       <strong>Bjørketrærne</strong> møter <strong>Granskogen</strong>. Først til <strong>10</strong> poeng vinner."
     `);
   });
@@ -81,7 +81,7 @@ describe('sendCupStartedNotification', () => {
     expect(payload.text).toMatchInlineSnapshot(`
       "Hei!
 
-      Cup-en «Høst-cup 2026» har startet.
+      Cupen «Høst-cup 2026» har startet.
 
       Bjørketrærne møter Granskogen. Først til 10 poeng vinner.
 
@@ -97,7 +97,7 @@ describe('sendCupStartedNotification', () => {
     expect(payload.text).toMatchInlineSnapshot(`
       "Hei Per!
 
-      Cup-en «Høst-cup 2026» har startet.
+      Cupen «Høst-cup 2026» har startet.
 
       Bjørketrærne møter Granskogen. Først til 10,5 poeng vinner.
 
@@ -107,7 +107,7 @@ describe('sendCupStartedNotification', () => {
       "
     `);
     expect(bodyHtml(payload.html)).toMatchInlineSnapshot(`
-      "Cup-en <strong>Høst-cup 2026</strong> har startet.
+      "Cupen <strong>Høst-cup 2026</strong> har startet.
       <strong>Bjørketrærne</strong> møter <strong>Granskogen</strong>. Først til <strong>10,5</strong> poeng vinner."
     `);
   });
@@ -119,7 +119,7 @@ describe('sendCupStartedNotification', () => {
     expect(payload.text).toMatchInlineSnapshot(`
       "Hei Per!
 
-      Cup-en «Høst-cup 2026» har startet.
+      Cupen «Høst-cup 2026» har startet.
 
       Bjørketrærne møter Granskogen. Vinneren kåres når cupen avsluttes.
 
@@ -129,7 +129,7 @@ describe('sendCupStartedNotification', () => {
       "
     `);
     expect(bodyHtml(payload.html)).toMatchInlineSnapshot(`
-      "Cup-en <strong>Høst-cup 2026</strong> har startet.
+      "Cupen <strong>Høst-cup 2026</strong> har startet.
       <strong>Bjørketrærne</strong> møter <strong>Granskogen</strong>. Vinneren kåres når cupen avsluttes."
     `);
   });
@@ -188,7 +188,7 @@ describe('sendCupStartedNotification', () => {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Cup-en har startet — Høst-cup 2026</title>
+        <title>Cupen har startet — Høst-cup 2026</title>
       </head>
       <body style="margin:0;padding:0;background:#F8F6F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1A2E1F;">
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#F8F6F0;">
@@ -206,7 +206,7 @@ describe('sendCupStartedNotification', () => {
                     Hei Per!
                   </h2>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    Cup-en <strong>Høst-cup 2026</strong> har startet.
+                    Cupen <strong>Høst-cup 2026</strong> har startet.
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
                     <strong>Bjørketrærne</strong> møter <strong>Granskogen</strong>. Først til <strong>10</strong> poeng vinner.

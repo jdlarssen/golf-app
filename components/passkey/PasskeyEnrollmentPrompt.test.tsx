@@ -17,7 +17,7 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-const NUDGE_BODY = 'Da logger du rett inn neste gang, uten å hente kode i mailen.';
+const NUDGE_BODY = 'Da logger du rett inn neste gang, uten å hente kode i e-posten.';
 
 describe('PasskeyEnrollmentPrompt', () => {
   it('shows the nudge only when the user has no passkey yet', async () => {

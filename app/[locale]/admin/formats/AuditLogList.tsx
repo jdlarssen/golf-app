@@ -41,7 +41,7 @@ function buildChangeLabel(t: FormatsT, entry: FormatAuditEntry): string {
       return `${entry.format_slug}${intentSuffix} → ${t('auditLog.changeLabels.moved', { from, to })}`;
     }
     default:
-      return `${entry.format_slug} → endret`;
+      return `${entry.format_slug} → ${t('auditLog.changeLabels.changed')}`;
   }
 }
 

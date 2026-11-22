@@ -75,7 +75,7 @@ const GENERATE_FAILURES: Record<string, string> = {
   too_many_players: 'En personlig cup tar maks {max} spillere. Vil du ha flere, lag en klubb-cup.',
   tee_off_in_past: 'Tee-off kan ikke være i fortiden. Velg et tidspunkt fra nå av.',
   rollback_failed:
-    'Noen av matchene ble laget før det gikk galt, og de ble ikke fjernet igjen. Ta kontakt med administrator for å få ryddet cupen.',
+    'Noen av matchene ble laget før det gikk galt, og de ble ikke fjernet igjen. Skriv til klubb@tornygolf.no, så rydder vi opp i cupen.',
 };
 
 /** Hvorfor kampene ikke ble laget. Nett og tilgang sier det samme som resten av oppsettet. */
@@ -102,7 +102,7 @@ export const START_TEXT = {
 
 const START_FAILURES: Record<string, string> = {
   too_few_matches: START_TEXT.hint,
-  wrong_status: 'Cupen er ikke i utkast-status og kan ikke startes.',
+  wrong_status: 'Cupen er ikke i utkaststatus og kan ikke startes.',
   start_failed: 'Klarte ikke å starte cupen.',
   not_found: 'Cupen finnes ikke.',
 };

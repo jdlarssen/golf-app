@@ -10,7 +10,7 @@ export const DELETE_TEXT = {
   warning: 'Cupen er ikke startet ennå. Genererte matcher som ikke er spilt, slettes for alltid sammen med cupen.',
   permanentHeading: 'Slettes permanent',
   cupEntry: 'Cupen «{name}»',
-  rosterEntry: 'Spillerliste og master-leaderboard',
+  rosterEntry: 'Spillerliste og hovedtavle',
   neverPlayedNote:
     '{count} {count, plural, one {genererte match som ikke er spilt} other {genererte matcher som ikke er spilt}} slettes for alltid.',
   keptNote:

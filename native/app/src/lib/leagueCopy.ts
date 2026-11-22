@@ -56,13 +56,13 @@ export const LEAGUE_TEXT = {
   /** `liga.player.playedBy.unknownPlayer`. */
   unknownPlayer: 'Ukjent spiller',
   /** `liga.player.seasonTableHeading`. */
-  seasonTable: 'Sesong-tabell',
+  seasonTable: 'Sesongtabell',
   /** `liga.player.roundsHeading`. */
   rounds: 'Runder',
   playRound: 'Spill runden',
   youDelivered: 'Du har levert',
   /** `liga.player.runde.missingSetup`. */
-  missingSetup: 'Runden mangler bane eller tee — admin fullfører oppsettet snart.',
+  missingSetup: 'Runden mangler bane eller tee — arrangøren fullfører oppsettet snart.',
   /** `liga.standings.colRank` og `colPlayer`. */
   colRank: '#',
   colPlayer: 'Spiller',
@@ -572,7 +572,7 @@ export const START_REFUSAL_TEXT = {
   need_marker: 'Du må velge minst én medspiller.',
   outside_window: 'Runden er ikke åpen for spill nå.',
   already_played: 'Du har allerede spilt denne runden.',
-  round_not_ready: 'Runden mangler bane eller tee — si fra til admin.',
+  round_not_ready: 'Runden mangler bane eller tee — si fra til arrangøren.',
   not_member: 'En eller flere av de valgte er ikke deltakere i ligaen.',
   members_failed: 'Klarte ikke å hente deltakerliste. Prøv igjen om litt.',
   league_not_active: 'Ligaen er ikke aktiv.',

@@ -26,7 +26,7 @@ describe('CupSetup', () => {
   it('viser cup-navn + lag-navn uten format-multiselect', () => {
     render(<CupSetup />);
 
-    expect(screen.getByLabelText(/cup-navn/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/cupnavn/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^lag 1$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^lag 2$/i)).toBeInTheDocument();
     // #1142: poengmål spørres ikke lenger om ved opprettelse.

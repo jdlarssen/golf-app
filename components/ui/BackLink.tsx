@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from './SmartLink';
 
 /**
@@ -22,7 +23,8 @@ export function BackLink({
   href: string;
   children?: ReactNode;
 }) {
-  const label = typeof children === 'string' ? children : 'Tilbake';
+  const t = useTranslations('common');
+  const label = typeof children === 'string' ? children : t('back');
   return (
     <SmartLink
       href={href}
