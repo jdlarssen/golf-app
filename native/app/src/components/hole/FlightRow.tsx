@@ -54,6 +54,8 @@ export type FlightRowProps = {
   initial: string;
   /** Slagene raden får på hullet. `null` = motoren kunne ikke svare. */
   extraStrokes: number | null;
+  /** Raden får ingen slag på noe hull i runden: bare da står «Scratch». */
+  scratchRound: boolean;
   score: number | null;
   par: number;
   /** Skinna taster denne raden nå. */
@@ -75,13 +77,17 @@ const WAITING_STATUS = 'venter';
 const NO_SCORE = '–';
 
 /**
- * Slagene raden får på hullet, som i designet: «Får 1 slag», eller «Scratch»
- * når den ikke får noen. Gir raden slag tilbake (plusshandicap), står
- * «Mister 1 slag» (#2635), med samme ord som skinna. Ingenting når motoren
- * ikke kan svare.
+ * Slagene raden får på hullet, som i designet: «Får 1 slag». «Scratch» står
+ * bare når raden ikke får slag på noe hull i runden; en spiller som får slag
+ * på andre hull, har ingen linje på et hull uten (eierens valg, avvik fra
+ * #2385). Gir raden slag tilbake (plusshandicap), står «Mister 1 slag»
+ * (#2635), med samme ord som skinna. Ingenting når motoren ikke kan svare.
  */
-export function strokesLine(extraStrokes: number | null): string | null {
-  if (extraStrokes === 0) return 'Scratch';
+export function strokesLine(
+  extraStrokes: number | null,
+  scratchRound: boolean,
+): string | null {
+  if (extraStrokes === 0) return scratchRound ? 'Scratch' : null;
   return railStrokesLine(extraStrokes)?.text ?? null;
 }
 
@@ -166,6 +172,7 @@ export function FlightRow({
   a11yName,
   initial,
   extraStrokes,
+  scratchRound,
   score,
   par,
   active,
@@ -182,7 +189,7 @@ export function FlightRow({
   const status = score != null ? null : WAITING_STATUS;
   const subLine = active
     ? [note, ACTIVE_STATUS].filter(Boolean).join(' · ')
-    : [note, strokesLine(extraStrokes), status].filter(Boolean).join(' · ');
+    : [note, strokesLine(extraStrokes, scratchRound), status].filter(Boolean).join(' · ');
   // En som ikke har tastet ennå og ikke er på tur, får en blek skive.
   const waiting = !active && score == null;
   const a11yLabel = `${
