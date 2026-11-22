@@ -17,6 +17,7 @@ import { MAX_PERSONAL_CUP_PLAYERS } from '../../../../lib/cup/limits';
 import { formatMessage } from './kavalkadeCopy';
 import { CUP_TEXT, matchStatusLabel } from './cupCopy';
 import { reportedDistance } from './endGameCopy';
+import { ownEntry } from './ownEntry';
 
 export const WITHDRAW_TEXT = {
   kicker: 'Trekk fra cupen',
@@ -228,32 +229,32 @@ const APP_FAILURES: Record<string, string> = {
 
 /** Hvorfor et trekk eller et valg ikke gikk. */
 export function withdrawFailureText(reason: string): string {
-  return APP_FAILURES[reason] ?? WITHDRAW_ERRORS[reason] ?? WITHDRAW_ERRORS.withdraw_failed;
+  return ownEntry(APP_FAILURES, reason) ?? ownEntry(WITHDRAW_ERRORS, reason) ?? WITHDRAW_ERRORS.withdraw_failed;
 }
 
 /** Hvorfor et bytte ikke gikk. */
 export function swapFailureText(reason: string): string {
-  const known = APP_FAILURES[reason] ?? SWAP_ERRORS[reason];
+  const known = ownEntry(APP_FAILURES, reason) ?? ownEntry(SWAP_ERRORS, reason);
   if (known) return formatMessage(known, { cap: MAX_PERSONAL_CUP_PLAYERS });
   return SWAP_ERRORS.swap_failed;
 }
 
 /** Hvorfor et sidepoeng ikke ble lagret. */
 export function sideAwardFailureText(reason: string, max?: number): string {
-  const known = APP_FAILURES[reason] ?? SIDE_AWARD_ERRORS[reason] ?? SIDE_AWARD_ERRORS.save_failed;
+  const known = ownEntry(APP_FAILURES, reason) ?? ownEntry(SIDE_AWARD_ERRORS, reason) ?? SIDE_AWARD_ERRORS.save_failed;
   return formatMessage(known, { max: max ?? 0 });
 }
 
 /** Hvorfor en kamp ikke ble avsluttet. */
 export function matchFinishFailureText(reason: string): string {
-  return APP_FAILURES[reason] ?? MATCH_FINISH_ERRORS[reason] ?? MATCH_FINISH_ERRORS.finish_failed;
+  return ownEntry(APP_FAILURES, reason) ?? ownEntry(MATCH_FINISH_ERRORS, reason) ?? MATCH_FINISH_ERRORS.finish_failed;
 }
 
 /** Hvorfor cupen ikke ble avsluttet. `matches` er kampene som fortsatt pågår. */
 export function cupFinishFailureText(reason: string, matches: string): string {
   if (reason === 'match_finish_failed') return formatMessage(FINISH_TEXT.failed, { matches });
   if (reason === 'not_started') return 'Cupen er ikke startet ennå, så du kan ikke avslutte den.';
-  return APP_FAILURES[reason] ?? FINISH_TEXT.failedPlain;
+  return ownEntry(APP_FAILURES, reason) ?? FINISH_TEXT.failedPlain;
 }
 
 /** «Nærmest pinnen (hull 7), GIR (hull 12)», som i nettets hint. */
@@ -273,7 +274,7 @@ export function boardFailureText(reason: string): string {
 /** Når skjermen ikke fikk lest det den skal vise. */
 export function manageLoadFailureText(reason: string): string {
   if (reason === 'not_found') return MANAGE_APP_TEXT.notFound;
-  return APP_FAILURES[reason] ?? MANAGE_APP_TEXT.loadFailed;
+  return ownEntry(APP_FAILURES, reason) ?? MANAGE_APP_TEXT.loadFailed;
 }
 
 /** «Singel 1 · man. 2. nov → halveres», ordrett som på nettsiden. */

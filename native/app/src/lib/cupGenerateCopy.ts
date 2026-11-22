@@ -5,6 +5,7 @@ import type { CupBundleFormat } from '../../../../lib/cup/cupPairing';
 import { MAX_PERSONAL_CUP_MATCHES, MAX_PERSONAL_CUP_PLAYERS } from '../../../../lib/cup/limits';
 import { setupLoadFailureText } from './cupSetupCopy';
 import { formatMessage } from './kavalkadeCopy';
+import { ownEntry } from './ownEntry';
 
 export const GENERATE_TEXT = {
   door: 'Fordel & generer',
@@ -86,7 +87,8 @@ export function generateFailureText(reason: string): string {
   if (reason === 'too_many_players') {
     return formatMessage(GENERATE_FAILURES.too_many_players, { max: MAX_PERSONAL_CUP_PLAYERS });
   }
-  if (GENERATE_FAILURES[reason]) return GENERATE_FAILURES[reason];
+  const known = ownEntry(GENERATE_FAILURES, reason);
+  if (known) return known;
   // Koder nettets kart ikke har (en håndlaget plan) får samme setning som der.
   const app = setupLoadFailureText(reason);
   return app === setupLoadFailureText('load_failed') ? GENERATE_FAILURES.insert_failed : app;
@@ -108,7 +110,8 @@ const START_FAILURES: Record<string, string> = {
 };
 
 export function startFailureText(reason: string): string {
-  if (START_FAILURES[reason]) return START_FAILURES[reason];
+  const known = ownEntry(START_FAILURES, reason);
+  if (known) return known;
   const app = setupLoadFailureText(reason);
   return app === setupLoadFailureText('load_failed') ? START_FAILURES.start_failed : app;
 }

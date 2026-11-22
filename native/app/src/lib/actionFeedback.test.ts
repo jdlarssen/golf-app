@@ -13,6 +13,7 @@ import {
   describeFailure,
   describeSubmitFailure,
 } from './actionFeedback';
+import source from '../../../../messages/no.json';
 import { OFFLINE_NOTE } from './rosterCopy';
 import { WEB_LINK_TEXT } from './webLink';
 
@@ -76,6 +77,10 @@ const SUBMIT_REASON_MAP = {
 const SUBMIT_REASONS = Object.keys(SUBMIT_REASON_MAP) as readonly SubmitCardFailure[];
 
 describe('describeSubmitFailure', () => {
+  it('«velg en markør» er nettets setning, ord for ord', () => {
+    expect(describeSubmitFailure('marker_required')).toBe(source.game.submit.errors.marker_required);
+  });
+
   it.each(SUBMIT_REASONS)('gir en ferdig setning for «%s»', (reason) => {
     expect(isFinishedSentence(describeSubmitFailure(reason))).toBe(true);
   });
