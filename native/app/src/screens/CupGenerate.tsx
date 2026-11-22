@@ -68,8 +68,12 @@ export function CupGenerate({ route, navigation }: ScreenProps<'CupGenerate'>) {
   // lesing ville vist dem som om de alltid var der. Da ville neste forsøk laget alle på nytt.
   const sentFrom = useRef<number | null>(null);
 
+  // Bare det sist startede kallet får skrive: et eldre svar kan komme etter et nyere.
+  const loadSeq = useRef(0);
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     const result = await fetchCupGenerate(cupId);
+    if (seq !== loadSeq.current) return;
     if (result.ok) {
       setView(result.view);
       setFailure(null);

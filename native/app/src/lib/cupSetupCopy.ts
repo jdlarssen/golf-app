@@ -6,6 +6,7 @@
 import type { CupJoinDecision } from '../../../../lib/cup/joinValidation';
 import { formatMessage } from './kavalkadeCopy';
 import { formatHcpNb } from './profileCopy';
+import { ownEntry } from './ownEntry';
 
 /** `cup.join`. */
 export const JOIN_TEXT = {
@@ -238,33 +239,33 @@ const APP_FAILURES: Record<string, string> = {
 
 /** Hvorfor et steg i veiviseren ikke gikk. */
 export function detailsFailureText(reason: string): string {
-  return APP_FAILURES[reason] ?? DETAILS_ERRORS[reason] ?? DETAILS_ERRORS.cup_insert_failed;
+  return ownEntry(APP_FAILURES, reason) ?? ownEntry(DETAILS_ERRORS, reason) ?? DETAILS_ERRORS.cup_insert_failed;
 }
 
 export function planFailureText(reason: string): string {
   if (reason === 'plan_matches_not_updated') {
     return 'Oppsettet er lagret, men kampene fikk det ikke. Prøv igjen.';
   }
-  return APP_FAILURES[reason] ?? PLAN_ERRORS[reason] ?? 'Klarte ikke å lagre oppsettet. Prøv igjen.';
+  return ownEntry(APP_FAILURES, reason) ?? ownEntry(PLAN_ERRORS, reason) ?? 'Klarte ikke å lagre oppsettet. Prøv igjen.';
 }
 
 export function awardFailureText(reason: string): string {
-  return APP_FAILURES[reason] ?? AWARD_ERRORS[reason] ?? AWARD_ERRORS.save_failed;
+  return ownEntry(APP_FAILURES, reason) ?? ownEntry(AWARD_ERRORS, reason) ?? AWARD_ERRORS.save_failed;
 }
 
 export function participantFailureText(reason: string, cap: number): string {
-  const known = APP_FAILURES[reason] ?? PARTICIPANT_ERRORS[reason] ?? PARTICIPANT_ERRORS.plan_save_failed;
+  const known = ownEntry(APP_FAILURES, reason) ?? ownEntry(PARTICIPANT_ERRORS, reason) ?? PARTICIPANT_ERRORS.plan_save_failed;
   return formatMessage(known, { cap });
 }
 
 export function setupLoadFailureText(reason: string): string {
   if (reason === 'not_found') return SETUP_APP_TEXT.notFound;
-  return APP_FAILURES[reason] ?? SETUP_APP_TEXT.loadFailed;
+  return ownEntry(APP_FAILURES, reason) ?? SETUP_APP_TEXT.loadFailed;
 }
 
 /** Hvorfor påmeldingen ikke gikk. */
 export function joinFailureText(reason: string, cap: number): string {
-  const known = APP_FAILURES[reason] ?? JOIN_ERRORS[reason] ?? JOIN_ERRORS.save_failed;
+  const known = ownEntry(APP_FAILURES, reason) ?? ownEntry(JOIN_ERRORS, reason) ?? JOIN_ERRORS.save_failed;
   return formatMessage(known, { cap });
 }
 
@@ -274,7 +275,7 @@ export function joinStatusText(status: string): string | null {
 
 export function joinLoadFailureText(reason: string): string {
   if (reason === 'not_found') return JOIN_ERRORS.not_found;
-  return APP_FAILURES[reason] ?? SETUP_APP_TEXT.joinFailed;
+  return ownEntry(APP_FAILURES, reason) ?? SETUP_APP_TEXT.joinFailed;
 }
 
 /** Setningen for en tilstand uten knapp å melde seg på med. */

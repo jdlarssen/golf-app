@@ -160,8 +160,9 @@ export function readTeamPageView(body: unknown): AppTeamPageResponse | null {
   }
 }
 
-/** Laget ditt i runden, eller hvorfor det ikke er noe lag å vise. */
 /**
+ * Laget ditt i runden, eller hvorfor det ikke er noe lag å vise.
+ *
  * `visit: false` er en titt (#2840): raden «Laget ditt» leser laget uten at plassen
  * bekreftes eller lagvarslene merkes lest. Det gjør bare lagsiden selv.
  */

@@ -97,7 +97,12 @@ let stopActive: (() => void) | null = null;
 export function startSyncTriggers(): () => void {
   if (stopActive) return stopActive;
 
-  const networkSub = addNetworkStateListener(applyNetworkState);
+  // En hendelse som kommer før den første lesingen er svart, er nyere enn lesingen.
+  let eventSeen = false;
+  const networkSub = addNetworkStateListener((state) => {
+    eventSeen = true;
+    applyNetworkState(state);
+  });
 
   const appStateSub = AppState.addEventListener(
     'change',
@@ -113,7 +118,9 @@ export function startSyncTriggers(): () => void {
   // Les nett-status én gang så flagget ikke står optimistisk feil, og ta en
   // drain med det samme (webbens «try once on bootstrap»).
   void getNetworkStateAsync()
-    .then(applyNetworkState)
+    .then((state) => {
+      if (!eventSeen) applyNetworkState(state);
+    })
     .catch(() => {
       // Klarer vi ikke lese nettstatus, står det optimistiske flagget — en
       // mislykket drain er billigere enn en kø som aldri prøver.

@@ -308,7 +308,8 @@ export function isParStableford(
  * Spillerne i den rekkefølgen `player_0…player_n` skal bære dem.
  *
  * Lag-modi: sortert på lag stigende (stabilt innen laget), og spillere UTEN
- * lag-tildeling droppes — nøyaktig som webbens `orderedPayload`. Å sende dem
+ * lag-tildeling droppes. Webben sender dem som `unassigned_player_id` (#2210) og beholder
+ * dem på lista; appen gjør ikke det, og oppsummeringen advarer om dem. Å sende dem
  * med tom lag-verdi ville gitt `bad_team` fra den delte validatoren i både
  * draft og publish, altså en feilmelding i stedet for et halvferdig utkast.
  *

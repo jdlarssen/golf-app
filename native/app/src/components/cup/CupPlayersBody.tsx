@@ -3,7 +3,7 @@
 // `cup_signup` åpner. Kandidatene er serverens (`getCupCandidatePlayers`), og det er
 // serveren som sjekker dem. En startet cup har en låst liste.
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import type { AppCupEnrolled, AppCupParticipantsView } from '../../../../../lib/cup/appCupSetupView';
 import { PICKER_VISIBLE_ROWS, pickerRows } from '../../../../../lib/league/pickerRows';
@@ -53,8 +53,12 @@ export function CupPlayersBody({
   const [search, setSearch] = useState('');
   const [showAll, setShowAll] = useState(false);
 
+  // Bare det sist startede kallet får skrive: et eldre svar kan komme etter et nyere.
+  const loadSeq = useRef(0);
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     const result = await fetchCupParticipants(cupId);
+    if (seq !== loadSeq.current) return;
     if (result.ok) {
       setView(result.view);
       setFailure(null);

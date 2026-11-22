@@ -45,6 +45,12 @@ function slotLabel(slot: PrizeSlot, ld: number, ctp: number): string {
 const SILVER = '#CFC9BD';
 const BRONZE = '#B07C52';
 const MEDAL = 22;
+const MAX_ENTRY_FEE_KR = 100000;
+
+/** Basens tak: beløpet over 100 000 kr stoppes i feltet i stedet for å klampes stille ved lagring. */
+export function capEntryFee(digits: string): string {
+  return Number(digits) > MAX_ENTRY_FEE_KR ? String(MAX_ENTRY_FEE_KR) : digits;
+}
 
 export function FeeAndPrizes({
   mode,
@@ -77,7 +83,7 @@ export function FeeAndPrizes({
           testID="create-entry-fee"
           style={[ui.input, styles.numbers]}
           value={fee.entryFee}
-          onChangeText={(entryFee) => onFee({ entryFee: entryFee.replace(/[^0-9]/g, '') })}
+          onChangeText={(entryFee) => onFee({ entryFee: capEntryFee(entryFee.replace(/[^0-9]/g, '')) })}
           keyboardType="number-pad"
           // Basens tak er 100 000 kr (den delte parseren klamper dit).
           maxLength={6}

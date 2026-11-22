@@ -41,8 +41,12 @@ export function CupFinish({ route, navigation }: ScreenProps<'CupFinish'>) {
   const [error, setError] = useState<string | null>(null);
   const [matchDone, setMatchDone] = useState(false);
 
+  // Bare det sist startede kallet får skrive: et eldre svar kan komme etter et nyere.
+  const loadSeq = useRef(0);
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     const result = await fetchCupManage(cupId);
+    if (seq !== loadSeq.current) return result.ok ? result.view : null;
     if (result.ok) {
       setView(result.view);
       setFailure(null);

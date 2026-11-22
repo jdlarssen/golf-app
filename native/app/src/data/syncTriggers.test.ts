@@ -2,7 +2,7 @@
 // AppState stubbes: det er overgangen til `active` som skal fyre, ikke
 // bakgrunn og ikke inaktiv.
 import { AppState, type AppStateStatus } from 'react-native';
-import { addNetworkStateListener, type NetworkState } from 'expo-network';
+import { addNetworkStateListener, getNetworkStateAsync, type NetworkState } from 'expo-network';
 import { addConnectivityListener, addForegroundListener, startSyncTriggers } from './syncTriggers';
 
 jest.mock('./syncWorker', () => ({ drainQueue: jest.fn(async () => undefined) }));
@@ -63,6 +63,34 @@ describe('addConnectivityListener', () => {
 
     // Rydd opp: flagget tilbake til tilkoblet, og triggerne stoppes.
     applyState({ isConnected: true });
+    stopTriggers();
+    appState.mockRestore();
+  });
+});
+
+describe('startSyncTriggers: nettstatus ved oppstart', () => {
+  it('den første lesingen overskriver ikke en hendelse som kom før den svarte', async () => {
+    const appState = jest
+      .spyOn(AppState, 'addEventListener')
+      .mockReturnValue({ remove: jest.fn() } as unknown as ReturnType<typeof AppState.addEventListener>);
+    let answerRead: (s: NetworkState) => void = () => {};
+    (getNetworkStateAsync as jest.Mock).mockImplementationOnce(
+      () => new Promise<NetworkState>((resolve) => { answerRead = resolve; }),
+    );
+    const listener = jest.fn();
+    const stopListening = addConnectivityListener(listener);
+    const stopTriggers = startSyncTriggers();
+    const calls = (addNetworkStateListener as jest.Mock).mock.calls;
+    const applyEvent = calls[calls.length - 1][0] as (s: NetworkState) => void;
+
+    applyEvent({ isConnected: false });
+    answerRead({ isConnected: true }); // den eldre lesingen svarer sist
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(listener.mock.calls).toEqual([[false]]);
+
+    applyEvent({ isConnected: true });
+    stopListening();
     stopTriggers();
     appState.mockRestore();
   });

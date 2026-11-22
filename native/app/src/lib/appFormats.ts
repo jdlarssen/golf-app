@@ -3,12 +3,12 @@
 // de heter på norsk.
 //
 // Webben har 22 aktive formater og trenger et intent-steg for å ordne dem.
-// Appen har færre (14 etter #2753), og en flat liste er riktigere native-IA (kontraktens Key
+// Appen har færre (15 etter #2753), og en flat liste er riktigere native-IA (kontraktens Key
 // Decision). Lista her er appens halvdel av den gaten — DB-halvdelen bor i
 // `data/formatCatalog.ts`, og et format må stå i BEGGE for å vises.
 //
 // **Etikettene er en håndkopi**, av samme grunn som `sideTournamentCopy.ts`:
-// `messages/no.json` er 341 KB for de 8 strengene appen trenger, og Metro
+// `messages/no.json` er 341 KB for de få strengene appen trenger, og Metro
 // tree-shaker ikke JSON. Prisen er drift, og `appFormats.test.ts` er
 // forsikringen — den leser `no.json` fra node-siden (testen bundles aldri) og
 // krever tegn-for-tegn likhet med `modes.<slug>`.

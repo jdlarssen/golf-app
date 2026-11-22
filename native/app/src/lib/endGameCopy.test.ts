@@ -108,6 +108,7 @@ describe('describeEndRoundFailure', () => {
     );
     expect(END_GAME_TEXT.withdrawLabel).toBe(source.game.finish.withdrawLabel);
     expect(END_GAME_TEXT.submitBusy).toBe(source.game.finish.finishPending);
+    expect(END_GAME_TEXT.ownCardAwaitsMarker).toBe(source.game.finish.ownCardAwaitsMarker);
   });
 
   it('bøyer kortet etter hvor mange som rakk å levere', () => {

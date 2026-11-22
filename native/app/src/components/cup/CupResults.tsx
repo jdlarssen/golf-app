@@ -121,9 +121,9 @@ export function CupResults({
                     {row.userId === userId ? (
                       <Text style={[styles.cardLabel, { color: colors.accentText }]}>{CUP_TEXT.yourPoints}</Text>
                     ) : null}
-                    {row.contributions.map((contribution) => (
+                    {row.contributions.map((contribution, index) => (
                       <Text
-                        key={contribution.type === 'match' ? contribution.gameId : `${contribution.type}-${contribution.holeNumber}`}
+                        key={`${contribution.type === 'match' ? contribution.gameId : `${contribution.type}-${contribution.holeNumber}`}-${index}`}
                         style={[styles.sub, { color: colors.muted }]}
                       >
                         {contributionLine(contribution)}
