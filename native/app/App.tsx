@@ -165,7 +165,7 @@ function ReadyApp({ session }: { session: Session | null }) {
   //
   // #2975: «ny versjon er klar» står rundt alt, også innloggingen. Leverandøren
   // har samme plass i begge grenene, så den beholder svaret over en innlogging.
-  // Arket er en `Modal` og kan stå hvor som helst i treet.
+  // Arket er en `Modal`; med en sesjon står det innenfor låsen (#2841).
   if (!session) {
     return (
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
@@ -182,10 +182,12 @@ function ReadyApp({ session }: { session: Session | null }) {
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <NewVersionProvider enabled>
-        <NewVersionSheet />
         {/* #1954 Del B: edge to edge, Android no longer shrinks the window for the keyboard. */}
         <KeyboardInset>
           <AppLockGate startLocked={startLocked} onUnlocked={onUnlocked}>
+            {/* #2975: arket står innenfor låsen. Låseskjermen monterer ikke barna,
+                så arket kan aldri legge seg over «Lås opp». */}
+            <NewVersionSheet />
             <OwnerGate key={session.user.id} userId={session.user.id}>
               <SessionProvider
                 value={{ userId: session.user.id, email: session.user.email ?? null }}
