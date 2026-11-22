@@ -19,7 +19,9 @@
 // and stale entries (including any authed HTML cached by the old v1 SW)
 // are evicted during activate.
 // v4 (#1350): precached offline document + `/` removed from the allowlist.
-const CACHE_VERSION = 'v4';
+// v5 (audit 2026-11-20): static assets are pruned (see trimStaticAssets); the
+// bump clears the chunks every earlier build left behind.
+const CACHE_VERSION = 'v5';
 const RUNTIME_CACHE = `golf-app-runtime-${CACHE_VERSION}`;
 
 // Locale prefixes that next-intl injects (keep in sync with i18n config).
@@ -112,6 +114,33 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// sw.js is the same file on every deploy, so the worker rarely re-installs and
+// the activate cleanup above rarely runs. Each build's hashed /_next/ chunks
+// would pile up in the runtime cache for good. Keep only the newest
+// MAX_STATIC_ASSETS of them (the Cache API lists requests in insertion order);
+// the offline documents are never touched.
+const MAX_STATIC_ASSETS = 200;
+let trimming = null;
+
+function trimStaticAssets() {
+  if (!trimming) {
+    trimming = (async () => {
+      try {
+        const cache = await caches.open(RUNTIME_CACHE);
+        const keys = await cache.keys();
+        const statics = keys.filter((req) => new URL(req.url).pathname.startsWith('/_next/'));
+        const excess = statics.length - MAX_STATIC_ASSETS;
+        for (let i = 0; i < excess; i++) await cache.delete(statics[i]);
+      } catch {
+        // Best effort: a failed trim only leaves a larger cache.
+      } finally {
+        trimming = null;
+      }
+    })();
+  }
+  return trimming;
+}
+
 function shouldCache(url) {
   // Cache same-origin Next.js static assets only.
   // Navigation HTML is handled separately with a stricter allowlist.
@@ -174,20 +203,23 @@ self.addEventListener('fetch', (event) => {
 
   // Cache-first for hashed static assets (/_next/*).
   if (url.pathname.startsWith('/_next/')) {
-    event.respondWith(
-      (async () => {
-        const cache = await caches.open(RUNTIME_CACHE);
-        const cached = await cache.match(request);
-        if (cached) return cached;
-        try {
-          const fresh = await fetch(request);
-          cache.put(request, fresh.clone());
-          return fresh;
-        } catch {
-          return Response.error();
-        }
-      })(),
-    );
+    const served = (async () => {
+      const cache = await caches.open(RUNTIME_CACHE);
+      const cached = await cache.match(request);
+      if (cached) return cached;
+      try {
+        const fresh = await fetch(request);
+        await cache.put(request, fresh.clone());
+        return fresh;
+      } catch {
+        return Response.error();
+      }
+    })();
+    event.respondWith(served);
+    // Pruned once the asset is stored; waitUntil keeps the worker alive.
+    if (typeof event.waitUntil === 'function') {
+      event.waitUntil(served.then(() => trimStaticAssets()));
+    }
   }
 });
 

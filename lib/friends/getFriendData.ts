@@ -15,6 +15,9 @@ export type FriendUser = {
   email: string;
 };
 
+/** The lookup row: `deleted_at` only decides who may be suggested. */
+type FriendUserRow = FriendUser & { deleted_at: string | null };
+
 export type FriendRequestRow = {
   /** friendships.id — brukes til godta/avslå/trekk. */
   id: string;
@@ -56,18 +59,24 @@ export async function getFriendData(userId: string): Promise<FriendData> {
 
   const allIds = [...new Set([...relatedIds, ...suggestion])];
   const byId = new Map<string, FriendUser>();
+  // Audit 2026-11-20: deleted accounts (anonymize_user keeps the row as
+  // «Slettet bruker», game_players still points at it) are never suggested.
+  const deletedIds = new Set<string>();
   if (allIds.length > 0) {
     // #2267: in slices, since a club-scale list passes the `.in()` URL limit.
     // A failed slice leaves no names, as a failed single lookup did.
     try {
-      const users = await readInChunks<FriendUser>(allIds, (slice) =>
+      const users = await readInChunks<FriendUserRow>(allIds, (slice) =>
         admin
           .from('users')
-          .select('id, name, nickname, email')
+          .select('id, name, nickname, email, deleted_at')
           .in('id', slice)
-          .returns<FriendUser[]>(),
+          .returns<FriendUserRow[]>(),
       );
-      for (const u of users) byId.set(u.id, u);
+      for (const { deleted_at, ...u } of users) {
+        byId.set(u.id, u);
+        if (deleted_at) deletedIds.add(u.id);
+      }
     } catch (e) {
       console.error('[getFriendData] user lookup failed', e);
     }
@@ -94,6 +103,7 @@ export async function getFriendData(userId: string): Promise<FriendData> {
       .map(withUser)
       .filter((r): r is FriendRequestRow => r !== null),
     suggestions: suggestion
+      .filter((id) => !deletedIds.has(id))
       .map(resolve)
       .filter((u): u is FriendUser => u !== null && Boolean(u.email))
       .sort(sortByName),

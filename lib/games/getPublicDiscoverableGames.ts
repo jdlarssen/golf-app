@@ -29,7 +29,7 @@ export async function getPublicDiscoverableGames(): Promise<
 > {
   const admin = getAdminClient();
 
-  const { data } = await admin
+  const { data, error } = await admin
     .from('games')
     .select(
       'id, name, short_id, scheduled_tee_off_at, registration_mode, status, signups_closed_at, signup_deadline, game_mode, mode_config, hole_segment, start_type, courses(name)',
@@ -51,6 +51,10 @@ export async function getPublicDiscoverableGames(): Promise<
         start_type: StartType;
       }>
     >();
+
+  // Audit 2026-11-20: a failed read is not «no tournaments». It throws, so
+  // /finn-turneringer shows its error screen (the landing page hides the block).
+  if (error) throw error;
 
   return (data ?? [])
     .filter((row) =>

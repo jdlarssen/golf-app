@@ -71,7 +71,7 @@ export default async function AvsluttLikevelPage({
   const supabase = await getServerClient();
   await requireAdmin(supabase);
 
-  const { data: game } = await supabase
+  const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
       'id, name, status, game_mode, mode_config, require_peer_approval, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name)',
@@ -91,6 +91,7 @@ export default async function AvsluttLikevelPage({
       courses: { name: string } | null;
     }>();
 
+  if (gameError) throw gameError;
   if (!game) notFound();
 
   if (game.status !== 'active') {
@@ -102,7 +103,7 @@ export default async function AvsluttLikevelPage({
     redirect({ href: `${detailPath}/avslutt`, locale });
   }
 
-  const { data: gamePlayers } = await getAdminClient()
+  const { data: gamePlayers, error: gamePlayersError } = await getAdminClient()
     .from('game_players')
     .select(
       'user_id, submitted_at, approved_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname, email)',
@@ -121,6 +122,9 @@ export default async function AvsluttLikevelPage({
         } | null;
       }[]
     >();
+  // Audit 2026-11-20: a failed read throws to the error screen; before, it
+  // looked like «nobody missing» and silently redirected (#1445).
+  if (gamePlayersError) throw gamePlayersError;
 
   // Allerede trukne er allerede ute av rangeringen — filtrer dem vekk.
   // endGame hopper over dem automatisk (#386). Lista er sperrens egen

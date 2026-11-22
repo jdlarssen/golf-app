@@ -393,7 +393,7 @@ describe('withdrawInvitation — frees the e-mail of an unfinished account (audi
   ] as const)('%s', async (_label, account, profile, deleted) => {
     supabaseMock = buildSupabaseMock([
       { data: { email: 'Ola_N@Example.test', accepted_at: null }, error: null }, // invitation
-      { data: null, error: null }, // invitation delete
+      { data: [{ id: 'inv-1' }], error: null }, // invitation delete
     ]);
     lookupUserByEmailMock.mockResolvedValue(account);
     const deleteUser = vi.fn(async () => ({ error: null }));
@@ -409,5 +409,22 @@ describe('withdrawInvitation — frees the e-mail of an unfinished account (audi
     expect(listUsers).not.toHaveBeenCalled();
     if (deleted) expect(deleteUser).toHaveBeenCalledWith('u-9');
     else expect(deleteUser).not.toHaveBeenCalled();
+  });
+});
+
+describe('withdrawInvitation — row check (audit 2026-11-20)', () => {
+  it('a delete that removed 0 rows says withdraw_failed and frees no account', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { email: 'ola@example.test', accepted_at: null }, error: null }, // invitation
+      { data: [], error: null }, // invitation delete: 0 rows
+    ]);
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { withdrawInvitation } = await import('./actions');
+
+    await expect(withdrawInvitation(fd({ id: 'inv-1' }))).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/admin/spillere?error=withdraw_failed');
+    expect(lookupUserByEmailMock).not.toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 });

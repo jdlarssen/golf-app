@@ -23,8 +23,9 @@ export function chunkIds<T>(ids: readonly T[], size = IN_CHUNK): T[][] {
 export async function readInChunks<R>(
   ids: readonly string[],
   read: (slice: string[]) => PromiseLike<{ data: R[] | null; error: unknown }>,
+  size = IN_CHUNK,
 ): Promise<R[]> {
-  const results = await Promise.all(chunkIds(ids).map((slice) => read(slice)));
+  const results = await Promise.all(chunkIds(ids, size).map((slice) => read(slice)));
   const rows: R[] = [];
   for (const { data, error } of results) {
     if (error) throw error;

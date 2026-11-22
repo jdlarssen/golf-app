@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 type Row = Record<string, unknown>;
 
-const gamesRows = vi.fn<() => { data: Row[] | null }>();
+const gamesRows = vi.fn<() => { data: Row[] | null; error?: { message: string } }>();
 const eqArg = vi.fn();
 const inArg = vi.fn();
 const isArg = vi.fn();
@@ -52,6 +52,17 @@ beforeEach(() => {
 });
 
 describe('getPublicDiscoverableGames', () => {
+  // Audit 2026-11-20: a failed read is not «no tournaments». The page sends
+  // the throw to its error screen; the landing page hides the block.
+  it('kaster når lesingen feiler, i stedet for å svare tom liste', async () => {
+    gamesRows.mockReturnValue({ data: null, error: { message: 'read failed' } });
+
+    const { getPublicDiscoverableGames } = await import(
+      './getPublicDiscoverableGames'
+    );
+    await expect(getPublicDiscoverableGames()).rejects.toThrow();
+  });
+
   it('returnerer tom liste når ingen offentlige spill finnes', async () => {
     gamesRows.mockReturnValue({ data: [] });
 

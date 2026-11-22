@@ -13,6 +13,8 @@ const coPlayers = Array.from({ length: 150 }, (_, i) => `u${i}`);
 
 /** The lookup of the slice that starts at the 101st person fails. */
 let failSecondSlice = false;
+/** Co-players whose account was deleted (anonymize_user sets deleted_at). */
+let deletedIds = new Set<string>();
 const fake = createAdminClientMock({
   respond: (op: QueryOp) => {
     if (op.table === 'friendships') {
@@ -21,7 +23,13 @@ const fake = createAdminClientMock({
     if (op.table === 'users') {
       const ids = op.filters.find((f) => f.op === 'in')?.value as string[];
       if (failSecondSlice && ids[0] === 'u100') return { data: null, error: { message: 'nede' } };
-      return { data: ids.map((id) => ({ id, name: `Navn ${id}`, nickname: null, email: `${id}@example.test` })) };
+      return {
+        data: ids.map((id) =>
+          deletedIds.has(id)
+            ? { id, name: 'Slettet bruker', nickname: null, email: `slettet+${id}@deleted.tornygolf.no`, deleted_at: '2026-11-01T10:00:00Z' }
+            : { id, name: `Navn ${id}`, nickname: null, email: `${id}@example.test`, deleted_at: null },
+        ),
+      };
     }
     throw new Error(`uventet tabell ${op.table}`);
   },
@@ -34,6 +42,7 @@ import { getFriendData } from './getFriendData';
 beforeEach(() => {
   fake.reset();
   failSecondSlice = false;
+  deletedIds = new Set();
 });
 
 describe('getFriendData', () => {
@@ -56,5 +65,17 @@ describe('getFriendData', () => {
     expect(data.friends).toEqual([]);
     expect(data.suggestions).toEqual([]);
     expect(log).toHaveBeenCalledWith('[getFriendData] user lookup failed', expect.anything());
+  });
+
+  // Audit 2026-11-20: a deleted account you once played with is no
+  // suggestion. Its row stays (game_players keeps it) as «Slettet bruker».
+  it('leaves deleted accounts out of the suggestions', async () => {
+    deletedIds = new Set(['u7', 'u8']);
+    const data = await getFriendData(ME);
+    const ids = data.suggestions.map((u) => u.id);
+    expect(ids).not.toContain('u7');
+    expect(ids).not.toContain('u8');
+    expect(data.suggestions).toHaveLength(147);
+    expect(data.suggestions.some((u) => u.name === 'Slettet bruker')).toBe(false);
   });
 });

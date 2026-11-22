@@ -1,5 +1,6 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { selectAllRows } from '@/lib/supabase/selectAllRows';
 import { playerName } from '@/lib/names/playerName';
 
 export type AdminClubRow = {
@@ -20,23 +21,34 @@ export type AdminClubRow = {
  * Fetches all groups + all group_members in two queries, then aggregates
  * member counts + owner names in JS to avoid N+1.
  *
+ * Audit 2026-11-20: a failed read throws (the page shows its error screen),
+ * never «no clubs» or «0 members». The members are read in pages, past
+ * PostgREST's 1 000-row cap.
+ *
  * Part of #50 (Klubb-eierskap, delegering & tilgangsstyring).
  */
 export async function getAllClubsForAdmin(): Promise<AdminClubRow[]> {
   const admin = getAdminClient();
 
-  const [groupsRes, membersRes] = await Promise.all([
+  const [groupsRes, allMembers] = await Promise.all([
     admin
       .from('groups')
       .select('id, name, short_id, member_cap, valid_until')
       .order('name', { ascending: true }),
-    admin
-      .from('group_members')
-      .select('group_id, role, user_id, users(name, nickname)'),
+    selectAllRows(
+      (from, to) =>
+        admin
+          .from('group_members')
+          .select('group_id, role, user_id, users(name, nickname)')
+          .order('group_id')
+          .order('user_id')
+          .range(from, to),
+      'getAllClubsForAdmin members',
+    ),
   ]);
 
+  if (groupsRes.error) throw groupsRes.error;
   const groups = groupsRes.data ?? [];
-  const allMembers = membersRes.data ?? [];
 
   // Aggregate per group
   return groups

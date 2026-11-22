@@ -5,6 +5,7 @@ import { getLocale } from 'next-intl/server';
 import { randomUUID } from 'node:crypto';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { expectAffected } from '@/lib/supabase/affectedRows';
 import { lookupUserByEmail } from '@/lib/users/lookupByEmail';
 import { requireAdmin } from '@/lib/admin/auth';
 import { sendInviteNotification } from '@/lib/mail/inviteNotification';
@@ -251,14 +252,19 @@ export async function withdrawInvitation(formData: FormData) {
   if (inv.accepted_at) redirect({ href: '/admin/spillere?error=withdraw_failed', locale });
 
   // Delete the invitations row via the cookie client (RLS lets admin do it).
-  const { error: delError } = await supabase
-    .from('invitations')
-    .delete()
-    .eq('id', id);
-  if (delError) {
-    console.error('[admin/spillere] invitation delete failed', delError);
-    redirect({ href: '/admin/spillere?error=withdraw_failed', locale });
+  // Audit 2026-11-20 (AGENTS.md trap 2): counted, so a delete that hit nothing
+  // never says «withdrawn» or frees the account below.
+  let withdrawn = false;
+  try {
+    expectAffected(
+      await supabase.from('invitations').delete().eq('id', id).select('id'),
+      '[admin/spillere] invitation delete',
+    );
+    withdrawn = true;
+  } catch (err) {
+    console.error('[admin/spillere] invitation delete failed', err);
   }
+  if (!withdrawn) redirect({ href: '/admin/spillere?error=withdraw_failed', locale });
 
   // If the invitee had requested a code (auth.users row exists) but never
   // completed their profile (public.users.profile_completed_at IS NULL),

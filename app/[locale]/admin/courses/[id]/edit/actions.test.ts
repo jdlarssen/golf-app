@@ -86,10 +86,10 @@ describe('restoreTee', () => {
         },
         error: null,
       },
-      // tee_boxes.update — restore
-      { error: null },
+      // tee_boxes.update — restore (row-counted, audit 2026-11-20)
+      { data: [{ id: teeId }], error: null },
       // courses.update — audit bump
-      { error: null },
+      { data: [{ id: courseId }], error: null },
     ]);
     setupAdminAuth();
 
@@ -463,6 +463,59 @@ describe('restoreTee', () => {
   });
 });
 
+describe('row checks and game caches (audit 2026-11-20)', () => {
+  const archivedTee = {
+    data: { id: teeId, course_id: courseId, archived_at: '2026-05-20T10:00:00.000Z' },
+    error: null,
+  };
+
+  it('restoreTee: a tee restore that touched 0 rows says db_tees, not restored', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      archivedTee,
+      // tee_boxes.update — RLS or a concurrent delete: no error, no rows
+      { data: [], error: null },
+    ]);
+    setupAdminAuth();
+
+    const { restoreTee } = await import('./actions');
+    await expect(restoreTee(courseId, teeId)).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe(`/admin/courses/${courseId}/edit?error=db_tees`);
+    expect(supabaseMock.__fromCalls.filter((c) => c.table === 'courses')).toHaveLength(0);
+  });
+
+  it('restoreTee: a course audit bump that touched 0 rows says db_course', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      archivedTee,
+      { data: [{ id: teeId }], error: null },
+      { data: [], error: null },
+    ]);
+    setupAdminAuth();
+
+    const { restoreTee } = await import('./actions');
+    await expect(restoreTee(courseId, teeId)).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe(`/admin/courses/${courseId}/edit?error=db_course`);
+  });
+
+  it('deleteCourse: a delete that removed 0 rows says delete_failed, not deleted', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, email: 'admin@example.com', name: 'Jørgen' }, error: null },
+      { data: [], error: null },
+      { data: [], error: null },
+    ]);
+    setupAdminAuth();
+
+    const { deleteCourse } = await import('./actions');
+    await expect(deleteCourse(courseId)).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/admin/courses?error=delete_failed');
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+});
+
 describe('deleteCourse — admin path', () => {
   it('admin deletes course not in use: redirects with status=deleted', async () => {
     supabaseMock = buildSupabaseMock([
@@ -471,7 +524,7 @@ describe('deleteCourse — admin path', () => {
       // games.select — no usage
       { data: [], error: null },
       // courses.delete (admin uses request-scoped supabase as writeClient)
-      { error: null },
+      { data: [{ id: courseId }], error: null },
     ]);
     setupAdminAuth();
 

@@ -393,7 +393,10 @@ async function GamesLedger({ view }: { view: LedgerView }) {
   const t = await getTranslations('admin.games');
   const tStatus = await getTranslations('gameStatus');
   const locale = await getLocale();
-  const { data: rosterRows } = await readRosterRows(gameIds);
+  // Audit 2026-11-20: a failed read throws, as DefaultRounds does, never
+  // «0 spillere» on every row.
+  const { data: rosterRows, error: rosterError } = await readRosterRows(gameIds);
+  if (rosterError) throw rosterError;
   const playerCounts = new Map<string, number>();
   for (const r of rosterRows ?? []) {
     playerCounts.set(r.game_id, (playerCounts.get(r.game_id) ?? 0) + 1);

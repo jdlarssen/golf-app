@@ -4,6 +4,8 @@ import { revalidateTag } from 'next/cache';
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
+import { expectAffected } from '@/lib/supabase/affectedRows';
+import { expireCourseGameCaches } from '@/lib/games/expireCourseGameCaches';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { MAX_TEE_BOXES } from '@/app/[locale]/admin/courses/constants';
@@ -113,6 +115,8 @@ export async function updateCourse(
   // #1045: rename/holes/tees all feed isPubliclyEligible → an edit can (un)qualify
   // a course or change its /baner card. Invalidate before redirect.
   revalidateTag('public-courses', 'max');
+  // Audit 2026-11-20: the cached games on this course carry its tee numbers.
+  await expireCourseGameCaches(supabase, courseId);
 
   redirect({ href: `/admin/courses?status=updated&name=${encodeURIComponent(name)}`, locale });
 }
@@ -145,28 +149,45 @@ export async function restoreTee(
   if (tee.course_id !== courseId) redirect({ href: `${editPath}?error=tee_not_found`, locale });
   if (tee.archived_at === null) redirect({ href: `${editPath}?error=tee_not_archived`, locale });
 
-  const { error: restoreError } = await supabase
-    .from('tee_boxes')
-    .update({ archived_at: null })
-    .eq('id', teeId);
-  if (restoreError) {
-    console.error('[restoreTee] tee restore failed', restoreError);
-    redirect({ href: `${editPath}?error=db_tees`, locale });
+  // Audit 2026-11-20 (AGENTS.md trap 2): a write RLS refuses, or one whose
+  // tee vanished, answers `error: null` with 0 rows. Counted, so the page never
+  // says «restored» for nothing.
+  let teeRestored = false;
+  try {
+    expectAffected(
+      await supabase
+        .from('tee_boxes')
+        .update({ archived_at: null })
+        .eq('id', teeId)
+        .select('id'),
+      '[restoreTee] tee restore',
+    );
+    teeRestored = true;
+  } catch (err) {
+    console.error('[restoreTee] tee restore failed', err);
   }
+  if (!teeRestored) redirect({ href: `${editPath}?error=db_tees`, locale });
 
   // Restore is a course change → bump audit fields on courses, same pattern
   // as updateCourse.
-  const { error: courseUpdateError } = await supabase
-    .from('courses')
-    .update({
-      updated_at: new Date().toISOString(),
-      updated_by: role.userId,
-    })
-    .eq('id', courseId);
-  if (courseUpdateError) {
-    console.error('[restoreTee] course audit update failed', courseUpdateError);
-    redirect({ href: `${editPath}?error=db_course`, locale });
+  let courseBumped = false;
+  try {
+    expectAffected(
+      await supabase
+        .from('courses')
+        .update({
+          updated_at: new Date().toISOString(),
+          updated_by: role.userId,
+        })
+        .eq('id', courseId)
+        .select('id'),
+      '[restoreTee] course audit update',
+    );
+    courseBumped = true;
+  } catch (err) {
+    console.error('[restoreTee] course audit update failed', err);
   }
+  if (!courseBumped) redirect({ href: `${editPath}?error=db_course`, locale });
 
   // Invalidate route caches so CourseForm's tee-list fetch refetches fresh:
   // without this, the next render of the edit page may serve the cached
@@ -206,14 +227,19 @@ export async function deleteCourse(courseId: string) {
   }
 
   // course_holes and tee_boxes cascade via FK on the courses table.
-  const { error: deleteError } = await supabase
-    .from('courses')
-    .delete()
-    .eq('id', courseId);
-  if (deleteError) {
-    console.error('[deleteCourse] delete failed', { courseId, error: deleteError });
-    redirect({ href: '/admin/courses?error=delete_failed', locale });
+  // Audit 2026-11-20 (AGENTS.md trap 2): a delete RLS refuses answers
+  // `error: null` with 0 rows; the page must not say «deleted».
+  let deleted = false;
+  try {
+    expectAffected(
+      await supabase.from('courses').delete().eq('id', courseId).select('id'),
+      '[deleteCourse] delete',
+    );
+    deleted = true;
+  } catch (err) {
+    console.error('[deleteCourse] delete failed', { courseId, error: err });
   }
+  if (!deleted) redirect({ href: '/admin/courses?error=delete_failed', locale });
 
   // #1045: a deleted course must drop off `/baner` immediately, not after the
   // 24t revalidate. Before redirect.

@@ -181,15 +181,25 @@ export async function cancelGameInvitation(
     redirect({ href: `${detailPath}?error=cancel_missing_invitation`, locale });
   }
 
-  const { error } = await supabase
-    .from('invitations')
-    .delete()
-    .eq('id', invitationId)
-    .eq('game_id', gameId);
-  if (error) {
-    console.error('[cancelGameInvitation] delete failed', error);
-    redirect({ href: `${detailPath}?error=cancel_failed`, locale });
+  // Audit 2026-11-20 (AGENTS.md trap 2): a delete RLS refuses, or one that
+  // finds nothing, answers `error: null` with 0 rows. Counted, so the page
+  // never says «invitasjonen er avbrutt» for nothing.
+  let cancelled = false;
+  try {
+    expectAffected(
+      await supabase
+        .from('invitations')
+        .delete()
+        .eq('id', invitationId)
+        .eq('game_id', gameId)
+        .select('id'),
+      '[cancelGameInvitation] delete',
+    );
+    cancelled = true;
+  } catch (err) {
+    console.error('[cancelGameInvitation] delete failed', err);
   }
+  if (!cancelled) redirect({ href: `${detailPath}?error=cancel_failed`, locale });
 
   expireGameCache(gameId);
   redirect({ href: `${detailPath}?status=invite_cancelled`, locale });

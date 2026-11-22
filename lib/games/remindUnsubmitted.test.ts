@@ -64,7 +64,11 @@ let db: {
   stamp: QueryResponse;
   /** Settes for å bevise at en DB-feil bobler opp som et kast, ikke som `ok`. */
   gameLookupThrows: boolean;
+  /** Audit 2026-11-20: reads that answer with `error` instead of throwing. */
+  readError: 'game' | 'players' | 'scores' | null;
 };
+
+const READ_ERROR = { data: null, error: { message: 'read failed' } };
 
 function player(
   user_id: string,
@@ -97,12 +101,14 @@ function respond(op: QueryOp): QueryResponse {
 
   if (op.table === 'games' && op.single) {
     if (db.gameLookupThrows) throw new Error('connection reset');
+    if (db.readError === 'game') return READ_ERROR;
     return { data: value('id') === GAME_ID ? db.game : null };
   }
   // Eneste andre games-spørring er #1466-oppslaget etter back9-verter.
   if (op.table === 'games') return { data: db.back9Hosts };
   // Serves the page window like PostgREST does, capped at 1 000 rows (#1894).
   if (op.table === 'scores') {
+    if (db.readError === 'scores') return READ_ERROR;
     const [from, to] = op.range ?? [0, db.scores.length];
     return { data: db.scores.slice(from, Math.min(to + 1, from + 1000)) };
   }
@@ -111,7 +117,9 @@ function respond(op: QueryOp): QueryResponse {
   if (op.filters.some((f) => f.column === 'game_id' && f.op === 'in')) {
     return { data: db.undeliveredSiblings };
   }
-  if (op.table === 'game_players') return { data: db.players };
+  if (op.table === 'game_players') {
+    return db.readError === 'players' ? READ_ERROR : { data: db.players };
+  }
   throw new Error(`uventet spørring: ${op.kind} ${op.table}`);
 }
 
@@ -181,6 +189,7 @@ beforeEach(() => {
     undeliveredSiblings: [],
     stamp: { data: [] },
     gameLookupThrows: false,
+    readError: null,
   };
 });
 
@@ -488,4 +497,20 @@ describe('feil fra databasen', () => {
     await expect(previewReminder(GAME_ID)).rejects.toThrow('connection reset');
     await expect(sendReminders(GAME_ID)).rejects.toThrow('connection reset');
   });
+});
+
+describe('a read that answers with an error (audit 2026-11-20)', () => {
+  // A failed read is not «nobody to remind» or «game not found»: the page and
+  // the route send it to their error handling instead of a false 0.
+  it.each(['game', 'players', 'scores'] as const)(
+    'the %s read throws instead of counting 0 targets',
+    async (which) => {
+      db.readError = which;
+
+      await expect(previewReminder(GAME_ID)).rejects.toThrow();
+      await expect(sendReminders(GAME_ID)).rejects.toThrow();
+      expect(reminderMock).not.toHaveBeenCalled();
+      expect(writes()).toHaveLength(0);
+    },
+  );
 });

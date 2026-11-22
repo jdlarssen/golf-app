@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 type Row = Record<string, unknown>;
 
-const playerRows = vi.fn<() => { data: Row[] | null }>();
-const requestRows = vi.fn<() => { data: Row[] | null }>();
-const openGamesRows = vi.fn<() => { data: Row[] | null }>();
-const clubGamesRows = vi.fn<() => { data: Row[] | null }>();
-const friendGamesRows = vi.fn<() => { data: Row[] | null }>();
-const myClubsRows = vi.fn<() => { data: Row[] | null }>();
+const playerRows = vi.fn<() => { data: Row[] | null; error?: { message: string } }>();
+const requestRows = vi.fn<() => { data: Row[] | null; error?: { message: string } }>();
+const openGamesRows = vi.fn<() => { data: Row[] | null; error?: { message: string } }>();
+const clubGamesRows = vi.fn<() => { data: Row[] | null; error?: { message: string } }>();
+const friendGamesRows = vi.fn<() => { data: Row[] | null; error?: { message: string } }>();
+const myClubsRows = vi.fn<() => { data: Row[] | null; error?: { message: string } }>();
 const notInArg = vi.fn();
 const inArg = vi.fn();
 const eqArg = vi.fn();
@@ -98,6 +98,7 @@ vi.mock('@/lib/supabase/admin', () => ({
 const mockGetFriendIds = vi.fn<(userId: string) => Promise<string[]>>();
 vi.mock('@/lib/friends/getFriendIds', () => ({
   getFriendIds: (userId: string) => mockGetFriendIds(userId),
+  readFriendIds: (userId: string) => mockGetFriendIds(userId),
 }));
 
 // #2276: a games row passes the per-row gate only when its signup window is
@@ -245,6 +246,69 @@ describe('getDiscoverableGames', () => {
 
     expect(notInArg).toHaveBeenCalledWith('id', 'in', expect.stringContaining('g1'));
     expect(notInArg).toHaveBeenCalledWith('id', 'in', expect.stringContaining('g2'));
+  });
+
+  // Audit 2026-11-20: a failed read is not «no tournaments». The page and the
+  // app route send the throw to their error screen.
+  it.each([
+    ['game_players', playerRows],
+    ['game_registration_requests', requestRows],
+    ['group_members', myClubsRows],
+    ['games (open)', openGamesRows],
+  ] as const)('kaster når %s-lesingen feiler', async (_label, rows) => {
+    playerRows.mockReturnValue({ data: [] });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({ data: [] });
+    rows.mockReturnValue({ data: null, error: { message: 'read failed' } });
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    await expect(getDiscoverableGames('u1')).rejects.toThrow();
+  });
+
+  it('kaster når venne-oppslaget feiler', async () => {
+    playerRows.mockReturnValue({ data: [] });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({ data: [] });
+    mockGetFriendIds.mockRejectedValue(new Error('read failed'));
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    await expect(getDiscoverableGames('u1')).rejects.toThrow();
+  });
+
+  it('kaster når klubb- eller venne-lesingen feiler', async () => {
+    playerRows.mockReturnValue({ data: [] });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({ data: [] });
+    myClubsRows.mockReturnValue({ data: [{ group_id: 'c1', groups: { valid_until: null } }] });
+    clubGamesRows.mockReturnValue({ data: null, error: { message: 'read failed' } });
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    await expect(getDiscoverableGames('u1')).rejects.toThrow();
+
+    clubGamesRows.mockReturnValue({ data: [] });
+    mockGetFriendIds.mockResolvedValue(['f1']);
+    friendGamesRows.mockReturnValue({ data: null, error: { message: 'read failed' } });
+    await expect(getDiscoverableGames('u1')).rejects.toThrow();
+  });
+
+  // Audit 2026-11-20: the NOT IN list rides in the URL. Only scheduled rounds
+  // can show up in the lists, so finished ones stay out of it and the URL no
+  // longer grows with every round the player has played.
+  it('holder ferdige spill utenfor ekskluderings-lista i URL-en', async () => {
+    playerRows.mockReturnValue({
+      data: [
+        { game_id: 'g-planlagt', games: { status: 'scheduled' } },
+        { game_id: 'g-ferdig', games: { status: 'finished' } },
+      ],
+    });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({ data: [] });
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    await getDiscoverableGames('u1');
+
+    expect(notInArg).toHaveBeenCalledWith('id', 'in', expect.stringContaining('g-planlagt'));
+    expect(notInArg).not.toHaveBeenCalledWith('id', 'in', expect.stringContaining('g-ferdig'));
   });
 
   it('ekskluderer også spill med pending/approved request', async () => {

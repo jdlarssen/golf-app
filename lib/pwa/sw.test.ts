@@ -51,7 +51,9 @@ function bootSw() {
     match: async (key: string | { url: string }) => store.get(absolute(key)),
     put,
     addAll,
-    keys: async () => [],
+    // The Cache API lists requests in insertion order.
+    keys: async () => [...store.keys()].map((url) => ({ url })),
+    delete: vi.fn(async (key: string | { url: string }) => store.delete(absolute(key))),
   };
   const caches = {
     open: vi.fn(async () => cache),
@@ -124,6 +126,28 @@ function bootSw() {
       });
       if (!responded) throw new Error('fetch handler did not respond');
       return responded;
+    },
+    /** A non-navigation GET for a hashed static asset; resolves after waitUntil work. */
+    async asset(pathname: string): Promise<FakeResponse> {
+      const request = {
+        url: absolute(pathname),
+        method: 'GET',
+        mode: 'no-cors',
+        headers: { get: () => null },
+      };
+      let responded: Promise<FakeResponse> | undefined;
+      const pending: Promise<unknown>[] = [];
+      listeners.fetch({
+        request,
+        respondWith: (value: Promise<FakeResponse>) => {
+          responded = value;
+        },
+        waitUntil: (value: Promise<unknown>) => pending.push(value),
+      });
+      if (!responded) throw new Error('fetch handler did not respond');
+      const res = await responded;
+      await Promise.all(pending);
+      return res;
     },
     async install(): Promise<void> {
       const pending: Promise<unknown>[] = [];
@@ -227,5 +251,40 @@ describe('sw.js — offline documents', () => {
     expect(html).toContain(heading);
     expect(html).toContain('data-testid="offline-retry"');
     expect(html).toContain('data-testid="offline-fallback"');
+  });
+});
+
+// Audit 2026-11-20: sw.js is the same file on every deploy, so the worker never
+// re-installs and the activate cleanup never runs. Every build's hashed chunks
+// piled up in the runtime cache for good. The cache now keeps the newest
+// static assets only.
+describe('sw.js — static asset pruning', () => {
+  it('keeps at most the newest static assets, and never drops the offline documents', async () => {
+    const sw = bootSw();
+    await sw.install();
+    sw.online('chunk');
+
+    for (let i = 0; i < 260; i++) {
+      await sw.asset(`/_next/static/chunks/build-${i}.js`);
+    }
+
+    const keys = [...sw.store.keys()];
+    const chunks = keys.filter((k) => k.includes('/_next/'));
+    expect(chunks.length).toBeLessThanOrEqual(200);
+    expect(chunks.length).toBeGreaterThan(0);
+    // The newest asset stays; the oldest one is gone.
+    expect(keys).toContain(`${ORIGIN}/_next/static/chunks/build-259.js`);
+    expect(keys).not.toContain(`${ORIGIN}/_next/static/chunks/build-0.js`);
+    expect(keys).toContain(`${ORIGIN}/offline.html`);
+    expect(keys).toContain(`${ORIGIN}/offline-en.html`);
+  });
+
+  it('still serves a cached asset without touching the network', async () => {
+    const sw = bootSw();
+    sw.seed('/_next/static/chunks/a.js', 'cached-a');
+
+    const res = await sw.asset('/_next/static/chunks/a.js');
+
+    expect(res.tag).toBe('cached-a');
   });
 });

@@ -136,7 +136,7 @@ async function loadReminderContext(
   admin: ReturnType<typeof getAdminClient>,
   gameId: string,
 ): Promise<ReminderContext | ReminderBlocked> {
-  const { data: game } = await admin
+  const { data: game, error: gameError } = await admin
     .from('games')
     .select(
       'id, name, status, game_mode, hole_segment, tournament_id, scheduled_tee_off_at, created_at',
@@ -144,6 +144,10 @@ async function loadReminderContext(
     .eq('id', gameId)
     .maybeSingle<GameRow>();
 
+  // Audit 2026-11-20: error ≠ absence (#1445). A failed read throws, so the
+  // page shows its error screen and the route a 500, not «not found» or a
+  // false «nobody to remind».
+  if (gameError) throw gameError;
   if (!game) return { ok: false, reason: 'not_found' };
   if (game.status !== 'active') return { ok: false, reason: 'not_active' };
 
@@ -171,6 +175,9 @@ async function loadReminderContext(
       'remindUnsubmitted scores',
     ),
   ]);
+
+  if (playersRes.error) throw playersRes.error;
+  if (scoresRes.error) throw scoresRes.error;
 
   // Withdrawn players stay in on purpose: `filledHolesByPlayer` needs the whole
   // team to pick its row owner, and the target selection drops them itself.

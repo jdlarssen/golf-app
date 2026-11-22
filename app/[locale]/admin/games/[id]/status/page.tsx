@@ -130,6 +130,10 @@ export default async function GameStatusPage({
     ),
   ]);
 
+  // Audit 2026-11-20: a failed read throws to the error screen (#1441), never
+  // «0 av 0 levert» or every player «ikke startet».
+  if (playersRes.error) throw playersRes.error;
+  if (scoresRes.error) throw scoresRes.error;
   const players = playersRes.data ?? [];
   const scores = scoresRes.data ?? [];
 

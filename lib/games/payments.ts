@@ -135,7 +135,7 @@ type UnpaidPlayerRow = {
  * read with `client`, the players with the admin client (their e-mail).
  */
 export async function remindUnpaidPlayers(client: Client, gameId: string): Promise<{ count: number }> {
-  const { data: game } = await client
+  const { data: game, error: gameError } = await client
     .from('games')
     .select('id, name, status, entry_fee_kr, payment_link')
     .eq('id', gameId)
@@ -147,14 +147,18 @@ export async function remindUnpaidPlayers(client: Client, gameId: string): Promi
       payment_link: string | null;
     }>();
 
+  // Audit 2026-11-20: a failed read throws (both callers turn it into an error
+  // line or a 500), never a false «nobody owes».
+  if (gameError) throw gameError;
   // No fee, nothing to remind about.
   if (!game || game.entry_fee_kr <= 0) return { count: 0 };
 
-  const { data: players } = await getAdminClient()
+  const { data: players, error: playersError } = await getAdminClient()
     .from('game_players')
     .select('user_id, paid_at, withdrawn_at, users!game_players_user_id_fkey(email, name, locale, is_guest)')
     .eq('game_id', gameId)
     .returns<UnpaidPlayerRow[]>();
+  if (playersError) throw playersError;
 
   const targets = (players ?? []).filter((p) =>
     isRemindable({ paid: p.paid_at != null, withdrawn: p.withdrawn_at != null, isGuest: p.users?.is_guest ?? false }),

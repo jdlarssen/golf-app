@@ -312,9 +312,34 @@ describe('endGameCore — validation gates', () => {
     expectTailUntouched();
   });
 
+  // Audit 2026-11-20: a failed read is not «not active» or «no players». It
+  // answers db_finish («Klarte ikke å avslutte spillet. Prøv igjen.»).
+  it('a failed game read answers db_finish, not not_active', async () => {
+    const client = buildSupabaseMock([{ data: null, error: { message: 'read failed' } }]);
+
+    const result = await endGameCore(client as never, GAME_ID, ACTOR);
+
+    expect(result).toEqual({ ok: false, reason: 'db_finish' });
+    expect(callSeq(client)).not.toContain('game_players.select');
+    expectTailUntouched();
+  });
+
+  it('a failed roster read answers db_finish, not no_players', async () => {
+    const client = buildSupabaseMock([
+      gameRow(),
+      { data: null, error: { message: 'read failed' } },
+    ]);
+
+    const result = await endGameCore(client as never, GAME_ID, ACTOR);
+
+    expect(result).toEqual({ ok: false, reason: 'db_finish' });
+    expect(callSeq(client)).not.toContain('games.update');
+    expectTailUntouched();
+  });
+
   it.each([
     ['an empty roster', [] as unknown[]],
-    ['a failed roster query (data null)', null],
+    ['a roster query with data null and no error', null],
   ])('refuses with no_players on %s', async (_label, rows) => {
     const client = buildSupabaseMock([
       gameRow(),
