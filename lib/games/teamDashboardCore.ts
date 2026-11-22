@@ -664,8 +664,21 @@ export async function addTeamMemberCore(
   ) {
     return { ok: false, error: 'not_found' };
   }
-  // A row being replaced is rejected or withdrawn, so it never holds a seat.
-  const taken = team.filter((c) => c.status === 'pending' || c.status === 'approved').length;
+  // A row being replaced is rejected or withdrawn, so it never holds a seat;
+  // nor does an old invitation for someone seated on another team.
+  const elsewhere = await readSeatedElsewhere(
+    admin,
+    game.id,
+    userId,
+    team.map((c) => c.user_id),
+  );
+  if (!elsewhere.ok) {
+    console.error('[addTeamMember] seat lookup failed', { gameId: game.id, error: elsewhere.error });
+    return { ok: false, error: 'db_error' };
+  }
+  const taken = team.filter(
+    (c) => (c.status === 'pending' || c.status === 'approved') && !elsewhere.ids.has(c.user_id),
+  ).length;
   if (taken >= teamSize - 1) {
     return { ok: false, error: 'team_full' };
   }
@@ -812,6 +825,39 @@ type CaptainRequestRow = {
  * error boundary and the app route's 500 take it from here. The display-name
  * read further down stays best effort, as it always was.
  */
+/**
+ * Team rows whose user has a seat that is not on the captain's team: another
+ * team number, or a seat while the captain has none. The organiser placed
+ * them, and an old invitation does not hold a seat on this team. The team page
+ * leaves them out and «add a friend» does not count them, so the two always
+ * agree on the free seats (audit 2026-11-20).
+ */
+async function readSeatedElsewhere(
+  admin: ReturnType<typeof getAdminClient>,
+  gameId: string,
+  captainUserId: string | null,
+  memberUserIds: string[],
+): Promise<{ ok: true; ids: Set<string> } | { ok: false; error: { message?: string } }> {
+  if (memberUserIds.length === 0) return { ok: true, ids: new Set() };
+  const userIds = captainUserId ? [captainUserId, ...memberUserIds] : memberUserIds;
+  const { data, error } = await admin
+    .from('game_players')
+    .select('user_id, team_number')
+    .eq('game_id', gameId)
+    .in('user_id', userIds)
+    .returns<{ user_id: string; team_number: number | null }[]>();
+  if (error) return { ok: false, error };
+  const seatByUser = new Map((data ?? []).map((p) => [p.user_id, p]));
+  const captainSeat = captainUserId ? seatByUser.get(captainUserId) : undefined;
+  const ids = new Set(
+    memberUserIds.filter((id) => {
+      const seat = seatByUser.get(id);
+      return seat !== undefined && (!captainSeat || seat.team_number !== captainSeat.team_number);
+    }),
+  );
+  return { ok: true, ids };
+}
+
 function throwRead(what: string, error: { message?: string }): never {
   throw new Error(`[loadTeamDashboard] ${what} read failed: ${error.message ?? 'unknown'}`);
 }
@@ -934,7 +980,17 @@ export async function loadTeamDashboard(
   if (allRowsError) throwRead('team rows', allRowsError);
   const rows = allRows ?? [];
   const captainRow = rows.find((r) => r.is_team_captain);
-  const memberRows = rows.filter((r) => !r.is_team_captain);
+
+  // Your own row always shows, so the page never loses the person looking at it.
+  const childRows = rows.filter((r) => !r.is_team_captain);
+  const elsewhere = await readSeatedElsewhere(
+    admin,
+    game.id,
+    captainRow?.user_id ?? null,
+    childRows.map((r) => r.user_id),
+  );
+  if (!elsewhere.ok) throwRead('team seats', elsewhere.error);
+  const memberRows = childRows.filter((r) => r.id === myRow.id || !elsewhere.ids.has(r.user_id));
 
   // Display names, best effort. #2207: a teammate without a name shows as the
   // masked address — the full one never leaves the server.

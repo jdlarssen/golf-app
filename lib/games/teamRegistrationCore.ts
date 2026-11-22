@@ -726,6 +726,8 @@ export async function deleteTeamRosterRow(opts: {
     return 'db_error';
   }
   const teamNumber = captainPlayer?.team_number ?? null;
+  // Intended 'ok' with no delete: also when the captain's request is pending
+  // and the organiser removed the captain's roster row — no team seat is left.
   if (teamNumber === null) return 'ok';
 
   // 0 rows is normal: manual approval, or the teammate never took the seat.
