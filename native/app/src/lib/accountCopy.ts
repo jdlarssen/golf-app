@@ -189,6 +189,8 @@ export const ACCOUNT_TEXT = {
   // tilbake til. #1906 bygde rommet, `goBack()` lander i det, og avviket er
   // dermed borte — appen sier nå det samme som webben.
   backLabel: 'Tilbake til profil',
+  // Under grunnen når vi ikke fikk spurt om kontoen kan slettes: spør på nytt.
+  retry: 'Prøv igjen',
   deletedHeading: 'Dette vil bli slettet',
   deletedBullets: [
     'Brukerprofilen din (navn, kallenavn, handicap)',
