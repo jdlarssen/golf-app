@@ -347,11 +347,12 @@ describe('runFinishPipeline — the slow tail after the response (audit 2026-11-
     expect(finishDerivedGamesMock).toHaveBeenCalledTimes(1);
     expect(persistResultSummariesMock).toHaveBeenCalledTimes(1);
     expect(persistScoreDifferentialsMock).toHaveBeenCalledTimes(1);
+    // The audit row stays in the action: a throwing round report must not lose it.
+    expect(logAdminEventMock).toHaveBeenCalledTimes(1);
     for (const slow of [
       notifyAchievementUnlocksMock,
       notifyFriendsOfAchievementsMock,
       generateAndPersistRoundReportMock,
-      logAdminEventMock,
       notifyPlayersGameFinishedMock,
       sendGameFinishedNotificationMock,
       spawnWeeklyRepeatMock,
@@ -408,10 +409,10 @@ describe('runFinishPipeline — the tail', () => {
       finishDerivedGamesMock,
       persistResultSummariesMock,
       persistScoreDifferentialsMock,
+      logAdminEventMock,
       notifyAchievementUnlocksMock,
       notifyFriendsOfAchievementsMock,
       generateAndPersistRoundReportMock,
-      logAdminEventMock,
       notifyPlayersGameFinishedMock,
       buildGameFinishedRecipientsMock,
       sendGameFinishedNotificationMock,

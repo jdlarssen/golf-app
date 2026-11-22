@@ -121,8 +121,8 @@ export type RunFinishPipelineInput = {
   logContext?: string;
   /**
    * Audit 2026-11-20: where the SLOW, best-effort part of the tail runs
-   * (achievement notices, the AI round report, the audit row, the
-   * «Resultatet er klart» notices and mail, the weekly repeat). The web finish
+   * (achievement notices, the AI round report, the «Resultatet er klart»
+   * notices and mail, the weekly repeat). The audit row stays in the action. The web finish
    * passes Next's `after()`, so the server action returns right after the
    * persistence steps: Next flushes `revalidateTag` only when the action
    * returns, and until then every board reads the cached «active» game.
@@ -208,7 +208,7 @@ export async function runFinishPipeline(
   supabase: SupabaseClient<Database>,
   input: RunFinishPipelineInput,
 ): Promise<RunFinishPipelineResult> {
-  const { game, endedAt, logContext = 'finishPipeline' } = input;
+  const { game, endedAt, actor, auditExtras, logContext = 'finishPipeline' } = input;
 
   // Claim before any work — see the file header. 0 rows back = someone else
   // owns this finish.
@@ -239,6 +239,20 @@ export async function runFinishPipeline(
   // persistScoreDifferentials for fullstendig begrunnelse.
   await persistScoreDifferentials(game.id);
 
+  // The audit row stays in the action (audit 2026-11-20): a throwing round
+  // report in the deferred part must not lose it.
+  await logAdminEvent({
+    actorId: actor.id,
+    actorName: actor.name,
+    eventType: 'game.finished',
+    targetType: 'game',
+    targetId: game.id,
+    // #1488 (K1): `auditExtras` carries the side-winners caller's
+    // `{ sideTournament: true, sideWinners }` so the audit payload is
+    // byte-identical to the old inline action.
+    payload: { gameName: game.name, ...auditExtras },
+  });
+
   // Audit 2026-11-20: everything below is slow and best-effort. With `defer`
   // it runs after the response, so the finish returns (and its cache expiry
   // reaches the boards) without waiting for the AI report and the mail.
@@ -259,14 +273,7 @@ export async function runFinishPipeline(
 
 /** The slow, best-effort part of the tail (see `defer`), in its documented order. */
 async function runSlowTail(input: RunFinishPipelineInput): Promise<void> {
-  const {
-    game,
-    players,
-    actor,
-    suppressPerGameNotifications = false,
-    auditExtras,
-    logContext = 'finishPipeline',
-  } = input;
+  const { game, players, suppressPerGameNotifications = false, logContext = 'finishPipeline' } = input;
 
   // #947: best-effort bragd-varsel til spillere som låste opp et øyeblikk
   // (hole-in-one/eagle/turkey/snowman) i runden. Feiler aldri ut avslutningen.
@@ -282,18 +289,6 @@ async function runSlowTail(input: RunFinishPipelineInput): Promise<void> {
   // klart»-mailen — feiler den (manglende nøkkel, tynn data, SDK-feil)
   // fortsetter avslutningen som i dag, bare uten referat.
   const { report: roundReport } = await generateAndPersistRoundReport(game.id);
-
-  await logAdminEvent({
-    actorId: actor.id,
-    actorName: actor.name,
-    eventType: 'game.finished',
-    targetType: 'game',
-    targetId: game.id,
-    // #1488 (K1): `auditExtras` carries the side-winners caller's
-    // `{ sideTournament: true, sideWinners }` so the audit payload is
-    // byte-identical to the old inline action.
-    payload: { gameName: game.name, ...auditExtras },
-  });
 
   // #1501: cup-avslutningen undertrykker de to reveal-signalene per kamp —
   // cup-mailen er reveal-signalet der. Vanlig enkeltspill-avslutning kjører
