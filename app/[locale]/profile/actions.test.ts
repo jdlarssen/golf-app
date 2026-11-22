@@ -9,7 +9,7 @@ import {
  * Unit tests for profile server-actions.
  *
  * Scoped to the trap-#2 fix in updateProfile: a 0-row UPDATE (no matching
- * users row) must redirect to error=unknown, not silently report success.
+ * users row) must come back as error 'unknown', not silently report success.
  */
 
 const redirectMock = makeLocaleRedirectMock();
@@ -46,6 +46,8 @@ const validForm = fd({
   level: 'normal',
 });
 
+const IDLE = { error: null };
+
 function lastRedirect(): string | undefined {
   const arg = redirectMock.mock.calls.at(-1)?.[0];
   if (arg === undefined) return undefined;
@@ -63,7 +65,7 @@ beforeEach(() => {
 });
 
 describe('updateProfile — trap #2: 0-row UPDATE treated as failure', () => {
-  it('redirects to error=unknown when the UPDATE matches 0 rows', async () => {
+  it('returns error unknown when the UPDATE matches 0 rows, and stays on the form', async () => {
     // Simulate PostgREST returning no rows (user not found / RLS blocked write)
     supabaseMock = buildSupabaseMock([{ data: [], error: null }]);
     supabaseMock.auth.getUser = vi.fn(async () => ({
@@ -73,9 +75,10 @@ describe('updateProfile — trap #2: 0-row UPDATE treated as failure', () => {
 
     const { updateProfile } = await import('./actions');
 
-    await expect(updateProfile(validForm)).rejects.toBeInstanceOf(RedirectError);
+    // A refusal comes back to the form, which keeps what was typed (audit 2026-11-20).
+    await expect(updateProfile(IDLE, validForm)).resolves.toEqual({ error: 'unknown' });
 
-    expect(lastRedirect()).toBe('/profile?error=unknown');
+    expect(lastRedirect()).toBeUndefined();
   });
 });
 
@@ -88,7 +91,7 @@ describe('updateProfile — asks back only the id (#2207)', () => {
     }));
 
     const { updateProfile } = await import('./actions');
-    await expect(updateProfile(validForm)).rejects.toBeInstanceOf(RedirectError);
+    await expect(updateProfile(IDLE, validForm)).rejects.toBeInstanceOf(RedirectError);
 
     const selects = supabaseMock.__fromCalls.filter(
       (c) => c.table === 'users' && c.method === 'select',
@@ -118,7 +121,7 @@ describe('updateProfile — recomputes frozen course handicaps after a hcp edit'
       level: 'normal',
     });
 
-    await expect(updateProfile(form)).rejects.toBeInstanceOf(RedirectError);
+    await expect(updateProfile(IDLE, form)).rejects.toBeInstanceOf(RedirectError);
 
     expect(recomputeMock).toHaveBeenCalledWith('user-1', -2.2);
   });
@@ -132,7 +135,7 @@ describe('updateProfile — recomputes frozen course handicaps after a hcp edit'
 
     const { updateProfile } = await import('./actions');
 
-    await expect(updateProfile(validForm)).rejects.toBeInstanceOf(RedirectError);
+    await expect(updateProfile(IDLE, validForm)).resolves.toEqual({ error: 'unknown' });
 
     expect(recomputeMock).not.toHaveBeenCalled();
   });
@@ -155,7 +158,7 @@ describe('updateProfile — #1064 empty gender preserves the existing value', ()
       level: 'normal',
     });
 
-    await expect(updateProfile(form)).rejects.toBeInstanceOf(RedirectError);
+    await expect(updateProfile(IDLE, form)).rejects.toBeInstanceOf(RedirectError);
 
     const updateCall = supabaseMock.__fromCalls.find(
       (c) => c.table === 'users' && c.method === 'update',
@@ -180,8 +183,8 @@ describe('updateProfile — #1064 empty gender preserves the existing value', ()
       level: 'normal',
     });
 
-    await expect(updateProfile(form)).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe('/profile?error=gender_required');
+    await expect(updateProfile(IDLE, form)).resolves.toEqual({ error: 'gender_required' });
+    expect(lastRedirect()).toBeUndefined();
   });
 
   it('still saves a valid gender value when the form provides one', async () => {
@@ -193,7 +196,7 @@ describe('updateProfile — #1064 empty gender preserves the existing value', ()
 
     const { updateProfile } = await import('./actions');
 
-    await expect(updateProfile(validForm)).rejects.toBeInstanceOf(RedirectError);
+    await expect(updateProfile(IDLE, validForm)).rejects.toBeInstanceOf(RedirectError);
 
     const updateCall = supabaseMock.__fromCalls.find(
       (c) => c.table === 'users' && c.method === 'update',

@@ -6,10 +6,10 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
-import { Banner } from '@/components/ui/Banner';
 import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { CourseForm } from '@/app/[locale]/admin/courses/CourseForm';
+import { courseFormErrorMessages } from '@/lib/courses/courseFormState';
 import { createCourse } from '@/app/[locale]/admin/courses/new/actions';
 import { getServerClient } from '@/lib/supabase/server';
 import { withCourseParam } from '@/lib/courses/similarCoursesPanel';
@@ -30,7 +30,6 @@ import { withCourseParam } from '@/lib/courses/similarCoursesPanel';
 // du lagrer herfra, velges også når du går tilbake til spillet (?bane=).
 
 type SearchParams = Promise<{
-  error?: string | string[];
   status?: string | string[];
   name?: string | string[];
   next?: string | string[];
@@ -62,7 +61,6 @@ export default async function OpprettBanePage({
   // Bare interne stier slipper gjennom (samme regel som createCourse).
   const next = safeInternalPath(first(sp.next)) ?? undefined;
   const status = first(sp.status);
-  const errorCode = first(sp.error);
 
   // Åpnet fra Klubbhuset (#2487): tilbake går dit, og merket følger med
   // gjennom skjemaet (feil-retur, kvittering, «Opprett en bane til»).
@@ -75,12 +73,12 @@ export default async function OpprettBanePage({
     next ? `/opprett-bane?next=${encodeURIComponent(next)}` : '/opprett-bane',
   );
 
-  // Resolve error message from catalog; unknown codes render no banner.
-  const errorKey = errorCode
-    ? (`errors.${errorCode}` as Parameters<typeof t>[0])
-    : undefined;
-  const errorMessage =
-    errorKey && t.has(errorKey) ? t(errorKey) : undefined;
+  // A refused save comes back to the form as a code (audit 2026-11-20); the
+  // copy for each is read here. A code with no text shows the generic one.
+  const errorMessages = courseFormErrorMessages((code) => {
+    const key = `errors.${code}` as Parameters<typeof t>[0];
+    return t.has(key) ? t(key) : undefined;
+  }, t('errors.db_course'));
 
   // Suksess-visning: bekreftelse + veier videre. Ingen skjema (rent kort).
   if (status === 'created') {
@@ -133,8 +131,7 @@ export default async function OpprettBanePage({
     );
   }
 
-  // Bevar ?next= gjennom feil/suksess slik at bruker kan returnere til spillet.
-  const redirectBase = createAnotherHref;
+  // Bevar ?next= gjennom suksess slik at bruker kan returnere til spillet.
   const successRedirect = keepOrigin(
     next
       ? `/opprett-bane?status=created&next=${encodeURIComponent(next)}`
@@ -154,17 +151,11 @@ export default async function OpprettBanePage({
         </p>
       </div>
 
-      {errorMessage && (
-        <div className="mt-4">
-          <Banner tone="error">{errorMessage}</Banner>
-        </div>
-      )}
-
       <div className="mt-3.5">
         <CourseForm
           action={createCourse}
+          errorMessages={errorMessages}
           submitLabel={t('door.submitLabel')}
-          redirectBase={redirectBase}
           successRedirect={successRedirect}
           similarCourses={{ kind: 'wizard', next }}
         />

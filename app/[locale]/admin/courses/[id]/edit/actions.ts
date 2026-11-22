@@ -7,23 +7,35 @@ import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { MAX_TEE_BOXES } from '@/app/[locale]/admin/courses/constants';
-import { parseCourseHolesAndTees } from '@/lib/courses/parseCourseForm';
+import { parseCourseHolesAndTees, type ParsedCourseForm } from '@/lib/courses/parseCourseForm';
+import {
+  CourseFormRefusal,
+  refuseCourseForm,
+  type CourseFormState,
+} from '@/lib/courses/courseFormState';
 
-export async function updateCourse(courseId: string, formData: FormData) {
+/**
+ * A refused save comes back as `{ error }` so the form keeps the edits
+ * (audit 2026-11-20); before, it redirected to `?error=` and the page reloaded
+ * the stored course over them. Success still redirects.
+ */
+export async function updateCourse(
+  courseId: string,
+  _prev: CourseFormState,
+  formData: FormData,
+): Promise<CourseFormState> {
   const supabase = await getServerClient();
   const role = await requireAdmin(supabase);
   const locale = await getLocale();
 
-  const editPath = `/admin/courses/${courseId}/edit`;
-
-  const fail = (code: string): never =>
-    redirect({ href: `${editPath}?error=${code}`, locale });
-
-  const { name, nineHoles, holes, teeBoxes } = parseCourseHolesAndTees(
-    formData,
-    MAX_TEE_BOXES,
-    fail,
-  );
+  let parsed: ParsedCourseForm;
+  try {
+    parsed = parseCourseHolesAndTees(formData, MAX_TEE_BOXES, refuseCourseForm);
+  } catch (err) {
+    if (err instanceof CourseFormRefusal) return { error: err.code };
+    throw err;
+  }
+  const { name, nineHoles, holes, teeBoxes } = parsed;
 
   // Eksisterende ikke-arkiverte tees. Arkiverte hopes over slik at
   // toDelete-utregningen ikke prøver å «slette» dem på nytt på hver lagring
@@ -35,7 +47,7 @@ export async function updateCourse(courseId: string, formData: FormData) {
     .is('archived_at', null);
   if (existingTeesError) {
     console.error('[updateCourse] existing tees read failed', existingTeesError);
-    redirect({ href: `${editPath}?error=db_load`, locale });
+    return { error: 'db_load' };
   }
 
   const existingIds = new Set((existingTees ?? []).map((t) => t.id));
@@ -55,7 +67,7 @@ export async function updateCourse(courseId: string, formData: FormData) {
       .in('tee_box_id', toDelete);
     if (gameRefsError) {
       console.error('[updateCourse] game refs read failed', gameRefsError);
-      redirect({ href: `${editPath}?error=db_load`, locale });
+      return { error: 'db_load' };
     }
     const inUseIds = new Set(
       (gameRefs ?? [])
@@ -92,10 +104,10 @@ export async function updateCourse(courseId: string, formData: FormData) {
     // #2484: the RPC refuses to change the hole count once the course is used
     // in a round (any status), so par 10–18 of a played course never shift.
     if (rpcError.message?.includes('nine_holes_locked')) {
-      redirect({ href: `${editPath}?error=hole_count_locked`, locale });
+      return { error: 'hole_count_locked' };
     }
     console.error('[updateCourse] update_course_with_layout failed', rpcError);
-    redirect({ href: `${editPath}?error=db_course`, locale });
+    return { error: 'db_course' };
   }
 
   // #1045: rename/holes/tees all feed isPubliclyEligible → an edit can (un)qualify

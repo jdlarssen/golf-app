@@ -314,7 +314,7 @@ describe('restoreTee', () => {
     formData.set('tee_0_cr_mens', '70.0');
 
     const { updateCourse } = await import('./actions');
-    await expect(updateCourse(courseId, formData)).rejects.toBeInstanceOf(
+    await expect(updateCourse(courseId, { error: null }, formData)).rejects.toBeInstanceOf(
       RedirectError,
     );
 
@@ -370,9 +370,10 @@ describe('restoreTee', () => {
     formData.set('tee_0_cr_mens', '70.0');
 
     const { updateCourse } = await import('./actions');
-    await expect(updateCourse(courseId, formData)).rejects.toBeInstanceOf(
-      RedirectError,
-    );
+    // A refusal comes back to the form, which keeps the edits (audit 2026-11-20).
+    await expect(updateCourse(courseId, { error: null }, formData)).resolves.toEqual({
+      error: 'db_course',
+    });
 
     // Atomicity is enforced in Postgres; here we prove the TS path routes through
     // the RPC and surfaces a localized error rather than a partial multi-write.
@@ -386,9 +387,7 @@ describe('restoreTee', () => {
         (c) => c.name === 'update_course_with_layout',
       ),
     ).toBeDefined();
-    expect(lastRedirect()).toBe(
-      `/admin/courses/${courseId}/edit?error=db_course`,
-    );
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 
   it('#2484: sends p_nine_holes with the 9-hole course expanded to 18 holes', async () => {
@@ -399,7 +398,7 @@ describe('restoreTee', () => {
     setupAdminAuth();
 
     const { updateCourse } = await import('./actions');
-    await expect(updateCourse(courseId, buildNineHoleFormData())).rejects.toBeInstanceOf(
+    await expect(updateCourse(courseId, { error: null }, buildNineHoleFormData())).rejects.toBeInstanceOf(
       RedirectError,
     );
 
@@ -410,7 +409,7 @@ describe('restoreTee', () => {
     expect(lastRedirect()).toMatch(/\/admin\/courses\?status=updated/);
   });
 
-  it('#2484: a refused hole-count change on a used course redirects with error=hole_count_locked', async () => {
+  it('#2484: a refused hole-count change on a used course returns hole_count_locked', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null }, // gate
       { data: [], error: null }, // existing tees
@@ -422,11 +421,11 @@ describe('restoreTee', () => {
     }) as unknown as typeof supabaseMock.rpc;
 
     const { updateCourse } = await import('./actions');
-    await expect(updateCourse(courseId, buildNineHoleFormData())).rejects.toBeInstanceOf(
-      RedirectError,
-    );
+    await expect(
+      updateCourse(courseId, { error: null }, buildNineHoleFormData()),
+    ).resolves.toEqual({ error: 'hole_count_locked' });
 
-    expect(lastRedirect()).toBe(`/admin/courses/${courseId}/edit?error=hole_count_locked`);
+    expect(redirectMock).not.toHaveBeenCalled();
     expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 

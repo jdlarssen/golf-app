@@ -32,7 +32,6 @@ import { formatDate } from '@/lib/i18n/format';
 import { ChevronRightIcon } from '@/components/icons';
 
 type SearchParams = Promise<{
-  error?: string | string[];
   profile?: string | string[];
   next?: string | string[];
 }>;
@@ -80,10 +79,6 @@ export default async function ProfilePage({
   const canEnrollPasskey = await getPasskeyEnrollAccess();
 
   const params = await searchParams;
-  const errorCode = first(params.error);
-  const errorMessage = errorCode && t.has(`errors.${errorCode}` as Parameters<typeof t>[0])
-    ? t(`errors.${errorCode}` as Parameters<typeof t>[0])
-    : errorCode ? t('errors.unknown') : undefined;
   const profileUpdated = first(params.profile) === 'updated';
   const nextSafe = safeInternalPath(first(params.next));
 
@@ -102,7 +97,7 @@ export default async function ProfilePage({
       </Suspense>
 
       <Suspense fallback={<ProfileFormSkeleton />}>
-        <ProfileFormCard errorMessage={errorMessage} next={nextSafe} />
+        <ProfileFormCard next={nextSafe} />
       </Suspense>
 
       <div className="mt-6">
@@ -206,13 +201,7 @@ async function AccountActions() {
   );
 }
 
-async function ProfileFormCard({
-  errorMessage,
-  next,
-}: {
-  errorMessage: string | undefined;
-  next: string | null;
-}) {
+async function ProfileFormCard({ next }: { next: string | null }) {
   const locale = await getLocale();
   const t = await getTranslations('profile');
 
@@ -244,11 +233,6 @@ async function ProfileFormCard({
 
   return (
     <Card>
-      {errorMessage && (
-        <div className="mb-4">
-          <Banner tone="error">{errorMessage}</Banner>
-        </div>
-      )}
       <div className="mb-5 flex items-center gap-3">
         <div
           aria-hidden="true"
@@ -300,6 +284,7 @@ async function ProfileFormCard({
           level: profile.level,
         }}
         action={updateProfile}
+        stale={hasHcp && stale}
         next={next}
       />
     </Card>

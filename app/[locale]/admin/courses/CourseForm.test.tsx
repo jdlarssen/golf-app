@@ -3,6 +3,7 @@ import { render, screen, fireEvent, within, waitFor } from '@testing-library/rea
 import {
   CourseForm,
   hasHoleChanges,
+  hasRatingChanges,
   sumHolePars,
   type HoleData,
   type TeeBoxData,
@@ -11,6 +12,7 @@ import { REAL_SI } from '@/lib/courses/__fixtures__/courseForm';
 import { TEE_BOUNDS } from '@/lib/courses/coursePayload';
 import { emptyTee } from '@/lib/courses/teeChips';
 import type { SimilarCourse } from '@/lib/courses/similarCourses';
+import { COURSE_FORM_IDLE, courseFormErrorMessages } from '@/lib/courses/courseFormState';
 
 // #2485: the similar-courses panel asks a server action; here it answers from a stub.
 const findSimilarCourses = vi.fn<(query: string) => Promise<SimilarCourse[]>>();
@@ -28,7 +30,10 @@ function makeHoles(pars: number[]): HoleData[] {
   }));
 }
 
-const NO_OP = async () => {};
+const NO_OP = async () => COURSE_FORM_IDLE;
+
+/** Every refusal's copy, as a page passes it: the code itself, for the asserts. */
+const ERRORS = courseFormErrorMessages((code) => `feil:${code}`, 'feil');
 
 function setField(container: HTMLElement, name: string, value: string) {
   const input = container.querySelector<HTMLInputElement>(`input[name="${name}"]`);
@@ -103,7 +108,7 @@ describe('sumHolePars', () => {
 
 describe('CourseForm — par-celler', () => {
   it('rendrer én par-knapp per hull, ikke number-input for par', () => {
-    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const { container } = render(<CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />);
 
     expect(parCell(1, 4).textContent).toBe('4');
     expect(
@@ -115,14 +120,14 @@ describe('CourseForm — par-celler', () => {
   });
 
   it('viser default par 4 i knappens navn på mount', () => {
-    render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    render(<CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />);
 
     const hole1 = screen.getByRole('button', { name: /^Par for hull 1:/ });
     expect(hole1.getAttribute('aria-label')).toContain(': 4.');
   });
 
   it('endrer par til 5 ved klikk og oppdaterer hidden-input', () => {
-    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const { container } = render(<CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />);
 
     fireEvent.click(parCell(1, 4));
 
@@ -136,7 +141,7 @@ describe('CourseForm — par-celler', () => {
 
 describe('CourseForm — per-kjønn-par-overstyring', () => {
   it('viser kollapset toggle for damer og junior som default på new-flyt', () => {
-    render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    render(<CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />);
 
     expect(
       screen.getByRole('button', { name: /legg til avvikende par for damer/i }),
@@ -151,7 +156,7 @@ describe('CourseForm — per-kjønn-par-overstyring', () => {
   });
 
   it('eksponerer 18 nye par-rader når «avvikende par for damer» klikkes', () => {
-    render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    render(<CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />);
 
     fireEvent.click(
       screen.getByRole('button', { name: /legg til avvikende par for damer/i }),
@@ -165,7 +170,7 @@ describe('CourseForm — per-kjønn-par-overstyring', () => {
   });
 
   it('rendrer hidden-inputs hole_${n}_par_ladies når dame-par-seksjonen er utvidet', () => {
-    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const { container } = render(<CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />);
 
     fireEvent.click(
       screen.getByRole('button', { name: /legg til avvikende par for damer/i }),
@@ -179,7 +184,7 @@ describe('CourseForm — per-kjønn-par-overstyring', () => {
   });
 
   it('rendrer mirror-input par_ladies = par_mens når dame-par-seksjonen er kollapset', () => {
-    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const { container } = render(<CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />);
 
     // Kollapset = mirror-inputs sender samme verdi som par_mens.
     const ladiesHidden = container.querySelectorAll<HTMLInputElement>(
@@ -190,7 +195,7 @@ describe('CourseForm — per-kjønn-par-overstyring', () => {
   });
 
   it('hovedrad-endring speiles til par_ladies/par_juniors så lenge seksjonene er kollapset', () => {
-    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const { container } = render(<CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />);
 
     fireEvent.click(parCell(1, 4));
 
@@ -205,7 +210,7 @@ describe('CourseForm — per-kjønn-par-overstyring', () => {
   });
 
   it('når dame-seksjonen er åpen, fryses dame-par uavhengig av hovedraden', () => {
-    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const { container } = render(<CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />);
 
     // Åpne avvikende-par-seksjonen for damer.
     fireEvent.click(
@@ -229,7 +234,7 @@ describe('CourseForm — per-kjønn-par-overstyring', () => {
   });
 
   it('fjern-knapp tilbakestiller par_ladies til par_mens og kollapser seksjonen', () => {
-    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const { container } = render(<CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />);
 
     // Åpne dame-par + endre hull 1 til par 5.
     fireEvent.click(
@@ -265,7 +270,7 @@ describe('CourseForm — per-kjønn-par-overstyring', () => {
     const holes = makeHoles(Array(18).fill(4));
     holes[3].par_ladies = '5'; // Hull 4: dame-par 5 vs herre-par 4
     render(
-      <CourseForm
+      <CourseForm errorMessages={ERRORS}
         action={NO_OP}
         submitLabel="Lagre"
         initialData={{
@@ -301,7 +306,7 @@ describe('CourseForm — per-kjønn-par-overstyring', () => {
   });
 });
 
-describe('CourseForm — confirm-gate ved par/SI-endring + aktive spill', () => {
+describe('CourseForm — asks before par, index or rating changes on a used course', () => {
   const baselineHoles = makeHoles(Array(18).fill(4));
   const teeBoxes: TeeBoxData[] = [
     {
@@ -322,54 +327,93 @@ describe('CourseForm — confirm-gate ved par/SI-endring + aktive spill', () => 
     vi.restoreAllMocks();
   });
 
-  it('viser confirm-dialog når par endres og affectedGamesCount > 0', () => {
+  it('asks first when par changes on a course used in rounds (any status)', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    const action = vi.fn(async () => {});
 
     render(
-      <CourseForm
-        action={action}
+      <CourseForm errorMessages={ERRORS}
+        action={NO_OP}
         submitLabel="Lagre"
-        affectedGamesCount={2}
+        usedInGamesCount={2}
         initialData={{ name: 'Test', holes: baselineHoles, teeBoxes }}
       />,
     );
 
     fireEvent.click(parCell(1, 4));
-
     fireEvent.click(screen.getByRole('button', { name: 'Lagre' }));
 
     expect(confirmSpy).toHaveBeenCalledTimes(1);
-    const msg = confirmSpy.mock.calls[0][0] as string;
-    expect(msg).toMatch(/2 spill/);
-    expect(msg).toMatch(/par eller stroke-indeks/);
+    expect(confirmSpy.mock.calls[0][0]).toBe(
+      'Banen er brukt i 2 runder. Endrer du par, indeks, slope eller CR, kan resultatene i disse rundene endre seg. Vil du lagre likevel?',
+    );
   });
 
-  it('viser IKKE confirm-dialog når ingen hull-endring er gjort, selv om affectedGamesCount > 0', () => {
+  it('asks first when slope or CR changes on a saved tee of a used course', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
-    render(
-      <CourseForm
-        action={async () => {}}
+    const { container } = render(
+      <CourseForm errorMessages={ERRORS}
+        action={NO_OP}
         submitLabel="Lagre"
-        affectedGamesCount={3}
+        usedInGamesCount={1}
         initialData={{ name: 'Test', holes: baselineHoles, teeBoxes }}
       />,
     );
 
+    setField(container, 'tee_0_slope_mens', '125');
+    fireEvent.click(screen.getByRole('button', { name: 'Lagre' }));
+
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(confirmSpy.mock.calls[0][0]).toMatch(/^Banen er brukt i én runde\./);
+  });
+
+  it('a «No» to the question keeps the form unsent', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const action = vi.fn(NO_OP);
+
+    render(
+      <CourseForm errorMessages={ERRORS}
+        action={action}
+        submitLabel="Lagre"
+        usedInGamesCount={1}
+        initialData={{ name: 'Test', holes: baselineHoles, teeBoxes }}
+      />,
+    );
+
+    fireEvent.click(parCell(1, 4));
+    fireEvent.click(screen.getByRole('button', { name: 'Lagre' }));
+
+    expect(action).not.toHaveBeenCalled();
+  });
+
+  it('does not ask when nothing on the holes or ratings changed, even on a used course', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    const { container } = render(
+      <CourseForm errorMessages={ERRORS}
+        action={NO_OP}
+        submitLabel="Lagre"
+        usedInGamesCount={3}
+        initialData={{ name: 'Test', holes: baselineHoles, teeBoxes }}
+      />,
+    );
+
+    // The name and a typed-over equal number («120» → «120.0») are no change.
+    fireEvent.change(screen.getByLabelText('Navn på banen'), { target: { value: 'Nytt navn' } });
+    setField(container, 'tee_0_slope_mens', `${teeBoxes[0].slope_mens}.0`);
     fireEvent.click(screen.getByRole('button', { name: 'Lagre' }));
 
     expect(confirmSpy).not.toHaveBeenCalled();
   });
 
-  it('viser IKKE confirm-dialog når par endres men affectedGamesCount = 0', () => {
+  it('does not ask when par changes on a course no round has used', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     render(
-      <CourseForm
-        action={async () => {}}
+      <CourseForm errorMessages={ERRORS}
+        action={NO_OP}
         submitLabel="Lagre"
-        affectedGamesCount={0}
+        usedInGamesCount={0}
         initialData={{ name: 'Test', holes: baselineHoles, teeBoxes }}
       />,
     );
@@ -380,11 +424,11 @@ describe('CourseForm — confirm-gate ved par/SI-endring + aktive spill', () => 
     expect(confirmSpy).not.toHaveBeenCalled();
   });
 
-  it('viser IKKE confirm-dialog på /new-flyten (ingen initialData)', () => {
+  it('does not ask on the new-course door (no initialData)', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     const { container } = render(
-      <CourseForm action={async () => {}} submitLabel="Lagre" />,
+      <CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />,
     );
     // Uten 18 indekser og en tee med slope/CR er «Lagre» grå, og klikket beviser ingenting.
     fillStrokeIndices(container);
@@ -397,31 +441,56 @@ describe('CourseForm — confirm-gate ved par/SI-endring + aktive spill', () => 
 
     expect(confirmSpy).not.toHaveBeenCalled();
   });
+});
 
-  it('bruker entall-form «ett spill» når affectedGamesCount = 1', () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+describe('hasRatingChanges', () => {
+  const saved = { ...emptyTee('Gul', 'yellow'), id: 't1', slope_mens: '120', course_rating_mens: '70.1' };
 
-    render(
-      <CourseForm
-        action={async () => {}}
-        submitLabel="Lagre"
-        affectedGamesCount={1}
-        initialData={{ name: 'Test', holes: baselineHoles, teeBoxes }}
-      />,
+  it('is false without a baseline, for equal numbers and for new or removed tees', () => {
+    expect(hasRatingChanges(undefined, [saved])).toBe(false);
+    expect(hasRatingChanges([saved], [{ ...saved, course_rating_mens: '70.10' }])).toBe(false);
+    expect(hasRatingChanges([saved], [saved, { ...emptyTee('Rød', 'red'), slope_mens: '110' }])).toBe(false);
+    expect(hasRatingChanges([saved], [])).toBe(false);
+  });
+
+  it('is true when slope or CR of a saved tee changed, emptied included', () => {
+    expect(hasRatingChanges([saved], [{ ...saved, slope_mens: '121' }])).toBe(true);
+    expect(hasRatingChanges([saved], [{ ...saved, course_rating_mens: '' }])).toBe(true);
+    expect(hasRatingChanges([saved], [{ ...saved, slope_ladies: '118' }])).toBe(true);
+  });
+});
+
+describe('CourseForm: a refused save keeps the form (audit 2026-11-20)', () => {
+  it('shows the refusal and keeps every typed value', async () => {
+    const action = vi.fn(async () => ({ error: 'si_duplicate' as const }));
+    const { container } = render(
+      <CourseForm errorMessages={ERRORS} action={action} submitLabel="Lagre" />,
     );
-
+    fireEvent.change(screen.getByLabelText('Navn på banen'), { target: { value: 'Bjaavann' } });
+    fillStrokeIndices(container);
+    fireEvent.click(chip('Gul'));
+    fillMensRating(container, 0, '125', '71.2');
     fireEvent.click(parCell(1, 4));
+
     fireEvent.click(screen.getByRole('button', { name: 'Lagre' }));
 
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(confirmSpy.mock.calls[0][0]).toMatch(/ett spill/);
+    expect(await screen.findByRole('alert')).toHaveTextContent('feil:si_duplicate');
+    expect(action).toHaveBeenCalledTimes(1);
+    const value = (name: string) =>
+      container.querySelector<HTMLInputElement>(`input[name="${name}"]`)!.value;
+    expect(value('name')).toBe('Bjaavann');
+    expect(value('hole_1_si')).toBe(String(REAL_SI[0]));
+    expect(value('hole_18_si')).toBe(String(REAL_SI[17]));
+    expect(value('hole_1_par_mens')).toBe('5');
+    expect(value('tee_0_slope_mens')).toBe('125');
+    expect(value('tee_0_cr_mens')).toBe('71.2');
   });
 });
 
 describe('CourseForm: tomme felt på ny bane (#2279)', () => {
   it('starter tom, holder «Lagre» grå og sier hva som mangler til alt er fylt ut', () => {
-    const action = vi.fn();
-    const { container } = render(<CourseForm action={action} submitLabel="Lagre" />);
+    const action = vi.fn(NO_OP);
+    const { container } = render(<CourseForm errorMessages={ERRORS} action={action} submitLabel="Lagre" />);
     const value = (name: string) =>
       container.querySelector<HTMLInputElement>(`input[name="${name}"]`)!.value;
     const save = () => screen.getByRole<HTMLButtonElement>('button', { name: 'Lagre' });
@@ -477,7 +546,7 @@ describe('CourseForm: tomme felt på ny bane (#2279)', () => {
 
   it('redigering: knappen er aktiv fra start, og en ny tee må fylles ut', () => {
     const { container } = render(
-      <CourseForm
+      <CourseForm errorMessages={ERRORS}
         action={NO_OP}
         submitLabel="Lagre"
         initialData={{
@@ -523,7 +592,7 @@ describe('CourseForm: tomme felt på ny bane (#2279)', () => {
 
 describe('CourseForm: banekortet (#2278)', () => {
   it('viser hullene i to tabeller, og par går 4 → 5 → 3 → 4 med beskjed til skjermleseren', () => {
-    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const { container } = render(<CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />);
     const hidden = () =>
       container.querySelector<HTMLInputElement>('input[type="hidden"][name="hole_1_par_mens"]')!
         .value;
@@ -542,7 +611,7 @@ describe('CourseForm: banekortet (#2278)', () => {
   });
 
   it('ny bane: tomme indekser viser «?», kortet lister de som mangler, og et tall to ganger er ugyldig', () => {
-    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const { container } = render(<CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />);
     const si = (n: number) =>
       container.querySelector<HTMLInputElement>(`input[name="hole_${n}_si"]`)!;
 
@@ -574,7 +643,7 @@ describe('CourseForm: banekortet (#2278)', () => {
   });
 
   it('lagrelinja: det som mangler står under «Lagre»', () => {
-    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const { container } = render(<CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />);
     const save = screen.getByRole('button', { name: 'Lagre' });
     const status = container.querySelector('#course-save-status')!;
 
@@ -601,7 +670,7 @@ describe('CourseForm — «Finnes banen alt?» (#2485)', () => {
   it('lists similar courses under the name while you type, and the name still posts', async () => {
     findSimilarCourses.mockReset().mockResolvedValue([NORTH]);
     const { container } = render(
-      <CourseForm action={NO_OP} submitLabel="Lagre" similarCourses={{ kind: 'wizard' }} />,
+      <CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" similarCourses={{ kind: 'wizard' }} />,
     );
     typeName(container, 'Byneset n');
 
@@ -622,7 +691,7 @@ describe('CourseForm — «Finnes banen alt?» (#2485)', () => {
   it('«Nei, legg til …» hides the list and moves on to the first par cell', async () => {
     findSimilarCourses.mockReset().mockResolvedValue([NORTH]);
     const { container } = render(
-      <CourseForm action={NO_OP} submitLabel="Lagre" similarCourses={{ kind: 'wizard' }} />,
+      <CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" similarCourses={{ kind: 'wizard' }} />,
     );
     typeName(container, 'Byneset n');
     fireEvent.click(
@@ -635,7 +704,7 @@ describe('CourseForm — «Finnes banen alt?» (#2485)', () => {
 
   it('the edit page (no similarCourses) never searches', async () => {
     findSimilarCourses.mockReset().mockResolvedValue([NORTH]);
-    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const { container } = render(<CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />);
     typeName(container, 'Byneset n');
     await new Promise((resolve) => setTimeout(resolve, 400));
     await waitFor(() => expect(findSimilarCourses).not.toHaveBeenCalled());
@@ -649,7 +718,7 @@ describe('CourseForm: tee-tabellen (#2486)', () => {
     within(screen.getByRole('table', { name: 'Slope og course rating per tee' })).getAllByRole('rowheader');
 
   it('ny bane: brikkene legger til og fjerner rader, og «+ Annen» spør etter et navn', () => {
-    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const { container } = render(<CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />);
 
     fireEvent.click(chip('Gul'));
     expect(chip('Gul').getAttribute('aria-pressed')).toBe('true');
@@ -688,7 +757,7 @@ describe('CourseForm: tee-tabellen (#2486)', () => {
 
   it('redigering: lagrede tee-er står trykket, og av og på igjen gir samme tee tilbake', () => {
     const { container } = render(
-      <CourseForm
+      <CourseForm errorMessages={ERRORS}
         action={NO_OP}
         submitLabel="Lagre"
         initialData={{
@@ -719,7 +788,7 @@ describe('CourseForm: tee-tabellen (#2486)', () => {
 
   it('junior-kolonnen og lengden står åpne når banen har tall der, og sju tee-er er taket', () => {
     render(
-      <CourseForm
+      <CourseForm errorMessages={ERRORS}
         action={NO_OP}
         submitLabel="Lagre"
         initialData={{
@@ -784,7 +853,7 @@ describe('CourseForm — 9-hullsbane som spilles to ganger (#2484)', () => {
   const saveButton = () => screen.getByRole('button', { name: 'Lagre' });
 
   it('spør «Hvor mange hull?» med 18 hull valgt på ny bane', () => {
-    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const { container } = render(<CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />);
 
     const group = screen.getByRole('radiogroup', { name: 'Hvor mange hull?' });
     const radios = within(group).getAllByRole('radio');
@@ -797,7 +866,7 @@ describe('CourseForm — 9-hullsbane som spilles to ganger (#2484)', () => {
   });
 
   it('viser hull 1–9 i én tabell med to indeksrader ved 9 hull', () => {
-    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const { container } = render(<CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />);
     chooseNine();
 
     expect(container.querySelectorAll('table')).toHaveLength(1);
@@ -821,7 +890,7 @@ describe('CourseForm — 9-hullsbane som spilles to ganger (#2484)', () => {
   });
 
   it('holder «Lagre» grå til hvert tall 1–18 står én gang i de to radene', () => {
-    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const { container } = render(<CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />);
     chooseNine();
     fireEvent.click(chip('Gul'));
     fillMensRating(container);
@@ -838,7 +907,7 @@ describe('CourseForm — 9-hullsbane som spilles to ganger (#2484)', () => {
   });
 
   it('teller par for 18 hull: et par-trykk på hull 3 gir «Par 37 · 74»', () => {
-    render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    render(<CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />);
     chooseNine();
 
     fireEvent.click(parCell(3, 4));
@@ -846,7 +915,7 @@ describe('CourseForm — 9-hullsbane som spilles to ganger (#2484)', () => {
   });
 
   it('viser «Fordel» bare når rad 1 har 1–9 og rad 2 er tom, og fyller oddetall og partall', () => {
-    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const { container } = render(<CourseForm errorMessages={ERRORS} action={NO_OP} submitLabel="Lagre" />);
     chooseNine();
     fireEvent.click(chip('Gul'));
     fillMensRating(container);
@@ -877,7 +946,7 @@ describe('CourseForm — 9-hullsbane som spilles to ganger (#2484)', () => {
   it('beholder par og indekser ved bytte fra 18 til 9 hull på en ubrukt bane', () => {
     const holes = makeHoles([4, 4, 5, 3, 4, 4, 3, 5, 4, 3, 3, 3, 3, 3, 3, 3, 3, 3]);
     const { container } = render(
-      <CourseForm
+      <CourseForm errorMessages={ERRORS}
         action={NO_OP}
         submitLabel="Lagre"
         initialData={{ name: 'Bane', holes, teeBoxes: [] }}
@@ -909,7 +978,7 @@ describe('CourseForm — 9-hullsbane som spilles to ganger (#2484)', () => {
       stroke_index: String(si),
     }));
     const { container } = render(
-      <CourseForm
+      <CourseForm errorMessages={ERRORS}
         action={NO_OP}
         submitLabel="Lagre"
         initialData={{ name: 'Ni hull', nineHoles: true, holes, teeBoxes: [] }}
@@ -928,7 +997,7 @@ describe('CourseForm — 9-hullsbane som spilles to ganger (#2484)', () => {
 
   it('låser antall hull når banen er brukt i en runde', () => {
     const { container } = render(
-      <CourseForm
+      <CourseForm errorMessages={ERRORS}
         action={NO_OP}
         submitLabel="Lagre"
         usedInGamesCount={2}
@@ -945,7 +1014,7 @@ describe('CourseForm — 9-hullsbane som spilles to ganger (#2484)', () => {
 
   it('lar antall hull stå åpent på en ubrukt bane', () => {
     render(
-      <CourseForm
+      <CourseForm errorMessages={ERRORS}
         action={NO_OP}
         submitLabel="Lagre"
         usedInGamesCount={0}

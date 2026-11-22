@@ -235,7 +235,9 @@ describe('startboden (#2254)', () => {
     const list = await home().fetchHomeCards(ME);
 
     // Forrige runde er den som ble avsluttet sist, ikke den som ble laget sist.
-    expect(list.lastRound).toEqual({ gameId: 'new', brutto: 9, netto: 6, teamBall: false });
+    // Netto bare for 18 hull: to hull gir ingen netto (computeRoundScore,
+    // audit 2026-11-20).
+    expect(list.lastRound).toEqual({ gameId: 'new', brutto: 9, netto: null, teamBall: false });
     expect(stepArgs(gamesStub, 'in')).toEqual([['id', ['new']]]);
     expect(list.cards.find((c) => c.gameId === 'new')?.resultSummary).toEqual({
       kind: 'placement',

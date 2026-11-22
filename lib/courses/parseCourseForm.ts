@@ -18,6 +18,7 @@ import {
   isPartiallyFilledRating,
   parseLengthMeters,
   isValidPar,
+  isValidParTotal,
   isValidStrokeIndex,
   allStrokeIndicesUnique,
 } from './coursePayload';
@@ -148,6 +149,11 @@ export function parseCourseHolesAndTees(
   const parSumMens = holes.reduce((s, h) => s + h.par_mens, 0);
   const parSumLadies = holes.reduce((s, h) => s + h.par_ladies, 0);
   const parSumJuniors = holes.reduce((s, h) => s + h.par_juniors, 0);
+  // The par total's one rule (PAR_TOTAL_BOUNDS). With 18 holes of par 3–6
+  // it always holds; the check keeps parser and DB CHECK saying the same.
+  if (![parSumMens, parSumLadies, parSumJuniors].every(isValidParTotal)) {
+    fail('bad_par');
+  }
 
   // Parse tee boxes. Rows with an empty name are skipped — the form sends up
   // to maxTeeBoxes slots but only the populated ones count.

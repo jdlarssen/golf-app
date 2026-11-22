@@ -35,6 +35,27 @@ const PAR_MAX = 6;
 const SI_MIN = 1;
 const SI_MAX = 18;
 
+/** Holes in a stored course: a 9-hole course is stored as 18 (#2484). */
+const STORED_HOLES = 18;
+
+/**
+ * The par total's one rule (audit 2026-11-20, AGENTS.md trap 4): 18 holes of
+ * par 3–6, so 54–108. A par-3 course (54) is a real course. The parser checks
+ * it, and coursePayload.parTotal.test.ts locks it to the tee_boxes
+ * par_total_* CHECKs, which said 60–80 before and refused every par-3 course.
+ */
+export const PAR_TOTAL_BOUNDS = {
+  min: PAR_MIN * STORED_HOLES,
+  max: PAR_MAX * STORED_HOLES,
+} as const;
+
+/** A par total must be an integer in PAR_TOTAL_BOUNDS. */
+export function isValidParTotal(total: number): boolean {
+  return (
+    Number.isInteger(total) && total >= PAR_TOTAL_BOUNDS.min && total <= PAR_TOTAL_BOUNDS.max
+  );
+}
+
 /**
  * Parse + clamp a per-gender rating from raw form strings. Empty or
  * out-of-range values become `null` per field — slope must be an integer in

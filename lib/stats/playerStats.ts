@@ -33,7 +33,12 @@ export type MyStats = {
   roundsPlayed: number;
   /** Snitt total brutto over KOMPLETTE 18-hulls-runder, avrundet. `null` hvis ingen. */
   grossAverage: number | null;
-  /** Laveste total brutto over KOMPLETTE 18-hulls-runder. `null` hvis ingen. */
+  /**
+   * Brutto for den KOMPLETTE 18-hulls-runden med færrest slag over par; ved
+   * likt mot par vinner laveste brutto. `null` hvis ingen. Målt mot par fordi
+   * banene har ulik par: 58 på en par 54-bane er dårligere enn 74 på par 72
+   * (audit 2026-11-20; par 3-baner kan lagres nå).
+   */
   bestRound: number | null;
   achievements: Achievements;
 };
@@ -47,23 +52,40 @@ function isPlayed(h: HoleScore): h is HoleScore & { strokes: number } {
 }
 
 /**
- * Total brutto for en runde KUN hvis den er en komplett 18-hulls-runde
+ * Total brutto og par for en runde KUN hvis den er en komplett 18-hulls-runde
  * (nøyaktig 18 ikke-null slag). 9-hulls- og ufullstendige runder gir `null`,
  * så de blandes ikke inn i snitt/beste runde. (Bevisst — apples-to-apples.)
  */
-function completeRoundTotal(round: RoundInput): number | null {
+function completeRoundTotal(round: RoundInput): { gross: number; par: number } | null {
   const played = round.holes.filter(isPlayed);
   if (played.length !== COMPLETE_ROUND_HOLES) return null;
-  return played.reduce((sum, h) => sum + h.strokes, 0);
+  return {
+    gross: played.reduce((sum, h) => sum + h.strokes, 0),
+    par: played.reduce((sum, h) => sum + h.par, 0),
+  };
+}
+
+/** Fewest strokes over par first; on a tie, the lower gross. */
+function isBetterRound(
+  a: { gross: number; par: number },
+  b: { gross: number; par: number },
+): boolean {
+  const toParA = a.gross - a.par;
+  const toParB = b.gross - b.par;
+  return toParA !== toParB ? toParA < toParB : a.gross < b.gross;
 }
 
 export function computePlayerStats(rounds: RoundInput[]): MyStats {
   const achievements: Achievements = { ...EMPTY_ACHIEVEMENTS };
   const completeTotals: number[] = [];
+  let best: { gross: number; par: number } | null = null;
 
   for (const round of rounds) {
     const total = completeRoundTotal(round);
-    if (total != null) completeTotals.push(total);
+    if (total != null) {
+      completeTotals.push(total.gross);
+      if (best == null || isBetterRound(total, best)) best = total;
+    }
 
     const a = countRoundAchievements(round.holes);
     achievements.holeInOne += a.holeInOne;
@@ -79,8 +101,7 @@ export function computePlayerStats(rounds: RoundInput[]): MyStats {
           completeTotals.reduce((a, b) => a + b, 0) / completeTotals.length,
         )
       : null;
-  const bestRound =
-    completeTotals.length > 0 ? Math.min(...completeTotals) : null;
+  const bestRound = best?.gross ?? null;
 
   return {
     roundsPlayed: rounds.length,

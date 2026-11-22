@@ -415,6 +415,7 @@
       "levelSenior": "Senior",
       "savePending": "Saving …",
       "saveButton": "Save",
+      "confirmButton": "My handicap is right",
       "saveHint": "Save activates once you change something."
     },
     "deleteAccount": {
@@ -4238,9 +4239,7 @@
       "juniorsParRemoveLabel": "Remove juniors' override",
       "genderParLadies": "ladies",
       "genderParJuniors": "juniors",
-      "confirmChanges": "The course is used in {games} currently in progress or scheduled. Changing par or stroke index will alter score calculations mid-round for players who have already submitted scorecards. Are you sure you want to continue?",
-      "confirmGames1": "one game",
-      "confirmGamesN": "{count} games"
+      "confirmUsedChanges": "{count, plural, one {The course has been used in one round.} other {The course has been used in # rounds.}} Changing par, index, slope or CR can change the results of those rounds. Save anyway?"
     }
   },
   "admin": {
