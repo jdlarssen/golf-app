@@ -24,6 +24,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { bottomPadding, setBottomInset } from '../test/safeAreaMock';
 import { AccessibilityInfo } from 'react-native';
+import { HOLE_TEXT_CAP } from '../components/hole/holeTextCap';
 import { drainQueue } from '../data/syncWorker';
 import { writeScore } from '../data/writeScore';
 import { writeTeeShot } from '../data/writeTeeShot';
@@ -920,6 +921,26 @@ describe('Hole', () => {
   // #2252 del 2: sollys. Med telefonen i mørk modus blir hullsiden hvit og svart
   // når bryteren er på, valget ligger på telefonen, og det står gjennom
   // hullbytte. Skjermroten, headeren og hullnummeret viser det.
+  // Stor skrift: radene, skinna og pillene har faste mål fra designet. Hver
+  // tekst på hullsiden har et tak, så ingenting flyter ut av boksen sin, og
+  // skinna kan ikke vokse over flighten.
+  it('setter et tak på tekstskaleringen i hver tekst på hullsiden', async () => {
+    mockState.bundle = mockSoloBundle;
+    await renderHole();
+    await waitFor(() => {
+      expect(screen.getByTestId('rail-dock')).toBeTruthy();
+    });
+
+    const uncapped = screen
+      .getAllByText(/./, { includeHiddenElements: true })
+      .filter((node) => {
+        const cap = node.props.maxFontSizeMultiplier;
+        return !(typeof cap === 'number' && cap >= 1 && cap <= HOLE_TEXT_CAP);
+      })
+      .map((node) => node.props.testID ?? String(node.props.children));
+    expect(uncapped).toEqual([]);
+  });
+
   it('sollys gjør hullsiden hvit i mørk modus, huskes og står gjennom hullbytte', async () => {
     mockScheme.value = 'dark';
     const navigation = { setParams: jest.fn(), navigate: jest.fn(), setOptions: jest.fn() };
@@ -937,7 +958,7 @@ describe('Hole', () => {
     expect(screen.getByTestId('hole-hero-number')).toHaveStyle({ fontSize: 132 });
     // Hull-sollys (#2385): knappene er 84 med kant på 3, og før noen score står
     // er par fylt svart. Raden på tur er en svart flate, og det er ingen stripe.
-    expect(screen.getByTestId('rail-option-5')).toHaveStyle({ height: 84, borderWidth: 3 });
+    expect(screen.getByTestId('rail-option-5')).toHaveStyle({ minHeight: 84, borderWidth: 3 });
     expect(screen.getByTestId('rail-option-4')).toHaveStyle({ backgroundColor: '#000000' });
     expect(screen.getByTestId('flight-row-me')).toHaveStyle({ backgroundColor: '#000000' });
     expect(screen.queryByTestId('hole-strip')).toBeNull();

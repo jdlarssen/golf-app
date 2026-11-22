@@ -59,7 +59,7 @@ describe('ScoreRail', () => {
     expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par');
     expect(screen.getByTestId('rail-option-8-detail').props.children).toBe('+4');
     expect(screen.getByTestId('rail-option-4')).toHaveStyle({
-      height: themeFor('light').hole.railButton,
+      minHeight: themeFor('light').hole.railButton,
     });
     expect(screen.getByLabelText('Sett 3 slag for Marte: Birdie')).toBeTruthy();
     // Uten score er det ingenting å rette, og par er forslaget.

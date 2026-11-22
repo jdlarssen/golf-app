@@ -18,6 +18,7 @@ import {
 } from '../../lib/teeShotTeams';
 import { teeShotButtonLabel, teeShotCountText, teeShotHoleLineText, teeShotsT } from '../../lib/teeShotsCopy';
 import { UtslagHakeIcon } from '../icons/Icons';
+import { HOLE_TEXT_CAP } from './holeTextCap';
 
 export function TeeShotPicker({
   holeNumber,
@@ -93,11 +94,11 @@ function TeamBlock({
   return (
     <View testID={`tee-shot-team-${team.teamNumber}`}>
       <View style={[styles.head, deliveryCoversWholeTeam(gameMode) ? null : styles.headShamble]}>
-        <Text style={[styles.question, { color: colors.text }]} accessibilityRole="header">
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.question, { color: colors.text }]} accessibilityRole="header">
           {showTeamLabel ? `${teeShotsT('teamLabel', { team: team.teamNumber })} · ` : ''}
           {teeShotsT('question')}
         </Text>
-        <Text style={[styles.minimum, { color: colors.muted }]} numberOfLines={1}>
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.minimum, { color: colors.muted }]} numberOfLines={1}>
           {teeShotsT('minimum', { min: minimum })}
         </Text>
       </View>
@@ -135,7 +136,7 @@ function TeamBlock({
               testID={`tee-shot-${player.userId}`}
               style={[styles.button, { minHeight }, look]}
             >
-              <Text
+              <Text maxFontSizeMultiplier={HOLE_TEXT_CAP}
                 style={[styles.name, { color: nameColor, fontFamily: canTap ? FONTS.sansSemiBold : FONTS.sansMedium }]}
                 numberOfLines={1}
               >
@@ -143,7 +144,7 @@ function TeamBlock({
               </Text>
               <View style={styles.countRow}>
                 {reached ? <UtslagHakeIcon color={countColor} /> : null}
-                <Text
+                <Text maxFontSizeMultiplier={HOLE_TEXT_CAP}
                   style={[
                     styles.count,
                     { color: countColor, fontFamily: countBold ? FONTS.sansSemiBold : FONTS.sans },
@@ -157,7 +158,7 @@ function TeamBlock({
         })}
       </View>
       {line ? (
-        <Text style={[styles.line, { color: colors.muted }]} testID={`tee-shot-line-${team.teamNumber}`}>
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.line, { color: colors.muted }]} testID={`tee-shot-line-${team.teamNumber}`}>
           {line}
         </Text>
       ) : null}

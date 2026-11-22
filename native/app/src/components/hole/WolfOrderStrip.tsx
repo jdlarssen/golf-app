@@ -9,12 +9,13 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { WolfOrderStripState } from '../../lib/wolfHole';
 import { FONTS, useTheme } from '../../theme';
+import { HOLE_TEXT_CAP } from './holeTextCap';
 
 export function WolfOrderStrip({ strip }: { strip: WolfOrderStripState }) {
   const { colors, hole, ui } = useTheme();
   return (
     <View style={styles.wrap} testID="wolf-order">
-      <Text style={ui.kicker} accessibilityRole="header">
+      <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.kicker} accessibilityRole="header">
         Wolf-rekkefølgen
       </Text>
       <View style={styles.row} accessibilityRole="list">
@@ -41,10 +42,10 @@ export function WolfOrderStrip({ strip }: { strip: WolfOrderStripState }) {
             ]}
             testID={`wolf-order-${column.hole}`}
           >
-            <Text style={[styles.hole, { color: filled ? colors.onPrimary : colors.muted }]}>
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.hole, { color: filled ? colors.onPrimary : colors.muted }]}>
               {`Hull ${column.hole}`}
             </Text>
-            <Text
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP}
               style={[
                 styles.name,
                 {
@@ -68,7 +69,7 @@ export function WolfOrderStrip({ strip }: { strip: WolfOrderStripState }) {
         })}
       </View>
       {strip.ruleLine ? (
-        <Text style={[ui.muted, styles.rule]} testID="wolf-order-rule">
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[ui.muted, styles.rule]} testID="wolf-order-rule">
           {strip.ruleLine}
         </Text>
       ) : null}

@@ -34,6 +34,7 @@ import {
   type WolfHoleState,
 } from '../../lib/wolfHole';
 import { FONTS, TAP, useTheme } from '../../theme';
+import { HOLE_TEXT_CAP } from './holeTextCap';
 
 export function WolfChoiceCard({
   gameId,
@@ -82,7 +83,7 @@ export function WolfChoiceCard({
   return (
     <View style={ui.card} testID="wolf-card">
       {state.catchUp ? (
-        <Text
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP}
           style={[
             styles.tag,
             { color: colors.primary, borderColor: colors.primary, borderWidth: hole.borderW },
@@ -94,32 +95,32 @@ export function WolfChoiceCard({
       ) : null}
 
       {state.badgeText ? (
-        <Text style={ui.body} testID="wolf-badge">
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.body} testID="wolf-badge">
           {state.badgeText}
         </Text>
       ) : null}
 
       {state.catchUpLine ? (
-        <Text style={[ui.muted, styles.small]} testID="wolf-catch-up-line">
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[ui.muted, styles.small]} testID="wolf-catch-up-line">
           {state.catchUpLine}
         </Text>
       ) : null}
 
       {state.flowLine ? (
-        <Text style={[ui.muted, styles.small]} testID="wolf-flow-line">
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[ui.muted, styles.small]} testID="wolf-flow-line">
           {state.flowLine}
         </Text>
       ) : null}
 
       {state.notice ? (
-        <Text style={ui.muted} testID="wolf-notice">
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.muted} testID="wolf-notice">
           {state.notice}
         </Text>
       ) : null}
 
       {state.showChoiceUi ? (
         <View style={styles.choices} testID="wolf-choices">
-          <Text style={ui.kicker} accessibilityRole="header">
+          <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.kicker} accessibilityRole="header">
             Slik går hullet
           </Text>
           <View
@@ -137,14 +138,14 @@ export function WolfChoiceCard({
           >
             {WOLF_FLOW_STEPS.map((step, index) => (
               <View key={step} style={styles.step} accessible accessibilityLabel={`${index + 1}. ${step}`}>
-                <Text style={[styles.stepNumber, { color: colors.primary }]}>{`${index + 1}.`}</Text>
-                <Text style={[ui.body, styles.stepText]}>{step}</Text>
+                <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.stepNumber, { color: colors.primary }]}>{`${index + 1}.`}</Text>
+                <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[ui.body, styles.stepText]}>{step}</Text>
               </View>
             ))}
           </View>
-          <Text style={[ui.muted, styles.small]}>{WOLF_FLOW_HINT}</Text>
+          <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[ui.muted, styles.small]}>{WOLF_FLOW_HINT}</Text>
           {state.choiceTexts.stakeLine ? (
-            <Text style={ui.muted} testID="wolf-stake-line">
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.muted} testID="wolf-stake-line">
               {state.choiceTexts.stakeLine}
             </Text>
           ) : null}
@@ -182,7 +183,7 @@ export function WolfChoiceCard({
       ) : null}
 
       {error ? (
-        <Text style={ui.error} testID="wolf-error">
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.error} testID="wolf-error">
           {error}
         </Text>
       ) : null}
@@ -230,10 +231,10 @@ function ChoiceButton({
       testID={testID}
     >
       <View style={styles.choiceTitleRow}>
-        <Text style={[ui.body, styles.choiceTitle]}>{title}</Text>
-        {aside ? <Text style={[ui.muted, styles.tabular]}>{aside}</Text> : null}
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[ui.body, styles.choiceTitle]}>{title}</Text>
+        {aside ? <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[ui.muted, styles.tabular]}>{aside}</Text> : null}
       </View>
-      {subtitle ? <Text style={ui.muted}>{subtitle}</Text> : null}
+      {subtitle ? <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.muted}>{subtitle}</Text> : null}
     </Pressable>
   );
 }

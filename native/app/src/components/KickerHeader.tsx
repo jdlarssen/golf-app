@@ -61,6 +61,8 @@ type TopOptions = {
   tone?: 'muted' | 'gold';
   /** Hullsiden i sollys: svart og hvitt, større pil, ingen tittel. */
   sunlight?: boolean;
+  /** Tak på tekstskaleringen i ordet og linja under (hullsiden). */
+  textCap?: number;
 };
 
 /**
@@ -73,7 +75,7 @@ type TopOptions = {
 export function kickerHeader(
   kicker: string,
   title: string,
-  { backLabel = BACK_LABEL, subtitle, tone = 'muted', sunlight = false }: TopOptions = {},
+  { backLabel = BACK_LABEL, subtitle, tone = 'muted', sunlight = false, textCap }: TopOptions = {},
 ): NativeStackNavigationOptions {
   return {
     title,
@@ -85,6 +87,7 @@ export function kickerHeader(
           tone={tone}
           sunlight={sunlight}
           backLabel={backLabel}
+          textCap={textCap}
           onBack={back ? () => navigation.goBack() : undefined}
           right={options.headerRight?.({ canGoBack: back != null })}
         />
@@ -295,6 +298,7 @@ function KickerTopBar({
   tone,
   sunlight,
   backLabel,
+  textCap,
   onBack,
   right,
 }: {
@@ -303,6 +307,7 @@ function KickerTopBar({
   tone: 'muted' | 'gold';
   sunlight: boolean;
   backLabel: string;
+  textCap?: number;
   onBack?: () => void;
   right?: ReactNode;
 }) {
@@ -332,13 +337,19 @@ function KickerTopBar({
           accessibilityRole="header"
           accessibilityLabel={[kicker, subtitle].filter(Boolean).join(', ')}
         >
-          <Text numberOfLines={1} ellipsizeMode="tail" style={[ui.kicker, styles.center, { color: ink }]}>
+          <Text
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            maxFontSizeMultiplier={textCap}
+            style={[ui.kicker, styles.center, { color: ink }]}
+          >
             {kicker}
           </Text>
           {subtitle ? (
             <Text
               numberOfLines={1}
               ellipsizeMode="tail"
+              maxFontSizeMultiplier={textCap}
               style={[styles.subtitle, styles.center, { color: colors.muted }]}
             >
               {subtitle}

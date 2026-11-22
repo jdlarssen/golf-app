@@ -33,6 +33,7 @@ import { scoreToneColor } from '../../lib/scoreToneColor';
 import { FONTS, fraunces, interLine, useTheme } from '../../theme';
 import { DashedRing } from '../icons/Icons';
 import { railStrokesLine } from './ScoreRail';
+import { HOLE_BOX_TEXT_CAP, HOLE_TEXT_CAP } from './holeTextCap';
 
 /** Designets form: 40 pt med strek på 2, firkanten med hjørner på 6. */
 const SHAPE_SIZE = 40;
@@ -153,7 +154,7 @@ function ScoreShapeView({
           />
         );
       })}
-      <Text
+      <Text maxFontSizeMultiplier={HOLE_BOX_TEXT_CAP}
         style={[
           fraunces(600, numberFontSize(shape, score)),
           { color: tone === 'par' ? colors.text : color },
@@ -218,16 +219,20 @@ export function FlightRow({
         ]}
       >
         <View style={styles.middle}>
-          <Text style={[styles.nameSun, { color: ink }]} numberOfLines={1}>
+          <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.nameSun, { color: ink }]} numberOfLines={1}>
             {active ? `${name} · din tur` : name}
           </Text>
           {note ? (
-            <Text style={[styles.note, { color: ink }]} testID={`flight-row-${seatId}-note`}>
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.note, { color: ink }]} testID={`flight-row-${seatId}-note`}>
               {note}
             </Text>
           ) : null}
         </View>
-        <Text style={[styles.scoreSun, { color: ink }]} testID={`flight-row-${seatId}-score`}>
+        <Text maxFontSizeMultiplier={HOLE_BOX_TEXT_CAP} style={[styles.scoreSun, { color: ink }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          testID={`flight-row-${seatId}-score`}
+        >
           {score ?? (active ? '?' : NO_SCORE)}
         </Text>
       </Pressable>
@@ -247,7 +252,7 @@ export function FlightRow({
         style={[styles.avatar, { backgroundColor: waiting ? colors.primarySoft : colors.primary }]}
         testID={`flight-row-${seatId}-avatar${waiting ? '-waiting' : ''}`}
       >
-        <Text
+        <Text maxFontSizeMultiplier={HOLE_BOX_TEXT_CAP}
           style={[
             styles.avatarText,
             {
@@ -266,11 +271,11 @@ export function FlightRow({
 
       <View style={styles.middle}>
         <View style={styles.nameLine}>
-          <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
+          <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.name, { color: colors.text }]} numberOfLines={1}>
             {name}
           </Text>
           {submitted ? (
-            <Text
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP}
               style={[styles.badge, { color: colors.muted }]}
               testID={`flight-row-${seatId}-submitted`}
             >
@@ -279,7 +284,7 @@ export function FlightRow({
           ) : null}
         </View>
         {subLine ? (
-          <Text
+          <Text maxFontSizeMultiplier={HOLE_TEXT_CAP}
             style={[
               styles.note,
               active
@@ -300,11 +305,11 @@ export function FlightRow({
           <View style={styles.ringOverlay}>
             <DashedRing color={colors.scoreUnsetFg} kind="score" />
           </View>
-          <Text style={[styles.unset, { color: colors.scoreUnsetFg }]}>?</Text>
+          <Text maxFontSizeMultiplier={HOLE_BOX_TEXT_CAP} style={[styles.unset, { color: colors.scoreUnsetFg }]}>?</Text>
         </View>
       ) : (
         <View style={styles.shape} testID={`flight-row-${seatId}-score`}>
-          <Text style={[styles.unset, { color: colors.scoreUnsetFg }]}>{NO_SCORE}</Text>
+          <Text maxFontSizeMultiplier={HOLE_BOX_TEXT_CAP} style={[styles.unset, { color: colors.scoreUnsetFg }]}>{NO_SCORE}</Text>
         </View>
       )}
     </Pressable>
@@ -317,15 +322,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    height: 56,
+    minHeight: 56,
     padding: 8,
     borderRadius: 14,
   },
   // `Hull-sollys`: rader på 64 pt kant til kant, og den aktive som svart flate
   // med 4 pt inn fra kantene.
-  rowSun: { flexDirection: 'row', alignItems: 'center', gap: 12, height: 64, paddingHorizontal: 20 },
+  rowSun: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, paddingHorizontal: 20 },
   // Streken under kommer i tillegg til de 64 i designet (CSS teller den utenpå).
-  rowSunRuled: { height: 65, borderBottomWidth: 1 },
+  rowSunRuled: { minHeight: 65, borderBottomWidth: 1 },
   rowSunActive: { paddingHorizontal: 16, marginHorizontal: 4, borderRadius: 12 },
   // Samme grå som et låst kort (#2211).
   locked: { opacity: 0.6 },

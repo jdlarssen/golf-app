@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { PATSOME_HOLE_TEXT } from '../../lib/holesCopy';
 import { patsomeSegmentFor } from '../../lib/teamPlay';
 import { FONTS, fraunces, interLine, useTheme } from '../../theme';
+import { HOLE_TEXT_CAP } from './holeTextCap';
 
 const SEGMENT_TEXT = {
   fourball: { label: PATSOME_HOLE_TEXT.fourballLabel, rule: PATSOME_HOLE_TEXT.fourballRule },
@@ -19,8 +20,8 @@ export function PatsomeSegmentBanner({ holeNumber }: { holeNumber: number }) {
       style={[styles.banner, { backgroundColor: colors.surface, borderColor: colors.border }]}
       testID="patsome-segment-banner"
     >
-      <Text style={[styles.label, { color: colors.primary }]}>{label}</Text>
-      <Text style={[styles.rule, { color: colors.muted }]}>{rule}</Text>
+      <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.label, { color: colors.primary }]}>{label}</Text>
+      <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.rule, { color: colors.muted }]}>{rule}</Text>
     </View>
   );
 }
