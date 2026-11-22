@@ -4,9 +4,10 @@ import { MIN_APP_VERSION } from '@/lib/app/minVersion';
 
 /**
  * Oldest native build the server still supports (#2619), and the newest one
- * testers can install (#2975). Public on purpose: the app asks before login, and
- * the numbers are build counters, not secrets. The five minutes of `max-age` is
- * how long a changed number can take to reach a phone that just asked.
+ * testers can install, with its version and release notes (#2975). Public on
+ * purpose: the app asks before login, and the numbers are build counters, not
+ * secrets. The five minutes of `max-age` is how long a changed number can take
+ * to reach a phone that just asked.
  *
  * The latest fields were added beside the minimum ones: builds that only know
  * `minBuild` / `minVersionCode` read those and ignore the rest.

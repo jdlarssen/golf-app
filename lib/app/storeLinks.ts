@@ -29,11 +29,11 @@ export const GOOGLE_PLAY_MARKET_URL = 'market://details?id=no.tornygolf.app';
 export const TESTFLIGHT_APP_URL = 'itms-beta://beta.itunes.apple.com/v1/app/6806675951';
 
 /**
- * Where "Oppdater" in the app's new-version strip goes (#2975), tried in order
- * until one opens. This is the one place to change at the store launch: set
- * `ios` to `[APP_STORE_URL]`. Android needs no change, since the Play listing
- * serves the test track and production alike. Each build carries the links it
- * was built with, so TestFlight builds keep pointing at TestFlight.
+ * Where "Oppdater" in the app's new-version sheet and Profile row go (#2975),
+ * tried in order until one opens. This is the one place to change at the store
+ * launch: set `ios` to `[APP_STORE_URL]`. Android needs no change, since the
+ * Play listing serves the test track and production alike. Each build carries
+ * the links it was built with, so TestFlight builds keep pointing at TestFlight.
  */
 export const NEW_VERSION_LINKS: Record<'ios' | 'android', readonly string[]> = {
   ios: [TESTFLIGHT_APP_URL],
