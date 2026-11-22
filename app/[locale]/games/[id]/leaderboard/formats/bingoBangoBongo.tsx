@@ -14,6 +14,7 @@ import { SettlementTable } from '../SettlementTable';
 import { settlementForResult } from '@/lib/scoring/settlement';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
+import { nobodyWon } from '@/lib/leaderboard/podium';
 
 /**
  * Bingo Bango Bongo-grenen (issue #277) — henter per-hull-data fra
@@ -150,6 +151,7 @@ export async function renderBingoBangoBongo(opts: {
       // nøyaktig samme tall (#600). Vis kun kortet, som Stableford/Slagspill.
       mainContent = (chromeless, footerSlot) => (
         <HeadToHeadResult
+          nobodyWon={nobodyWon(result)}
           gameId={gameId}
           gameName={game.name}
           formatLabel="Bingo Bango Bongo"

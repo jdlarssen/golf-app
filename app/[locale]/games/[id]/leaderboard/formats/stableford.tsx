@@ -26,6 +26,7 @@ import { renderLiveBoard, type LiveBoardFollowOpts } from './liveBoard';
 import { renderTeamLiveBoard } from './teamLiveBoard';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
+import { nobodyWon } from '@/lib/leaderboard/podium';
 
 /**
  * Stableford-grenen — bygger ScoringContext fra rå-rad-ene, kjører
@@ -245,6 +246,7 @@ export async function renderStableford(opts: {
     if (game.status === 'finished') {
       const podium = (chromeless: boolean, footerSlot?: ReactNode) => (
         <TeamStablefordPodium
+          modifiedStableford={stablefordMode === 'modified_stableford'}
           gameId={gameId}
           gameName={game.name}
           result={result}
@@ -364,6 +366,7 @@ export async function renderStableford(opts: {
         a.rank === b.rank ? null : a.rank < b.rank ? a.userId : b.userId;
       mainContent = (chromeless, footerSlot) => (
         <HeadToHeadResult
+          nobodyWon={nobodyWon(result, { modifiedStableford: stablefordMode === 'modified_stableford' })}
           gameId={gameId}
           gameName={game.name}
           formatLabel={tModes(stablefordMode)}
@@ -380,6 +383,7 @@ export async function renderStableford(opts: {
     } else {
       mainContent = (chromeless, footerSlot) => (
         <SoloStablefordPodium
+          modifiedStableford={stablefordMode === 'modified_stableford'}
           gameId={gameId}
           gameName={game.name}
           result={result}

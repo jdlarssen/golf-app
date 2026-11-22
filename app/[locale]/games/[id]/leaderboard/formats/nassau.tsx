@@ -15,6 +15,7 @@ import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
 import type { AppLocale } from '@/i18n/routing';
 import { formatListLocale } from '@/lib/i18n/format';
+import { nobodyWon } from '@/lib/leaderboard/podium';
 
 /**
  * Nassau-grenen (issue #276) — bygger ScoringContext fra rå-rad-ene, kjører
@@ -167,6 +168,7 @@ export async function renderNassau(opts: {
       // ville gjenta samme resultat (#600). Vis kun kortet.
       mainContent = (chromeless, footerSlot) => (
         <HeadToHeadResult
+          nobodyWon={nobodyWon(result)}
           gameId={gameId}
           gameName={game.name}
           formatLabel={`Nassau · ${result.scoring === 'net' ? tc('netto') : tc('brutto')}`}

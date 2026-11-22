@@ -29,6 +29,8 @@ import { nobodyWon } from '@/lib/leaderboard/podium';
 const STORAGE_PREFIX = 'torny-stableford-podium-confetti-seen-';
 
 export interface SoloStablefordPodiumProps {
+  /** Modified stableford: 0 points is a par, so everyone on 0 is a tie, not «Ingen vinner». */
+  modifiedStableford?: boolean;
   /** Spill-id — brukes til drilldown/analytics + sessionStorage-nøkkel. */
   gameId: string;
   /** Turneringsnavn — vises som kicker i header. */
@@ -81,11 +83,12 @@ export function SoloStablefordPodium({
   backHref = '/',
   chromeless = false,
   footerSlot,
+  modifiedStableford = false,
 }: SoloStablefordPodiumProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const [replayKey, setReplayKey] = useState(0);
   // Audit 2026-11-20: everyone on zero won nothing — «Ingen vinner», no confetti.
-  const noWinner = nobodyWon(result);
+  const noWinner = nobodyWon(result, { modifiedStableford });
 
   // Auto-fyr konfetti på første besøk per browser-sesjon. Wrapped i try/catch
   // siden sessionStorage kan kaste i private-browsing eller når brukeren har

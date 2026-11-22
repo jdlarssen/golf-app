@@ -105,6 +105,13 @@ describe('CeremonyStage', () => {
     expect(risen()).toEqual([false, false, false]);
     expect(document.querySelectorAll('.confetti-piece')).toHaveLength(0);
 
+    // Audit 2026-11-20: a game nobody won (everyone on zero) gets no confetti
+    // when the top card is turned, the same rule as the podiums.
+    rerender(
+      <CeremonyStage gameName="Lørdagsrunden" data={{ ...solo, nobodyWon: true }} step={4} played={3} />,
+    );
+    expect(document.querySelectorAll('.confetti-piece')).toHaveLength(0);
+
     // ?vist comes from the address and anyone can change it: it only stills
     // animation, it never shows a card past the real step. ?vist=4 on step 1
     // shows the side prizes alone, and no podium name.

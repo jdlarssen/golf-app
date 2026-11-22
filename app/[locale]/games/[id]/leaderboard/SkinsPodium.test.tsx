@@ -30,7 +30,7 @@ describe('SkinsPodium', () => {
   // Type C: nøyaktig ÉN render-test — delt-førsteplass-casen (#1573).
   it('delt førsteplass: begge medvinnere får champagne, medaljong «1» og «Delt 1. plass»-merke', () => {
     window.sessionStorage.clear();
-    render(
+    const { unmount } = render(
       <SkinsPodium
         gameId="g1"
         gameName="Sommerturnering"
@@ -66,5 +66,33 @@ describe('SkinsPodium', () => {
     expect(slot3.dataset.rank).toBe('3');
     expect(within(slot3).getByTitle('3. plass')).toBeInTheDocument();
     expect(slot3.textContent).not.toContain('Delt');
+    // A winner is crowned with confetti.
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Skins-vinneren kåret');
+    expect(document.querySelectorAll('.confetti-piece').length).toBeGreaterThan(0);
+
+    // Audit 2026-11-20: nobody took a skin → «Ingen vinner», no confetti, no
+    // «Gratulerer.». A fresh game id, so the confetti is not held back as seen.
+    window.sessionStorage.clear();
+    unmount();
+    render(
+      <SkinsPodium
+        gameId="g2"
+        gameName="Sommerturnering"
+        result={makeResult([
+          makePlayerLine('u1', 1, 0, 0, ['u2', 'u3']),
+          makePlayerLine('u2', 1, 0, 0, ['u1', 'u3']),
+          makePlayerLine('u3', 1, 0, 0, ['u1', 'u2']),
+        ])}
+        playersById={makePlayers([
+          ['u1', 'Alice Andersen', null],
+          ['u2', 'Bjørn Berg', 'Bjørnen'],
+          ['u3', 'Camilla Carlsen', null],
+        ])}
+        backHref="/games/g2"
+      />,
+    );
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Ingen vinner');
+    expect(document.querySelectorAll('.confetti-piece')).toHaveLength(0);
+    expect(screen.queryByText('Gratulerer.')).not.toBeInTheDocument();
   });
 });
