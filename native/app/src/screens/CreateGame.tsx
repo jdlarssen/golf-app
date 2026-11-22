@@ -66,6 +66,7 @@ import { averagePctToSumPct } from '../../../../lib/games/teamHandicapUnit';
 import { canRepeatWeekly } from '../../../../lib/games/weeklyRepeatRule';
 import { repeatWeeklyNextText } from '../lib/repeatWeeklyCopy';
 import { openOrReturn } from '../lib/backTo';
+import { useLeaveWhenFocused } from '../lib/useLeaveWhenFocused';
 import {
   createFailureBelongsOnWeb,
   describeCreateGameFailure,
@@ -554,6 +555,7 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
   const leavingRef = useRef(false);
   // `busy` is drawn one render late; the ref stops a second tap before that.
   const publishing = useRef(false);
+  const leaveWhenFocused = useLeaveWhenFocused(navigation);
 
   const publish = useCallback(async () => {
     // Dobbelttrykk-låsen står FØRST: to gjennomkjøringer samtidig ville kjempet
@@ -573,8 +575,13 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
       if (result.ok) {
         // `replace`, ikke `navigate`: en ferdig veiviser skal ikke ligge igjen
         // bak spillet i stacken — «tilbake» fra runden hører hjemme på Hjem.
-        leavingRef.current = true;
-        navigation.replace('GameHome', { gameId: result.gameId });
+        // A screen opened on top (a push notification) stays in front; the
+        // game opens when the wizard is in front again.
+        const createdGameId = result.gameId;
+        leaveWhenFocused(() => {
+          leavingRef.current = true;
+          navigation.replace('GameHome', { gameId: createdGameId });
+        });
         return;
       }
       setFailure({
@@ -590,7 +597,7 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
     // Bevisst utenfor `finally`: på suksess er skjermen borte, og knappen skal
     // ikke låses opp igjen på vei ut.
     setBusy(false);
-  }, [busy, draft, gameId, navigation]);
+  }, [busy, draft, gameId, navigation, leaveWhenFocused]);
 
   const stepIndex = STEPS.indexOf(step);
 

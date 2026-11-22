@@ -633,6 +633,25 @@ describe('Scorecard', () => {
 
       await waitFor(() => expect(nav.popTo).toHaveBeenCalledWith('GameHome', { gameId: 'half' }));
     });
+
+    it('en avledet kamp med en annen skjerm i front: den skjermen blir stående', async () => {
+      mockState.bundle = half('back9', null, 'host') as never;
+      const nav = stackNavigation([
+        { name: 'Home' },
+        { name: 'GameHome', params: { gameId: 'half' } },
+        { name: 'Scorecard', params: { gameId: 'half' } },
+      ]);
+      nav.isFocused.mockReturnValue(false);
+
+      await render(scorecardElement('half', nav.navigate, nav));
+
+      // The bundle lands, and the effect runs.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      expect(nav.popTo).not.toHaveBeenCalled();
+      expect(nav.replace).not.toHaveBeenCalled();
+    });
   });
 
   // Gjennomgangen av #2622: «Lever for <makker>» etter at mitt kort alt er

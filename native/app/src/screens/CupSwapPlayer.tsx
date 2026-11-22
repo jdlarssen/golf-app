@@ -109,8 +109,12 @@ export function CupSwapPlayer({ route, navigation }: ScreenProps<'CupSwapPlayer'
     sending.current = true;
     setBusy(true);
     setError(null);
-    const result = await swapCupPlayer(cupId, gameId, outId, inId);
-    sending.current = false;
+    let result: Awaited<ReturnType<typeof swapCupPlayer>>;
+    try {
+      result = await swapCupPlayer(cupId, gameId, outId, inId);
+    } finally {
+      sending.current = false;
+    }
     if (result.ok) {
       leaveWhenFocused(() => backTo(navigation, 'CupManage', { cupId, notice: 'player_swapped' }));
       return;

@@ -404,8 +404,12 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
     if (!hcpCard || confirmingHcp.current) return;
     confirmingHcp.current = true;
     setConfirming(true);
-    const result = await saveHandicap(hcpCard.profile, hcpCard.hcp);
-    confirmingHcp.current = false;
+    let result: Awaited<ReturnType<typeof saveHandicap>>;
+    try {
+      result = await saveHandicap(hcpCard.profile, hcpCard.hcp);
+    } finally {
+      confirmingHcp.current = false;
+    }
     setConfirming(false);
     if (!result.ok) {
       Alert.alert(describeHandicapSaveFailure(result.reason));
