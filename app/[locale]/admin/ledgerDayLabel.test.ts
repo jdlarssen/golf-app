@@ -7,8 +7,10 @@ const NOW = new Date('2026-11-20T12:00:00.000Z').getTime(); // fre 20. nov 13:00
 describe('ledgerDayLabel', () => {
   it('is null for an entry from today (Oslo day)', () => {
     expect(ledgerDayLabel('2026-11-20T08:00:00.000Z', 'no', NOW)).toBeNull();
-    // 23:30 Oslo on the 19th is yesterday, 00:30 on the 20th is today.
+    // 23:30Z on the 19th is 00:30 Oslo on the 20th: today.
     expect(ledgerDayLabel('2026-11-19T23:30:00.000Z', 'no', NOW)).toBeNull();
+    // 22:30Z on the 19th is 23:30 Oslo on the 19th: yesterday.
+    expect(ledgerDayLabel('2026-11-19T22:30:00.000Z', 'no', NOW)).toBe('i går');
   });
   it('says «i går» for the day before, also late in the evening', () => {
     expect(ledgerDayLabel('2026-11-19T20:00:00.000Z', 'no', NOW)).toBe('i går');

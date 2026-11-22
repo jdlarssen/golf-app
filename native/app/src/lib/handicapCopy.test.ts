@@ -84,6 +84,15 @@ describe('formatRelativeAgoNb, kantene', () => {
   it('59,5 minutter er «for 1 time siden», ikke «60 minutter»', () => {
     expect(formatRelativeAgoNb(new Date(NOW - 59.5 * MIN).toISOString(), NOW)).toBe('for 1 time siden');
   });
+  it('teller kalenderdager: 25 timer over midnatt er «i forgårs»', () => {
+    const now = new Date(2026, 10, 18, 0, 30).getTime(); // 00:30 enhetstid
+    expect(formatRelativeAgoNb(new Date(now - 25 * 60 * MIN).toISOString(), now)).toBe('i forgårs');
+    expect(formatRelativeAgoNb(new Date(now - 23.5 * 60 * MIN).toISOString(), now)).toBe('i går');
+    const noon = new Date(2026, 10, 18, 13, 0).getTime();
+    // 13:00 minus 33,6 t er 03:24 dagen før: i går. Minus 38 t er 23:00 to dager før.
+    expect(formatRelativeAgoNb(new Date(noon - 33.6 * 60 * MIN).toISOString(), noon)).toBe('i går');
+    expect(formatRelativeAgoNb(new Date(noon - 38 * 60 * MIN).toISOString(), noon)).toBe('i forgårs');
+  });
   it('en uparsbar tid kaster ikke og gir tom tekst', () => {
     expect(formatRelativeAgoNb('not-a-date', NOW)).toBe('');
   });

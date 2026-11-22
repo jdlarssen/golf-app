@@ -835,3 +835,24 @@ describe('formatDayChoiceLocale (#2480, shared by #2448)', () => {
     expect(formatDayChoiceLocale('2027-03-28', 'no')).toBe('Søn. 28. mar');
   });
 });
+
+describe('formatRelativeLocale (en) rounding, Oslo days and bad input', () => {
+  const NOW_MS = new Date('2026-05-24T12:00:00.000Z').getTime();
+  const MIN = 60_000;
+  const HR = 60 * MIN;
+  const at = (ms: number) => new Date(NOW_MS - ms).toISOString();
+  it('59.5 min reads «1 hour ago», never «60 minutes ago»', () => {
+    expect(formatRelativeLocale(at(59.5 * MIN), 'en', NOW_MS)).toBe('1 hour ago');
+  });
+  it('23.5 h across midnight reads «yesterday», never «24 hours ago»', () => {
+    expect(formatRelativeLocale(at(23.5 * HR), 'en', NOW_MS)).toBe('yesterday');
+  });
+  it('Mon 23:30 to Wed 00:30 Oslo is two days ago, not yesterday', () => {
+    const now = new Date('2026-05-26T22:30:00.000Z').getTime(); // Wed 00:30 Oslo
+    const then = new Date('2026-05-25T21:30:00.000Z').toISOString(); // Mon 23:30 Oslo
+    expect(formatRelativeLocale(then, 'en', now)).toBe('2 days ago');
+  });
+  it('an unparseable stamp does not throw', () => {
+    expect(formatRelativeLocale('not-a-date', 'en', NOW_MS)).toBe('');
+  });
+});
