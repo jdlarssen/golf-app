@@ -842,7 +842,7 @@
         "choose": "Velg matchplay"
       },
       "fourball_matchplay": {
-        "line": "To mot to, lagets best ball teller",
+        "line": "To mot to, best ball for laget teller",
         "pitch": "Alle spiller sin egen ball, og den beste scoren på laget teller på hvert hull. Laget som vinner flest hull, vinner matchen.",
         "choose": "Velg fourball"
       },
