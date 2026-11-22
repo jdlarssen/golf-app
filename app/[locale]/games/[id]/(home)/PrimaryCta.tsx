@@ -2,6 +2,8 @@ import { useTranslations } from 'next-intl';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { LinkButton } from '@/components/ui/Button';
 import { firstHoleForSegment, holeNumbersForSegment } from '@/lib/games/holeScope';
+import { nextUnfilledHole } from '@/lib/games/nextHole';
+import type { StartType } from '@/lib/games/startType';
 import { findSegmentSibling } from '@/lib/games/segmentSibling';
 import { scoredHoleNumbers, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
 import { loadFlightDeliveryCards } from '@/lib/games/loadFlightDelivery';
@@ -17,6 +19,7 @@ export async function PrimaryCtaSection({
   approvedAt,
   requirePeerApproval,
   holeSegment,
+  startType,
   tournamentId,
   gameMode,
   teamScoreOwnerId,
@@ -36,6 +39,8 @@ export async function PrimaryCtaSection({
   leagueFlight: boolean;
   /** #1441: limits «all holes filled» + the next-hole scan to the game's segment. */
   holeSegment: HoleSegment;
+  /** A shotgun round continues on the group's own start, not on hole 1. */
+  startType: StartType;
   /**
    * #1441 (owner-QA finding B): non-null only for cup matches. Only used to
    * look up the front9 ⇄ back9 sibling so a finished front9 host's CTA can
@@ -96,15 +101,11 @@ export async function PrimaryCtaSection({
   // 1, som ligger utenfor spillets scope. Ved full runde havner vi i
   // ready_to_submit-state og denne verdien brukes ikke (CTA-en routes til
   // /submit i stedet).
+  // The shared rule (`nextUnfilledHole`) also walks a shotgun round in the
+  // order the group plays it, as the app does.
   const segmentHoles = holeNumbersForSegment(holeSegment);
-  const filledSet = new Set(filledHoles);
-  let nextHole = segmentHoles[0];
-  for (const h of segmentHoles) {
-    if (!filledSet.has(h)) {
-      nextHole = h;
-      break;
-    }
-  }
+  const nextHole =
+    nextUnfilledHole(holeSegment, new Set(filledHoles), startType) ?? segmentHoles[0];
 
   const state = computePrimaryCtaState({
     strokesCount,

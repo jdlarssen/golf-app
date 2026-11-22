@@ -21,6 +21,7 @@ import {
   type CupSideAwardRow,
 } from '../../../../lib/games/sideContest';
 import type { HoleSegment } from '../../../../lib/scoring/holeSegment';
+import { parseStartType, type StartType } from '../../../../lib/games/startType';
 import type { ResultSummary } from '../../../../lib/scoring/resultSummary';
 import {
   GAME_SELECT,
@@ -103,6 +104,12 @@ export interface BundleGame {
   requirePeerApproval: boolean;
   scheduledTeeOffAt: string | null;
   holeSegment: string;
+  /**
+   * Første tee eller shotgun (`games.start_type`). Mangler i en bundel som ble
+   * lagret av en eldre versjon av appen; da leses den som første tee til neste
+   * henting skriver den om.
+   */
+  startType?: StartType;
   sourceGameId: string | null;
   createdBy: string | null;
   /**
@@ -390,6 +397,7 @@ export function toBundle(
       requirePeerApproval: game.require_peer_approval,
       scheduledTeeOffAt: game.scheduled_tee_off_at,
       holeSegment: game.hole_segment,
+      startType: parseStartType(game.start_type),
       sourceGameId: game.source_game_id,
       createdBy: game.created_by,
       scoreVisibility: game.score_visibility,

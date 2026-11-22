@@ -89,6 +89,15 @@ describe('buildHeroModel', () => {
     });
   });
 
+  it('shotgun: neste hull følger flightens egen start, ikke hull 1', () => {
+    const model = buildHeroModel({
+      bundle: homeBundle({ players: trio, game: { startType: 'shotgun' } }),
+      scores: holeScores('g-live', ME, 14, 4, 10),
+      userId: ME,
+    });
+    expect(model).toMatchObject({ played: 5, nextHole: 15, action: { kind: 'hole', holeNumber: 15 } });
+  });
+
   it('gir lederen plass 1 uten avstand', () => {
     const model = buildHeroModel({
       bundle: homeBundle({ players: trio }),

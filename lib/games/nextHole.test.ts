@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { nextUnfilledHole, playOrder } from './nextHole';
+import { nextUnfilledHole, nextUnfilledHoleOf, playOrder } from './nextHole';
 
 const range = (from: number, to: number) =>
   Array.from({ length: to - from + 1 }, (_, i) => from + i);
@@ -64,3 +64,26 @@ describe('playOrder (#2286) — a shotgun group plays on from the hole it starte
   });
 });
 
+
+describe('nextUnfilledHoleOf (a list of holes, as the app holds them)', () => {
+  const backNine = [10, 11, 12, 13, 14, 15, 16, 17, 18];
+
+  it('matches the segment version for the same holes', () => {
+    const filled = new Set([15, 16, 17, 18, 10]);
+    expect(nextUnfilledHoleOf(backNine, filled, 'shotgun')).toBe(
+      nextUnfilledHole('back9', filled, 'shotgun'),
+    );
+    expect(nextUnfilledHoleOf(backNine, filled, 'shotgun')).toBe(11);
+  });
+
+  it('walks a shotgun start on hole 10 of a full round to 15, and a first tee to 1', () => {
+    const all = Array.from({ length: 18 }, (_, i) => i + 1);
+    const played = new Set([10, 11, 12, 13, 14]);
+    expect(nextUnfilledHoleOf(all, played, 'shotgun')).toBe(15);
+    expect(nextUnfilledHoleOf(all, played, 'first_tee')).toBe(1);
+  });
+
+  it('answers null when every hole has a score', () => {
+    expect(nextUnfilledHoleOf(backNine, new Set(backNine), 'shotgun')).toBeNull();
+  });
+});

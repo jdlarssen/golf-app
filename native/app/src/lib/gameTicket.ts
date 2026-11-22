@@ -37,6 +37,7 @@ import { HOME_TEXT, finishedResultText } from './homeCopy';
 import { formatClock, formatNameList } from './display';
 import { formatStubDate, formatWeekdayDayMonth, teeOffProximityLocal } from './homeDates';
 import { nextUnfilledHole } from './primaryCtaState';
+import type { StartType } from '../../../../lib/games/startType';
 import type { RoundHole } from './segmentRound';
 import { scorecardHandicapPart } from './scorecardHeader';
 import { TICKET_TEXT, allowancePart, fieldA11y, flightOf, maxStrokesPart, teePart } from './ticketCopy';
@@ -335,6 +336,8 @@ export function ticketStub(opts: {
   filled: readonly number[];
   /** Hullene spillet eier: alle 18, eller segmentets (#2752). */
   holes: readonly number[];
+  /** Shotgun: «Fortsett på hull N» følger flightens egen start. */
+  startType?: StartType;
   /** #2752: broen til hull 10 (`bridgeHole`), ellers `null`. */
   bridge?: RoundHole | null;
   /** #2752: kampen slagene føres i, når spillet er en avledet kamp. */
@@ -394,7 +397,7 @@ export function ticketStub(opts: {
     state,
     played: opts.filled.length,
     total: opts.holes.length,
-    nextHole: nextUnfilledHole(opts.filled, opts.holes),
+    nextHole: nextUnfilledHole(opts.filled, opts.holes, opts.startType),
     ...(opts.bridge ? { bridge: opts.bridge } : {}),
   };
 }
