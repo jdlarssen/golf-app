@@ -6,23 +6,31 @@ import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { safeInternalPath } from '@/lib/url/safeInternalPath';
-import { parseProfileInput } from '@/lib/users/profileInput';
+import { parseProfileInput, type ProfileInputError } from '@/lib/users/profileInput';
 import { recomputeCourseHandicapForUser } from '@/lib/games/recomputeCourseHandicap';
 import { expectAffected, expectOne } from '@/lib/supabase/affectedRows';
 
-export async function updateProfile(formData: FormData) {
+/**
+ * What the profile form gets back when a save is refused: the code for the
+ * message. The form keeps what was typed (audit 2026-11-20); before, a refusal
+ * redirected to `?error=` and the form refilled from the stored row.
+ */
+export type ProfileFormState = { error: ProfileSaveError | null };
+type ProfileSaveError = ProfileInputError | 'unknown';
+
+export async function updateProfile(
+  _prev: ProfileFormState,
+  formData: FormData,
+): Promise<ProfileFormState> {
   const locale = await getLocale();
   // Optional ?next=-redirect target. Validation in safeInternalPath rejects
   // anything that isn't a same-origin path (open-redirect vern).
   const nextSafe = safeInternalPath(formData.get('next'));
-  const errorBackTo = nextSafe
-    ? `/profile?next=${encodeURIComponent(nextSafe)}`
-    : '/profile';
 
   // Selve regelen bor i `lib/users/profileInput.ts` — den deles nå med ruta
   // native-appen kaller (#1906), så begge dørene godtar og avviser NØYAKTIG
   // det samme (AGENTS trap 4: én regel, ett hjem). Denne actionen oversetter
-  // bare feilkoden til redirecten skjemaets feilbanner allerede leser.
+  // bare feilkoden tilbake til skjemaet, som viser meldingen.
   //
   // Hcp-feltet sender en positiv magnitude + et plus-flagg (spilleren slipper
   // å taste fortegn på mobil). Plusshandicap lagres internt negativt.
@@ -40,10 +48,7 @@ export async function updateProfile(formData: FormData) {
     level: levelEntry === null ? null : String(levelEntry),
   });
   if (!parsed.ok) {
-    redirect({
-      href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=${parsed.error}`,
-      locale,
-    });
+    return { error: parsed.error };
   }
   const { name, nickname, hcpIndex: hcpParsed, gender, level } = parsed.value;
 
@@ -67,7 +72,10 @@ export async function updateProfile(formData: FormData) {
   // edit, which is fine — the field's role is "has the user ever completed
   // onboarding," not "when did they first onboard."
   // Bump handicap_updated_at on every save — even when hcp_index didn't
-  // change, the player has been through the form and endorsed the value.
+  // change, the player has been through the form and endorsed the value. The
+  // form lets an unchanged save through when the handicap is stale, as
+  // «Handicapet stemmer» (audit 2026-11-20); before, an unchanged form could
+  // not be sent, so this path never ran from the profile.
   // Drives the stale-handicap prompt in the scheduled-game waiting room
   // (see lib/handicap/staleness.ts).
   const now = new Date().toISOString();
@@ -96,10 +104,10 @@ export async function updateProfile(formData: FormData) {
     );
   } catch (err) {
     // Catches both DB errors (Error) and silent 0-row writes (NoRowsAffectedError)
-    // — trap #2 from AGENTS.md. Keep the same redirect-on-error behaviour so
-    // the user sees the existing error banner rather than a raw 500.
+    // — trap #2 from AGENTS.md. The form shows the message rather than a raw 500.
     if (err instanceof Error) {
-      redirect({ href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=unknown`, locale });
+      console.error('[updateProfile] save failed', err);
+      return { error: 'unknown' };
     }
     throw err; // rethrow unexpected non-Error throws (should never happen)
   }

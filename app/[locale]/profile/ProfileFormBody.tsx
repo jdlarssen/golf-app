@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useActionState, useEffect, useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/Input';
 import { SubmitButton } from '@/components/ui/SubmitButton';
@@ -8,6 +8,8 @@ import { SegmentedField } from '@/components/ui/SegmentedField';
 import { fromSignedHcp } from '@/lib/handicap/sign';
 import { formatGolfboxHcp } from '@/lib/handicap/signFormat';
 import { HCP_MAX } from '@/lib/users/profileInput';
+import { Banner } from '@/components/ui/Banner';
+import type { ProfileFormState } from './actions';
 
 type Gender = 'mens' | 'ladies';
 type Level = 'junior' | 'normal' | 'senior';
@@ -24,7 +26,14 @@ type InitialValues = {
 type Props = {
   email: string;
   initial: InitialValues;
-  action: (formData: FormData) => void;
+  /** updateProfile: a refused save returns `{ error }`, and the form keeps what was typed. */
+  action: (prev: ProfileFormState, formData: FormData) => Promise<ProfileFormState>;
+  /**
+   * The stored handicap is over a month old (`isHandicapStale`). An unchanged
+   * form can then be sent as «Handicapet stemmer», which stamps the handicap as
+   * checked (audit 2026-11-20).
+   */
+  stale?: boolean;
   /**
    * Optional same-origin path the action should redirect to on success.
    * Already validated by `safeInternalPath` upstream — rendered as a hidden input.
@@ -66,10 +75,13 @@ export function ProfileFormBody({
   email,
   initial,
   action,
+  stale = false,
   next,
 }: Props) {
   const locale = useLocale();
   const t = useTranslations('profile.form');
+  const tErrors = useTranslations('profile.errors');
+  const [state, formAction] = useActionState(action, { error: null });
   const initialHcp = useMemo(() => splitInitialHcp(initial.hcpIndex), [initial.hcpIndex]);
 
   const [name, setName] = useState(initial.name);
@@ -116,6 +128,10 @@ export function ProfileFormBody({
     gender !== initial.gender ||
     level !== initial.level;
 
+  // An unchanged form is a confirmation of the handicap, and only worth sending
+  // when the handicap is stale and has a value to confirm.
+  const confirmOnly = !dirty && stale && initialHcp.magnitude !== '';
+
   // Bekreftelses-linja under hcp-raden: når plusshandicap er på, bekrefter vi
   // hva som lagres (sikkerhetsnett mot stille feil-oppsett). Ferskheten står
   // én gang, i profilhodet over skjemaet (#2709).
@@ -133,8 +149,10 @@ export function ProfileFormBody({
   ];
 
   return (
-    <form action={action} className="space-y-3">
+    <form action={formAction} className="space-y-3">
       {next ? <input type="hidden" name="next" value={next} /> : null}
+
+      {state.error !== null && <Banner tone="error">{tErrors(state.error)}</Banner>}
 
       <Input
         id="name"
@@ -275,19 +293,28 @@ export function ProfileFormBody({
         {t('emailPrefix')} <span className="text-text">{email}</span> · {t('emailLine')}
       </p>
 
-      <div className="pt-2">
-        <SubmitButton pendingLabel={t('savePending')} disabled={!dirty}>
-          {t('saveButton')}
-        </SubmitButton>
-        {!dirty && (
-          <p
-            aria-live="polite"
-            className="mt-1.5 text-xs text-muted"
-          >
-            {t('saveHint')}
-          </p>
-        )}
-      </div>
+      <SaveRow dirty={dirty} confirmOnly={confirmOnly} />
     </form>
+  );
+}
+
+/**
+ * «Lagre» while something changed; «Handicapet stemmer» on an unchanged form
+ * with a stale handicap (audit 2026-11-20); otherwise a grey «Lagre» and why.
+ */
+function SaveRow({ dirty, confirmOnly }: { dirty: boolean; confirmOnly: boolean }) {
+  const t = useTranslations('profile.form');
+  const idle = !dirty && !confirmOnly;
+  return (
+    <div className="pt-2">
+      <SubmitButton pendingLabel={t('savePending')} disabled={idle}>
+        {confirmOnly ? t('confirmButton') : t('saveButton')}
+      </SubmitButton>
+      {idle && (
+        <p aria-live="polite" className="mt-1.5 text-xs text-muted">
+          {t('saveHint')}
+        </p>
+      )}
+    </div>
   );
 }

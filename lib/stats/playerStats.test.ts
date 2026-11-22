@@ -78,6 +78,31 @@ describe('computePlayerStats — grossAverage & bestRound (complete-18 only)', (
   });
 });
 
+describe('computePlayerStats — bestRound is measured against par (audit 2026-11-20)', () => {
+  /** A complete round with the same par and strokes on every hole. */
+  const flat = (par: number, strokes: number): RoundInput => ({
+    holes: Array.from({ length: 18 }, (_, i) => hole(i + 1, par, strokes)),
+  });
+  /** 18 holes on a par-54 course, 58 strokes: +4. */
+  const par3Course58: RoundInput = {
+    holes: Array.from({ length: 18 }, (_, i) => hole(i + 1, 3, i < 4 ? 4 : 3)),
+  };
+  /** 18 holes on a par-72 course, 74 strokes: +2. */
+  const par72Course74: RoundInput = {
+    holes: Array.from({ length: 18 }, (_, i) => hole(i + 1, 4, i < 2 ? 5 : 4)),
+  };
+
+  it('a 74 on a par-72 course beats a 58 on a par-54 course', () => {
+    const stats = computePlayerStats([par3Course58, par72Course74]);
+    expect(stats.bestRound).toBe(74);
+  });
+
+  it('on equal score to par, the lower gross wins', () => {
+    // 54 strokes on par 54 and 72 on par 72: both level par.
+    expect(computePlayerStats([flat(4, 4), flat(3, 3)]).bestRound).toBe(54);
+  });
+});
+
 describe('computePlayerStats — per-hole achievements', () => {
   it.each([
     // [label, par, strokes, expected flags]

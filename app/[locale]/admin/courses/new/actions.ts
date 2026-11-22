@@ -5,10 +5,15 @@ import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { MAX_TEE_BOXES } from '@/app/[locale]/admin/courses/constants';
-import { parseCourseHolesAndTees } from '@/lib/courses/parseCourseForm';
+import { parseCourseHolesAndTees, type ParsedCourseForm } from '@/lib/courses/parseCourseForm';
+import {
+  CourseFormRefusal,
+  refuseCourseForm,
+  type CourseFormState,
+} from '@/lib/courses/courseFormState';
 import { safeInternalPath } from '@/lib/url/safeInternalPath';
 
-// Open-redirect-guard: redirect_base/success_redirect er klient-kontrollert
+// Open-redirect-guard: success_redirect er klient-kontrollert
 // FormData (CourseForm sender dem som skjulte inputs), så de går gjennom den
 // felles regelen for interne stier. Defense-in-depth — verdien er
 // server-konstruert, men behandles som upålitelig.
@@ -24,7 +29,15 @@ function appendQuery(base: string, key: string, value: string): string {
   return `${base}${sep}${key}=${value}`;
 }
 
-export async function createCourse(formData: FormData) {
+/**
+ * A refused save comes back as `{ error }` so the form keeps what was typed
+ * (audit 2026-11-20); before, it redirected to `?error=` and the page drew an
+ * empty form. Success still redirects.
+ */
+export async function createCourse(
+  _prev: CourseFormState,
+  formData: FormData,
+): Promise<CourseFormState> {
   const locale = await getLocale();
   const supabase = await getServerClient();
   // #366: bane-opprettelse er åpen for ALLE innloggede brukere (ikke bare
@@ -38,25 +51,22 @@ export async function createCourse(formData: FormData) {
     redirect({ href: '/login', locale });
   }
 
-  // Hvor valideringsfeil bouncer / hvor suksess lander. Admin-flyten sender
-  // ingen verdier → admin-defaults. /opprett-bane sender egne stier så
-  // ikke-admin-brukere ikke kastes til /admin/courses (dit har de ikke tilgang).
-  const errorBase = internalPathOr(
-    formData.get('redirect_base'),
-    '/admin/courses/new',
-  );
+  // Hvor suksess lander. Admin-flyten sender ingen verdi → admin-default.
+  // /opprett-bane sender sin egen sti så ikke-admin-brukere ikke kastes til
+  // /admin/courses (dit har de ikke tilgang).
   const successRedirect = internalPathOr(
     formData.get('success_redirect'),
     '/admin/courses?status=created',
   );
-  const fail = (code: string): never =>
-    redirect({ href: appendQuery(errorBase, 'error', code), locale });
 
-  const { name, nineHoles, holes, teeBoxes } = parseCourseHolesAndTees(
-    formData,
-    MAX_TEE_BOXES,
-    fail,
-  );
+  let parsed: ParsedCourseForm;
+  try {
+    parsed = parseCourseHolesAndTees(formData, MAX_TEE_BOXES, refuseCourseForm);
+  } catch (err) {
+    if (err instanceof CourseFormRefusal) return { error: err.code };
+    throw err;
+  }
+  const { name, nineHoles, holes, teeBoxes } = parsed;
 
   // #737: atomisk oppretting. Tidligere insertet vi courses → course_holes →
   // tee_boxes sekvensielt UTEN rollback; feilet en barn-insert, ble en
@@ -77,7 +87,7 @@ export async function createCourse(formData: FormData) {
   );
   if (rpcError || !courseId) {
     console.error('[createCourse] create_course_with_layout failed', rpcError);
-    return fail('db_course');
+    return { error: 'db_course' };
   }
 
   // #1045: a new admin course may be publicly eligible → invalidate the

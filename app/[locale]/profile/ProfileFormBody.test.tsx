@@ -16,12 +16,18 @@ const baseInitial = {
   level: 'normal' as const,
 };
 
-function renderForm(overrides: Partial<typeof baseInitial> = {}) {
+const IDLE = async () => ({ error: null });
+
+function renderForm(
+  overrides: Partial<typeof baseInitial> = {},
+  props: Partial<Pick<Parameters<typeof ProfileFormBody>[0], 'action' | 'stale'>> = {},
+) {
   return render(
     <ProfileFormBody
       email="per@example.com"
       initial={{ ...baseInitial, ...overrides }}
-      action={() => undefined}
+      action={IDLE}
+      {...props}
     />,
   );
 }
@@ -35,6 +41,47 @@ describe('ProfileFormBody — dirty / Lagre', () => {
       target: { value: 'Per Hansen Jr' },
     });
     expect(saveBtn).not.toBeDisabled();
+  });
+});
+
+describe('ProfileFormBody — a stale handicap can be confirmed (audit 2026-11-20)', () => {
+  it('offers «Handicapet stemmer» on an unchanged form when the handicap is stale', () => {
+    renderForm({}, { stale: true });
+    const confirm = screen.getByRole('button', { name: 'Handicapet stemmer' });
+    expect(confirm).not.toBeDisabled();
+    expect(screen.queryByText('Lagre blir aktiv når du endrer noe.')).toBeNull();
+  });
+
+  it('goes back to «Lagre» once something changes', () => {
+    renderForm({}, { stale: true });
+    fireEvent.change(screen.getByLabelText('Navn'), { target: { value: 'Per H' } });
+    expect(screen.getByRole('button', { name: 'Lagre' })).not.toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Handicapet stemmer' })).toBeNull();
+  });
+
+  it('keeps «Lagre» grey when the handicap is fresh, or empty and stale', () => {
+    renderForm({}, { stale: false });
+    expect(screen.getByRole('button', { name: 'Lagre' })).toBeDisabled();
+    cleanup();
+    renderForm({ hcpIndex: '' }, { stale: true });
+    expect(screen.getByRole('button', { name: 'Lagre' })).toBeDisabled();
+  });
+});
+
+describe('ProfileFormBody — a refused save keeps the typed values (audit 2026-11-20)', () => {
+  it('shows the refusal and leaves name and handicap as typed', async () => {
+    const action = vi.fn(async () => ({ error: 'hcp_invalid' as const }));
+    renderForm({}, { action });
+    fireEvent.change(screen.getByLabelText('Navn'), { target: { value: 'Per Ny' } });
+    fireEvent.change(screen.getByLabelText('Handicap'), { target: { value: '60' } });
+    fireEvent.submit(screen.getByRole('button', { name: 'Lagre' }).closest('form')!);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Handicap-index må være et tall mellom 0 og 54.',
+    );
+    expect(action).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText('Navn')).toHaveValue('Per Ny');
+    expect(screen.getByLabelText('Handicap')).toHaveValue(60);
   });
 });
 

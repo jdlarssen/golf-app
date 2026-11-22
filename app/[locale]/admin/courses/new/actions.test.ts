@@ -16,8 +16,12 @@ import {
  *   erstattet med ett `create_course_with_layout`-RPC-kall som kjører dem i én
  *   transaksjon. created_by tvinges til auth.uid() INNE i RPC-en — aldri en param.
  *   En RPC-feil ruller alt tilbake (ingen orphan course) og viser lokalisert feil.
- * - redirect_base / success_redirect respekteres OG saniteres (open-redirect).
+ * - success_redirect respekteres OG saniteres (open-redirect).
+ * - A refused save returns { error } so the form keeps what was typed
+ *   (audit 2026-11-20); it no longer redirects to ?error=.
  */
+
+const IDLE = { error: null };
 
 const redirectMock = makeRedirectMock();
 vi.mock('@/i18n/navigation', () => ({
@@ -92,7 +96,7 @@ describe('createCourse — #366 gate + RLS-write', () => {
     setAuth(null);
     const { createCourse } = await import('./actions');
 
-    await expect(createCourse(validCourseFormData())).rejects.toThrow(
+    await expect(createCourse(IDLE, validCourseFormData())).rejects.toThrow(
       RedirectError,
     );
     expect(lastRedirect()).toBe('/login');
@@ -108,7 +112,7 @@ describe('createCourse — #366 gate + RLS-write', () => {
     setAuth({ id: regularUserId });
     const { createCourse } = await import('./actions');
 
-    await expect(createCourse(validCourseFormData())).rejects.toThrow(
+    await expect(createCourse(IDLE, validCourseFormData())).rejects.toThrow(
       RedirectError,
     );
 
@@ -144,7 +148,7 @@ describe('createCourse — #366 gate + RLS-write', () => {
     setAuth({ id: regularUserId });
     const { createCourse } = await import('./actions');
 
-    await expect(createCourse(validCourseFormData())).rejects.toThrow(RedirectError);
+    await expect(createCourse(IDLE, validCourseFormData())).rejects.toThrow(RedirectError);
 
     const params = rpcCall('create_course_with_layout')!.params as { p_nine_holes: boolean };
     expect(params.p_nine_holes).toBe(false);
@@ -155,7 +159,7 @@ describe('createCourse — #366 gate + RLS-write', () => {
     setAuth({ id: regularUserId });
     const { createCourse } = await import('./actions');
 
-    await expect(createCourse(buildNineHoleFormData())).rejects.toThrow(RedirectError);
+    await expect(createCourse(IDLE, buildNineHoleFormData())).rejects.toThrow(RedirectError);
 
     const params = rpcCall('create_course_with_layout')!.params as {
       p_nine_holes: boolean;
@@ -167,16 +171,13 @@ describe('createCourse — #366 gate + RLS-write', () => {
     expect(lastRedirect()).toMatch(/^\/admin\/courses\?status=created/);
   });
 
-  it('honors success_redirect + redirect_base for the non-admin /opprett-bane route', async () => {
+  it('honors success_redirect for the non-admin /opprett-bane route', async () => {
     supabaseMock = happyMock();
     setAuth({ id: regularUserId });
     const { createCourse } = await import('./actions');
 
-    const fd = validCourseFormData({
-      redirect_base: '/opprett-bane',
-      success_redirect: '/opprett-bane?status=created',
-    });
-    await expect(createCourse(fd)).rejects.toThrow(RedirectError);
+    const fd = validCourseFormData({ success_redirect: '/opprett-bane?status=created' });
+    await expect(createCourse(IDLE, fd)).rejects.toThrow(RedirectError);
     expect(lastRedirect()).toBe(
       '/opprett-bane?status=created&name=Testbanen&bane=course-1',
     );
@@ -197,61 +198,44 @@ describe('createCourse — #366 gate + RLS-write', () => {
     }) as unknown as typeof supabaseMock.rpc;
     const { createCourse } = await import('./actions');
 
-    await expect(createCourse(validCourseFormData())).rejects.toThrow(
-      RedirectError,
-    );
+    await expect(createCourse(IDLE, validCourseFormData())).resolves.toEqual({
+      error: 'db_course',
+    });
     // No direct courses/holes/tees insert could have leaked a partial course.
     expect(supabaseMock.__fromCalls.some((c) => c.method === 'insert')).toBe(
       false,
     );
-    // The RPC was attempted, and the failure bounced to a localized error.
+    // The RPC was attempted, and the failure came back to the form as a code.
     expect(rpcCall('create_course_with_layout')).toBeDefined();
-    expect(lastRedirect()).toBe('/admin/courses/new?error=db_course');
+    expect(redirectMock).not.toHaveBeenCalled();
     // #1045: a failed create must NOT invalidate the /baner cache (nothing changed).
     expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 
-  it('bounces validation errors to redirect_base (non-admin route)', async () => {
+  it('returns a validation refusal to the form instead of redirecting (audit 2026-11-20)', async () => {
     supabaseMock = buildSupabaseMock([]);
     setAuth({ id: regularUserId });
     const { createCourse } = await import('./actions');
 
-    const fd = validCourseFormData({ redirect_base: '/opprett-bane' });
+    const fd = validCourseFormData({ success_redirect: '/opprett-bane?status=created' });
     fd.set('name', ''); // trigger name_required
-    await expect(createCourse(fd)).rejects.toThrow(RedirectError);
-    expect(lastRedirect()).toBe('/opprett-bane?error=name_required');
+    await expect(createCourse(IDLE, fd)).resolves.toEqual({ error: 'name_required' });
+    expect(redirectMock).not.toHaveBeenCalled();
+    expect(supabaseMock.__rpcCalls).toHaveLength(0);
   });
 
-  it('rejects an external redirect_base (open-redirect guard) and falls back to the admin default', async () => {
-    supabaseMock = buildSupabaseMock([]);
+  it.each([
+    ['an external URL', 'https://evil.example'],
+    ['a protocol-relative URL', '//evil.example'],
+    ['a backslash path (browsers normalize \\ to /)', '/\\evil.example'],
+  ])('ignores %s as success_redirect and lands on the admin default', async (_label, target) => {
+    supabaseMock = happyMock();
     setAuth({ id: regularUserId });
     const { createCourse } = await import('./actions');
 
-    const fd = validCourseFormData({ redirect_base: 'https://evil.example' });
-    fd.set('name', ''); // trigger an error so we observe the bounce target
-    await expect(createCourse(fd)).rejects.toThrow(RedirectError);
-    expect(lastRedirect()).toBe('/admin/courses/new?error=name_required');
-  });
-
-  it('rejects a protocol-relative redirect_base (//evil)', async () => {
-    supabaseMock = buildSupabaseMock([]);
-    setAuth({ id: regularUserId });
-    const { createCourse } = await import('./actions');
-
-    const fd = validCourseFormData({ redirect_base: '//evil.example' });
-    fd.set('name', '');
-    await expect(createCourse(fd)).rejects.toThrow(RedirectError);
-    expect(lastRedirect()).toBe('/admin/courses/new?error=name_required');
-  });
-
-  it('rejects a backslash redirect_base (/\\evil — browsers normalize \\ to /)', async () => {
-    supabaseMock = buildSupabaseMock([]);
-    setAuth({ id: regularUserId });
-    const { createCourse } = await import('./actions');
-
-    const fd = validCourseFormData({ redirect_base: '/\\evil.example' });
-    fd.set('name', '');
-    await expect(createCourse(fd)).rejects.toThrow(RedirectError);
-    expect(lastRedirect()).toBe('/admin/courses/new?error=name_required');
+    await expect(
+      createCourse(IDLE, validCourseFormData({ success_redirect: target })),
+    ).rejects.toThrow(RedirectError);
+    expect(lastRedirect()).toBe('/admin/courses?status=created&name=Testbanen&bane=course-1');
   });
 });

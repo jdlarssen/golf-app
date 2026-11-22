@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { CourseForm } from '../../CourseForm';
 import { isTeeColor } from '@/lib/courses/teeColors';
 import { updateCourse } from './actions';
+import { courseFormErrorMessages } from '@/lib/courses/courseFormState';
 import { SmartLink } from '@/components/ui/SmartLink';
 import {
   ArchivedTeesSection,
@@ -245,7 +246,8 @@ async function EditCourseFormBody({
   submitLabel: string;
 }) {
   const { supabase } = await getEditCourseContext();
-  const [holesResult, teesResult, affectedGamesResult, usedGamesResult] = await Promise.all([
+  const tEdit = await getTranslations('admin.courses.edit');
+  const [holesResult, teesResult, usedGamesResult] = await Promise.all([
     supabase
       .from('course_holes')
       .select(COURSE_HOLES_SELECT)
@@ -259,16 +261,9 @@ async function EditCourseFormBody({
       .eq('course_id', courseId)
       .is('archived_at', null)
       .order('name', { ascending: true }),
-    // Forvarsel-count: hvor mange spill på denne banen er live eller venter
-    // på tee-off. Brukes av CourseForm til å gate en confirm-dialog hvis
-    // admin endrer par/SI mens spill pågår. Se issue #237.
-    supabase
-      .from('games')
-      .select('id', { count: 'exact', head: true })
-      .eq('course_id', courseId)
-      .in('status', ['active', 'scheduled']),
     // #2484: every round on the course, finished ones too. Above 0 the form
-    // locks the hole count (update_course_with_layout refuses the switch).
+    // locks the hole count (update_course_with_layout refuses the switch) and
+    // asks before a change to par, index, slope or CR (#237, audit 2026-11-20).
     supabase
       .from('games')
       .select('id', { count: 'exact', head: true })
@@ -277,13 +272,9 @@ async function EditCourseFormBody({
 
   if (holesResult.error) throw holesResult.error;
   if (teesResult.error) throw teesResult.error;
-  // Count-feil er ikke fatal — vi vil heller miste advarselen enn å hindre
-  // admin i å redigere banen. Default 0 ⇒ ingen confirm-dialog.
-  const affectedGamesCount = affectedGamesResult.error
-    ? 0
-    : (affectedGamesResult.count ?? 0);
-  // A failed count leaves the choice open; the RPC still refuses a switch on a
-  // used course, and the page shows that as hole_count_locked.
+  // A failed count leaves the choice open and skips the question; the RPC still
+  // refuses a switch on a used course, and the form shows that as
+  // hole_count_locked. Losing the question beats blocking the edit.
   const usedInGamesCount = usedGamesResult.error ? 0 : (usedGamesResult.count ?? 0);
 
   // Numeric fields are stringified so the form's controlled inputs preserve
@@ -332,8 +323,11 @@ async function EditCourseFormBody({
     <CourseForm
       key={teeSetKey}
       action={updateAction}
+      errorMessages={courseFormErrorMessages((code) => {
+        const key = `errors.${code}` as Parameters<typeof tEdit>[0];
+        return tEdit.has(key) ? tEdit(key) : undefined;
+      }, tEdit('errors.db_course'))}
       submitLabel={submitLabel}
-      affectedGamesCount={affectedGamesCount}
       usedInGamesCount={usedInGamesCount}
       tone="admin"
       initialData={{

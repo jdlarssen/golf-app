@@ -415,6 +415,7 @@
       "levelSenior": "Senior",
       "savePending": "Lagrer …",
       "saveButton": "Lagre",
+      "confirmButton": "Handicapet stemmer",
       "saveHint": "Lagre blir aktiv når du endrer noe."
     },
     "deleteAccount": {
@@ -4251,9 +4252,7 @@
       "juniorsParRemoveLabel": "Fjern junior-overstyring",
       "genderParLadies": "damer",
       "genderParJuniors": "junior",
-      "confirmChanges": "Banen brukes i {games} som pågår eller er planlagt. Endring av par eller stroke-indeks vil endre score-beregningen mid-runde for spillere som allerede har levert scorekort. Er du sikker på at du vil fortsette?",
-      "confirmGames1": "ett spill",
-      "confirmGamesN": "{count} spill"
+      "confirmUsedChanges": "{count, plural, one {Banen er brukt i én runde.} other {Banen er brukt i # runder.}} Endrer du par, indeks, slope eller CR, kan resultatene i disse rundene endre seg. Vil du lagre likevel?"
     }
   },
   "admin": {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useActionState, useMemo, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/Input';
 import { SubmitButton } from '@/components/ui/SubmitButton';
@@ -15,6 +15,11 @@ import { ChoiceCardGrid, RadioChoiceCard } from '@/components/ui/ChoiceCard';
 import { formatListLocale } from '@/lib/i18n/format';
 import type { TeeBoxData, TeeRows } from '@/lib/courses/teeChips';
 import type { SimilarCourseTarget } from '@/lib/courses/similarCoursesPanel';
+import {
+  COURSE_FORM_IDLE,
+  type CourseFormErrorCode,
+  type CourseFormState,
+} from '@/lib/courses/courseFormState';
 import type { AppLocale } from '@/i18n/routing';
 import { HoleGridEditor } from './HoleGridEditor';
 import { TeeTableEditor } from './TeeTableEditor';
@@ -42,28 +47,24 @@ export type CourseFormInitialData = {
 };
 
 type Props = {
-  // The server action receives FormData. Two signatures are supported here:
-  // - create: (formData) => void
-  // - update: (formData) => void  (bound with the course id ahead of time)
-  action: (formData: FormData) => void | Promise<void>;
+  // createCourse, or updateCourse bound with the course id. A refused save
+  // returns `{ error }` and the form stays as typed (audit 2026-11-20).
+  action: (prev: CourseFormState, formData: FormData) => Promise<CourseFormState>;
+  // The page's copy for every refusal code, read on the server.
+  errorMessages: Record<CourseFormErrorCode, string>;
   submitLabel: string;
   initialData?: CourseFormInitialData;
-  // Antall games på banen som har status 'active' eller 'scheduled'. Brukes
-  // til å gate en confirm-dialog ved par/SI-endringer som ville påvirke
-  // mid-runde-scoring. Default 0 så create-flyten og andre kall uten denne
-  // prop-en aldri trigger advarselen. Se issue #237.
-  affectedGamesCount?: number;
   // Rounds of any status on the course (#2484). Above 0 the hole count is
   // locked: switching would rewrite par 10–18 under a played round, and
-  // update_course_with_layout refuses it anyway.
+  // update_course_with_layout refuses it anyway. Above 0 a change to par,
+  // index, slope or CR also asks first (#237, audit 2026-11-20): par and
+  // index are read live by every round on the course, finished ones too.
   usedInGamesCount?: number;
   // Optional extra footer (e.g. a delete button on the edit page).
   footer?: React.ReactNode;
-  // Where createCourse should bounce validation errors / land on success.
-  // Admin-flyten lar dem stå udefinert → action-en bruker sine admin-defaults.
-  // /opprett-bane setter dem så ikke-admin-brukere holdes på sin egen rute
-  // (de har ikke tilgang til /admin/courses). Se createCourse-action.
-  redirectBase?: string;
+  // Where createCourse lands on success. The admin door leaves it out and
+  // gets the admin default; /opprett-bane sets its own path, since a player
+  // has no access to /admin/courses.
   successRedirect?: string;
   // The page colour under the sticky save bar: `admin` on the AdminShell
   // doors, `app` (default) on /opprett-bane.
@@ -123,6 +124,32 @@ const SAVE_BAR_TONE = {
   admin: 'bg-admin-bg after:bg-admin-bg',
 } as const;
 
+// Whether slope or CR changed on a tee that was already saved. New tees and
+// removed tees do not count: a new tee has no rounds, and a removed tee in use
+// is archived, not changed. Compared as numbers, so «72» and «72.0» are equal.
+const RATING_KEYS = [
+  'slope_mens',
+  'course_rating_mens',
+  'slope_ladies',
+  'course_rating_ladies',
+  'slope_juniors',
+  'course_rating_juniors',
+] as const;
+
+export function hasRatingChanges(
+  initial: TeeBoxData[] | undefined,
+  current: TeeBoxData[],
+): boolean {
+  if (!initial) return false;
+  const before = new Map(initial.filter((t) => t.id).map((t) => [t.id, t]));
+  const asNumber = (raw: string) => (raw.trim() === '' ? null : Number(raw.trim()));
+  return current.some((tee) => {
+    const init = tee.id ? before.get(tee.id) : undefined;
+    if (!init) return false;
+    return RATING_KEYS.some((key) => asNumber(tee[key]) !== asNumber(init[key]));
+  });
+}
+
 // Sjekker om hullene har avvikende par for et gitt kjønn — brukes for å
 // avgjøre om per-kjønn-par-seksjonen skal stå åpen ved mount på edit-flyten.
 // In 9-hole mode holes 10–18 are 1–9 again with the second round's index
@@ -144,17 +171,17 @@ function hasGenderParOverride(
 
 export function CourseForm({
   action,
+  errorMessages,
   submitLabel,
   initialData,
-  affectedGamesCount = 0,
   usedInGamesCount = 0,
   footer,
-  redirectBase,
   successRedirect,
   tone = 'app',
   similarCourses,
 }: Props) {
   const t = useTranslations('courseForm.form');
+  const [state, formAction] = useActionState(action, COURSE_FORM_IDLE);
 
   // Controlled so the similar-courses panel can read it; `name="name"` keeps
   // the FormData the server action reads unchanged.
@@ -203,8 +230,8 @@ export function CourseForm({
   const parNineMens = useMemo(() => sumHolePars(holes.slice(0, 9), 'mens'), [holes]);
 
   // "Lagre bane" stays disabled until the indices and tee ratings would pass
-  // the server (#2279) — a server bounce reloads an empty form, so 18 typed
-  // indices would be lost. A duplicate always leaves a number missing, so
+  // the server (#2279), so the person sees what is missing before tapping. A
+  // refusal from the server keeps the form as typed (audit 2026-11-20). A duplicate always leaves a number missing, so
   // `missing` alone gates the indices. In 9-hole mode holes 10–18 hold the
   // second round, so the 18 values are the server's expanded ones (#2484).
   const siGaps = useMemo(
@@ -312,28 +339,20 @@ export function CourseForm({
     });
   }
 
-  function buildConfirmMessage(count: number): string {
-    const games =
-      count === 1 ? t('confirmGames1') : t('confirmGamesN', { count });
-    return t('confirmChanges', { games });
-  }
-
   return (
     <form
-      action={action}
+      action={formAction}
       onSubmit={(event) => {
         if (
-          affectedGamesCount > 0 &&
-          hasHoleChanges(initialData?.holes, holes)
+          usedInGamesCount > 0 &&
+          (hasHoleChanges(initialData?.holes, holes) ||
+            hasRatingChanges(initialData?.teeBoxes, tees.rows))
         ) {
-          const ok = window.confirm(buildConfirmMessage(affectedGamesCount));
+          const ok = window.confirm(t('confirmUsedChanges', { count: usedInGamesCount }));
           if (!ok) event.preventDefault();
         }
       }}
     >
-      {redirectBase !== undefined && (
-        <input type="hidden" name="redirect_base" value={redirectBase} />
-      )}
       {successRedirect !== undefined && (
         <input type="hidden" name="success_redirect" value={successRedirect} />
       )}
@@ -515,6 +534,16 @@ export function CourseForm({
         >
           {submitLabel}
         </SubmitButton>
+
+        {state.error !== null && (
+          <p
+            role="alert"
+            data-testid="course-save-error"
+            className="text-center text-xs font-semibold leading-[normal] text-danger"
+          >
+            {errorMessages[state.error]}
+          </p>
+        )}
 
         {blocked && (
           <SaveStatus
