@@ -46,13 +46,14 @@ import {
 } from 'react-native';
 import {
   eligibleForFlightAssignment,
-  MAX_FLIGHT_SIZE,
   needsFlightAssignment,
 } from '../../../../../lib/games/flightScope';
+import { offeredFlightNumbers } from '../../../../../lib/games/startlist';
 import {
   expectedTeamSize,
   modeRequiresTeamNumber,
   needsTeamAssignment,
+  offeredTeamNumbers,
   type TeamPlayer,
 } from '../../../../../lib/games/teamScope';
 import {
@@ -297,7 +298,8 @@ export function OrganiserSection({
     game.modeConfig as { team_size?: number } | null,
   );
   const teamPlayers = toTeamPlayers(bundle.players);
-  const activeCount = teamPlayers.filter((p) => p.withdrawn_at == null).length;
+  const activeTeamPlayers = teamPlayers.filter((p) => p.withdrawn_at == null);
+  const activeCount = activeTeamPlayers.length;
   // #1875: hvilke rader formatet HAR, og hvilke det mangler noe i, er to
   // forskjellige spørsmål. Før var de ett — kontrollene var gatet på «mangler
   // noen?», så de forsvant i samme bevegelse som arrangøren fylte siste tomme
@@ -321,8 +323,17 @@ export function OrganiserSection({
   // ville vært en knapp uten jobb.
   const canAdjust =
     (hasTeamRows || hasFlightRows) && !teamsMissing && !flightsMissing;
-  const teamCount = Math.max(1, Math.ceil(activeCount / teamSize));
-  const flightCount = Math.max(1, Math.ceil(activeCount / MAX_FLIGHT_SIZE));
+  // The same numbers the web offers (one empty team or flight more, and any
+  // number set on the web above that), so a choice made there shows here.
+  const teamOptions = offeredTeamNumbers(
+    activeCount,
+    teamSize,
+    activeTeamPlayers.flatMap((p) => (p.team_number == null ? [] : [p.team_number])),
+  );
+  const flightOptions = offeredFlightNumbers(
+    activeCount,
+    activeTeamPlayers.flatMap((p) => (p.flight_number == null ? [] : [p.flight_number])),
+  );
   const canWithdraw = active && supportsWithdrawal(mode);
   // Cup-runder avsluttes fra nettsiden: cup-flyten eier de avledede kampene og
   // demper per-spill-varslene. `finishRound` avviser dem uansett — men en knapp
@@ -410,7 +421,7 @@ export function OrganiserSection({
               {showTeams ? (
                 <ChipRow
                   label="Lag"
-                  count={teamCount}
+                  values={teamOptions}
                   selected={player.teamNumber}
                   disabled={busy}
                   testIDPrefix={`organiser-team-${player.userId}`}
@@ -424,7 +435,7 @@ export function OrganiserSection({
               {showFlights ? (
                 <ChipRow
                   label="Flight"
-                  count={flightCount}
+                  values={flightOptions}
                   selected={player.flightNumber}
                   disabled={busy}
                   testIDPrefix={`organiser-flight-${player.userId}`}
@@ -683,14 +694,14 @@ export function OrganiserSection({
 /** Én rad med tall-valg — lag eller flight. */
 function ChipRow({
   label,
-  count,
+  values,
   selected,
   disabled,
   testIDPrefix,
   onPick,
 }: {
   label: string;
-  count: number;
+  values: readonly number[];
   selected: number | null;
   disabled: boolean;
   testIDPrefix: string;
@@ -700,7 +711,7 @@ function ChipRow({
   return (
     <View style={styles.chipRow}>
       <Text style={ui.muted}>{label}</Text>
-      {Array.from({ length: count }, (_, i) => i + 1).map((value) => {
+      {values.map((value) => {
         const on = selected === value;
         return (
           <Pressable

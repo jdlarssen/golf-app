@@ -288,6 +288,51 @@ describe('OrganiserSection — flight i lagformater (#2290)', () => {
     expect(screen.getByTestId('organiser-flight-user-5-1')).toBeTruthy();
     expect(screen.queryByTestId('organiser-team-user-5-1')).toBeNull();
   });
+
+  it('tilbyr de samme flightene som nettet: tre for åtte, og en flight satt på nettet over det står valgt', async () => {
+    const base = bundle('scheduled', {
+      gameMode: 'stableford',
+      modeConfig: { team_size: 1 },
+    });
+    const players = roster(8, false).map((p, i) =>
+      i === 5 ? { ...p, flightNumber: 5 } : p,
+    );
+    await render(
+      <OrganiserSection
+        bundle={{ ...base, players }}
+        userId={ME}
+        onChanged={jest.fn()}
+        onFinish={jest.fn()}
+        onOpenPayments={jest.fn()}
+      />,
+    );
+
+    // ceil(8 / 4) + 1 = 3, plus flight 5 that is in use.
+    for (const n of [1, 2, 3, 5]) {
+      expect(screen.getByTestId(`organiser-flight-user-4-${n}`)).toBeTruthy();
+    }
+    expect(screen.queryByTestId('organiser-flight-user-4-4')).toBeNull();
+  });
+
+  it('tilbyr ett tomt lag ekstra, som nettet', async () => {
+    const base = bundle('scheduled', {
+      gameMode: 'texas_scramble',
+      modeConfig: { team_size: 4 },
+    });
+    await render(
+      <OrganiserSection
+        bundle={{ ...base, players: roster(12, true) }}
+        userId={ME}
+        onChanged={jest.fn()}
+        onFinish={jest.fn()}
+        onOpenPayments={jest.fn()}
+      />,
+    );
+
+    await fireEvent.press(screen.getByTestId('organiser-adjust-toggle'));
+    expect(screen.getByTestId('organiser-team-user-5-4')).toBeTruthy();
+    expect(screen.queryByTestId('organiser-team-user-5-5')).toBeNull();
+  });
 });
 
 describe('OrganiserSection', () => {
