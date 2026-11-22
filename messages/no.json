@@ -842,7 +842,7 @@
         "choose": "Velg matchplay"
       },
       "fourball_matchplay": {
-        "line": "To mot to, lagets beste ball teller",
+        "line": "To mot to, lagets best ball teller",
         "pitch": "Alle spiller sin egen ball, og den beste scoren på laget teller på hvert hull. Laget som vinner flest hull, vinner matchen.",
         "choose": "Velg fourball"
       },
@@ -1671,8 +1671,8 @@
       "unsupported_mode_size_combo": "Den valgte lagstørrelsen er ikke støttet for denne spillformen ennå.",
       "min_players_for_mode": "Formatet trenger flere spillere. Legg til noen før du publiserer.",
       "too_many_players_for_mode": "Du har valgt flere spillere enn formatet tar. Ta bort noen før du publiserer.",
-      "mode_locked_after_publish": "Spillform kan ikke endres etter at spillet er publisert. Slett spillet og opprett et nytt hvis du vil bytte modus.",
-      "invalid_game_mode": "Den valgte spillformen er ikke tilgjengelig. Velg en annen modus og prøv igjen.",
+      "mode_locked_after_publish": "Spillformen kan ikke endres etter at spillet er publisert. Slett spillet og opprett et nytt hvis du vil bytte spillform.",
+      "invalid_game_mode": "Den valgte spillformen er ikke tilgjengelig. Velg en annen spillform og prøv igjen.",
       "bad_registration_mode": "Valget for hvem som kan melde seg på er ugyldig. Sett det på nytt under «Hvem kan melde seg på?».",
       "bad_registration_type": "Typen påmelding er ugyldig. Velg «Individuelt» eller «Lag».",
       "team_registration_unsupported_mode": "Lagpåmelding funker ikke med dette formatet. Velg «Individuelt», eller bytt til et format som spilles i lag.",
@@ -7228,7 +7228,7 @@
       "bodyText": "Forespørselen din om å bli med i {gameName} ble dessverre ikke godkjent.",
       "reasonPrefix": "Begrunnelse: «{reason}»",
       "closing": "Kanskje neste runde. Lykke til på banen uansett.",
-      "footer": "Spørsmål? Snakk med arrangøren direkte — Tørny formidler ingen meldinger på vegne av admin."
+      "footer": "Spørsmål? Snakk med arrangøren direkte. Tørny formidler ingen meldinger."
     },
     "registrationRequest": {
       "subject": "Ny påmelding til {gameName}",
@@ -7856,7 +7856,7 @@
         "unit": " kr",
         "label": "Uten abonnement.\nUten reklame."
       },
-      { "value": "20", "unit": "+", "label": "spillformater\nå velge mellom" },
+      { "value": "20", "unit": "+", "label": "spillformer\nå velge mellom" },
       {
         "value": "2",
         "unit": " min",

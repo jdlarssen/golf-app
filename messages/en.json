@@ -1819,7 +1819,7 @@
           },
           {
             "q": "Can Stableford be played in teams?",
-            "a": "Yes. Fireball Stableford pairs two players up, and only the better points score per hole counts for the team."
+            "a": "Yes. Fourball Stableford pairs two players up, and only the better points score per hole counts for the team."
           }
         ]
       },
@@ -1864,8 +1864,8 @@
             "body": "Best ball is played in pairs, and both of you play your own ball for the whole round. On each hole you compare the net scores and the team records the lower one. The other score simply stands. That lets you take turns being aggressive: if your partner is safely on the green in two, you can go straight at the flag without risking anything for the team. Best ball is played as stroke play where the team total after 18 holes decides, or as match play where the lower net wins the hole. Everyone plays their own round, and Tørny has room for up to 20 pairs in the same game."
           },
           {
-            "heading": "Best ball, fourball and fireball",
-            "body": "The names are used interchangeably and broadly mean the same thing: two players, a ball each, the better score counts. Fourball is the name the rule book uses, fireball is what the clubs say, and best ball is what the group says on the first tee. The format is often confused with foursomes, which is something else entirely, because there the pair shares one ball and plays alternate shots. In a scramble everyone hits, but the team plays on from the best shot with one ball. In best ball you always play your own ball until it is holed, or until you can see you cannot contribute."
+            "heading": "Best ball, fourball and fourball better ball",
+            "body": "The names are used interchangeably and broadly mean the same thing: two players, a ball each, the better score counts. Fourball is the name the rule book uses, better ball is what the clubs say, and best ball is what the group says on the first tee. The format is often confused with foursomes, which is something else entirely, because there the pair shares one ball and plays alternate shots. In a scramble everyone hits, but the team plays on from the best shot with one ball. In best ball you always play your own ball until it is holed, or until you can see you cannot contribute."
           },
           {
             "heading": "Handicap in best ball",
@@ -1892,7 +1892,7 @@
           },
           {
             "q": "Are fourball and best ball the same thing?",
-            "a": "In practice yes. Fourball is the rule book name, while best ball and fireball are the everyday names for the same format."
+            "a": "In practice yes. Fourball is the rule book name, while best ball and better ball are the everyday names for the same format."
           }
         ]
       },
@@ -3469,9 +3469,9 @@
       "front9Label": "Front 9",
       "back9Label": "Back 9",
       "totalLabel": "Total",
-      "noSections": "No sections",
+      "noSections": "No matches",
       "pushedNote": "{sections} ended tied.",
-      "unitSections": "sections",
+      "unitSections": "matches",
       "front9Heading": "Front 9",
       "front9Sub": "Holes 1–9",
       "back9Heading": "Back 9",
@@ -3485,8 +3485,8 @@
       "seire": "wins",
       "seier": "win",
       "sweepLabel": "Swept the board",
-      "sweepSubtitle": "Won all three sections",
-      "sectionVunnetLabel": "Sections won",
+      "sweepSubtitle": "Won all three matches",
+      "sectionVunnetLabel": "Matches won",
       "totalEffectiveStrokesLabel": "strokes",
       "sectionBrutto": "{gross} gross",
       "sectionHullSpilt": "{holes} holes played",
@@ -6359,7 +6359,7 @@
         "invalid_source_match": "That lineup looks off. Reload the page and try again.",
         "unexpected": "Something went wrong. Try again, or get in touch if it keeps happening.",
         "rollback_failed": "Some matches were set up before something went wrong, and they weren't removed again. Write to klubb@tornygolf.no and we will clean up the session.",
-        "reveal_undo_failed": "The matches weren't set up, but the session still shows as revealed. Contact an administrator to get it cleaned up."
+        "reveal_undo_failed": "The matches weren't set up, but the session still shows as revealed. Write to klubb@tornygolf.no and we will clean it up."
       }
     },
     "presets": {
