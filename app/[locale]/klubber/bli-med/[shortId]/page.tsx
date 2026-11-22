@@ -104,10 +104,10 @@ export default async function BliMedPage({
   // Check for existing pending request (to show correct state without ?sent=1).
   const { data: existingRequest } = await admin
     .from('group_join_requests')
-    .select('id, status, decided_at, created_at')
+    .select('id, status, decided_at')
     .eq('group_id', group.id)
     .eq('user_id', user.id)
-    .maybeSingle<{ id: string; status: string; decided_at: string | null; created_at: string }>();
+    .maybeSingle<{ id: string; status: string; decided_at: string | null }>();
 
   const hasPendingRequest = existingRequest?.status === 'pending';
   const showSentState = sent || hasPendingRequest;

@@ -67,12 +67,12 @@ const ADMINS = { data: [{ user_id: 'owner-1' }], error: null };
 const REQUESTER = { data: { name: 'Kari Nordmann', nickname: null, email: 'kari@example.test' }, error: null };
 
 describe('requestToJoin', () => {
-  it('self-withdrawn, last request 8 days ago → reopened, the admins are told', async () => {
+  it('withdrawn before 0255 (no close time) → reopened, the admins are told', async () => {
     setup(
       [
         { data: GROUP, error: null },
         { data: null, error: null },
-        { data: { id: 'req-1', status: 'withdrawn', decided_at: null, created_at: EIGHT_DAYS_AGO }, error: null },
+        { data: { id: 'req-1', status: 'withdrawn', decided_at: null, created_at: daysAgo(1) }, error: null },
         { data: [{ id: 'req-1' }], error: null },
         ADMINS,
         REQUESTER,
@@ -114,9 +114,8 @@ describe('requestToJoin', () => {
   it.each([
     ['rejected 1 day ago', { status: 'rejected', decided_at: daysAgo(1), created_at: daysAgo(30) }],
     ['left 6.9 days ago', { status: 'withdrawn', decided_at: daysAgo(6.9), created_at: daysAgo(30) }],
-    // A self-withdrawal cannot set decided_at (0107): the wait runs from the
-    // last request, so withdraw-and-ask-again cannot loop the owners' inbox.
-    ['self-withdrawn, last request 2 days ago', { status: 'withdrawn', decided_at: null, created_at: daysAgo(2) }],
+    // 0255 stamps decided_at on the requester's own withdrawal.
+    ['self-withdrawn 2 days ago', { status: 'withdrawn', decided_at: daysAgo(2), created_at: daysAgo(2) }],
   ])('old row %s → wait: nothing stored, nobody told', async (_label, old) => {
     setup(
       [
