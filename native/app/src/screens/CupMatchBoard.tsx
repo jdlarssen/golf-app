@@ -12,6 +12,7 @@ import { toRoster } from '../lib/roster';
 import { hasSoloBoard, soloBoardFor } from '../lib/soloBoard';
 import { hasTeamBoard, teamBoardFor } from '../lib/teamBoard';
 import { foldLocalScores } from '../lib/teamPlay';
+import { useLatestLoad } from '../lib/useLatestLoad';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { FONTS, fraunces, interLine, TAP, useTheme } from '../theme';
@@ -24,10 +25,13 @@ export function CupMatchBoard({ route }: ScreenProps<'CupMatchBoard'>) {
   const { cupId, gameId, names } = route.params;
   const [result, setResult] = useState<CupBoardResult | null>(null);
 
+  const latest = useLatestLoad();
   const load = useCallback(async () => {
+    const token = latest.begin();
     setResult(null);
-    setResult(await fetchCupMatchBoard(cupId, gameId));
-  }, [cupId, gameId]);
+    const answer = await fetchCupMatchBoard(cupId, gameId);
+    if (latest.isCurrent(token)) setResult(answer);
+  }, [cupId, gameId, latest]);
 
   useEffect(() => {
     let alive = true;

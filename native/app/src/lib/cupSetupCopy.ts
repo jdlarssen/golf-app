@@ -270,7 +270,7 @@ export function joinFailureText(reason: string, cap: number): string {
 }
 
 export function joinStatusText(status: string): string | null {
-  return JOIN_STATUS[status] ?? null;
+  return ownEntry(JOIN_STATUS, status) ?? null;
 }
 
 export function joinLoadFailureText(reason: string): string {

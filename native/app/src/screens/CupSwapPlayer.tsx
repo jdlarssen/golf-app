@@ -14,6 +14,7 @@ import { fetchCupSwapCandidates, swapCupPlayer } from '../data/cupManage';
 import { backTo } from '../lib/backTo';
 import { useLeaveWhenFocused } from '../lib/useLeaveWhenFocused';
 import { CUP_TEXT } from '../lib/cupCopy';
+import { useLatestLoad } from '../lib/useLatestLoad';
 import {
   MANAGE_APP_TEXT,
   SWAP_TEXT,
@@ -41,8 +42,11 @@ export function CupSwapPlayer({ route, navigation }: ScreenProps<'CupSwapPlayer'
   const [search, setSearch] = useState('');
   const [showAll, setShowAll] = useState(false);
 
+  const latest = useLatestLoad();
   const load = useCallback(async () => {
+    const token = latest.begin();
     const result = await fetchCupSwapCandidates(cupId, gameId);
+    if (!latest.isCurrent(token)) return;
     if (result.ok) {
       setView(result.view);
       setFailure(null);
@@ -60,7 +64,7 @@ export function CupSwapPlayer({ route, navigation }: ScreenProps<'CupSwapPlayer'
     } else {
       setFailure(result.reason);
     }
-  }, [cupId, gameId]);
+  }, [cupId, gameId, latest]);
 
   useFocusEffect(
     useCallback(() => {

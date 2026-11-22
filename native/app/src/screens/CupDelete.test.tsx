@@ -162,3 +162,23 @@ describe('CupDelete', () => {
     expect(screen.queryByTestId('cup-delete-retry')).toBeNull();
   });
 });
+
+describe('CupDelete: eldre svar', () => {
+  it('et eldre svar som kommer etter et nyere, overskriver ikke skjermen', async () => {
+    let releaseOld: (value: object) => void = () => {};
+    (fetchCupDeletePreview as jest.Mock).mockImplementationOnce(() => new Promise((r) => (releaseOld = r)));
+    const nav = (cupId: string) => {
+      const params = { cupId };
+      return {
+        navigation: { navigate: jest.fn(), popTo: jest.fn(), replace: jest.fn(), isFocused: jest.fn(() => true), getState: () => ({ index: 1, routes: [{ name: 'Home' }, { name: 'CupDelete', params }] }) },
+        route: { key: 'd', name: 'CupDelete', params },
+      } as unknown as ScreenProps<'CupDelete'>;
+    };
+    const view = await render(<CupDelete {...nav('cup-1')} />);
+    answer({ ok: true, view: preview({ name: 'Nyeste' }) });
+    await view.rerender(<CupDelete {...nav('cup-2')} />);
+    expect(screen.getByTestId('cup-delete-title')).toHaveTextContent('Slett «Nyeste»?');
+    await act(async () => releaseOld({ ok: true, view: preview({ name: 'Gammel' }) }));
+    expect(screen.getByTestId('cup-delete-title')).toHaveTextContent('Slett «Nyeste»?');
+  });
+});

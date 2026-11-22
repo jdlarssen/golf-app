@@ -27,6 +27,7 @@ import {
 } from '../lib/cupManageCopy';
 import { formatMessage } from '../lib/kavalkadeCopy';
 import { ROUND_START_TEXT, showAllLine } from '../lib/leagueCopy';
+import { useLatestLoad } from '../lib/useLatestLoad';
 import type { ScreenProps } from '../navigation';
 import { FONTS, fraunces, interLine, TAP, useTheme } from '../theme';
 
@@ -44,8 +45,11 @@ export function CupSideAwards({ route }: ScreenProps<'CupSideAwards'>) {
   const [view, setView] = useState<AppCupManageView | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
 
+  const latest = useLatestLoad();
   const load = useCallback(async () => {
+    const token = latest.begin();
     const result = await fetchCupManage(cupId);
+    if (!latest.isCurrent(token)) return;
     if (result.ok) {
       setView(result.view);
       setFailure(null);
@@ -53,7 +57,7 @@ export function CupSideAwards({ route }: ScreenProps<'CupSideAwards'>) {
       if (result.reason === 'not_found' || result.reason === 'not_manager') setView(null);
       setFailure(result.reason);
     }
-  }, [cupId]);
+  }, [cupId, latest]);
 
   useFocusEffect(
     useCallback(() => {

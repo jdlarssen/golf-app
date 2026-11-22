@@ -10,6 +10,7 @@
 // som er skjult her, lagres aldri. Logo lastes ikke opp i appen.
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { activePrizeSlots, prizeShapeFor, type PrizeDraft, type PrizeSlot } from '../../../../../lib/games/prizes';
+import { MAX_ENTRY_FEE_KR } from '../../../../../lib/games/gamePayload';
 import { sideLabel } from '../../../../../lib/games/sideLabel';
 import type { AppGameMode } from '../../lib/appFormats';
 import { PRIZE_TEXT, WIZARD_FEE_TEXT } from '../../lib/paymentCopy';
@@ -45,7 +46,6 @@ function slotLabel(slot: PrizeSlot, ld: number, ctp: number): string {
 const SILVER = '#CFC9BD';
 const BRONZE = '#B07C52';
 const MEDAL = 22;
-const MAX_ENTRY_FEE_KR = 100000;
 
 /** Basens tak: beløpet over 100 000 kr stoppes i feltet i stedet for å klampes stille ved lagring. */
 export function capEntryFee(digits: string): string {

@@ -419,6 +419,9 @@ function parseBase(formData: FormData): ParsedBase {
   };
 }
 
+/** Øvre grense for deltakeravgiften i kroner; appens felt bruker den samme. */
+export const MAX_ENTRY_FEE_KR = 100000;
+
 /**
  * #1049: startkontingent i hele kr per spiller. Form-feltet `entry_fee_kr`.
  * Tomt/0/negativ/ugyldig → 0 (feature av). Klampes til ikke-negativt heltall
@@ -429,7 +432,7 @@ function parseEntryFeeKr(formData: FormData): number {
   if (!raw) return 0;
   const n = Number(raw);
   if (!Number.isFinite(n) || n <= 0) return 0;
-  return Math.min(Math.floor(n), 100000);
+  return Math.min(Math.floor(n), MAX_ENTRY_FEE_KR);
 }
 
 /**

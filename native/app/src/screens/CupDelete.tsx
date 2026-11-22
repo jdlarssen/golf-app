@@ -11,6 +11,7 @@ import { backTo } from '../lib/backTo';
 import { DELETE_APP_TEXT, DELETE_TEXT, deleteFailureText } from '../lib/cupDeleteCopy';
 import { SETUP_APP_TEXT, setupLoadFailureText } from '../lib/cupSetupCopy';
 import { formatMessage } from '../lib/kavalkadeCopy';
+import { useLatestLoad } from '../lib/useLatestLoad';
 import type { ScreenProps } from '../navigation';
 import { FONTS, fraunces, interLine, useTheme, withAlpha } from '../theme';
 
@@ -26,19 +27,18 @@ export function CupDelete({ route, navigation }: ScreenProps<'CupDelete'>) {
   // Knappen er deaktivert først når `busy` er tegnet. Refen stopper trykk nummer to før det.
   const sending = useRef(false);
 
-  // Bare det sist startede kallet får skrive: et eldre svar kan komme etter et nyere.
-  const loadSeq = useRef(0);
+  const latest = useLatestLoad();
   const load = useCallback(async () => {
-    const seq = ++loadSeq.current;
+    const token = latest.begin();
     const result = await fetchCupDeletePreview(cupId);
-    if (seq !== loadSeq.current) return;
+    if (!latest.isCurrent(token)) return;
     if (result.ok) {
       setPreview(result.view);
       setFailure(null);
     } else {
       setFailure(result.reason);
     }
-  }, [cupId]);
+  }, [cupId, latest]);
 
   useFocusEffect(
     useCallback(() => {

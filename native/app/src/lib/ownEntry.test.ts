@@ -1,5 +1,5 @@
 import { ownEntry } from './ownEntry';
-import { detailsFailureText, setupLoadFailureText } from './cupSetupCopy';
+import { detailsFailureText, joinStatusText, setupLoadFailureText } from './cupSetupCopy';
 import { startFailureText } from './cupGenerateCopy';
 import { lineupFailureText } from './cupLineupCopy';
 import { matchFinishFailureText } from './cupManageCopy';
@@ -19,6 +19,7 @@ describe('ownEntry', () => {
       expect(typeof startFailureText(code)).toBe('string');
       expect(typeof lineupFailureText(code)).toBe('string');
       expect(typeof matchFinishFailureText(code)).toBe('string');
+      expect(joinStatusText(code)).toBeNull();
     }
   });
 });

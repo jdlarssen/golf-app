@@ -503,3 +503,22 @@ describe('samme kamper som nettet', () => {
     expect((createCupMatches as jest.Mock).mock.calls[0][1].matches).toEqual(expected[presetId]);
   });
 });
+
+describe('eldre svar', () => {
+  it('et eldre svar som kommer etter et nyere, overskriver ikke skjermen', async () => {
+    let releaseOld: (result: object) => void = () => {};
+    (fetchCupGenerate as jest.Mock).mockImplementationOnce(() => new Promise((r) => (releaseOld = r)));
+    const props = (cupId: string) =>
+      ({
+        navigation: { navigate: jest.fn(), popTo: jest.fn(), replace: jest.fn(), dispatch: jest.fn(), setParams: jest.fn(), isFocused: jest.fn(() => true), getState: () => ({ index: 1, routes: [{ name: 'Home' }, { name: 'CupGenerate', params: { cupId } }] }) },
+        route: { key: 'g', name: 'CupGenerate', params: { cupId } },
+      }) as unknown as ScreenProps<'CupGenerate'>;
+    const rendered = await render(<CupGenerate {...props('cup-1')} />);
+    answer(view({ team1Name: 'Nyeste Nord' }));
+    await rendered.rerender(<CupGenerate {...props('cup-2')} />);
+    expect(screen.getAllByText(/Nyeste Nord/).length).toBeGreaterThan(0);
+    await act(async () => releaseOld({ ok: true, view: view({ team1Name: 'Gammel Nord' }) }));
+    expect(screen.queryByText(/Gammel Nord/)).toBeNull();
+    expect(screen.getAllByText(/Nyeste Nord/).length).toBeGreaterThan(0);
+  });
+});
