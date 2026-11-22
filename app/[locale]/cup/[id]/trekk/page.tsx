@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { isUuid } from '@/lib/url/isUuid';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { redirect } from '@/i18n/navigation';
 import { first } from '@/lib/url/searchParams';
@@ -40,6 +41,8 @@ export default async function CupSelfWithdrawPage({
   searchParams: SearchParams;
 }) {
   const { id } = await params;
+  // Audit 2026-11-20: a hand-typed or broken link is «not found», not a 22P02 crash.
+  if (!isUuid(id)) notFound();
   const sp = await searchParams;
   const [userId, t, locale] = await Promise.all([
     getProxyVerifiedUserId(),

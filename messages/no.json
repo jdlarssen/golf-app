@@ -5448,7 +5448,8 @@
       "heading": "Klubbens ligaer",
       "empty": "Ingen ligaer i klubben ennå.",
       "newButton": "Ny liga",
-      "manageLink": "Styr"
+      "manageLink": "Styr",
+      "notStarted": "Ikke startet"
     },
     "cups": {
       "heading": "Klubbens cuper",
@@ -5788,7 +5789,8 @@
         "missing": "Mangler ligainformasjon.",
         "players": "Ugyldig spillerliste.",
         "players_failed": "Klarte ikke å legge til spillerne. Prøv igjen.",
-        "fallback": "Noe gikk galt."
+        "fallback": "Noe gikk galt.",
+        "league_finished": "Ligaen er ferdig, så du kan ikke legge til flere spillere."
       }
     },
     "addRound": {
@@ -5850,7 +5852,8 @@
         "sim_settings": "Velg innstillingene fra listene.",
         "not_simulator": "Ligaen er ikke en simulatorliga.",
         "not_found": "Fant ikke runden.",
-        "update_failed": "Klarte ikke å lagre. Prøv igjen."
+        "update_failed": "Klarte ikke å lagre. Prøv igjen.",
+        "window": "Fristen må være etter starten."
       }
     },
     "statusActions": {
@@ -5859,7 +5862,8 @@
       "startPending": "Starter …",
       "finishError": "Klarte ikke å avslutte ligaen.",
       "finishButton": "Avslutt ligaen",
-      "finishPending": "Avslutter …"
+      "finishPending": "Avslutter …",
+      "wrongStatus": "Ligaen er alt endret. Last inn siden på nytt."
     },
     "delete": {
       "kicker": "Klubbhuset",
@@ -6420,7 +6424,8 @@
         "not_withdrawn": "Spilleren er ikke trukket.",
         "match_not_eligible": "Valget passer ikke på denne kampen.",
         "withdraw_failed": "Klarte ikke å registrere trekket. Prøv igjen.",
-        "not_found": "Cupen finnes ikke."
+        "not_found": "Cupen finnes ikke.",
+        "not_started": "Cupen er ikke startet ennå, så du kan ikke avslutte den."
       },
       "statusMessages": {
         "created": "Cupen er opprettet. Legg til matcher under for å komme i gang.",
@@ -6470,7 +6475,8 @@
         "not_member": "Spilleren er ikke medlem av klubben lenger.",
         "too_many_players": "Cupen er full — en personlig cup tar maks {cap} spillere. Fjern en deltaker først, eller bytt inn en som allerede er påmeldt.",
         "swap_failed": "Klarte ikke å bytte spilleren. Prøv igjen.",
-        "unexpected": "Uventet feil: {code}"
+        "unexpected": "Uventet feil: {code}",
+        "wrong_team": "Spilleren er på det andre laget og kan ikke byttes inn her."
       }
     },
     "generate": {
@@ -6571,8 +6577,8 @@
         "cup_team_dup": "Lagene må ha forskjellige navn.",
         "cup_allowance": "Sjekk handicap-andelen for fourball.",
         "cup_foursomes_allowance": "Sjekk handicap-andelen for foursomes.",
-        "cup_win_points": "Poeng for seier må være et tall over 0.",
-        "cup_tie_points": "Poeng ved delt kan ikke være negativt.",
+        "cup_win_points": "Poeng for seier må være et tall over 0, med høyst én desimal.",
+        "cup_tie_points": "Poeng ved delt må være 0 eller mer, med høyst én desimal.",
         "cup_insert_failed": "Klarte ikke å opprette cupen. Prøv igjen.",
         "unexpected": "Uventet feil: {code}"
       }
@@ -7703,6 +7709,7 @@
     "resultStatus": "Sluttresultat",
     "seasonRunning": "Sesongen er i gang",
     "seasonDone": "Sesongen er ferdig",
+    "seasonNotStarted": "Sesongen har ikke startet ennå",
     "board": {
       "formatLine": "{format} · {unit} · {players}",
       "unit": {

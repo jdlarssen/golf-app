@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { isUuid } from '@/lib/url/isUuid';
 import { after } from 'next/server';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
@@ -36,6 +37,8 @@ const GOLD_CARD_STYLE = {
  */
 export default async function CupResultsPage({ params }: { params: Params }) {
   const { id } = await params;
+  // Audit 2026-11-20: a hand-typed or broken link is «not found», not a 22P02 crash.
+  if (!isUuid(id)) notFound();
   const [userId, t, locale] = await Promise.all([
     getProxyVerifiedUserId(),
     getTranslations('cup'),

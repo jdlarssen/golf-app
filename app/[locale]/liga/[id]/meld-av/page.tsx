@@ -1,4 +1,5 @@
 import { first } from '@/lib/url/searchParams';
+import { isUuid } from '@/lib/url/isUuid';
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
@@ -34,6 +35,8 @@ export default async function MeldAvLigaPage({
   searchParams: SearchParams;
 }) {
   const { id } = await params;
+  // Audit 2026-11-20: a hand-typed or broken link is «not found», not a 22P02 crash.
+  if (!isUuid(id)) notFound();
   const sp = await searchParams;
   const [t, locale] = await Promise.all([
     getTranslations('liga.player.meldAv'),

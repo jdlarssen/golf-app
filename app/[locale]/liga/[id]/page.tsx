@@ -1,4 +1,5 @@
 import { first } from '@/lib/url/searchParams';
+import { isUuid } from '@/lib/url/isUuid';
 import { notFound } from 'next/navigation';
 import { after } from 'next/server';
 import { getTranslations } from 'next-intl/server';
@@ -190,6 +191,8 @@ export default async function LigaPublicPage({
   searchParams: SearchParams;
 }) {
   const { id } = await params;
+  // Audit 2026-11-20: a hand-typed or broken link is «not found», not a 22P02 crash.
+  if (!isUuid(id)) notFound();
   const [t, tStatus, tFormatLine, tManage, tLiga, locale] = await Promise.all([
     getTranslations('liga.player'),
     getTranslations('gameStatus'),

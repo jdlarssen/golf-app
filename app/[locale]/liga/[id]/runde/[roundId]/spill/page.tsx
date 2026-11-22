@@ -1,4 +1,6 @@
 import { after } from 'next/server';
+import { notFound } from 'next/navigation';
+import { isUuid } from '@/lib/url/isUuid';
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { getTranslations } from 'next-intl/server';
@@ -43,6 +45,8 @@ function fmtWindow(iso: string, locale: AppLocale): string {
 
 export default async function RoundSpillPage({ params }: { params: Params }) {
   const { id: leagueId, roundId } = await params;
+  // Audit 2026-11-20: a hand-typed or broken link is «not found», not a 22P02 crash.
+  if (![leagueId, roundId].every(isUuid)) notFound();
   const [t, locale] = await Promise.all([
     getTranslations('liga.player.runde'),
     getLocale(),
