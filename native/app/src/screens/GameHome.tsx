@@ -156,6 +156,8 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
     profile: null,
   });
   const [confirming, setConfirming] = useState(false);
+  // `confirming` is drawn one render late; the ref stops a second tap before that.
+  const confirmingHcp = useRef(false);
   const [receipt, setReceipt] = useState(false);
   const updateRef = useRef<ComponentRef<typeof View>>(null);
   const receiptRef = useRef<ComponentRef<typeof View>>(null);
@@ -399,9 +401,11 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
       : null;
 
   const confirmHandicap = async () => {
-    if (!hcpCard) return;
+    if (!hcpCard || confirmingHcp.current) return;
+    confirmingHcp.current = true;
     setConfirming(true);
     const result = await saveHandicap(hcpCard.profile, hcpCard.hcp);
+    confirmingHcp.current = false;
     setConfirming(false);
     if (!result.ok) {
       Alert.alert(describeHandicapSaveFailure(result.reason));

@@ -6,6 +6,9 @@ import type { ScreenProps } from '../navigation';
 import { CupDeleteSession } from './CupDeleteSession';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
+}));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 jest.mock('../data/cupSetup', () => ({ deleteCupLineupSession: jest.fn(async () => ({ ok: true })) }));
 
@@ -92,6 +95,8 @@ describe('CupDeleteSession', () => {
     const navigation = await renderScreen({}, false);
     await fireEvent.press(screen.getByTestId('cup-delete-session-submit'));
     expect(navigation.popTo).not.toHaveBeenCalled();
+    // Økta er borte: knappen låses opp ikke igjen for noe som ikke finnes.
+    expect(screen.getByTestId('cup-delete-session-submit')).toBeDisabled();
   });
 
   it('«Avbryt» går tilbake uten kall', async () => {

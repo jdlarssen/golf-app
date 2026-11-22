@@ -22,7 +22,8 @@
 // tegning 5b. Etter start erstatter spillet denne skjermen, så «tilbake» fra
 // spillet går til ligaen.
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { useLeaveWhenFocused } from '../lib/useLeaveWhenFocused';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppLeagueParticipant, AppLeagueRound, AppLeagueView } from '../../../../lib/league/appLeagueView';
@@ -90,6 +91,9 @@ export function LeagueRoundStart({ navigation, route }: ScreenProps<'LeagueRound
   const [refusal, setRefusal] = useState<LeagueStartFailure | null>(null);
   // Bare dra-ned viser hjulet; en henting ved fokus går stille.
   const [pulling, setPulling] = useState(false);
+  // `pending` is drawn one render late; the ref stops a second tap before that.
+  const starting = useRef(false);
+  const leaveWhenFocused = useLeaveWhenFocused(navigation);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -175,14 +179,18 @@ export function LeagueRoundStart({ navigation, route }: ScreenProps<'LeagueRound
   };
 
   const start = async () => {
+    if (starting.current) return;
+    starting.current = true;
     setPending(true);
     setRefusal(null);
     const result = await startLeagueRound(
       round.id,
       chosen.map((c) => c.participant.userId),
     );
+    starting.current = false;
     if (result.ok) {
-      navigation.replace('GameHome', { gameId: result.gameId });
+      const gameId = result.gameId;
+      leaveWhenFocused(() => navigation.replace('GameHome', { gameId }));
       return;
     }
     setRefusal(result.reason);

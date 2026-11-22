@@ -23,7 +23,7 @@
 // nettsiden. Da står det en knapp dit, både i banneret og under feilmeldingen
 // etter et avvist forsøk (`deleteBlockWebLink`). En setning uten knapp er en
 // blindvei (#1891).
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -56,6 +56,8 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
   const [status, setStatus] = useState<AccountDeleteStatus | null>(null);
   const [ownName, setOwnName] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  // `pending` is drawn one render late; the ref stops a second tap before that.
+  const deleting = useRef(false);
   // Koden, ikke bare setningen: et avslag du løser på nettsiden får en knapp
   // dit under setningen.
   const [notice, setNotice] = useState<AccountDeleteFailure | null>(null);
@@ -98,6 +100,9 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
    * som ikke finnes lenger.
    */
   const confirm = useCallback(async () => {
+    // On success the ref stays set, like `pending`: the account is gone.
+    if (deleting.current) return;
+    deleting.current = true;
     setPending(true);
     setNotice(null);
     try {
@@ -108,6 +113,7 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
       console.error('[DeleteAccount] sletting kastet', err);
       setNotice('delete_failed');
     }
+    deleting.current = false;
     setPending(false);
   }, []);
 

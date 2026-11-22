@@ -56,6 +56,7 @@ function navigationStub(routes: { name: string; params?: object }[]) {
     popTo: jest.fn(),
     replace: jest.fn(),
     reset: jest.fn(),
+    isFocused: jest.fn(() => true),
     getState: () => ({ index: routes.length - 1, routes }),
   };
 }

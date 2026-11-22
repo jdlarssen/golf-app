@@ -54,6 +54,7 @@ function navigationStub() {
     replace: jest.fn(),
     reset: jest.fn(),
     setParams: jest.fn(),
+    isFocused: jest.fn(() => true),
     addListener: jest.fn(() => () => {}),
     getState: () => ({
       index: 3,

@@ -11,7 +11,7 @@
 // Navnet og forholdet kommer fra `GET /api/friends/link/[code]` (navnet er
 // maskert på serveren, #2271), koblingen fra `POST` på samme sti. Ingenting
 // legges i kø: uten nett står vennesidens linje og «Prøv igjen».
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { FriendLinkRelation } from '../../../../lib/friends/friendStatus';
 import { nameInitials } from '../../../../lib/names/initials';
@@ -63,6 +63,8 @@ export function FriendLink({ navigation, route }: ScreenProps<'FriendLink'>) {
   // «+»-ringen der.
   const [selfInitials, setSelfInitials] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
+  // `busy` is drawn one render late; the ref stops a second tap before that.
+  const connecting = useRef(false);
   const [line, setLine] = useState<string | null>(null);
 
   // `attempt` teller «Prøv igjen»: hvert trykk henter på nytt.
@@ -91,10 +93,12 @@ export function FriendLink({ navigation, route }: ScreenProps<'FriendLink'>) {
   }, [userId, email]);
 
   const onConnect = useCallback(async () => {
-    if (busy || view.state !== 'ready') return;
+    if (busy || connecting.current || view.state !== 'ready') return;
+    connecting.current = true;
     setBusy(true);
     setLine(null);
     const result = await connectFriendLink(code);
+    connecting.current = false;
     setBusy(false);
     if (!result.ok) {
       setLine(friendsFailureLine(result.reason));

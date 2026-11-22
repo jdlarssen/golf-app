@@ -45,6 +45,7 @@ async function renderSwap() {
     popTo: jest.fn(),
     replace: jest.fn(),
     reset: jest.fn(),
+    isFocused: jest.fn(() => true),
     getState: () => ({
       index: 3,
       routes: [

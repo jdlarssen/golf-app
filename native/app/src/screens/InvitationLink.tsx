@@ -14,6 +14,7 @@ import {
   type InvitationLinkOutcome,
 } from '../data/invitationLink';
 import { backTo } from '../lib/backTo';
+import { useLeaveWhenFocused } from '../lib/useLeaveWhenFocused';
 import { INVITATION_LINK_TEXT, describeInvitationLinkFailure } from '../lib/invitationLinkCopy';
 import type { ScreenProps } from '../navigation';
 import { FONTS, interLine, useTheme } from '../theme';
@@ -37,20 +38,25 @@ export function InvitationLink({ navigation, route }: ScreenProps<'InvitationLin
   const [shown, setShown] = useState<Shown>({ state: 'opening' });
   // `attempt` teller «Prøv igjen»: hvert trykk spør på nytt.
   const [attempt, setAttempt] = useState(0);
+  const leaveWhenFocused = useLeaveWhenFocused(navigation);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       const result = await openInvitationLink(token);
       if (cancelled) return;
-      if (result.ok) backTo(navigation, 'GameHome', { gameId: result.gameId });
+      // A screen opened on top while the invitation opened stays in front.
+      if (result.ok) {
+        const gameId = result.gameId;
+        leaveWhenFocused(() => backTo(navigation, 'GameHome', { gameId }));
+      }
       else if ('outcome' in result) setShown({ state: 'outcome', outcome: result.outcome });
       else setShown({ state: 'failed', reason: result.reason });
     })();
     return () => {
       cancelled = true;
     };
-  }, [attempt, navigation, token]);
+  }, [attempt, navigation, token, leaveWhenFocused]);
 
   if (shown.state === 'opening') {
     return (

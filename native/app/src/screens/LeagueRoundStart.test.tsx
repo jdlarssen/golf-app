@@ -27,10 +27,10 @@ jest.mock('@react-navigation/native', () => ({
 let mockView: LeagueResult = { ok: true, view: leagueView() };
 let mockStart: LeagueStartResult = { ok: true, gameId: 'game-9' };
 
-async function renderStart(roundId = 'r3') {
+async function renderStart(roundId = 'r3', focused = true) {
   const replace = jest.fn();
   const props = {
-    navigation: { replace },
+    navigation: { replace, isFocused: () => focused },
     route: { key: 'start', name: 'LeagueRoundStart', params: { leagueId: 'liga-vinter', roundId } },
   };
   await render(<LeagueRoundStart {...(props as unknown as ScreenProps<'LeagueRoundStart'>)} />);
@@ -53,6 +53,27 @@ beforeEach(() => {
 });
 
 describe('tegning 5: simulatorliga', () => {
+  // To raske trykk starter runden én gang. Et svar som kommer mens en annen
+  // skjerm ligger oppå (et push-varsel), flytter deg ikke bort fra den.
+  it('to trykk før knappen er tegnet på nytt: ett kall', async () => {
+    await renderStart();
+    await confirmSetup();
+    const button = screen.getByTestId('round-start-submit');
+    await act(async () => {
+      fireEvent.press(button);
+      fireEvent.press(button);
+    });
+    expect(startLeagueRound).toHaveBeenCalledTimes(1);
+  });
+
+  it('en annen skjerm i front: runden starter, men du blir stående der', async () => {
+    const { replace } = await renderStart('r3', false);
+    await confirmSetup();
+    await fireEvent.press(screen.getByTestId('round-start-submit'));
+    expect(startLeagueRound).toHaveBeenCalledTimes(1);
+    expect(replace).not.toHaveBeenCalled();
+  });
+
   it('sjekklista står øverst, og du kan starte alene etter avkrysningen', async () => {
     const { replace } = await renderStart();
 

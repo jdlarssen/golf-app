@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deleteCupLineupSession } from '../data/cupSetup';
 import { backTo } from '../lib/backTo';
+import { useLeaveWhenFocused } from '../lib/useLeaveWhenFocused';
 import { DELETE_TEXT, SESSION_DELETE_TEXT } from '../lib/cupDeleteCopy';
 import { FORMAT_LABELS } from '../lib/cupGenerateCopy';
 import { LINEUP_TEXT, lineupFailureText } from '../lib/cupLineupCopy';
@@ -26,6 +27,7 @@ export function CupDeleteSession({ route, navigation }: ScreenProps<'CupDeleteSe
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const sending = useRef(false);
+  const leaveWhenFocused = useLeaveWhenFocused(navigation);
 
   const leave = () => backTo(navigation, 'CupLineup', { cupId });
 
@@ -37,8 +39,9 @@ export function CupDeleteSession({ route, navigation }: ScreenProps<'CupDeleteSe
     const result = await deleteCupLineupSession(cupId, sessionId);
     sending.current = false;
     if (result.ok) {
-      if (navigation.isFocused()) leave();
-      else setBusy(false);
+      // The session is gone: the button stays locked, and a screen opened on
+      // top stays in front until you come back here.
+      leaveWhenFocused(leave);
       return;
     }
     setError(lineupFailureText(result.reason));
