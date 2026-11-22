@@ -72,8 +72,13 @@ type TeamProps = {
   gameName: string;
   /** Players per team, the captain included; null = the format has no size. */
   teamSize: number | null;
-  /** #543: the organiser closed signups; nobody changes the team. */
+  /**
+   * #543: nobody changes the team — signups closed, the deadline passed, or the
+   * round has started.
+   */
   signupsClosed: boolean;
+  /** The round has started or finished. */
+  started: boolean;
   /** The captain's friends for «Velg en venn»; null for a teammate. */
   picker: TeamFriendPickerData | null;
 };
@@ -398,9 +403,14 @@ function TeamView({
         <p className="mt-0.5 text-[13px] text-muted tabular-nums">{meta}</p>
       </header>
 
-      {/* #543: stengt påmelding — endringer avvises server-side med
-          signup_closed; banneret forklarer hvorfor på forhånd. */}
-      {props.signupsClosed && <Banner tone="info">{t('teamDashSignupsClosedBanner')}</Banner>}
+      {/* #543: stengt påmelding eller startet runde — endringer avvises
+          server-side med signup_closed / game_locked; banneret forklarer
+          hvorfor på forhånd. */}
+      {props.started ? (
+        <Banner tone="info">{t('teamDashStartedBanner')}</Banner>
+      ) : (
+        props.signupsClosed && <Banner tone="info">{t('teamDashSignupsClosedBanner')}</Banner>
+      )}
       {banners}
 
       <ul
@@ -527,12 +537,14 @@ function TeamView({
         ))}
       </ul>
 
-      <p className="rounded-2xl bg-surface px-3.5 py-3 text-sm leading-snug text-muted">
-        {isCaptain ? tt('captainNote') : tt('memberNote')}
-      </p>
+      {!props.signupsClosed && (
+        <p className="rounded-2xl bg-surface px-3.5 py-3 text-sm leading-snug text-muted">
+          {isCaptain ? tt('captainNote') : tt('memberNote')}
+        </p>
+      )}
 
       {/* The teammate's answer: yes or no, when the own row waits. */}
-      {props.mode === 'member' && props.myStatus === 'pending' && (
+      {props.mode === 'member' && props.myStatus === 'pending' && !props.signupsClosed && (
         <div className="space-y-3 rounded-[18px] bg-surface p-4">
           <p className="font-serif text-[22px] leading-snug font-medium text-text">
             {tt('inviteTitle', { firstName: captainFirstName })}

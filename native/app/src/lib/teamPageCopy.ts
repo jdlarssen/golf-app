@@ -33,6 +33,7 @@ export const TEAM_PAGE_TEXT = {
   attachInstant: 'Invitasjonen kom på e-post. Du blir med i runden med en gang.',
 
   // --- Appens egne --------------------------------------------------------------
+  started: 'Runden har startet. Laget kan ikke endres lenger.',
   attachApproval:
     'Invitasjonen kom på e-post. Sier du ja, må arrangøren godta laget før dere er med. Du får et varsel når det er klart.',
   onTeam: 'På laget',

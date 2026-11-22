@@ -436,6 +436,41 @@ export async function addTeammateRow(opts: {
   const { game, captainId, captainRequestId, captainStatus, memberId, context } = opts;
   const admin = getAdminClient();
 
+  // A roster row of their own (the organiser added them, with no request)
+  // means the friend is in the round already. Without this check the child
+  // request went in, the roster upsert below skipped the existing row, and the
+  // captain saw the friend on the team although the roster said otherwise.
+  const { data: rosterRow, error: rosterError } = await admin
+    .from('game_players')
+    .select('user_id')
+    .eq('game_id', game.id)
+    .eq('user_id', memberId)
+    .maybeSingle<{ user_id: string }>();
+  if (rosterError) {
+    console.error(`[${context}] roster lookup failed`, { gameId: game.id, userId: memberId, rosterError });
+    return { ok: false, userId: memberId, reason: 'dbError' };
+  }
+  if (rosterRow) {
+    return { ok: false, userId: memberId, reason: 'alreadyRegistered' };
+  }
+
+  // #2223: undo the child request so a retry starts clean.
+  const rollbackChild = async () => {
+    try {
+      expectAffected(
+        await admin
+          .from('game_registration_requests')
+          .delete()
+          .eq('team_request_id', captainRequestId)
+          .eq('user_id', memberId)
+          .select('id'),
+        context,
+      );
+    } catch (rollbackErr) {
+      console.error(`[${context}] child rollback failed`, rollbackErr);
+    }
+  };
+
   const { error: childError } = await admin.from('game_registration_requests').insert({
     game_id: game.id,
     user_id: memberId,
@@ -457,39 +492,36 @@ export async function addTeammateRow(opts: {
   if (captainStatus === 'approved' && opts.teamNumber !== null) {
     // #2209: the teammate's own tee category, not the column default.
     const teeGenders = await joinTeeGenders(game.id, [memberId]);
-    const { error: playerError } = await admin.from('game_players').upsert(
-      {
-        game_id: game.id,
-        user_id: memberId,
-        team_number: opts.teamNumber,
-        flight_number: opts.flightNumber,
-        course_handicap: null,
-        // #463: the captain adds a teammate, so not confirmed yet.
-        accepted_at: acceptedAtForActor(captainId, memberId),
-        tee_gender: teeGenders[memberId],
-      },
-      { onConflict: 'game_id,user_id', ignoreDuplicates: true },
-    );
+    const { data: insertedPlayers, error: playerError } = await admin
+      .from('game_players')
+      .upsert(
+        {
+          game_id: game.id,
+          user_id: memberId,
+          team_number: opts.teamNumber,
+          flight_number: opts.flightNumber,
+          course_handicap: null,
+          // #463: the captain adds a teammate, so not confirmed yet.
+          accepted_at: acceptedAtForActor(captainId, memberId),
+          tee_gender: teeGenders[memberId],
+        },
+        { onConflict: 'game_id,user_id', ignoreDuplicates: true },
+      )
+      .select('user_id');
     if (playerError) {
       console.error(`[${context}] player upsert failed`, {
         gameId: game.id,
         userId: memberId,
         error: playerError,
       });
-      try {
-        expectAffected(
-          await admin
-            .from('game_registration_requests')
-            .delete()
-            .eq('team_request_id', captainRequestId)
-            .eq('user_id', memberId)
-            .select('id'),
-          context,
-        );
-      } catch (rollbackErr) {
-        console.error(`[${context}] child rollback failed`, rollbackErr);
-      }
+      await rollbackChild();
       return { ok: false, userId: memberId, reason: 'dbError' };
+    }
+    // 0 rows: a roster row appeared after the check above (the organiser added
+    // the friend at the same moment). The friend is not on this team.
+    if (!insertedPlayers || insertedPlayers.length === 0) {
+      await rollbackChild();
+      return { ok: false, userId: memberId, reason: 'alreadyRegistered' };
     }
   }
 
@@ -669,6 +701,48 @@ export async function acceptTeamInviteCore(
 }
 
 /**
+ * Removes a teammate's roster row, but only the one on the captain's team: the
+ * row must carry the captain's own team number. A teammate who said no may
+ * since have a seat of their own (the organiser added them), and that seat is
+ * not the team's to take. No captain team number means the team has no roster
+ * rows yet (manual approval), so there is nothing to remove.
+ */
+export async function deleteTeamRosterRow(opts: {
+  gameId: string;
+  captainUserId: string;
+  memberUserId: string;
+  context: string;
+}): Promise<'ok' | 'db_error'> {
+  const { gameId, captainUserId, memberUserId, context } = opts;
+  const admin = getAdminClient();
+  const { data: captainPlayer, error: captainError } = await admin
+    .from('game_players')
+    .select('team_number')
+    .eq('game_id', gameId)
+    .eq('user_id', captainUserId)
+    .maybeSingle<{ team_number: number | null }>();
+  if (captainError) {
+    console.error(`[${context}] captain roster read failed`, { gameId, captainError });
+    return 'db_error';
+  }
+  const teamNumber = captainPlayer?.team_number ?? null;
+  if (teamNumber === null) return 'ok';
+
+  // 0 rows is normal: manual approval, or the teammate never took the seat.
+  const { error: deleteError } = await admin
+    .from('game_players')
+    .delete()
+    .eq('game_id', gameId)
+    .eq('user_id', memberUserId)
+    .eq('team_number', teamNumber);
+  if (deleteError) {
+    console.error(`[${context}] player delete failed`, { gameId, userId: memberUserId, deleteError });
+    return 'db_error';
+  }
+  return 'ok';
+}
+
+/**
  * A teammate says no. Their own row becomes rejected, and the captain gets a
  * `team_member_withdrew`.
  */
@@ -698,7 +772,16 @@ export async function declineTeamInviteCore(
   // #2358: only an invitation can be declined. A rejected captain row would
   // leave the teammates under a rejected captain; the captain withdraws with
   // «Trekk meg», or hands the captaincy on first.
-  if (!req || req.user_id !== userId || req.status === 'rejected' || req.is_team_captain) {
+  // A withdrawn row has left already: answering «Nei» again would tell the
+  // captain a second time.
+  if (
+    !req ||
+    req.user_id !== userId ||
+    req.status === 'rejected' ||
+    req.status === 'withdrawn' ||
+    req.is_team_captain ||
+    !req.team_request_id
+  ) {
     return { ok: false, error: 'not_found' };
   }
 
@@ -713,22 +796,33 @@ export async function declineTeamInviteCore(
   if (game.status !== 'scheduled') {
     return { ok: false, error: 'game_locked' };
   }
+  // The team freezes at the deadline, as for every other team write; the
+  // organiser makes the last changes.
+  if (isSignupClosed(game)) {
+    return { ok: false, error: 'signup_closed' };
+  }
 
-  // In open mode the player is already on the roster: remove them. #2223: the
-  // roster row goes first, so a failed delete leaves the request untouched and
-  // the player can try again. 0 rows is normal in manual approval.
-  const { error: playerDeleteError } = await admin
-    .from('game_players')
-    .delete()
-    .eq('game_id', game.id)
-    .eq('user_id', userId);
-  if (playerDeleteError) {
-    console.error('[declineTeamInvite] player delete failed', {
-      gameId: game.id,
-      userId,
-      error: playerDeleteError,
-    });
+  const { data: captainReq, error: captainReqError } = await admin
+    .from('game_registration_requests')
+    .select('user_id, team_name')
+    .eq('id', req.team_request_id)
+    .maybeSingle<{ user_id: string; team_name: string | null }>();
+  if (captainReqError) {
+    console.error('[declineTeamInvite] captain read failed', { requestId, captainReqError });
     return { ok: false, error: 'db_error' };
+  }
+
+  // In open mode the player is already on the team's roster: remove that row,
+  // and only that one. #2223: the roster row goes first, so a failed delete
+  // leaves the request untouched and the player can try again.
+  if (captainReq) {
+    const removed = await deleteTeamRosterRow({
+      gameId: game.id,
+      captainUserId: captainReq.user_id,
+      memberUserId: userId,
+      context: 'declineTeamInvite',
+    });
+    if (removed !== 'ok') return { ok: false, error: 'db_error' };
   }
 
   // #712: 0 rows means the request was already decided (the captain removed
@@ -753,26 +847,19 @@ export async function declineTeamInviteCore(
   }
 
   // Tell the captain. Best effort.
-  if (req.team_request_id) {
-    const { data: captainReq } = await admin
-      .from('game_registration_requests')
-      .select('user_id, team_name')
-      .eq('id', req.team_request_id)
-      .maybeSingle<{ user_id: string; team_name: string | null }>();
-    if (captainReq) {
-      const declinerName = await getCaptainDisplayName(userId);
-      await notify({
-        userId: captainReq.user_id,
-        kind: 'team_member_withdrew',
-        payload: {
-          game_id: game.id,
-          game_short_id: game.short_id,
-          game_name: game.name,
-          withdrawn_player_name: declinerName,
-          team_name: captainReq.team_name ?? req.team_name,
-        },
-      }).catch((err) => console.error('[declineTeamInvite] notify failed', err));
-    }
+  if (captainReq) {
+    const declinerName = await getCaptainDisplayName(userId);
+    await notify({
+      userId: captainReq.user_id,
+      kind: 'team_member_withdrew',
+      payload: {
+        game_id: game.id,
+        game_short_id: game.short_id,
+        game_name: game.name,
+        withdrawn_player_name: declinerName,
+        team_name: captainReq.team_name ?? req.team_name,
+      },
+    }).catch((err) => console.error('[declineTeamInvite] notify failed', err));
   }
 
   expireGameCache(game.id);

@@ -544,7 +544,7 @@ describe('GET /api/pamelding/[shortId]: the team screens (#2840)', () => {
     ownRow = { status: 'pending', is_team_captain: false, team_request_id: 'captain-row' };
     loadTeamDashboardMock.mockResolvedValue({
       kind: 'member',
-      game: { id: GAME_ID, shortId: SHORT_ID, name: 'x', courseName: null, joinEffect: 'instant', signupsClosed: false },
+      game: { id: GAME_ID, shortId: SHORT_ID, name: 'x', courseName: null, joinEffect: 'instant', signupsClosed: false, started: false },
       myRowId: REQUEST_ID,
       myStatus: 'pending',
       teamName: 'Martins lag',

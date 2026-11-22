@@ -157,8 +157,13 @@ export type AppTeamPageGame = {
   courseName: string | null;
   /** open → straight into the game; otherwise the team waits for approval (#362). */
   joinEffect: 'instant' | 'approval';
-  /** #543: signups closed while the game is still scheduled. */
+  /**
+   * #543: the team can no longer change — signups closed or past the
+   * deadline, or the round has started (then `started` is true too).
+   */
   signupsClosed: boolean;
+  /** The round has started or finished (`status !== 'scheduled'`). */
+  started: boolean;
   /**
    * #2840: players per team, the captain included (`resolveTeamSize`), so the
    * app can show the free seats. Null when the format has no team size.

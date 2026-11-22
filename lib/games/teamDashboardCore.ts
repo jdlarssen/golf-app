@@ -24,6 +24,7 @@ import {
   addTeammateRow,
   checkTeammatesAreFriends,
   isDuplicateError,
+  deleteTeamRosterRow,
   readProfileGate,
   resolveTeamSize,
   SHORT_ID_PATTERN,
@@ -66,6 +67,7 @@ export type TransferCaptaincyResult =
         | 'not_authed'
         | 'not_found'
         | 'game_locked'
+        | 'signup_closed'
         | 'not_approved'
         /** #2607: a guest has no login and cannot be captain (0228). */
         | 'captain_is_guest'
@@ -178,28 +180,35 @@ export async function removeTeamMemberCore(
   if (game.status !== 'scheduled') {
     return { ok: false, error: 'game_locked' };
   }
+  // The team freezes at the deadline; the organiser makes the last changes.
+  if (isSignupClosed(game)) {
+    return { ok: false, error: 'signup_closed' };
+  }
 
   const admin = getAdminClient();
   // #2223: the roster row goes first. A failed delete answers db_error with
-  // the request still in place, so the captain can try again.
-  const { error: deletePlayerError } = await admin
-    .from('game_players')
-    .delete()
-    .eq('game_id', game.id)
-    .eq('user_id', child.user_id);
-  if (deletePlayerError) {
-    console.error('[removeTeamMember] player delete failed', {
-      gameId: game.id,
-      userId: child.user_id,
-      error: deletePlayerError,
-    });
+  // the request still in place, so the captain can try again. Only the row on
+  // the captain's team: a teammate who said no may have a seat of their own.
+  const removed = await deleteTeamRosterRow({
+    gameId: game.id,
+    captainUserId: userId,
+    memberUserId: child.user_id,
+    context: 'removeTeamMember',
+  });
+  if (removed !== 'ok') {
     return { ok: false, error: 'db_error' };
   }
-  const { error: deleteReqError } = await admin
-    .from('game_registration_requests')
-    .delete()
-    .eq('id', child.id);
-  if (deleteReqError) {
+  try {
+    expectAffected(
+      await admin
+        .from('game_registration_requests')
+        .delete()
+        .eq('id', child.id)
+        .eq('team_request_id', child.team_request_id)
+        .select('id'),
+      'removeTeamMember',
+    );
+  } catch (deleteReqError) {
     console.error('[removeTeamMember] request delete failed', deleteReqError);
     return { ok: false, error: 'db_error' };
   }
@@ -247,6 +256,12 @@ export async function resendTeamInviteCore(
   if (game.status === 'draft') {
     return { ok: false, error: 'not_found' };
   }
+  if (game.status !== 'scheduled') {
+    return { ok: false, error: 'game_locked' };
+  }
+  if (isSignupClosed(game)) {
+    return { ok: false, error: 'signup_closed' };
+  }
 
   const captainName = await getCaptainDisplayName(userId);
   await notifyInvitedToTeam({
@@ -283,6 +298,14 @@ export async function transferCaptaincyCore(
   // #2445: a draft answers like a game that does not exist.
   if (game.status === 'draft') {
     return { ok: false, error: 'not_found' };
+  }
+  if (game.status !== 'scheduled') {
+    return { ok: false, error: 'game_locked' };
+  }
+  // The team freezes at the deadline. The function runs only on the service
+  // role (no grant to authenticated), so this gate is the only way in.
+  if (isSignupClosed(game)) {
+    return { ok: false, error: 'signup_closed' };
   }
 
   const { data, error } = await getAdminClient().rpc('transfer_team_captaincy', {
@@ -656,30 +679,22 @@ export async function addTeamMemberCore(
   }
 
   // Not in this round already: a request of any status (unique per game and
-  // user), or a roster row the organiser added.
-  const [{ data: existingReq, error: existingReqError }, { data: existingPlayer, error: existingPlayerError }] =
-    await Promise.all([
-      admin
-        .from('game_registration_requests')
-        .select('id')
-        .eq('game_id', game.id)
-        .eq('user_id', friendId)
-        .maybeSingle<{ id: string }>(),
-      admin
-        .from('game_players')
-        .select('user_id')
-        .eq('game_id', game.id)
-        .eq('user_id', friendId)
-        .maybeSingle<{ user_id: string }>(),
-    ]);
-  if (existingReqError || existingPlayerError) {
+  // user). A roster row the organiser added is checked in `addTeammateRow`,
+  // the one home of that rule for the team submit and this action alike.
+  const { data: existingReq, error: existingReqError } = await admin
+    .from('game_registration_requests')
+    .select('id')
+    .eq('game_id', game.id)
+    .eq('user_id', friendId)
+    .maybeSingle<{ id: string }>();
+  if (existingReqError) {
     console.error('[addTeamMember] registration lookup failed', {
       gameId: game.id,
-      error: existingReqError ?? existingPlayerError,
+      error: existingReqError,
     });
     return { ok: false, error: 'db_error' };
   }
-  if (existingReq || existingPlayer) {
+  if (existingReq) {
     return { ok: false, error: 'already_registered' };
   }
 
@@ -823,7 +838,11 @@ export async function loadTeamDashboard(
     name: game.name,
     courseName: game.courses?.name ?? null,
     joinEffect: game.registration_mode === 'open' ? 'instant' : 'approval',
-    signupsClosed: isSignupClosed(game) && game.status === 'scheduled',
+    // The team can no longer change: past the deadline, or the round has
+    // started. True after the start too, so an app build that only knows this
+    // field hides the team buttons as well.
+    signupsClosed: game.status !== 'scheduled' || isSignupClosed(game),
+    started: game.status !== 'scheduled',
     teamSize: resolveTeamSize(game.mode_config),
     teeOffAt: game.scheduled_tee_off_at,
   };

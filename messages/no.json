@@ -6899,6 +6899,7 @@
     "teamDashInvitedHeading": "Du er invitert til et lag i «{gameName}»",
     "teamDashSoloPlayerBanner": "Du er påmeldt som solo-spiller. Det er ikke noe lag å vise her.",
     "teamDashSignupsClosedBanner": "Påmeldingen er stengt. Arrangøren gjør de siste justeringene før start.",
+    "teamDashStartedBanner": "Runden har startet. Laget kan ikke endres lenger.",
     "teamDashCaptainLabel": "Kaptein",
     "teamDashMemberLabel": "Medspiller",
     "teamDashPendingInstant": "Sier du ja, er du med i spillet med en gang.",

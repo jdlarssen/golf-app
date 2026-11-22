@@ -40,3 +40,35 @@ describe('suggestTeamName', () => {
     }
   });
 });
+
+describe('suggestTeamName in English', () => {
+  it.each([
+    ['Martin', "Martin's team"],
+    ['Jonas', "Jonas' team"],
+    ['Max', "Max' team"],
+  ])('%s → %s', (firstName, expected) => {
+    expect(suggestTeamName(firstName, 'en')).toBe(expected);
+  });
+
+  it('no name → «My team»', () => {
+    expect(suggestTeamName('  ', 'en')).toBe('My team');
+  });
+
+  it('a long name is cut so the suggestion fits the team-name limit', () => {
+    const name = suggestTeamName('A'.repeat(80), 'en');
+    expect(name.length).toBe(TEAM_NAME_MAX);
+    expect(name.endsWith("A's team")).toBe(true);
+  });
+
+  it('every English suggestion is a valid team name', () => {
+    for (const n of ['', 'O', 'Jo', 'Martin', 'x'.repeat(200), `${'A'.repeat(40)}s`]) {
+      const s = suggestTeamName(n, 'en');
+      expect(s.length).toBeGreaterThanOrEqual(TEAM_NAME_MIN);
+      expect(s.length).toBeLessThanOrEqual(TEAM_NAME_MAX);
+    }
+  });
+
+  it('any other locale keeps the Norwegian suggestion', () => {
+    expect(suggestTeamName('Martin', 'no')).toBe('Martins lag');
+  });
+});

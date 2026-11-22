@@ -85,7 +85,10 @@ export function teamLineup(team: AppTeamPageTeam): LineupEntry[] {
   return entries;
 }
 
-/** Kan kapteinen endre laget nå? Ikke når arrangøren har stengt påmeldingen. */
+/**
+ * Kan kapteinen endre laget nå? Ikke når påmeldingen er stengt, fristen er ute
+ * eller runden har startet (`signupsClosed` dekker alle tre fra serveren).
+ */
 export function canEditTeam(team: Pick<AppTeamPageTeam, 'kind' | 'game'>): boolean {
   return team.kind === 'captain' && !team.game.signupsClosed;
 }

@@ -246,6 +246,36 @@ describe('lagnavnet', () => {
   });
 });
 
+describe('lagnavnet uten «Ferdig»', () => {
+  it('feltet står åpent ved innsending: det skrevne navnet sendes', async () => {
+    await renderForm();
+    await pick('ola', 'kari', 'per');
+    await fireEvent.press(screen.getByTestId('team-form-name'));
+    await fireEvent.changeText(screen.getByTestId('team-form-name-input'), 'Birdie-jegerne');
+    await fireEvent.press(submit());
+    expect(registerTeam).toHaveBeenCalledWith('k3x9pq', 'Birdie-jegerne', ['ola', 'kari', 'per']);
+    expect(onRegistered).toHaveBeenCalledWith('approval', expect.objectContaining({ teamName: 'Birdie-jegerne' }));
+  });
+
+  it('et ugyldig navn i åpent felt sendes ikke', async () => {
+    await renderForm();
+    await pick('ola', 'kari', 'per');
+    await fireEvent.press(screen.getByTestId('team-form-name'));
+    await fireEvent.changeText(screen.getByTestId('team-form-name-input'), 'Bi');
+    await fireEvent.press(submit());
+    expect(registerTeam).not.toHaveBeenCalled();
+    expect(screen.getByTestId('team-form-name-error')).toHaveTextContent('Lagnavnet må ha minst 3 tegn.');
+  });
+
+  it('å forlate feltet beholder et gyldig navn', async () => {
+    await renderForm();
+    await fireEvent.press(screen.getByTestId('team-form-name'));
+    await fireEvent.changeText(screen.getByTestId('team-form-name-input'), 'Birdie-jegerne');
+    await fireEvent(screen.getByTestId('team-form-name-input'), 'blur');
+    expect(screen.getByTestId('team-form-name')).toHaveTextContent('Birdie-jegerne');
+  });
+});
+
 describe('å sende', () => {
   it('sender navnet og vennene fra venstre, og gir svaret per venn videre', async () => {
     await renderForm();

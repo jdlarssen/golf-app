@@ -34,7 +34,12 @@ const INGRID: TeamPickerFriend = {
   unavailable: false,
 };
 
-function renderTeam(mode: 'captain' | 'member', myRowId = 'cap-1', signupsClosed = false) {
+function renderTeam(
+  mode: 'captain' | 'member',
+  myRowId = 'cap-1',
+  signupsClosed = false,
+  started = false,
+) {
   return render(
     <TeamDashboardClient
       mode={mode}
@@ -46,6 +51,7 @@ function renderTeam(mode: 'captain' | 'member', myRowId = 'cap-1', signupsClosed
       gameName="Onsdagsgolfen"
       teamSize={5}
       signupsClosed={signupsClosed}
+      started={started}
       picker={mode === 'captain' ? { friends: [INGRID], friendLinkPath: null } : null}
       captain={{ requestId: 'cap-1', userId: 'u-cap', displayName: 'Martin Berg', status: 'approved' }}
       members={[
@@ -116,6 +122,18 @@ describe('TeamDashboardClient — the captain (#2840 del 5)', () => {
     expect(screen.queryByTestId('team-pick-friend')).toBeNull();
   });
 
+  it('p17: on a started round the captain sees the team, a started banner, and no team buttons', () => {
+    // The server sends signupsClosed with started (the team can no longer change).
+    renderTeam('captain', 'cap-1', true, true);
+    expect(screen.getByTestId('team-rows')).toBeInTheDocument();
+    expect(screen.getByText('Runden har startet. Laget kan ikke endres lenger.')).toBeInTheDocument();
+    expect(screen.queryByText(/Påmeldingen er stengt/)).toBeNull();
+    expect(screen.queryByTestId('team-row-menu')).toBeNull();
+    expect(screen.queryByTestId('team-swap')).toBeNull();
+    expect(screen.queryByTestId('team-pick-friend')).toBeNull();
+    expect(screen.queryByText('Du kan endre laget til arrangøren stenger påmeldingen.')).toBeNull();
+  });
+
   it('#2840: a new screen moves focus to its heading, and back again on «Avbryt»', async () => {
     renderTeam('captain');
     fireEvent.click(openMenu('req-kari').getByText('Fjern fra laget'));
@@ -167,6 +185,15 @@ describe('TeamDashboardClient — the teammate', () => {
     expect(screen.getByText('Martin vil ha deg med på laget')).toBeInTheDocument();
     expect(screen.getByText(/Sier du ja.*godkjenne laget/i)).toBeInTheDocument();
     expect(screen.getByTestId('team-accept')).toHaveTextContent('Bli med på laget');
+  });
+
+  it.each([
+    ['past the deadline', false],
+    ['on a started round', true],
+  ])('p17: %s the yes/no is gone', (_label, started) => {
+    renderTeam('member', 'req-kari', true, started);
+    expect(screen.queryByTestId('team-accept')).toBeNull();
+    expect(screen.queryByText('Martin vil ha deg med på laget')).toBeNull();
   });
 });
 

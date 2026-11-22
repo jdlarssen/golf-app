@@ -19,6 +19,7 @@ const GAME = {
   courseName: 'Byneset',
   joinEffect: 'instant',
   signupsClosed: false,
+  started: false,
   teamSize: 4,
   teeOffAt: '2026-11-19T17:30:00.000Z',
 };
@@ -44,6 +45,17 @@ describe('fetchTeamPage', () => {
     respondWith(200, CAPTAIN);
     expect(await teamPage().fetchTeamPage(SHORT_ID, { visit: false })).toEqual({ ok: true, view: CAPTAIN });
     expect(mockFetch).toHaveBeenCalledWith(`${PATH}?visit=0`, expect.objectContaining({ method: 'GET' }));
+  });
+
+  it('p17: en startet runde leses som startet, og en eldre server uten feltet som ikke startet', async () => {
+    respondWith(200, { ...CAPTAIN, game: { ...GAME, signupsClosed: true, started: true } });
+    const started = await teamPage().fetchTeamPage(SHORT_ID);
+    expect(started.ok && started.view.game).toMatchObject({ signupsClosed: true, started: true });
+
+    const { started: _dropped, ...olderGame } = GAME;
+    respondWith(200, { ...CAPTAIN, game: olderGame });
+    const older = await teamPage().fetchTeamPage(SHORT_ID);
+    expect(older.ok && older.view.game).toMatchObject({ started: false });
   });
 
   it('spør lagsidens sti og leser kapteinens visning', async () => {

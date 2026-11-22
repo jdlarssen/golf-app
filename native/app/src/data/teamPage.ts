@@ -89,6 +89,9 @@ function readGame(value: unknown): AppTeamPageGame | null {
     courseName: str(value.courseName),
     joinEffect: value.joinEffect,
     signupsClosed: value.signupsClosed === true,
+    // An older server sends no `started`; its `signupsClosed` then covers only
+    // the deadline.
+    started: value.started === true,
     // En eldre server sender ingen av dem: da står ingen ledige plasser og ingen tid.
     teamSize: typeof value.teamSize === 'number' && value.teamSize >= 2 ? value.teamSize : null,
     teeOffAt: str(value.teeOffAt),

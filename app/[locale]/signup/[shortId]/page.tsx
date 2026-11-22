@@ -348,7 +348,7 @@ export default async function PåmeldingPage({
   const teamForm: TeamFormProps | null = teamPicker
     ? {
         picker: teamPicker,
-        suggestedName: suggestTeamName(firstName(profile.name) ?? ''),
+        suggestedName: suggestTeamName(firstName(profile.name) ?? '', locale),
         ownInitials: nameInitials(profile.name),
         meta: teamFormMeta(t, locale as AppLocale, {
           teeOffAt: game.scheduled_tee_off_at,

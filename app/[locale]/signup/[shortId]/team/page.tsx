@@ -190,6 +190,7 @@ export default async function TeamDashboardPage({
         gameName={gameName}
         teamSize={view.game.teamSize}
         signupsClosed={view.game.signupsClosed}
+        started={view.game.started}
         picker={picker}
         captain={
           view.captain

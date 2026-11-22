@@ -1,20 +1,28 @@
 import { TEAM_NAME_MAX, TEAM_NAME_MIN } from '@/lib/games/registration';
 
-const FALLBACK = 'Laget mitt';
-/** «s lag» and «' lag» are both five characters. */
-const SUFFIX_LENGTH = 5;
+/**
+ * Per language: the fallback without a name, the possessive ending, and the
+ * ending after s, x or z. Grammar, not catalog copy, so the app (which cannot
+ * read the web catalog) gets the same rule.
+ */
+const SUGGESTION = {
+  no: { fallback: 'Laget mitt', suffix: 's lag', apostrophe: "' lag" },
+  en: { fallback: 'My team', suffix: "'s team", apostrophe: "' team" },
+} as const;
 
 /**
- * The team name the app's team form starts with (#2840): the captain's first
- * name in the Norwegian genitive, «Martins lag». A name ending in s, x or z
- * takes an apostrophe instead, «Jonas' lag». No name gives «Laget mitt». A long
- * name is cut so the suggestion stays inside `TEAM_NAME_MAX`, the limit the
- * core checks. Pure.
+ * The team name the team form starts with (#2840): the captain's first name in
+ * the genitive, «Martins lag» / "Martin's team". A name ending in s, x or z
+ * takes an apostrophe alone, «Jonas' lag» / "Jonas' team". No name gives
+ * «Laget mitt» / "My team". A long name is cut so the suggestion stays inside
+ * `TEAM_NAME_MAX`, the limit the core checks. `locale` is the UI language;
+ * anything but 'en' gets Norwegian. Pure.
  */
-export function suggestTeamName(firstName: string): string {
-  const name = firstName.trim().slice(0, TEAM_NAME_MAX - SUFFIX_LENGTH).trimEnd();
-  if (name.length === 0) return FALLBACK;
-  return /[sxz]$/i.test(name) ? `${name}' lag` : `${name}s lag`;
+export function suggestTeamName(firstName: string, locale: string = 'no'): string {
+  const rule = locale === 'en' ? SUGGESTION.en : SUGGESTION.no;
+  const name = firstName.trim().slice(0, TEAM_NAME_MAX - rule.suffix.length).trimEnd();
+  if (name.length === 0) return rule.fallback;
+  return /[sxz]$/i.test(name) ? `${name}${rule.apostrophe}` : `${name}${rule.suffix}`;
 }
 
 export type TeamNameValidationError =

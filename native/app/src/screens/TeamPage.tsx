@@ -266,11 +266,13 @@ function TeamView({
         ];
 
   const note =
-    team.kind === 'member'
-      ? TEAM_PAGE_TEXT.memberNote
-      : team.game.signupsClosed
-        ? ROUND_INVITE_TEXT.closed
-        : TEAM_PAGE_TEXT.captainNote;
+    team.game.started
+      ? TEAM_PAGE_TEXT.started
+      : team.kind === 'member'
+        ? TEAM_PAGE_TEXT.memberNote
+        : team.game.signupsClosed
+          ? ROUND_INVITE_TEXT.closed
+          : TEAM_PAGE_TEXT.captainNote;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]} testID={`team-page-${team.kind}`}>
