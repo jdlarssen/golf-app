@@ -199,7 +199,7 @@ Regelen står i `app-store-release.md` §«Når bygget er ute».
 1. Vent til Play har publisert bygget i lukket testing (Alpha). Ikke hev tallet når bump-PR-en
    merges: Google-gjennomgangen kan ta dager.
 2. Hev `android.latestVersionCode` til den nye `versionCode` i en egen PR, med `latestVersion`.
-   Nyhetene (`RELEASE_NOTES`) er de samme som i Play-utgivelsen, høyst 500 tegn.
+   Nyhetene (`android.notes`) er de samme som i Play-utgivelsen, høyst 500 tegn.
 3. Etter deployen: åpne `https://tornygolf.no/api/app/min-version` og sjekk tallet.
 
 «Oppdater» åpner Play-oppføringen. Den viser testsporet for testerne og produksjon for alle

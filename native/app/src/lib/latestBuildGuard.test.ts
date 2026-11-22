@@ -44,10 +44,11 @@ describe('LATEST_APP_BUILD mot byggnummeret i app.config.ts', () => {
     expect(LATEST_APP_BUILD.android.latestVersion).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
-  it('har nyheter på høyst 500 tegn, som Play tar imot, og ingen tomme linjer', () => {
-    for (const notes of [LATEST_APP_BUILD.ios.notes, LATEST_APP_BUILD.android.notes]) {
-      expect(notes.join('\n').length).toBeLessThanOrEqual(RELEASE_NOTES_MAX_CHARS);
-      for (const line of notes) expect(line.trim()).not.toBe('');
-    }
+  it.each([
+    ['iOS', LATEST_APP_BUILD.ios.notes],
+    ['Android', LATEST_APP_BUILD.android.notes],
+  ])('har nyheter for %s på høyst 500 tegn, som Play tar imot, og ingen tomme linjer', (_platform, notes) => {
+    expect(notes.join('\n').length).toBeLessThanOrEqual(RELEASE_NOTES_MAX_CHARS);
+    for (const line of notes) expect(line.trim()).not.toBe('');
   });
 });

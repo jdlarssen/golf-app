@@ -290,8 +290,8 @@ profil-pillen og raden «Oppdater appen» på Profil til appen er oppdatert. Alt
    bump-PR-en merges: da finnes ikke bygget hos testerne ennå.
 2. Lag en egen PR som endrer `lib/app/latestBuild.ts`:
    - `ios.latestBuild` til det nye buildnummeret, og `latestVersion` til `STORE_VERSION`;
-   - `RELEASE_NOTES` til nyhetene, én linje per punkt. Bruk samme tekst som testerne får i
-     TestFlight og Play. Høyst 500 tegn til sammen, fordi Play ikke tar mer.
+   - `ios.notes` til nyhetene i bygget, én linje per punkt. Bruk samme tekst som testerne
+     får i TestFlight. Høyst 500 tegn til sammen, samme grense som Play.
    Android har sitt eget tall (`play-store-release.md`), så hev bare det som er ute.
 3. Etter deployen: åpne `https://tornygolf.no/api/app/min-version` og sjekk tallet. Svaret kan
    caches i 5 minutter.
