@@ -5447,7 +5447,8 @@
       "heading": "Club leagues",
       "empty": "No leagues in this club yet.",
       "newButton": "New league",
-      "manageLink": "Manage"
+      "manageLink": "Manage",
+      "notStarted": "Not started"
     },
     "cups": {
       "heading": "Club cups",
@@ -5787,7 +5788,8 @@
         "missing": "Missing league information.",
         "players": "Invalid player list.",
         "players_failed": "Could not add the players. Please try again.",
-        "fallback": "Something went wrong."
+        "fallback": "Something went wrong.",
+        "league_finished": "The league is finished, so you cannot add more players."
       }
     },
     "addRound": {
@@ -5849,7 +5851,8 @@
         "sim_settings": "Pick the settings from the lists.",
         "not_simulator": "The league is not a simulator league.",
         "not_found": "Round not found.",
-        "update_failed": "Could not save. Try again."
+        "update_failed": "Could not save. Try again.",
+        "window": "The deadline must be after the start."
       }
     },
     "statusActions": {
@@ -5858,7 +5861,8 @@
       "startPending": "Starting …",
       "finishError": "Could not finish the league.",
       "finishButton": "Finish league",
-      "finishPending": "Finishing …"
+      "finishPending": "Finishing …",
+      "wrongStatus": "The league has already changed. Reload the page."
     },
     "delete": {
       "kicker": "Clubhouse",
@@ -6419,7 +6423,8 @@
         "not_withdrawn": "The player has not withdrawn.",
         "match_not_eligible": "That choice does not fit this match.",
         "withdraw_failed": "Could not register the withdrawal. Try again.",
-        "not_found": "Cup not found."
+        "not_found": "Cup not found.",
+        "not_started": "The cup has not started yet, so you cannot finish it."
       },
       "statusMessages": {
         "created": "Cup created. Add matches below to get started.",
@@ -6469,7 +6474,8 @@
         "not_member": "That player is no longer a member of the club.",
         "too_many_players": "The cup is full — a personal cup holds up to {cap} players. Remove a participant first, or swap in someone who has already signed up.",
         "swap_failed": "Could not swap the player. Try again.",
-        "unexpected": "Unexpected error: {code}"
+        "unexpected": "Unexpected error: {code}",
+        "wrong_team": "That player is on the other team and cannot be swapped in here."
       }
     },
     "generate": {
@@ -6570,8 +6576,8 @@
         "cup_team_dup": "Teams must have different names.",
         "cup_allowance": "Check the handicap allowance for four-ball.",
         "cup_foursomes_allowance": "Check the handicap allowance for foursomes.",
-        "cup_win_points": "Points for a win must be a number above 0.",
-        "cup_tie_points": "Points for a tie can't be negative.",
+        "cup_win_points": "Points for a win must be a number above 0, with at most one decimal.",
+        "cup_tie_points": "Points for a tie must be 0 or more, with at most one decimal.",
         "cup_insert_failed": "Failed to create the cup. Please try again.",
         "unexpected": "Unexpected error: {code}"
       }
@@ -7703,6 +7709,7 @@
     "resultStatus": "Final result",
     "seasonRunning": "Season in progress",
     "seasonDone": "Season finished",
+    "seasonNotStarted": "The season has not started yet",
     "board": {
       "formatLine": "{format} · {unit} · {players}",
       "unit": {

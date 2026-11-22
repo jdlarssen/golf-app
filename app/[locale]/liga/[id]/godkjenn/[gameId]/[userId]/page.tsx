@@ -1,4 +1,5 @@
 import { first } from '@/lib/url/searchParams';
+import { isUuid } from '@/lib/url/isUuid';
 import { notFound } from 'next/navigation';
 import { after } from 'next/server';
 import { getLocale, getTranslations } from 'next-intl/server';
@@ -39,6 +40,8 @@ export default async function LeagueMarkerPage({
   searchParams: SearchParams;
 }) {
   const { id: leagueId, gameId, userId: playerUserId } = await params;
+  // Audit 2026-11-20: like the sibling kort page, a broken link is «not found».
+  if (![leagueId, gameId, playerUserId].every(isUuid)) notFound();
   const sp = await searchParams;
   const [t, tApprove, locale] = await Promise.all([
     getTranslations('liga.marker'),
