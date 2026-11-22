@@ -139,10 +139,15 @@ export async function sendLeagueRoundNotification(
               ${escapeHtml(summaryHeading)}
             </h3>${
               summary?.story
-                ? `
+                ? summary.story
+                    .split(/\n{2,}/)
+                    .map(
+                      (paragraph) => `
             <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-              ${escapeHtml(summary.story)}
-            </p>`
+              ${escapeHtml(paragraph)}
+            </p>`,
+                    )
+                    .join('')
                 : ''
             }
             <p style="font-size:14px;line-height:1.5;margin:0 0 16px;color:#4A3F30;">
