@@ -74,9 +74,81 @@ describe('dueNotices', () => {
     expect(
       dueNotices(
         round({ opens_at: '2026-10-23T22:00:00+00:00', closes_at: '2026-11-06T22:59:00.5+00:00' }),
-        Date.parse('2026-11-05T00:00:00Z'),
+        // 10:00 in Oslo: a daytime instant, so the night hold below is not in play.
+        Date.parse('2026-11-05T09:00:00Z'),
       ),
     ).toEqual(['league_round_open', 'league_round_closing']);
+  });
+});
+
+/**
+ * #2974: nothing goes out in quiet hours (22:00–07:00 in Oslo, the same hours
+ * as the push choices). What falls due at night goes on the first run after
+ * 07:00. `now` is a parameter, so the instants are fixed dates.
+ */
+describe('dueNotices: nothing in quiet hours', () => {
+  // The league's ordinary round: opens Monday 00:00 and closes Sunday 23:59 two
+  // weeks later, Oslo time (winter, UTC+1).
+  const winterRound = (over: Partial<NoticeRound> = {}) =>
+    round({ opens_at: '2026-12-06T23:00:00Z', closes_at: '2026-12-20T22:59:00Z', ...over });
+
+  it.each([
+    ['06:59 is held', '2026-12-07T05:59:00Z', []],
+    ['07:00 goes', '2026-12-07T06:00:00Z', ['league_round_open']],
+    ['21:59 goes', '2026-12-07T20:59:00Z', ['league_round_open']],
+    ['22:00 is held', '2026-12-07T21:00:00Z', []],
+  ])('winter time: %s', (_name, at, expected) => {
+    expect(dueNotices(winterRound(), Date.parse(at))).toEqual(expected);
+  });
+
+  it.each([
+    ['06:59 is held', '2027-06-07T04:59:00Z', []],
+    ['07:00 goes', '2027-06-07T05:00:00Z', ['league_round_open']],
+  ])('summer time: %s', (_name, at, expected) => {
+    expect(
+      dueNotices(round({ opens_at: '2027-06-06T22:00:00Z', closes_at: '2027-06-20T21:59:00Z' }), Date.parse(at)),
+    ).toEqual(expected);
+  });
+
+  it('the ordinary round: the opening message waits from 00:41 to 07:41 on the day it opens', () => {
+    expect(dueNotices(winterRound(), Date.parse('2026-12-06T23:41:00Z'))).toEqual([]);
+    expect(dueNotices(winterRound(), Date.parse('2026-12-07T06:41:00Z'))).toEqual(['league_round_open']);
+  });
+
+  it('the ordinary round: the reminder passes its 48 hours on Friday 23:59 and goes on Saturday 07:41', () => {
+    const told = winterRound({ opening_notice_sent_at: '2026-12-07T06:41:00Z' });
+    expect(dueNotices(told, Date.parse('2026-12-18T23:41:00Z'))).toEqual([]);
+    expect(dueNotices(told, Date.parse('2026-12-19T06:41:00Z'))).toEqual(['league_round_closing']);
+  });
+
+  it('a round that closes before the night is over is not held: now is the last chance', () => {
+    // 22:41 on the night the round closes at 23:59.
+    expect(dueNotices(winterRound(), Date.parse('2026-12-20T21:41:00Z'))).toEqual([
+      'league_round_open',
+      'league_round_closing',
+    ]);
+    // 23:00, and the round closes 07:30: the 07:41 run would find it closed.
+    const closesEarly = winterRound({ closes_at: '2026-12-08T06:30:00Z' });
+    expect(dueNotices(closesEarly, Date.parse('2026-12-07T22:00:00Z'))).toEqual([
+      'league_round_open',
+      'league_round_closing',
+    ]);
+    // Closes 08:01: the first run after 07:00 reaches it, so it waits.
+    const closesLater = winterRound({ closes_at: '2026-12-08T07:01:00Z' });
+    expect(dueNotices(closesLater, Date.parse('2026-12-07T22:00:00Z'))).toEqual([]);
+  });
+
+  it('the night the clocks go back is an hour longer, and the hold follows the Oslo clock', () => {
+    // 25 October 2026, 01:30 summer time. The night ends 07:00 winter time (06:00Z).
+    const now = Date.parse('2026-10-24T23:30:00Z');
+    const open = { opens_at: '2026-10-20T22:00:00Z' };
+    // Closes 07:59 Oslo: before the first run after 07:00 can reach it.
+    expect(dueNotices(round({ ...open, closes_at: '2026-10-25T06:59:00Z' }), now)).toEqual([
+      'league_round_open',
+      'league_round_closing',
+    ]);
+    // Closes 08:01 Oslo: held.
+    expect(dueNotices(round({ ...open, closes_at: '2026-10-25T07:01:00Z' }), now)).toEqual([]);
   });
 });
 
