@@ -125,7 +125,7 @@ export default async function BliMedPage({
       <PageHeader
         title={group.name}
         subtitle={
-          showSentState
+          showSentState || waitUntil
             ? undefined
             : t('subtitle')
         }
