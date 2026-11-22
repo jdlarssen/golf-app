@@ -26,6 +26,7 @@ import {
   type CourseHoleRow,
 } from '../../../../lib/supabase/queryFragments';
 import { selectAllRows } from '../../../../lib/supabase/selectAllRows';
+import { chunkIds } from '../../../../lib/notifications/inboxReads';
 import {
   buildHistoryRounds,
   localRoundYear,
@@ -76,6 +77,21 @@ function distinct(values: readonly (string | null)[]): string[] {
   return [...new Set(values.filter((v): v is string => v != null))];
 }
 
+/**
+ * Audit 2026-11-20: an `.in()` list rides in the request URL, and PostgREST
+ * fails past roughly 200 uuids (#2214). Every list here grows with the rounds
+ * a player has played, so each is read in slices and joined. The first failed
+ * slice throws, like the single read did.
+ */
+async function inSlices<T>(
+  ids: readonly string[],
+  read: (slice: string[]) => PromiseLike<T[]>,
+  size?: number,
+): Promise<T[]> {
+  const parts = await Promise.all(chunkIds(ids, size).map((slice) => read(slice)));
+  return parts.flat();
+}
+
 /** Hullene og tee-ene rundene ble spilt på. Tomme lister gir ingen spørring. */
 async function fetchCourseData(games: readonly HistoryGameInput[]): Promise<HistoryCourseData> {
   const courseIds = distinct(games.map((game) => game.courseId));
@@ -83,29 +99,33 @@ async function fetchCourseData(games: readonly HistoryGameInput[]): Promise<Hist
   const [holes, tees] = await Promise.all([
     courseIds.length === 0
       ? Promise.resolve([] as (CourseHoleRow & { course_id: string })[])
-      : selectAllRows(
-          (from, to) =>
-            supabase
-              .from('course_holes')
-              .select(`course_id, ${COURSE_HOLES_SELECT}`)
-              .in('course_id', courseIds)
-              .order('course_id')
-              .order('hole_number')
-              .range(from, to)
-              .returns<(CourseHoleRow & { course_id: string })[]>(),
-          'fetchRoundHistory course_holes',
+      : inSlices(courseIds, (slice) =>
+          selectAllRows(
+            (from, to) =>
+              supabase
+                .from('course_holes')
+                .select(`course_id, ${COURSE_HOLES_SELECT}`)
+                .in('course_id', slice)
+                .order('course_id')
+                .order('hole_number')
+                .range(from, to)
+                .returns<(CourseHoleRow & { course_id: string })[]>(),
+            'fetchRoundHistory course_holes',
+          ),
         ),
     teeIds.length === 0
       ? Promise.resolve([] as (TeeBoxRatings & { id: string })[])
-      : supabase
-          .from('tee_boxes')
-          .select(TEE_SELECT)
-          .in('id', teeIds)
-          .returns<(TeeBoxRatings & { id: string })[]>()
-          .then(({ data, error }) => {
-            if (error) throw new Error(error.message);
-            return data ?? [];
-          }),
+      : inSlices(teeIds, (slice) =>
+          supabase
+            .from('tee_boxes')
+            .select(TEE_SELECT)
+            .in('id', slice)
+            .returns<(TeeBoxRatings & { id: string })[]>()
+            .then(({ data, error }) => {
+              if (error) throw new Error(error.message);
+              return data ?? [];
+            }),
+        ),
   ]);
 
   const holesByCourse = new Map<string, Map<number, CourseHoleRow>>();
@@ -159,23 +179,24 @@ export async function fetchRoundHistory(
   if (wanted.length === 0) return [];
 
   const [scores, courses] = await Promise.all([
-    selectAllRows(
-      (from, to) =>
-        supabase
-          .from('scores')
-          .select('game_id, hole_number, strokes, putts')
-          .eq('user_id', userId)
-          .in(
-            'game_id',
-            wanted.map((game) => game.gameId),
-          )
-          .not('strokes', 'is', null)
-          .order('id')
-          .range(from, to)
-          .returns<
-            { game_id: string; hole_number: number; strokes: number | null; putts: number | null }[]
-          >(),
-      'fetchRoundHistory',
+    inSlices(
+      wanted.map((game) => game.gameId),
+      (slice) =>
+        selectAllRows(
+          (from, to) =>
+            supabase
+              .from('scores')
+              .select('game_id, hole_number, strokes, putts')
+              .eq('user_id', userId)
+              .in('game_id', slice)
+              .not('strokes', 'is', null)
+              .order('id')
+              .range(from, to)
+              .returns<
+                { game_id: string; hole_number: number; strokes: number | null; putts: number | null }[]
+              >(),
+          'fetchRoundHistory',
+        ),
     ),
     fetchCourseData(wanted),
   ]);
