@@ -821,11 +821,6 @@ type CaptainRequestRow = {
 };
 
 /**
- * #2840: a failed read must not look like «no team» (I3, #877). The page's
- * error boundary and the app route's 500 take it from here. The display-name
- * read further down stays best effort, as it always was.
- */
-/**
  * Team rows whose user has a seat that is not on the captain's team: another
  * team number, or a seat while the captain has none. The organiser placed
  * them, and an old invitation does not hold a seat on this team. The team page
@@ -858,6 +853,11 @@ async function readSeatedElsewhere(
   return { ok: true, ids };
 }
 
+/**
+ * #2840: a failed read must not look like «no team» (I3, #877). The page's
+ * error boundary and the app route's 500 take it from here. The display-name
+ * read further down stays best effort, as it always was.
+ */
 function throwRead(what: string, error: { message?: string }): never {
   throw new Error(`[loadTeamDashboard] ${what} read failed: ${error.message ?? 'unknown'}`);
 }
