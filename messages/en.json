@@ -5472,6 +5472,7 @@
       "sentBanner": "Request sent. The owner must approve it before you join.",
       "submitButton": "Request to join",
       "submitPending": "Sending request…",
+      "waitBanner": "You can ask to join again from {date} at {time}.",
       "errors": {
         "unknown": "Something went wrong. Please try again.",
         "fallback": "Something went wrong. Please try again."

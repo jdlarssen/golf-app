@@ -8,6 +8,7 @@ import { notify } from '@/lib/notifications/notify';
 import { displayNameForOthers } from '@/lib/users/displayName';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import type { Enums } from '@/lib/database.types';
+import { joinRequestWaitUntil } from '@/lib/clubs/joinRequestCooldown';
 
 /**
  * Sjekk om PG-error er UNIQUE-violation (23505) eller inneholder "duplicate"
@@ -44,7 +45,11 @@ async function getRequesterName(userId: string): Promise<string | null> {
 
 /**
  * The old request row behind a duplicate insert: still pending (nothing to
- * do), or decided/withdrawn and now reopened as a fresh pending request.
+ * do), closed less than 7 days ago (the owner's «Etter 7 dager»: nothing is
+ * stored, nobody is notified, the page shows when the person may ask again),
+ * or closed longer ago and now reopened as a fresh pending request.
+ * `decided_at` marks the close: the rejection, or the leave/removal stamp
+ * (`stampMembershipClosed`).
  *
  * Runs on the service role: RLS lets the requester only withdraw their own
  * pending row, and the guard trigger (0107) keeps the decision columns for
@@ -56,19 +61,24 @@ async function getRequesterName(userId: string): Promise<string | null> {
 async function reopenOldRequest(
   groupId: string,
   userId: string,
-): Promise<'already_pending' | 'reopened' | 'failed'> {
+): Promise<'already_pending' | 'wait' | 'reopened' | 'failed'> {
   const admin = getAdminClient();
   const { data: old, error: readError } = await admin
     .from('group_join_requests')
-    .select('id, status')
+    .select('id, status, decided_at')
     .eq('group_id', groupId)
     .eq('user_id', userId)
-    .maybeSingle<{ id: string; status: Enums<'registration_request_status'> }>();
+    .maybeSingle<{
+      id: string;
+      status: Enums<'registration_request_status'>;
+      decided_at: string | null;
+    }>();
   if (readError || !old) {
     console.error('[requestToJoin] old request read failed', readError ?? 'no row');
     return 'failed';
   }
   if (old.status === 'pending') return 'already_pending';
+  if (joinRequestWaitUntil(old.decided_at)) return 'wait';
   try {
     expectAffected(
       await admin
@@ -168,13 +178,17 @@ export async function requestToJoin(formData: FormData) {
       redirect({ href: `/klubber/bli-med/${shortId}?error=unknown`, locale });
     }
     // One row per (club, user) across every status (UNIQUE in 0075). A
-    // pending row means the request is already out; a decided or withdrawn
-    // one (rejected, or approved and then left or removed) is reopened, so a
-    // new request is stored and the admins hear about it (audit 2026-11-20:
-    // it used to say «sent» and store nothing).
+    // pending row means the request is already out. A rejected or withdrawn
+    // one (left or removed) is reopened once 7 days have passed, so a new
+    // request is stored and the admins hear about it (audit 2026-11-20: it
+    // used to say «sent» and store nothing).
     const outcome = await reopenOldRequest(group.id, user.id);
     if (outcome === 'already_pending') {
       redirect({ href: `/klubber/bli-med/${shortId}?sent=1`, locale });
+    }
+    if (outcome === 'wait') {
+      // The page reads the same row and says from when.
+      redirect({ href: `/klubber/bli-med/${shortId}`, locale });
     }
     if (outcome === 'failed') {
       redirect({ href: `/klubber/bli-med/${shortId}?error=unknown`, locale });

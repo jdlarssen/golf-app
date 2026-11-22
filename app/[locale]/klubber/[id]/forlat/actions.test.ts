@@ -25,6 +25,10 @@ let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/server', () => ({ getServerClient: async () => supabaseMock }));
 let adminMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/admin', () => ({ getAdminClient: () => adminMock }));
+const stampMock = vi.fn(async (_g: string, _u: string, _a: string) => true);
+vi.mock('@/lib/clubs/stampMembershipClosed', () => ({
+  stampMembershipClosed: (g: string, u: string, a: string) => stampMock(g, u, a),
+}));
 
 import { leaveClub } from './actions';
 import { cancelInvitation } from '../actions';
@@ -92,6 +96,23 @@ describe('leaveClub', () => {
     ['the owner count fails', [{ data: { role: 'owner' }, error: null }, { count: null, data: null, error: { message: 'nede' } }]],
   ])('%s → leave_failed, nothing deleted', async (_label, admin) => {
     expect(await leave(admin as never, undefined)).toBe(`/klubber/${GROUP}/forlat?error=leave_failed`);
+    expect(supabaseMock.__fromCalls.some((c) => c.method === 'delete')).toBe(false);
+  });
+
+  it('the leave is stamped before the delete (the owner\'s «Etter 7 dager»)', async () => {
+    expect(await leave([MEMBER_ROW, TWO_OWNERS], { data: [{ user_id: 'u-1' }], error: null })).toBe('/klubber');
+    expect(stampMock).toHaveBeenCalledWith(GROUP, 'u-1', 'u-1');
+  });
+
+  it('a failed stamp stops the leave, nothing deleted', async () => {
+    stampMock.mockResolvedValueOnce(false);
+    expect(await leave([MEMBER_ROW, TWO_OWNERS], undefined)).toBe(`/klubber/${GROUP}/forlat?error=leave_failed`);
+    expect(supabaseMock.__fromCalls.some((c) => c.method === 'delete')).toBe(false);
+  });
+
+  it('not a member → back to the list, no stamp, no delete', async () => {
+    expect(await leave([{ data: null, error: null }, TWO_OWNERS], undefined)).toBe('/klubber');
+    expect(stampMock).not.toHaveBeenCalled();
     expect(supabaseMock.__fromCalls.some((c) => c.method === 'delete')).toBe(false);
   });
 

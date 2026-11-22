@@ -6,6 +6,7 @@ import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { stampMembershipClosed } from '@/lib/clubs/stampMembershipClosed';
 
 /** After a delete that removed nothing: is the caller's membership gone? */
 async function membershipIsGone(groupId: string, userId: string): Promise<boolean> {
@@ -71,6 +72,20 @@ export async function leaveClub(formData: FormData) {
 
   if (isOwner && (owners.count ?? 0) <= 1) {
     redirect({ href: `/klubber/${groupId}/forlat?error=sole_owner`, locale });
+  }
+
+  // Not a member (any more): nothing to leave, and no stamp, so a stray visit
+  // never starts a wait for someone who was never in the club.
+  if (!mine.data) {
+    revalidatePath('/klubber');
+    redirect({ href: '/klubber', locale });
+  }
+
+  // The owner's «Etter 7 dager»: record when the membership ended, BEFORE the
+  // delete, so a new join request waits 7 days. A failed stamp stops the
+  // leave; a delete without it would skip the wait.
+  if (!(await stampMembershipClosed(groupId, user.id, user.id))) {
+    redirect({ href: `/klubber/${groupId}/forlat?error=leave_failed`, locale });
   }
 
   // Self-delete via request-scoped client (RLS: user_id = auth.uid()).

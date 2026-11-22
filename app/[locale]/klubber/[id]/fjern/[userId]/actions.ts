@@ -5,6 +5,7 @@ import { getLocale } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { stampMembershipClosed } from '@/lib/clubs/stampMembershipClosed';
 import { canRemoveClubMember, type ClubRole } from '@/lib/clubs/memberRemoval';
 
 /**
@@ -88,6 +89,13 @@ export async function removeMember(formData: FormData) {
         locale,
       });
     }
+  }
+
+  // The owner's «Etter 7 dager»: record when the membership ended, BEFORE the
+  // delete, so a new join request waits 7 days. Only for someone who is a
+  // member; a failed stamp stops the removal.
+  if (targetRow && !(await stampMembershipClosed(groupId, targetUserId, user.id))) {
+    redirect({ href: failed, locale });
   }
 
   // Delete via request-scoped client (RLS: "group_members delete admin or self").
