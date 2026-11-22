@@ -21,4 +21,14 @@ describe('nextUnfilledHole', () => {
   ])('%s', (_label: string, filled: number[], expected: number) => {
     expect(nextUnfilledHole(filled, BACK_NINE)).toBe(expected);
   });
+
+  // Shotgun: flighten startet på hull 10 og har spilt 10–14. Knappen peker på
+  // 15, ikke på hull 1 (samme regel som nettsiden).
+  it('shotgun følger flightens egen start', () => {
+    const ALL = Array.from({ length: 18 }, (_, i) => i + 1);
+    expect(nextUnfilledHole([10, 11, 12, 13, 14], ALL, 'shotgun')).toBe(15);
+    expect(nextUnfilledHole([10, 11, 12, 13, 14], ALL, 'first_tee')).toBe(1);
+    // Rundt hjørnet: 15–18 og 1 → neste er 2.
+    expect(nextUnfilledHole([15, 16, 17, 18, 1], ALL, 'shotgun')).toBe(2);
+  });
 });

@@ -90,6 +90,7 @@ async function callSection(opts: {
   submittedAt?: string | null;
   requirePeerApproval?: boolean;
   leagueFlight?: boolean;
+  startType?: 'first_tee' | 'shotgun';
 }) {
   const { PrimaryCtaSection } = await import('./PrimaryCta');
   const { client, captured } = makeSupabase(opts.rows);
@@ -102,6 +103,7 @@ async function callSection(opts: {
     requirePeerApproval: opts.requirePeerApproval ?? false,
     leagueFlight: opts.leagueFlight ?? false,
     holeSegment: 'full',
+    startType: opts.startType ?? 'first_tee',
     tournamentId: null,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     gameMode: opts.gameMode as any,
@@ -164,6 +166,33 @@ describe('PrimaryCtaSection completion counting (#1624)', () => {
     expect(props.nextHole).toBe(18);
     // Solo asks only for the viewer's rows, whichever filter form is used.
     expect(captured.inIds ?? [captured.eqUserId]).toEqual(['b-viewer']);
+  });
+});
+
+describe('PrimaryCtaSection in a shotgun round', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it('continues on the group\'s next hole in play order, not on hole 1', async () => {
+    // Started on 10 and played 10–14: the next hole is 15.
+    const { props } = await callSection({
+      rows: rowsFor(VIEWER, range(10, 14)),
+      gameMode: 'solo_strokeplay',
+      teamScoreOwnerId: null,
+      startType: 'shotgun',
+    });
+    expect(props.state).toBe('in_progress');
+    expect(props.nextHole).toBe(15);
+  });
+
+  it('a first-tee round with the same holes still goes to hole 1', async () => {
+    const { props } = await callSection({
+      rows: rowsFor(VIEWER, range(10, 14)),
+      gameMode: 'solo_strokeplay',
+      teamScoreOwnerId: null,
+    });
+    expect(props.nextHole).toBe(1);
   });
 });
 

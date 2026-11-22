@@ -209,7 +209,7 @@ function heroProgress(opts: HeroInput) {
   const own = new Set(holes);
   const filled = filledHolesForOwner(scores, mode, userId, captainId).filter((hole) => own.has(hole));
   const played = filled.length;
-  const nextHole = nextUnfilledHole(filled, holes);
+  const nextHole = nextUnfilledHole(filled, holes, game.startType);
 
   const cta = computePrimaryCtaState({
     strokesCount: played,

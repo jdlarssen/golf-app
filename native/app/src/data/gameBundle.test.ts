@@ -186,6 +186,26 @@ describe('gameBundle', () => {
     expect(select).toContain('prizes');
   });
 
+  // Shotgun: «Fortsett runden» og billetten følger flightens egen start.
+  it('starttypen rir med på spillet, og kolonnen er med i select-lista', async () => {
+    riggFetch({ start_type: 'shotgun' });
+    expect((await bundleModule().refreshGameBundle(GAME)).game.startType).toBe('shotgun');
+
+    const { queryStub, routeFrom, stepArgs } = mocks();
+    const gamesQuery = queryStub({ data: GAME_ROW, error: null });
+    routeFrom({
+      games: [gamesQuery],
+      game_players: [queryStub({ data: PLAYER_ROWS, error: null })],
+    });
+    await bundleModule().refreshGameBundle(GAME);
+    expect(String(stepArgs(gamesQuery, 'select')[0]![0])).toContain('start_type');
+  });
+
+  it('en rad uten starttype er første tee', async () => {
+    riggFetch();
+    expect((await bundleModule().refreshGameBundle(GAME)).game.startType).toBe('first_tee');
+  });
+
   // #2840 del 3: raden til lagsiden på runden før start.
   it('#2840: påmeldingskoden og -typen rir med på spillet', async () => {
     riggFetch({ short_id: 'abcd2345', registration_type: 'team', registration_mode: 'open' });
@@ -423,6 +443,7 @@ describe('gameBundle', () => {
       requirePeerApproval: true,
       scheduledTeeOffAt: '2026-08-30T14:00:00.000Z',
       holeSegment: 'full',
+      startType: 'first_tee',
       sourceGameId: null,
       createdBy: 'user-admin',
       scoreVisibility: 'live',
