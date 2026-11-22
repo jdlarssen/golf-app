@@ -164,6 +164,17 @@ Endres en av dem, må spørringen endres i samme PR:
 - `lib/notifications/leagueRoundNotices.ts`: stemplene og varseltypen
   `league_round_open` som `apning_uten_varsler` leter etter.
 
+## Etter #2974: tersklene gjelder ikke om natta
+
+Vakta er skrevet for runde 1 og 2 og slutter 23.11.2026. Fra #2974 sender sveipet
+ingenting i stille tid (kl. 22–07 norsk tid): en runde som åpner kl. 00:00, får
+åpningsvarselet kl. 07:41, og en påminnelse som forfaller kl. 23:59, går kl. 07:41
+neste morgen. `apning_forsinket` (to timer etter `opens_at`) og
+`paminnelse_forsinket` (under 46 timer igjen) slår da ut hver natt uten at noe er
+galt. Skal vakta brukes på en senere runde, må de to tersklene regnes fra kl. 07:00.
+Spillere uten enhet med push får i tillegg varselet på e-post; `apning_uten_varsler`
+teller fortsatt bare innboksradene.
+
 ## Det vakta ikke beviser
 
 VERIFICATION GAP: tellingen viser at varselet ble lagt i innboksen, ikke at noen
