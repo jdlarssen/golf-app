@@ -87,3 +87,13 @@ describe('FeeAndPrizes', () => {
     expect(screen.queryByTestId('create-prizes-toggle')).toBeNull();
   });
 });
+
+describe('kontingent over taket', () => {
+  it('et beløp over 100 000 kr blir 100 000 i feltet, ikke stille klampet ved lagring', async () => {
+    await render(<Harness />);
+    await fireEvent.changeText(screen.getByTestId('create-entry-fee'), '150000');
+    expect(screen.getByTestId('create-entry-fee').props.value).toBe('100000');
+    await fireEvent.changeText(screen.getByTestId('create-entry-fee'), '99999');
+    expect(screen.getByTestId('create-entry-fee').props.value).toBe('99999');
+  });
+});

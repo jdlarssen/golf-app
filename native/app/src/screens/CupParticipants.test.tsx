@@ -349,4 +349,24 @@ describe('CupParticipants', () => {
     expect(screen.getByTestId('cup-players-failed')).toHaveTextContent('Det er arrangøren som setter opp cupen.');
     expect(screen.queryByTestId('cup-players-retry')).toBeNull();
   });
+
+  it('et eldre svar som kommer etter et nyere, overskriver ikke lista', async () => {
+    let releaseOld: (load: Load) => void = () => {};
+    const old = new Promise<Load>((resolve) => {
+      releaseOld = resolve;
+    });
+    (fetchCupParticipants as jest.Mock).mockImplementationOnce(() => old);
+    mockResults = [];
+    mockLast = { ok: true, view: room({ participants: [] }) };
+    await renderList();
+    // Et nytt fokus starter et nyere kall som svarer først.
+    await act(async () => {
+      mockFocus();
+    });
+    expect(screen.getByTestId('cup-players-count')).toHaveTextContent('0 av 40 påmeldte');
+    await act(async () => {
+      releaseOld({ ok: true, view: room() });
+    });
+    expect(screen.getByTestId('cup-players-count')).toHaveTextContent('0 av 40 påmeldte');
+  });
 });

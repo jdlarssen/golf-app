@@ -320,6 +320,18 @@ describe('Cup — lasting og feil', () => {
     expect(screen.queryByTestId('cup-loading')).toBeNull();
   });
 
+  it('et eldre svar som kommer etter et nyere, overskriver ikke skjermen', async () => {
+    let resolveOld: (result: CupResult) => void = () => {};
+    const { fetchCup } = jest.requireMock('../data/cup') as { fetchCup: jest.Mock };
+    fetchCup.mockImplementationOnce(() => new Promise((r) => (resolveOld = r)));
+    answer({ ok: true, view: liveCup({ name: 'Nyeste' }) });
+    await renderCup();
+    await refocus();
+    expect(await screen.findByTestId('cup-name')).toHaveTextContent('Nyeste');
+    await act(async () => resolveOld({ ok: true, view: liveCup({ name: 'Gammel' }) }));
+    expect(screen.getByTestId('cup-name')).toHaveTextContent('Nyeste');
+  });
+
   it('uten nett beholder skjermen det den alt har hentet, med en merknad', async () => {
     answer({ ok: true, view: liveCup() }, { ok: false, reason: 'offline' });
     await renderCup();

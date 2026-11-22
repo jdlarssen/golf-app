@@ -2,6 +2,7 @@
 // `cup.public.*`), låst i `cupLineupCopy.test.ts`, og står her fordi appen ikke leser
 // nettets katalog.
 import { setupLoadFailureText } from './cupSetupCopy';
+import { ownEntry } from './ownEntry';
 
 export const LINEUP_TEXT = {
   pageTitle: 'Uttak',
@@ -100,7 +101,8 @@ const LINEUP_ERRORS: Record<string, string> = {
 
 /** Nettets setning for koden. Uten nett og uten innlogging sier det samme som resten av cupen. */
 export function lineupFailureText(reason: string): string {
-  if (LINEUP_ERRORS[reason]) return LINEUP_ERRORS[reason];
+  const known = ownEntry(LINEUP_ERRORS, reason);
+  if (known) return known;
   const app = setupLoadFailureText(reason);
   return app === setupLoadFailureText('load_failed') ? LINEUP_ERRORS.save_failed : app;
 }

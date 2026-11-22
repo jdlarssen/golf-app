@@ -26,8 +26,12 @@ export function CupDelete({ route, navigation }: ScreenProps<'CupDelete'>) {
   // Knappen er deaktivert først når `busy` er tegnet. Refen stopper trykk nummer to før det.
   const sending = useRef(false);
 
+  // Bare det sist startede kallet får skrive: et eldre svar kan komme etter et nyere.
+  const loadSeq = useRef(0);
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     const result = await fetchCupDeletePreview(cupId);
+    if (seq !== loadSeq.current) return;
     if (result.ok) {
       setPreview(result.view);
       setFailure(null);
