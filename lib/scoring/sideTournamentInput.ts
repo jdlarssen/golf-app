@@ -6,6 +6,7 @@
 
 import type { TeamLine } from '@/lib/leaderboard';
 import type { SideCategoryId } from './sideTournamentConfig';
+import { asScoringGender, parFor } from './modes/parResolver';
 import type { SideTournamentInput, SideWinner } from './sideTournament';
 import type { SideWinnerRow } from '@/app/[locale]/games/[id]/leaderboard/leaderboardTypes';
 
@@ -57,11 +58,20 @@ export function playerParsByHole(
   holes: { holeNumber: number; parMens: number; parLadies: number; parJuniors: number }[],
   teeGender: string | null | undefined,
 ): number[] {
+  const gender = asScoringGender(teeGender);
   const parByHole = new Map<number, number>();
   for (const h of holes) {
     parByHole.set(
       h.holeNumber,
-      teeGender === 'ladies' ? h.parLadies : teeGender === 'juniors' ? h.parJuniors : h.parMens,
+      parFor(
+        {
+          number: h.holeNumber,
+          par: h.parMens,
+          strokeIndex: 0,
+          parByGender: { mens: h.parMens, ladies: h.parLadies, juniors: h.parJuniors },
+        },
+        gender,
+      ),
     );
   }
   const pars: number[] = [];

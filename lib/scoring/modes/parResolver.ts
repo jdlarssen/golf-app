@@ -19,3 +19,13 @@ export function parFor(
   if (!hole.parByGender) return hole.par;
   return hole.parByGender[gender ?? 'mens'];
 }
+
+/**
+ * A tee value read from a row (`game_players.tee_gender`, the app bundle's
+ * string) as a `ScoringGender`, or `undefined` when it is none of the three —
+ * `parFor` then uses men's par. Lets every call site resolve a player's own
+ * par through `parFor` (audit 2026-11-20).
+ */
+export function asScoringGender(tee: string | null | undefined): ScoringGender | undefined {
+  return tee === 'mens' || tee === 'ladies' || tee === 'juniors' ? tee : undefined;
+}
