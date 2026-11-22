@@ -12,7 +12,7 @@ pg_cron (every minute) → EXISTS gate in the job body → `net.http_post` (pg_n
 | `finish-pipeline-sweep` | 0170 | a finished non-cup, non-derived game has `finish_pipeline_at is null` | `app/api/cron/finish-pipeline/route.ts` |
 | `delivery-reminder-sweep` (every 5 min) | 0192 | an active, non-derived game started in the last 2 days has a player with `submitted_at`, `withdrawn_at` and `deliver_reminder_sent_at` all null | `app/api/cron/delivery-reminder/route.ts` |
 | `stale-game-reminder-sweep` (hourly, :17) | 0205 | an active game that is not a cup match or derived, has a `created_by`, started over 24 h ago and has `organizer_stale_reminder_sent_at is null` | `app/api/cron/stale-game-reminder/route.ts` |
-| `league-round-reminder-sweep` (hourly, :41) | 0217 (stamps), 0218 | an open round (`opens_at <= now() < closes_at`) of an `active` league has `opening_notice_sent_at is null`, or `closing_reminder_sent_at is null` with under 48 h left | `app/api/cron/league-round-reminder/route.ts` |
+| `league-round-reminder-sweep` (hourly, :41) | 0217 (stamps), 0218 | an open round (`opens_at <= now() < closes_at`) of an `active` league has `opening_notice_sent_at is null`, or `closing_reminder_sent_at is null` with under 48 h left. The gate does not know the clock: in quiet hours (22:00–07:00 Oslo) it still opens, and the route sends and stamps nothing (`dueNotices`, #2974) | `app/api/cron/league-round-reminder/route.ts` |
 | `evening-before-sweep` (every 15 min) | 0241 (stamp), 0242 | it is 18:00 or later in Oslo, and a scheduled game that is not a cup match, derived game or league flight, has a `created_by`, `organizer_evening_notice_sent_at is null`, tee-off on tomorrow's Oslo date, was created before 18:00 Oslo today, and has another non-guest, non-withdrawn player than the organiser | `app/api/cron/evening-before/route.ts` |
 
 `purge-rate-limit-buckets` (nightly, 03:23 UTC, migration 0251) is plain SQL with no HTTP call: it runs `public.purge_admin_action_rate_limit()`, which deletes rate-limit buckets older than 2 days. Like `purge-cron-run-history` it is scheduled only where `cron_secret` is in Vault (prod).
@@ -67,6 +67,10 @@ order by gp.deliver_reminder_sent_at desc limit 20;
 -- 3d. League round messages (#2638): when each round told its players it was
 --     open, and reminded them before the deadline. The opening message comes
 --     within the hour after opens_at, the reminder 47 to 48 hours before closes_at.
+--     Nothing goes in quiet hours, 22:00-07:00 Oslo (#2974): a round that opens
+--     at 00:00 is told at 07:41, and a reminder whose 48 hours pass at 23:59
+--     goes at 07:41 the next morning (reminder_lead about 40 hours). The route's
+--     answer counts the mails to players with no push device as `mailed`.
 select l.name, r.sequence, r.opens_at, r.opening_notice_sent_at,
        r.closes_at, r.closing_reminder_sent_at,
        r.closes_at - r.closing_reminder_sent_at as reminder_lead
