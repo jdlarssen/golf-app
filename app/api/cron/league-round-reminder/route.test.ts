@@ -66,8 +66,11 @@ function round(id: string) {
   };
 }
 
-const sent = (open: number, closing: number) => ({
+// What one round's run answers: the varsler that landed and the mails that
+// went with them (#2974).
+const sent = (open: number, closing: number, mailedOpen = 0, mailedClosing = 0) => ({
   sent: { league_round_open: open, league_round_closing: closing },
+  mailed: { league_round_open: mailedOpen, league_round_closing: mailedClosing },
 });
 
 beforeEach(() => {
@@ -146,9 +149,9 @@ describe('POST /api/cron/league-round-reminder — the candidates', () => {
 
   it('runs exactly the rounds the database gave, and adds up what went', async () => {
     pending = { data: [round('1'), round('2'), round('3')] };
-    runMock.mockResolvedValueOnce(sent(4, 0));
-    runMock.mockResolvedValueOnce(sent(0, 2));
-    runMock.mockResolvedValueOnce(sent(3, 3));
+    runMock.mockResolvedValueOnce(sent(4, 0, 2, 0));
+    runMock.mockResolvedValueOnce(sent(0, 2, 0, 1));
+    runMock.mockResolvedValueOnce(sent(3, 3, 1, 0));
 
     const res = await POST(cronRequest());
 
@@ -157,6 +160,7 @@ describe('POST /api/cron/league-round-reminder — the candidates', () => {
       ok: true,
       checked: 3,
       sent: { league_round_open: 7, league_round_closing: 5 },
+      mailed: { league_round_open: 3, league_round_closing: 1 },
       failed: [],
     });
   });
@@ -174,6 +178,7 @@ describe('POST /api/cron/league-round-reminder — the candidates', () => {
       ok: true,
       checked: 2,
       sent: { league_round_open: 2, league_round_closing: 0 },
+      mailed: { league_round_open: 0, league_round_closing: 0 },
       failed: [{ id: '1', error: 'connection reset' }],
     });
     expect(errorSpy).toHaveBeenCalledWith('[leagueRoundReminder] round 1 failed', expect.any(Error));

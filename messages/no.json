@@ -7257,6 +7257,21 @@
       "submitButtonTextKept": "Lever kortene: {url}",
       "footer": "Du får denne meldingen fordi du er påmeldt spillet. Logg inn på <link>tornygolf.no</link> for å levere."
     },
+    "leagueRound": {
+      "subjectOpen": "{roundLabel} i {leagueName} er åpen",
+      "subjectClosing": "{roundLabel} i {leagueName} stenger {closesAt, date, ::EEEEdMMM} kl. {closesAt, time, ::HHmm}",
+      "salutationNamed": "Hei {name}!",
+      "salutationGeneric": "Hei!",
+      "bodyOpen": "Spill den når det passer deg. Fristen er {closesAt, date, ::EEEEdMMM} kl. {closesAt, time, ::HHmm}.",
+      "bodyOpenSim": "{courseName}, tee {teeName}. Åpne runden for å se hva du skal stille inn i Trackman. Fristen er {closesAt, date, ::EEEEdMMM} kl. {closesAt, time, ::HHmm}.",
+      "bodyClosing": "Du har ikke spilt den ennå.",
+      "buttonRound": "Åpne runden",
+      "buttonRoundText": "Åpne runden: {url}",
+      "buttonLeague": "Åpne ligaen",
+      "buttonLeagueText": "Åpne ligaen: {url}",
+      "footer": "Du får denne e-posten fordi du er med i ligaen og ikke har slått på varsler. Slå dem på i <link>profilen din</link>, så får du beskjeden som varsel i stedet.",
+      "footerText": "Du får denne e-posten fordi du er med i ligaen og ikke har slått på varsler. Slå dem på i profilen din ({url}), så får du beskjeden som varsel i stedet."
+    },
     "missingScoreReminder": {
       "subject": "Du mangler slag på hull {holes} i {gameName}",
       "heading": "Du mangler slag på hull {holes}",

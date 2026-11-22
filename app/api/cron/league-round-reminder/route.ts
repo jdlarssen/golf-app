@@ -50,6 +50,9 @@ export async function POST(request: NextRequest) {
   //   opens_at <= now < closes_at
   //   opening_notice_sent_at is null
   //   or (closing_reminder_sent_at is null and closes_at < now + 48 t)
+  // The night hold (#2974) is `dueNotices` alone: at night this query still
+  // finds the round, the run sends and stamps nothing, and the round is here
+  // again on the first run after 07:00.
   const now = Date.now();
   const nowIso = new Date(now).toISOString();
   const soonIso = new Date(now + CLOSING_REMINDER_LEAD_MS).toISOString();
@@ -72,6 +75,7 @@ export async function POST(request: NextRequest) {
   }
 
   const sent: Record<LeagueRoundNoticeKind, number> = { league_round_open: 0, league_round_closing: 0 };
+  const mailed: Record<LeagueRoundNoticeKind, number> = { league_round_open: 0, league_round_closing: 0 };
   const failed: Array<{ id: string; error: string }> = [];
 
   // One round at a time, with its own try/catch: a failure in one round
@@ -81,12 +85,15 @@ export async function POST(request: NextRequest) {
       const result = await runLeagueRoundNotices(admin, round, now);
       sent.league_round_open += result.sent.league_round_open;
       sent.league_round_closing += result.sent.league_round_closing;
+      mailed.league_round_open += result.mailed.league_round_open;
+      mailed.league_round_closing += result.mailed.league_round_closing;
     } catch (err) {
       console.error(`[${LOG_PREFIX}] round ${round.id} failed`, err);
       failed.push({ id: round.id, error: err instanceof Error ? err.message : 'unknown' });
     }
   }
 
-  // `checked` counts the rounds in the batch, `sent` the varsler per message.
-  return NextResponse.json({ ok: true, checked: candidates?.length ?? 0, sent, failed });
+  // `checked` counts the rounds in the batch, `sent` the varsler per message,
+  // `mailed` the mails to the players with no device to push to (#2974).
+  return NextResponse.json({ ok: true, checked: candidates?.length ?? 0, sent, mailed, failed });
 }
