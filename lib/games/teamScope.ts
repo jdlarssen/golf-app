@@ -132,6 +132,26 @@ export function activeTeamCounts(players: readonly TeamPlayer[]): Map<number, nu
 }
 
 /**
+ * The team numbers an organiser can pick for a player: `1..N+1`, where N is
+ * the larger of the teams the active players fill (`ceil(active / teamSize)`)
+ * and the highest team number in use, so one empty team more is always
+ * there. The one home for this rule: the web's team section and the app's
+ * organiser section both read it.
+ */
+export function offeredTeamNumbers(
+  activeCount: number,
+  teamSize: number,
+  usedTeams: Iterable<number>,
+): number[] {
+  const highest = Math.max(
+    Math.ceil(activeCount / Math.max(teamSize, 1)),
+    ...usedTeams,
+    1,
+  );
+  return Array.from({ length: highest + 1 }, (_, i) => i + 1);
+}
+
+/**
  * Hvordan ett lag med `count` aktive står mot regelen (#2569): fullt, kort
  * men lovlig (spiller med én mindre, handicapet regnes for dem som er igjen),
  * eller utenfor (`allowedTeamSizes`), og da stopper startvakta runden.

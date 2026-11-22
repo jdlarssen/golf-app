@@ -3,7 +3,12 @@
 import { useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { suggestTeamAssignment, setPlayerTeam } from './flightActions';
-import { teamBuckets, teamSizeStatus, type TeamPlayer } from '@/lib/games/teamScope';
+import {
+  offeredTeamNumbers,
+  teamBuckets,
+  teamSizeStatus,
+  type TeamPlayer,
+} from '@/lib/games/teamScope';
 import { allowedTeamSizes } from '@/lib/games/teamFormatLimits';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { Button } from '@/components/ui/Button';
@@ -58,12 +63,11 @@ export function LagSeksjon({
   const [isPending, startTransition] = useTransition();
 
   const activePlayers = players; // allerede filtrert server-side
-  const maxTeam = Math.max(
-    Math.ceil(activePlayers.length / Math.max(teamSize, 1)),
-    ...activePlayers.map((p) => p.team_number ?? 0),
-    1,
+  const teamOptions = offeredTeamNumbers(
+    activePlayers.length,
+    teamSize,
+    activePlayers.map((p) => p.team_number ?? 0),
   );
-  const teamOptions = Array.from({ length: maxTeam + 1 }, (_, i) => i + 1);
 
   const { assigned: byTeam, unassigned } = teamBuckets(activePlayers);
   // The smallest size a team may have (#2569): how many a team of too few lacks.

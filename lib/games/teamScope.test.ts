@@ -12,6 +12,7 @@ import {
   unevenTeamNumbers,
   activeTeamCounts,
   readShambleCount,
+  offeredTeamNumbers,
   type TeamPlayer,
 } from './teamScope';
 import type { GameMode } from '@/lib/scoring/modes/types';
@@ -403,5 +404,22 @@ describe('unevenTeamNumbers / activeTeamCounts (#2569)', () => {
     expect(readShambleCount({ shamble_count: 3 })).toBe(3);
     expect(readShambleCount({ shamble_count: '3' })).toBeUndefined();
     expect(readShambleCount(null)).toBeUndefined();
+  });
+});
+
+describe('offeredTeamNumbers', () => {
+  it('offers the filled teams plus one empty team', () => {
+    // 8 players in pairs fill 4 teams; a fifth is there to split differently.
+    expect(offeredTeamNumbers(8, 2, [1, 1, 2, 2, 3, 3, 4, 4])).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('reaches past a team number set above the filled count', () => {
+    // A player put in team 6 on the web must show as chosen, with 7 as the spare.
+    expect(offeredTeamNumbers(4, 2, [1, 6])).toEqual([1, 2, 3, 4, 5, 6, 7]);
+  });
+
+  it('offers teams 1 and 2 to an empty roster, and treats size 0 as 1', () => {
+    expect(offeredTeamNumbers(0, 4, [])).toEqual([1, 2]);
+    expect(offeredTeamNumbers(2, 0, [])).toEqual([1, 2, 3]);
   });
 });
