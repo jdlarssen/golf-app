@@ -3,6 +3,8 @@
 // `lib/appLock.test.ts`; her sjekkes det en render kan bekrefte: at ingenting
 // under porten monteres før telefonen har sagt ja, at «Lås opp» spør på nytt,
 // og at dekket i appvelgeren kommer og går med `AppState` uten å røre barna.
+// #2975: arket «Versjon … er klar» står innenfor porten, som i `App.tsx`, og
+// legger seg aldri over låseskjermen.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { useEffect, useState } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
@@ -11,6 +13,10 @@ import { authenticateAsync } from 'expo-local-authentication';
 import * as SplashScreen from 'expo-splash-screen';
 import { loadAppLock, setAppLock } from '../lib/appLock';
 import { setRecentsScreenshotEnabled } from '../lib/recentsScreenshot';
+import { fetchMinVersionBody } from '../data/updateCheck';
+import { readAppBuild } from '../lib/appBuild';
+import { NewVersionProvider } from '../lib/useNewVersion';
+import { NewVersionSheet } from './newVersion/NewVersionSheet';
 import { AppLockGate } from './AppLockGate';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -20,6 +26,12 @@ jest.mock('expo-local-authentication', () => require('../test/localAuthMock').lo
 jest.mock('expo-splash-screen', () => ({ hideAsync: jest.fn().mockResolvedValue(true) }));
 jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 jest.mock('../lib/recentsScreenshot', () => ({ setRecentsScreenshotEnabled: jest.fn() }));
+jest.mock('../data/updateCheck', () => ({ fetchMinVersionBody: jest.fn(async () => null) }));
+jest.mock('../data/syncTriggers', () => require('../test/syncTriggersMock'));
+jest.mock('../lib/appBuild', () => ({
+  ...jest.requireActual('../lib/appBuild'),
+  readAppBuild: jest.fn(() => ({ platform: 'ios', version: '1.2.0', build: null })),
+}));
 
 const authenticate = authenticateAsync as jest.Mock;
 let handlers: Array<(state: AppStateStatus) => void> = [];
@@ -33,7 +45,16 @@ function Probe() {
 }
 
 /** Som `ReadyApp` i `App.tsx`: porten nullstilles når telefonen har sagt ja. */
-function Harness({ initiallyLocked, onUnlocked }: { initiallyLocked: boolean; onUnlocked?: () => void }) {
+function Harness({
+  initiallyLocked,
+  onUnlocked,
+  withSheet = false,
+}: {
+  initiallyLocked: boolean;
+  onUnlocked?: () => void;
+  /** Arket «Versjon … er klar» øverst blant barna, der `App.tsx` har det. */
+  withSheet?: boolean;
+}) {
   const [startLocked, setStartLocked] = useState(initiallyLocked);
   return (
     <AppLockGate
@@ -43,6 +64,7 @@ function Harness({ initiallyLocked, onUnlocked }: { initiallyLocked: boolean; on
         setStartLocked(false);
       }}
     >
+      {withSheet ? <NewVersionSheet /> : null}
       <Probe />
     </AppLockGate>
   );
@@ -96,6 +118,32 @@ describe('AppLockGate', () => {
     await waitFor(() => expect(screen.getByTestId('app-stack')).toBeTruthy());
     expect(screen.queryByTestId('app-lock-screen')).toBeNull();
     expect(onUnlocked).toHaveBeenCalledTimes(1);
+  });
+
+  it('legger ikke arket «Versjon … er klar» over låseskjermen, men viser det etter ja (#2975)', async () => {
+    (readAppBuild as jest.Mock).mockReturnValue({ platform: 'ios', version: '1.2.0', build: 14 });
+    (fetchMinVersionBody as jest.Mock).mockResolvedValue({
+      ios: { minBuild: 1, latestBuild: 15, latestVersion: '1.2.0', notes: [] },
+    });
+    let answer: (value: { success: true }) => void = () => {};
+    authenticate.mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+    await render(
+      <NewVersionProvider enabled>
+        <Harness initiallyLocked withSheet />
+      </NewVersionProvider>,
+    );
+
+    // Serveren har svart, og telefonen venter på Face ID: låseskjermen alene.
+    await waitFor(() => expect(fetchMinVersionBody).toHaveBeenCalled());
+    await waitFor(() => expect(authenticate).toHaveBeenCalledTimes(1));
+    await act(async () => {});
+    expect(screen.getByTestId('app-lock-screen')).toBeTruthy();
+    expect(screen.getByTestId('app-lock-unlock')).toBeTruthy();
+    expect(screen.queryByTestId('new-version-sheet')).toBeNull();
+
+    await act(async () => answer({ success: true }));
+    expect(await screen.findByTestId('new-version-sheet')).toBeTruthy();
+    expect(screen.queryByTestId('app-lock-screen')).toBeNull();
   });
 
   it('slipper splashen før spørsmålet kommer', async () => {
