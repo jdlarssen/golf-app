@@ -16,8 +16,19 @@ export function playOrder(
   startType: StartType,
   filled: ReadonlySet<number>,
 ): number[] {
-  const holes = holeNumbersForSegment(segment);
-  if (startType !== 'shotgun') return holes;
+  return playOrderOf(holeNumbersForSegment(segment), startType, filled);
+}
+
+/**
+ * {@link playOrder} for a list of holes the caller already has (the app keeps
+ * the game's own holes as a list). `holes` is in hole order.
+ */
+export function playOrderOf(
+  holes: readonly number[],
+  startType: StartType,
+  filled: ReadonlySet<number>,
+): number[] {
+  if (startType !== 'shotgun') return [...holes];
   const n = holes.length;
   let start = 0;
   let shortest = Infinity;
@@ -49,7 +60,19 @@ export function nextUnfilledHole(
   filled: ReadonlySet<number>,
   startType: StartType = 'first_tee',
 ): number | null {
-  const holeNumbers = playOrder(segment, startType, filled);
+  return nextUnfilledHoleOf(holeNumbersForSegment(segment), filled, startType);
+}
+
+/**
+ * {@link nextUnfilledHole} for a list of holes: the app's «Fortsett runden»
+ * button and its ticket read this, so they walk a shotgun round the same way.
+ */
+export function nextUnfilledHoleOf(
+  holes: readonly number[],
+  filled: ReadonlySet<number>,
+  startType: StartType = 'first_tee',
+): number | null {
+  const holeNumbers = playOrderOf(holes, startType, filled);
   if (filled.size >= holeNumbers.length) return null;
   for (const h of holeNumbers) {
     if (!filled.has(h)) return h;

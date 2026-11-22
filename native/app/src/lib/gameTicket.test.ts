@@ -311,6 +311,13 @@ describe('ticketStub — samme grener og rekkefølge som før', () => {
     approvedAt: null,
     requirePeerApproval: false,
   };
+  it('shotgun: «Fortsett på hull» følger flightens egen start', () => {
+    expect(
+      ticketStub({ ...base, filled: [10, 11, 12, 13, 14], startType: 'shotgun' }),
+    ).toMatchObject({ kind: 'active', nextHole: 15 });
+    expect(ticketStub({ ...base, filled: [10, 11, 12, 13, 14] })).toMatchObject({ nextHole: 1 });
+  });
+
   // #2752: delt cup-dag og avledet kamp.
   describe('halve dager', () => {
     const backNine = [10, 11, 12, 13, 14, 15, 16, 17, 18];

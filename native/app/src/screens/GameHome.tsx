@@ -347,6 +347,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
     me: me?.player,
     filled,
     holes,
+    startType: game.startType,
     bridge: bridgeHole(bundle),
     host: game.sourceGameId
       ? { gameId: game.sourceGameId, name: bundle.sourceGameName ?? null }
