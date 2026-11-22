@@ -20,6 +20,7 @@ const BASE: FlightRowProps = {
   locked: false,
   submitted: false,
   note: 'Marte slår ut',
+  scratchRound: false,
   onSelect: jest.fn(),
 };
 
@@ -49,7 +50,7 @@ describe('FlightRow', () => {
     // Tastet og ikke på tur: bare slagene. 4 slag med ett slag på par 4 er
     // par mot brutto, uten form.
     await rerender(<FlightRow {...BASE} score={4} active={false} note={null} onSelect={onSelect} />);
-    expect(screen.getByTestId('flight-row-p1-note').props.children).toBe(strokesLine(1));
+    expect(screen.getByTestId('flight-row-p1-note').props.children).toBe(strokesLine(1, false));
     expect(screen.getByTestId('flight-row-p1-shape').props.children[0]).toHaveLength(0);
 
     // Ikke tastet og ikke på tur: «venter» og en blek skive.
@@ -64,7 +65,7 @@ describe('FlightRow', () => {
         onSelect={onSelect}
       />,
     );
-    expect(screen.getByTestId('flight-row-p1-note').props.children).toBe(`${strokesLine(1)} · venter`);
+    expect(screen.getByTestId('flight-row-p1-note').props.children).toBe(`${strokesLine(1, false)} · venter`);
     expect(screen.getByTestId('flight-row-p1-avatar-waiting', HIDDEN)).toBeTruthy();
     expect(screen.getByTestId('flight-row-p1-submitted')).toBeTruthy();
     expect(screen.getByLabelText('Marte Moe (deg): ingen score ennå, levert')).toBeTruthy();
@@ -91,12 +92,18 @@ describe('strokesLine', () => {
   it.each([
     [1, 'Får 1 slag'],
     [2, 'Får 2 slag'],
-    [0, 'Scratch'],
     // #2635: plusshandicap viser at slaget gis bort, som skinna.
     [-1, 'Mister 1 slag'],
     [-2, 'Mister 2 slag'],
+    // Får slag på andre hull, men ikke her: ingen linje.
+    [0, null],
     [null, null],
   ] as const)('%s slag gir %s', (extra, text) => {
-    expect(strokesLine(extra)).toBe(text);
+    expect(strokesLine(extra, false)).toBe(text);
+  });
+
+  it('sier «Scratch» bare når raden ikke får slag på noe hull i runden', () => {
+    expect(strokesLine(0, true)).toBe('Scratch');
+    expect(strokesLine(0, false)).toBeNull();
   });
 });

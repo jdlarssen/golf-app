@@ -448,6 +448,8 @@ type HoleSeat = ScoreRailSeat & {
   initial: string;
   /** Slagene setet får på hullet. `null` = motoren kunne ikke svare. */
   extraStrokes: number | null;
+  /** Setet får ingen slag på noe av spillets hull («Scratch»). */
+  scratchRound: boolean;
   submitted: boolean;
   note: string | null;
   /** Raden slagene skrives til (`scoreOwnerForHole` i lagformatene). */
@@ -643,6 +645,15 @@ function HoleView({
 
   // Setene på hullet. I lagformatene er setet lagets: kapteinens rad, og
   // hvert tapp går dit via den delte `scoreOwnerForHole`.
+  // «Scratch» belongs to a seat with no strokes on any of the game's holes,
+  // not to one that just has none on this hole.
+  const strokeIndexOf = (n: number) =>
+    bundle.holes.find((h) => h.holeNumber === n)?.strokeIndex ?? null;
+  const noStrokesOnRound = (extraFor: (holeNumber: number, strokeIndex: number) => number | null) =>
+    ownHoles.every((n) => {
+      const si = strokeIndexOf(n);
+      return si != null && extraFor(n, si) === 0;
+    });
   const seats: HoleSeat[] = collapsed
     ? teamCards.map((card) => {
         const row = byUserHole.get(`${card.captainId}#${holeNumber}`);
@@ -666,6 +677,9 @@ function HoleView({
           extraStrokes: leaderboard
             ? teamExtraForHole(leaderboard, card.teamNumber, holeNumber, hole.strokeIndex)
             : null,
+          scratchRound: leaderboard
+            ? noStrokesOnRound((n, si) => teamExtraForHole(leaderboard, card.teamNumber, n, si))
+            : false,
           submitted: card.submittedAt != null,
           note: teeStarter ? teeHint(teeStarter) : null,
           owner: scoreOwnerForHole(mode, holeNumber, userId, card.captainId),
@@ -674,6 +688,13 @@ function HoleView({
     : flight.map((entry) => {
         const row = byUserHole.get(`${entry.user_id}#${holeNumber}`);
         const name = displayName(entry.player);
+        const extraOn = (strokeIndex: number) =>
+          playerExtraForHole(
+            bundle.game,
+            entry.player.courseHandicap,
+            strokeIndex,
+            matchCourseHandicaps(bundle.players),
+          );
         return {
           id: entry.user_id,
           score: row?.strokes ?? null,
@@ -684,12 +705,8 @@ function HoleView({
           a11yName: entry.user_id === userId ? `${name} (deg)` : name,
           initial: nameInitials(entry.player.name),
           // `null` = configen peker på et annet format: da vises ingen badge.
-          extraStrokes: playerExtraForHole(
-            bundle.game,
-            entry.player.courseHandicap,
-            hole.strokeIndex,
-            matchCourseHandicaps(bundle.players),
-          ),
+          extraStrokes: extraOn(hole.strokeIndex),
+          scratchRound: noStrokesOnRound((_n, si) => extraOn(si)),
           submitted: entry.submitted_at != null,
           note: null,
           owner: entry.user_id,
@@ -1067,6 +1084,7 @@ function HoleView({
                 sunlight={sunlight}
                 initial={seat.initial}
                 extraStrokes={seat.extraStrokes}
+                scratchRound={seat.scratchRound}
                 score={seat.score}
                 par={par}
                 active={!locked && seat.id === rail.activeSeatId}
