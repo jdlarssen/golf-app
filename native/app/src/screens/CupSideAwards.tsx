@@ -186,15 +186,18 @@ function WinnerCard({
     sending.current = true;
     setBusy(true);
     setError(null);
-    const result = await registerSideAwardWinner(cupId, award.id, choice === NONE ? null : choice);
-    if (result.ok) {
-      setSaved(true);
-      await onSaved();
-    } else {
-      setError(sideAwardFailureText(result.reason));
+    try {
+      const result = await registerSideAwardWinner(cupId, award.id, choice === NONE ? null : choice);
+      if (result.ok) {
+        setSaved(true);
+        await onSaved();
+      } else {
+        setError(sideAwardFailureText(result.reason));
+      }
+    } finally {
+      sending.current = false;
+      setBusy(false);
     }
-    sending.current = false;
-    setBusy(false);
   };
 
   return (
@@ -301,15 +304,18 @@ function GirCard({
     sending.current = true;
     setBusy(true);
     setError(null);
-    const result = await registerGirCounts(cupId, award.id, Number(team1), Number(team2));
-    if (result.ok) {
-      setSaved(true);
-      await onSaved();
-    } else {
-      setError(sideAwardFailureText(result.reason, award.maxPerTeam));
+    try {
+      const result = await registerGirCounts(cupId, award.id, Number(team1), Number(team2));
+      if (result.ok) {
+        setSaved(true);
+        await onSaved();
+      } else {
+        setError(sideAwardFailureText(result.reason, award.maxPerTeam));
+      }
+    } finally {
+      sending.current = false;
+      setBusy(false);
     }
-    sending.current = false;
-    setBusy(false);
   };
 
   const field = (team: 1 | 2, name: string, value: string, set: (next: string) => void) => {

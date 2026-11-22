@@ -95,12 +95,15 @@ export function PaymentStatus({ route }: ScreenProps<'PaymentStatus'>) {
     remindSending.current = true;
     setReminding(true);
     setRemindNote(null);
-    const result = await remindUnpaid(gameId);
-    setRemindNote(result.ok ? BETALING_TEXT.remindDone(result.reminded) : BETALING_TEXT.remindFailed);
-    // The list says again who can still be reminded, as it does after a tick.
-    if (result.ok) await reload();
-    remindSending.current = false;
-    setReminding(false);
+    try {
+      const result = await remindUnpaid(gameId);
+      setRemindNote(result.ok ? BETALING_TEXT.remindDone(result.reminded) : BETALING_TEXT.remindFailed);
+      // The list says again who can still be reminded, as it does after a tick.
+      if (result.ok) await reload();
+    } finally {
+      remindSending.current = false;
+      setReminding(false);
+    }
   };
 
   if (load.state === 'loading') {

@@ -351,8 +351,9 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   // #2752: en avledet kamp har ikke noe eget kort, som nettets scorekort-side.
   const derived = bundle != null && isDerivedGame(bundle.game);
   useEffect(() => {
-    if (derived) backTo(navigation, 'GameHome', { gameId });
-  }, [derived, navigation, gameId]);
+    // A screen opened on top (a push notification) stays in front.
+    if (derived) leaveWhenFocused(() => backTo(navigation, 'GameHome', { gameId }));
+  }, [derived, navigation, gameId, leaveWhenFocused]);
 
   if (!bundle) {
     // #1954 A2: en feilet første henting uten cache sier fra, som hull- og
@@ -743,7 +744,8 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
           },
         },
       ],
-      { onDismiss: closed },
+      // Android: a tap outside does not close it; one of the two buttons answers.
+      { cancelable: false, onDismiss: closed },
     );
   };
 

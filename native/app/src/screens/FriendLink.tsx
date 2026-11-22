@@ -97,8 +97,12 @@ export function FriendLink({ navigation, route }: ScreenProps<'FriendLink'>) {
     connecting.current = true;
     setBusy(true);
     setLine(null);
-    const result = await connectFriendLink(code);
-    connecting.current = false;
+    let result: Awaited<ReturnType<typeof connectFriendLink>>;
+    try {
+      result = await connectFriendLink(code);
+    } finally {
+      connecting.current = false;
+    }
     setBusy(false);
     if (!result.ok) {
       setLine(friendsFailureLine(result.reason));
