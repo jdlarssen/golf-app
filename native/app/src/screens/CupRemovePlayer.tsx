@@ -29,8 +29,12 @@ export function CupRemovePlayer({ route, navigation }: ScreenProps<'CupRemovePla
     sending.current = true;
     setBusy(true);
     setError(null);
-    const result = await removeCupParticipant(cupId, userId);
-    sending.current = false;
+    let result: Awaited<ReturnType<typeof removeCupParticipant>>;
+    try {
+      result = await removeCupParticipant(cupId, userId);
+    } finally {
+      sending.current = false;
+    }
     if (result.ok) {
       // Har du gått tilbake mens svaret var på vei, er veiviseren der du står. Den skal stå i ro.
       if (navigation.isFocused()) leave('participant_removed');

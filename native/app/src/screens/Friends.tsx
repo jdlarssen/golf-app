@@ -171,9 +171,13 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
       setBusy(key);
       setLine(null);
       setShareNote(null);
-      const result = await action();
-      acting.current = false;
-      setBusy(null);
+      let result: FriendActionResult<S>;
+      try {
+        result = await action();
+      } finally {
+        acting.current = false;
+        setBusy(null);
+      }
       if (!result.ok) {
         setLine({ text: friendsFailureLine(result.reason), tone: 'error' });
         return;

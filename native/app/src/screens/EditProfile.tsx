@@ -228,7 +228,7 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
           // ville `goBack` truffet veiviseren, som da gikk ett steg tilbake av seg
           // selv (#2757).
           if (returnTo === 'CreateGame') {
-            if (navigation.isFocused()) navigation.goBack();
+            leaveWhenFocused(() => navigation.goBack());
             return;
           }
           // Tilbake til rommet med kvitteringen. Rommet viser banneret og

@@ -52,6 +52,7 @@ jest.mock('@react-navigation/native', () => ({
     mockPreventRemove.enabled = enabled;
     mockPreventRemove.callback = callback;
   },
+  useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
 }));
 jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 
@@ -211,6 +212,7 @@ async function renderWizard({ atType = false }: { atType?: boolean } = {}) {
     navigate: jest.fn(),
     dispatch: jest.fn(),
     setParams: jest.fn(),
+    isFocused: jest.fn(() => true),
     // Veiviseren henter profilen på nytt når den får fokus igjen (#2441).
     addListener: jest.fn(() => jest.fn()),
   } as unknown as ScreenProps<'CreateGame'>['navigation'];

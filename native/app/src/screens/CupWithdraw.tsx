@@ -81,8 +81,12 @@ export function CupWithdraw({ route, navigation }: ScreenProps<'CupWithdraw'>) {
     sending.current = true;
     setBusy(true);
     setError(null);
-    const result = await action();
-    sending.current = false;
+    let result: Awaited<ReturnType<typeof withdrawSelfFromCup>>;
+    try {
+      result = await action();
+    } finally {
+      sending.current = false;
+    }
     if (result.ok) {
       leaveWhenFocused(() => done(result.partial === true));
       return;
