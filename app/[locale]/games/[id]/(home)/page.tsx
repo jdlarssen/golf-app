@@ -99,7 +99,7 @@ import { CreatorStartBlockNotice } from './CreatorStartBlockNotice';
 import { FinishGameCard } from './FinishGameCard';
 import { LiveFollowControl } from './LiveFollowControl';
 import { CeremonyEntry } from './CeremonyEntry';
-import { ceremonyAvailable } from '@/lib/games/ceremony';
+import { ceremonyOpenFor } from '@/app/[locale]/games/[id]/premieutdeling/ceremonyData';
 import { PrimaryCtaSection, PrimaryCtaSkeleton } from './PrimaryCta';
 import {
   effectiveHcpAllowancePct,
@@ -326,8 +326,13 @@ export default async function GameHomePage({
   );
   const isCreator = gwp.game.created_by === userId && !simulatorFlight;
   // #2712, #2850: the prize-giving crowns a winner, so a league flight has
-  // none (`ceremonyAvailable`).
-  const ceremonyOpen = ceremonyAvailable(gwp.game.game_mode, gwp.game.league_round_id != null);
+  // none; owner 22.11 («Skjul den»): nor a game nobody won. Only the
+  // organiser sees the entry (the creator on the page, or the organiser view
+  // for someone off the roster), so only they pay for the result build.
+  const ceremonyOpen =
+    isCreator || !gwp.players.some((p) => p.user_id === userId)
+      ? await ceremonyOpenFor(gwp.game)
+      : false;
 
   // #938: current spectate_token (null = live-follow disabled).
   const spectateToken: string | null =

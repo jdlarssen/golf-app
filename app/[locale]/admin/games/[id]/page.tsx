@@ -95,7 +95,7 @@ import { PultTabs } from './_pult/PultTabs';
 import { NeedsYouList, type NeedsYouGap } from './_pult/NeedsYouList';
 import { FlightProgressList } from './_pult/FlightProgressList';
 import { EndGameBar } from './_pult/EndGameBar';
-import { ceremonyAvailable } from '@/lib/games/ceremony';
+import { ceremonyOpenFor } from '@/app/[locale]/games/[id]/premieutdeling/ceremonyData';
 import { playerNameWithNicknameAfter } from '@/lib/names/playerName';
 import { embedSnippetHeight } from '@/lib/embed/embedHeight';
 
@@ -131,6 +131,8 @@ type GameRow = {
   tee_box_id: string;
   // #1586: segment-filter for review-kortene (front9/back9-spill, #1441).
   hole_segment: HoleSegment;
+  /** #1441: a derived game reads its host's scores; the prize-giving's result build needs it. */
+  source_game_id: string | null;
   // #2268: a shotgun round has no hole gaps on the desk, and its groups count
   // holes played instead of the furthest hole (0200, `lib/games/startType.ts`).
   start_type: StartType;
@@ -297,7 +299,7 @@ export default async function GameDetailPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, game_mode, league_round_id, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, hole_segment, start_type, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, registration_mode, registration_type, short_id, signups_closed_at, signup_deadline, entry_fee_kr, spectate_token, prizes, courses(name), tee_boxes(name)',
+      'id, name, status, game_mode, league_round_id, source_game_id, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, hole_segment, start_type, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, registration_mode, registration_type, short_id, signups_closed_at, signup_deadline, entry_fee_kr, spectate_token, prizes, courses(name), tee_boxes(name)',
     )
     .eq('id', id)
     .maybeSingle<GameRow>();
@@ -614,6 +616,9 @@ async function buildSections({
   const tRows = await getTranslations('admin.game.rows');
   const tCta = await getTranslations('admin.game.cta');
   const tCeremony = await getTranslations('ceremony');
+  // #2298 + owner 22.11 («Skjul den»): no prize-giving for a league flight or
+  // a game nobody won.
+  const ceremonyOpen = await ceremonyOpenFor(game);
   const tModes = await getTranslations('modes');
   const tRegistration = await getTranslations('admin.game.registration');
   const tApprove = await getTranslations('game.approve');
@@ -1293,7 +1298,7 @@ async function buildSections({
         </SmartLink>
         {/* #2298: the prize-giving on the big screen, for the podium formats.
             #2712, #2850: not for a league flight. */}
-        {ceremonyAvailable(game.game_mode, game.league_round_id != null) && (
+        {ceremonyOpen && (
           <SmartLink
             href={`/games/${gameId}/premieutdeling`}
             data-testid="ceremony-entry"

@@ -8,7 +8,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { localizeGameName } from '@/lib/games/autoGameName';
-import { ceremonyAvailable, type CeremonyPlace } from '@/lib/games/ceremony';
+import type { CeremonyPlace } from '@/lib/games/ceremony';
 import { canonicalPath } from '@/lib/seo/canonical';
 import { requestOrigin } from '@/lib/url/requestOrigin';
 import { AppShell } from '@/components/ui/AppShell';
@@ -17,7 +17,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { ShareLinkField } from '@/components/ui/ShareLinkField';
-import { loadCeremonyData } from './ceremonyData';
+import { ceremonyOpenFor, loadCeremonyData } from './ceremonyData';
 import { afterColon, placeText, sidePrizeLabel, type PlaceWords } from './ceremonyText';
 import { BigScreenSwitch, CeremonyRemote, type RemoteStep } from './CeremonyRemote';
 
@@ -43,10 +43,14 @@ export default async function CeremonyPage({ params }: { params: Params }) {
   const gwp = await getGameWithPlayers(id);
   if (!gwp) notFound();
   const { game } = gwp;
-  // #2712, #2850: no prize-giving for a league flight.
-  const ceremonyOpen = ceremonyAvailable(game.game_mode, game.league_round_id != null);
-  if (game.status !== 'finished' || !ceremonyOpen) {
+  if (game.status !== 'finished') {
     redirect({ href: `/games/${id}`, locale });
+  }
+  // #2712, #2850: no prize-giving for a league flight; owner 22.11 («Skjul
+  // den»): nor for a game nobody won. A finished game without one sends the
+  // direct address to the result list.
+  if (!(await ceremonyOpenFor(game))) {
+    redirect({ href: `/games/${id}/leaderboard`, locale });
   }
 
   const admin = getAdminClient();

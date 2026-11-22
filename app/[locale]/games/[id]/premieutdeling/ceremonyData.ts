@@ -4,6 +4,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { buildModeResultForGame } from '@/lib/scoring/buildModeResultForGame';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import {
+  ceremonyAvailable,
   ceremonyLines,
   ceremonyPlaces,
   ceremonySteps,
@@ -85,4 +86,43 @@ export async function loadCeremonyData({ game, players }: GameWithPlayers): Prom
       result !== null &&
       nobodyWon(result, { modifiedStableford: game.game_mode === 'modified_stableford' }),
   };
+}
+
+/** The game fields `ceremonyOpenFor` reads. */
+type CeremonyGame = Pick<
+  GameWithPlayers['game'],
+  | 'id'
+  | 'game_mode'
+  | 'mode_config'
+  | 'course_id'
+  | 'hole_segment'
+  | 'source_game_id'
+  | 'league_round_id'
+  | 'status'
+>;
+
+/**
+ * Is the prize-giving open for this game? The one answer every entry reads:
+ * the game page, the organiser view, the admin page, the remote and the TV.
+ * `ceremonyAvailable` plus the owner's rule of 22.11 («Skjul den»): when
+ * nobody won (`nobodyWon`), it is hidden. The result is only built for a
+ * finished game in a podium format; before the finish there is nothing to
+ * hand out and the entries are hidden by their own status check.
+ */
+export async function ceremonyOpenFor(game: CeremonyGame): Promise<boolean> {
+  const leagueFlight = game.league_round_id != null;
+  if (!ceremonyAvailable(game.game_mode, leagueFlight)) return false;
+  if (game.status !== 'finished') return true;
+  const result = await buildModeResultForGame(getAdminClient(), {
+    id: game.id,
+    game_mode: game.game_mode,
+    mode_config: game.mode_config,
+    course_id: game.course_id,
+    hole_segment: game.hole_segment,
+    source_game_id: game.source_game_id,
+  });
+  const noWinner =
+    result !== null &&
+    nobodyWon(result, { modifiedStableford: game.game_mode === 'modified_stableford' });
+  return ceremonyAvailable(game.game_mode, leagueFlight, noWinner);
 }
