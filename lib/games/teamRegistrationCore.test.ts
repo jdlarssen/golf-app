@@ -301,10 +301,12 @@ describe('submitTeamRegistrationCore — writes', () => {
         liveUsers(FRIEND_A, FRIEND_B),
         { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
         CAPTAIN_DISPLAY,
+        { data: null, error: null }, // child A roster lookup
         { data: null, error: null }, // child A insert
-        { data: null, error: null }, // child A upsert
+        { data: [{ user_id: FRIEND_A }], error: null }, // child A upsert
+        { data: null, error: null }, // child B roster lookup
         { data: null, error: null }, // child B insert
-        { data: null, error: null }, // child B upsert
+        { data: [{ user_id: FRIEND_B }], error: null }, // child B upsert
       ],
       { claim_open_registration_seat: { outcome: 'ok', team_number: 3 } },
     );
@@ -360,6 +362,7 @@ describe('submitTeamRegistrationCore — writes', () => {
       liveUsers(FRIEND_A),
       { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
       CAPTAIN_DISPLAY,
+      { data: null, error: null }, // roster lookup
       { data: null, error: null }, // child insert
     ]);
 
@@ -371,7 +374,8 @@ describe('submitTeamRegistrationCore — writes', () => {
       expect.objectContaining({ user_id: FRIEND_A, status: 'pending', decided_at: null }),
     ]);
     expect(adminMock.__rpcCalls).toEqual([]);
-    expect(adminMock.__fromCalls.filter((c) => c.table === 'game_players')).toEqual([]);
+    // The roster is only read (is the friend in the round already?), never written.
+    expect(anyWrites().filter((c) => c.table === 'game_players')).toEqual([]);
     expect(notifyMock).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: ADMIN_USER_ID,
@@ -399,9 +403,11 @@ describe('submitTeamRegistrationCore — writes', () => {
         liveUsers(FRIEND_A, FRIEND_B),
         { data: { id: CAPTAIN_REQUEST_ID }, error: null },
         CAPTAIN_DISPLAY,
+        { data: null, error: null }, // child A roster lookup
         { data: null, error: { code: '23505', message: 'duplicate' } }, // child A
+        { data: null, error: null }, // child B roster lookup
         { data: null, error: null }, // child B insert
-        { data: null, error: null }, // child B upsert
+        { data: [{ user_id: FRIEND_B }], error: null }, // child B upsert
       ],
       { claim_open_registration_seat: { outcome: 'ok', team_number: 1 } },
     );
@@ -422,6 +428,7 @@ describe('submitTeamRegistrationCore — writes', () => {
         liveUsers(FRIEND_A),
         { data: { id: CAPTAIN_REQUEST_ID }, error: null },
         CAPTAIN_DISPLAY,
+        { data: null, error: null }, // roster lookup
         { data: null, error: null }, // child insert
         { data: null, error: { message: 'connection reset' } }, // child upsert
         { data: [{ id: 'child-1' }], error: null }, // rollback .select('id')
@@ -433,6 +440,65 @@ describe('submitTeamRegistrationCore — writes', () => {
 
     expect(result.ok && result.slotResults).toEqual([
       { ok: false, userId: FRIEND_A, reason: 'dbError' },
+    ]);
+    expect(filtersAfter('game_registration_requests', 'delete')).toEqual([
+      ['team_request_id', CAPTAIN_REQUEST_ID],
+      ['user_id', FRIEND_A],
+    ]);
+    expect(notifyInvitedToTeamMock).not.toHaveBeenCalled();
+  });
+
+  it('p17: a friend the organiser already put on the roster → slot alreadyRegistered, no child row, no invite', async () => {
+    getGameByShortIdMock.mockResolvedValue(makeGame({ mode_config: { ...PAIRS, team_size: 3 } }));
+    adminMock = buildSupabaseMock(
+      [
+        PROFILE_OK,
+        liveUsers(FRIEND_A, FRIEND_B),
+        { data: { id: CAPTAIN_REQUEST_ID }, error: null },
+        CAPTAIN_DISPLAY,
+        { data: { user_id: FRIEND_A }, error: null }, // child A roster lookup: on the roster
+        { data: null, error: null }, // child B roster lookup
+        { data: null, error: null }, // child B insert
+        { data: [{ user_id: FRIEND_B }], error: null }, // child B upsert
+      ],
+      { claim_open_registration_seat: { outcome: 'ok', team_number: 1 } },
+    );
+
+    const result = await submit([FRIEND_A, FRIEND_B]);
+
+    expect(result.ok && result.slotResults).toEqual([
+      { ok: false, userId: FRIEND_A, reason: 'alreadyRegistered' },
+      { ok: true, outcome: 'known_added', userId: FRIEND_B },
+    ]);
+    const childInserts = calls('game_registration_requests', 'insert').map((c) => c.args[0]);
+    expect(childInserts).not.toContainEqual(expect.objectContaining({ user_id: FRIEND_A }));
+    expect(notifyInvitedToTeamMock).toHaveBeenCalledTimes(1);
+    expect(notifyInvitedToTeamMock).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientUserId: FRIEND_B }),
+    );
+  });
+
+  it('p17: the roster row appears between the check and the write (upsert skips it) → alreadyRegistered, child rolled back', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    getGameByShortIdMock.mockResolvedValue(makeGame({ mode_config: PAIRS }));
+    adminMock = buildSupabaseMock(
+      [
+        PROFILE_OK,
+        liveUsers(FRIEND_A),
+        { data: { id: CAPTAIN_REQUEST_ID }, error: null },
+        CAPTAIN_DISPLAY,
+        { data: null, error: null }, // roster lookup
+        { data: null, error: null }, // child insert
+        { data: [], error: null }, // upsert ignored the existing row
+        { data: [{ id: 'child-1' }], error: null }, // rollback
+      ],
+      { claim_open_registration_seat: { outcome: 'ok', team_number: 1 } },
+    );
+
+    const result = await submit([FRIEND_A]);
+
+    expect(result.ok && result.slotResults).toEqual([
+      { ok: false, userId: FRIEND_A, reason: 'alreadyRegistered' },
     ]);
     expect(filtersAfter('game_registration_requests', 'delete')).toEqual([
       ['team_request_id', CAPTAIN_REQUEST_ID],
@@ -706,20 +772,54 @@ describe('declineTeamInviteCore', () => {
     getGameByShortIdMock.mockResolvedValue(makeGame());
   });
 
-  it('declines: roster row first, then the request, then the captain is told', async () => {
+  it('declines: the roster row on the team first, then the request, then the captain is told', async () => {
     adminMock = buildSupabaseMock([
       PROFILE_OK,
       mateRequest({ status: 'approved' }),
+      { data: { user_id: CAPTAIN_ID, team_name: 'Lag A' }, error: null }, // captain request
+      { data: { team_number: 4 }, error: null }, // captain's roster row
       { data: null, error: null }, // game_players delete
       { data: [{ id: MATE_REQUEST_ID }], error: null }, // update .select('id')
-      { data: { user_id: CAPTAIN_ID, team_name: 'Lag A' }, error: null }, // captain request
       { data: { name: 'Mate', nickname: null, email: 'mate@example.com' }, error: null }, // decliner name
     ]);
     expect(await decline()).toEqual({ ok: true });
+    // p17: only the row on the captain's team number goes.
+    expect(filtersAfter('game_players', 'delete')).toEqual([
+      ['game_id', GAME_ID],
+      ['user_id', MATE_ID],
+      ['team_number', 4],
+    ]);
     expect(calls('game_registration_requests', 'update')[0]?.args[0]).toMatchObject({ status: 'rejected' });
     expect(notifyMock).toHaveBeenCalledWith(
       expect.objectContaining({ userId: CAPTAIN_ID, kind: 'team_member_withdrew' }),
     );
+  });
+
+  it('p17: the captain has no team number yet (manual approval) → no roster row is touched', async () => {
+    adminMock = buildSupabaseMock([
+      PROFILE_OK,
+      mateRequest(),
+      { data: { user_id: CAPTAIN_ID, team_name: 'Lag A' }, error: null },
+      { data: null, error: null }, // captain has no roster row
+      { data: [{ id: MATE_REQUEST_ID }], error: null }, // update
+      { data: { name: 'Mate', nickname: null, email: 'mate@example.com' }, error: null },
+    ]);
+    expect(await decline()).toEqual({ ok: true });
+    expect(calls('game_players', 'delete')).toEqual([]);
+  });
+
+  it('p17: a withdrawn row cannot be declined again → not_found, nothing written, no second notice', async () => {
+    adminMock = buildSupabaseMock([PROFILE_OK, mateRequest({ status: 'withdrawn' })]);
+    expect(await decline()).toEqual({ ok: false, error: 'not_found' });
+    expect(anyWrites()).toEqual([]);
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('p17: past the deadline → signup_closed, nothing written', async () => {
+    getGameByShortIdMock.mockResolvedValue(makeGame({ signup_deadline: '2026-01-01T00:00:00Z' }));
+    adminMock = buildSupabaseMock([PROFILE_OK, mateRequest()]);
+    expect(await decline()).toEqual({ ok: false, error: 'signup_closed' });
+    expect(anyWrites()).toEqual([]);
   });
 
   it('#2840: the request cannot be read → db_error, nothing written', async () => {
@@ -734,6 +834,8 @@ describe('declineTeamInviteCore', () => {
     adminMock = buildSupabaseMock([
       PROFILE_OK,
       mateRequest({ status: 'approved' }),
+      { data: { user_id: CAPTAIN_ID, team_name: 'Lag A' }, error: null },
+      { data: { team_number: 4 }, error: null },
       { data: null, error: DB_ERR },
       { data: [{ id: MATE_REQUEST_ID }], error: null },
     ]);

@@ -92,6 +92,7 @@ const CAPTAIN_VIEW = {
     courseName: 'Larvik GK',
     joinEffect: 'instant',
     signupsClosed: false,
+    started: false,
   },
   myRowId: REQUEST_ID,
   myStatus: 'approved',

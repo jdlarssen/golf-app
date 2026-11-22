@@ -47,15 +47,11 @@ const DELETE_SITES: Record<string, { count: number; promotes: boolean; reason: s
     promotes: false,
     reason: "the compensation of a failed «Godta»: the seats were never the round's",
   },
-  'lib/games/teamDashboardCore.ts': {
-    count: 1,
-    promotes: false,
-    reason: 'a captain removes a teammate: a team holds its full size, so no seat frees (U10)',
-  },
   'lib/games/teamRegistrationCore.ts': {
     count: 1,
     promotes: false,
-    reason: 'a teammate declines: a team holds its full size, so no seat frees (U10)',
+    reason:
+      "deleteTeamRosterRow: a teammate declines, or the captain removes one (teamDashboardCore calls it) — a team holds its full size, so no seat frees (U10)",
   },
   'lib/cup/swapCupMatchPlayerCore.ts': {
     count: 2,

@@ -38,6 +38,7 @@ function team(overrides: Partial<AppTeamPageTeam> = {}): AppTeamPageTeam {
       courseName: null,
       joinEffect: 'instant',
       signupsClosed: false,
+      started: false,
       teamSize: 4,
       teeOffAt: null,
     },

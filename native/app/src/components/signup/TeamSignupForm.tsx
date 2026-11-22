@@ -258,18 +258,27 @@ export function TeamSignupForm({
 
   const submit = useCallback(async () => {
     if (sending.current || open > 0) return;
+    // The name field may still be open: send what is typed, not the name from
+    // before. An invalid draft stops here, and the field already says why.
+    let name = teamName;
+    if (editing) {
+      if (validateTeamName(draft) !== null) return;
+      name = draft.trim();
+      setTeamName(name);
+      setEditing(false);
+    }
     sending.current = true;
     setBusy(true);
     setError(null);
     const memberIds = pickedIds(slots);
-    const result = await registerTeam(shortId, teamName, memberIds);
+    const result = await registerTeam(shortId, name, memberIds);
     sending.current = false;
     if (!alive.current) return;
     setBusy(false);
     if (result.ok) {
       if (result.status !== 'team_registered') return;
       onRegistered(result.joinEffect, {
-        teamName,
+        teamName: name,
         rows: result.slotResults.map((slot) => ({
           userId: slot.userId,
           name: slot.name ?? friendsById.get(slot.userId)?.name ?? '',
@@ -293,7 +302,7 @@ export function TeamSignupForm({
       default:
         setError(result.reason);
     }
-  }, [friendsById, onRegistered, onStale, open, shortId, slots, teamName]);
+  }, [draft, editing, friendsById, onRegistered, onStale, open, shortId, slots, teamName]);
 
   const retryable = error !== null && isRetryableTeamFailure(error);
   const selfLabel = nameInitials(self.name);
@@ -316,6 +325,8 @@ export function TeamSignupForm({
                 accessibilityLabel={TEAM_SIGNUP_TEXT.nameField}
                 returnKeyType="done"
                 onSubmitEditing={finishEditing}
+                // Leaving the field keeps a valid name, also without «Ferdig».
+                onBlur={finishEditing}
                 selectionColor={colors.primary}
                 style={[styles.editInput, { color: colors.text }]}
                 testID="team-form-name-input"

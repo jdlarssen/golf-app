@@ -48,6 +48,7 @@ const GAME = {
   courseName: 'Byneset',
   joinEffect: 'instant' as const,
   signupsClosed: false,
+  started: false,
   teamSize: 4,
   teeOffAt: null,
 };
@@ -201,6 +202,19 @@ describe('kapteinen', () => {
     await renderPage();
     expect(screen.queryByTestId('team-page-row-r-Ola-menu')).toBeNull();
     expect(screen.queryByTestId('team-page-row-r-Per-swap')).toBeNull();
+  });
+});
+
+describe('p17: runden har startet', () => {
+  it.each([
+    ['kapteinen', {}],
+    ['medspilleren', { kind: 'member' as const, myRowId: 'r-Ola' }],
+  ])('%s ser laget uten knapper, og at runden har startet', async (_label, over) => {
+    show(captainView({ ...over, game: { ...GAME, signupsClosed: true, started: true } }));
+    await renderPage();
+    expect(screen.queryByTestId('team-page-row-r-Ola-menu')).toBeNull();
+    expect(screen.queryByTestId('team-page-row-r-Per-swap')).toBeNull();
+    expect(screen.getByText(TEAM_PAGE_TEXT.started)).toBeTruthy();
   });
 });
 

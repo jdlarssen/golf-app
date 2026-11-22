@@ -6912,6 +6912,7 @@
     "teamDashInvitedHeading": "You''ve been invited to a team in \"{gameName}\"",
     "teamDashSoloPlayerBanner": "You're registered as a solo player. There's no team to show here.",
     "teamDashSignupsClosedBanner": "Sign-up is closed. The organiser is making final adjustments before the start.",
+    "teamDashStartedBanner": "The round has started. The team can no longer be changed.",
     "teamDashCaptainLabel": "Captain",
     "teamDashMemberLabel": "Teammate",
     "teamDashPendingInstant": "If you say yes, you're in the game straight away.",

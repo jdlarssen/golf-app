@@ -162,8 +162,9 @@ describe('remove and resend follow the captaincy (#2358)', () => {
     adminMock = buildSupabaseMock([
       childRow(),
       captainRow(NEW_CAPTAIN_ID),
-      { data: null, error: null },
-      { data: null, error: null },
+      { data: { team_number: 2 }, error: null }, // captain's roster row
+      { data: null, error: null }, // game_players delete
+      { data: [{ id: CHILD_REQUEST_ID }], error: null }, // request delete .select('id')
     ]);
     expect(await removeTeamMemberCore(NEW_CAPTAIN_ID, input)).toEqual({ ok: true });
     expect(calls('game_players', 'delete')).toHaveLength(1);
@@ -191,9 +192,82 @@ describe('remove and resend follow the captaincy (#2358)', () => {
     expect(anyWrites()).toEqual([]);
   });
 
+  it('p17: removing a teammate deletes only the roster row on the captain\'s team number', async () => {
+    // The teammate said no, and the organiser has since given them a seat of
+    // their own on team 7. The captain's team is 2: that seat stays.
+    adminMock = buildSupabaseMock([
+      { data: { ...(childRow().data as object), status: 'rejected' }, error: null },
+      captainRow(CAPTAIN_ID),
+      { data: { team_number: 2 }, error: null },
+      { data: null, error: null }, // game_players delete (matches nothing on team 7)
+      { data: [{ id: CHILD_REQUEST_ID }], error: null },
+    ]);
+    expect(await removeTeamMemberCore(CAPTAIN_ID, input)).toEqual({ ok: true });
+    expect(filtersAfter('game_players', 'delete')).toEqual([
+      ['game_id', GAME_ID],
+      ['user_id', MATE_ID],
+      ['team_number', 2],
+    ]);
+    expect(filtersAfter('game_registration_requests', 'delete')).toEqual([
+      ['id', CHILD_REQUEST_ID],
+      ['team_request_id', CAPTAIN_REQUEST_ID],
+    ]);
+  });
+
+  it('p17: a captain without a team number (manual approval) touches no roster row', async () => {
+    adminMock = buildSupabaseMock([
+      childRow(),
+      captainRow(CAPTAIN_ID, 'pending'),
+      { data: null, error: null }, // no roster row for the captain
+      { data: [{ id: CHILD_REQUEST_ID }], error: null },
+    ]);
+    expect(await removeTeamMemberCore(CAPTAIN_ID, input)).toEqual({ ok: true });
+    expect(calls('game_players', 'delete')).toEqual([]);
+  });
+
+  it('p17: the request delete matches 0 rows → db_error, no notice', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([
+      childRow(),
+      captainRow(CAPTAIN_ID),
+      { data: { team_number: 2 }, error: null },
+      { data: null, error: null },
+      { data: [], error: null },
+    ]);
+    expect(await removeTeamMemberCore(CAPTAIN_ID, input)).toEqual({ ok: false, error: 'db_error' });
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['remove', removeTeamMemberCore],
+    ['resend', resendTeamInviteCore],
+  ] as const)('p17: %s on a started round → game_locked, nothing written or sent', async (_label, core) => {
+    getGameByShortIdMock.mockResolvedValue(makeGame({ status: 'active' }));
+    adminMock = buildSupabaseMock([childRow(), captainRow(CAPTAIN_ID)]);
+    expect(await core(CAPTAIN_ID, input)).toEqual({ ok: false, error: 'game_locked' });
+    expect(anyWrites()).toEqual([]);
+    expect(notifyInvitedToTeamMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['remove', removeTeamMemberCore],
+    ['resend', resendTeamInviteCore],
+  ] as const)('p17: %s past the deadline → signup_closed, nothing written or sent', async (_label, core) => {
+    getGameByShortIdMock.mockResolvedValue(makeGame({ signup_deadline: '2026-01-01T00:00:00Z' }));
+    adminMock = buildSupabaseMock([childRow(), captainRow(CAPTAIN_ID)]);
+    expect(await core(CAPTAIN_ID, input)).toEqual({ ok: false, error: 'signup_closed' });
+    expect(anyWrites()).toEqual([]);
+    expect(notifyInvitedToTeamMock).not.toHaveBeenCalled();
+  });
+
   it('#2223: the roster row cannot be deleted → db_error, the request untouched', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    adminMock = buildSupabaseMock([childRow(), captainRow(CAPTAIN_ID), { data: null, error: DB_ERR }]);
+    adminMock = buildSupabaseMock([
+      childRow(),
+      captainRow(CAPTAIN_ID),
+      { data: { team_number: 2 }, error: null },
+      { data: null, error: DB_ERR },
+    ]);
     expect(await removeTeamMemberCore(CAPTAIN_ID, input)).toEqual({ ok: false, error: 'db_error' });
     expect(calls('game_registration_requests', 'delete')).toEqual([]);
     expect(notifyMock).not.toHaveBeenCalled();
@@ -248,6 +322,17 @@ describe('transferCaptaincyCore (#2358)', () => {
     adminMock = buildSupabaseMock([], { transfer_team_captaincy: { outcome } });
     expect(await transferCaptaincyCore(CAPTAIN_ID, input)).toEqual({ ok: false, error });
     expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['a started round', { status: 'active' }, 'game_locked'],
+    ['past the deadline', { signup_deadline: '2026-01-01T00:00:00Z' }, 'signup_closed'],
+    ['signups closed by hand', { signups_closed_at: '2026-01-01T00:00:00Z' }, 'signup_closed'],
+  ])('p17: %s → %s, no RPC', async (_label, over, error) => {
+    getGameByShortIdMock.mockResolvedValue(makeGame(over));
+    adminMock = buildSupabaseMock([], { transfer_team_captaincy: { outcome: 'ok' } });
+    expect(await transferCaptaincyCore(CAPTAIN_ID, input)).toEqual({ ok: false, error });
+    expect(adminMock.__rpcCalls).toEqual([]);
   });
 
   it('an RPC error → db_error', async () => {
@@ -477,8 +562,9 @@ describe('#2840: addTeamMemberCore — fill a free seat with a friend', () => {
   const liveFriend: QueryResult = { data: [{ id: FRIEND_ID }], error: null };
   const notInRound: QueryResult[] = [
     { data: null, error: null }, // request for the friend in this game
-    { data: null, error: null }, // roster row for the friend in this game
   ];
+  /** `addTeammateRow`'s own check: no roster row for the friend (p17). */
+  const notOnRoster: QueryResult = { data: null, error: null };
 
   function add(over: { friendId?: string; replaceRequestId?: string } = {}) {
     return addTeamMemberCore(CAPTAIN_ID, { shortId: SHORT_ID, friendId: FRIEND_ID, ...over });
@@ -492,8 +578,9 @@ describe('#2840: addTeamMemberCore — fill a free seat with a friend', () => {
       ...notInRound,
       { data: { team_number: 4, flight_number: 4, withdrawn_at: null }, error: null }, // captain's roster row
       CAPTAIN_DISPLAY,
+      notOnRoster,
       { data: null, error: null }, // child insert
-      { data: null, error: null }, // game_players upsert
+      { data: [{ user_id: FRIEND_ID }], error: null }, // game_players upsert
     ]);
 
     expect(await add()).toEqual({ ok: true });
@@ -523,6 +610,7 @@ describe('#2840: addTeamMemberCore — fill a free seat with a friend', () => {
       liveFriend,
       ...notInRound,
       CAPTAIN_DISPLAY,
+      notOnRoster,
       { data: null, error: null }, // child insert
     ]);
     expect(await add()).toEqual({ ok: true });
@@ -592,7 +680,9 @@ describe('#2840: addTeamMemberCore — fill a free seat with a friend', () => {
       activeCaptain(),
       team(),
       liveFriend,
-      { data: null, error: null },
+      ...notInRound,
+      { data: { team_number: 4, flight_number: 4, withdrawn_at: null }, error: null },
+      CAPTAIN_DISPLAY,
       { data: { user_id: FRIEND_ID }, error: null }, // the organiser put them on the roster
     ]);
     expect(await add()).toEqual({ ok: false, error: 'already_registered' });
@@ -608,6 +698,7 @@ describe('#2840: addTeamMemberCore — fill a free seat with a friend', () => {
       ...notInRound,
       { data: { team_number: 4, flight_number: 4, withdrawn_at: null }, error: null },
       CAPTAIN_DISPLAY,
+      notOnRoster,
       { data: null, error: null }, // child insert
       { data: null, error: DB_ERR }, // upsert fails
       { data: [{ id: 'new-child' }], error: null }, // rollback .select('id')
@@ -632,8 +723,9 @@ describe('#2840: addTeamMemberCore — fill a free seat with a friend', () => {
       ...notInRound,
       { data: { team_number: 4, flight_number: 4, withdrawn_at: null }, error: null },
       CAPTAIN_DISPLAY,
+      notOnRoster,
       { data: null, error: null }, // child insert
-      { data: null, error: null }, // upsert
+      { data: [{ user_id: FRIEND_ID }], error: null }, // upsert
       { data: [{ id: OLD_REQUEST_ID }], error: null }, // old row delete .select('id')
     ]);
     expect(await add({ replaceRequestId: OLD_REQUEST_ID })).toEqual({ ok: true, replaced: true });
@@ -659,6 +751,7 @@ describe('#2840: addTeamMemberCore — fill a free seat with a friend', () => {
       liveFriend,
       ...notInRound,
       CAPTAIN_DISPLAY,
+      notOnRoster,
       { data: null, error: null }, // child insert
       { data: [], error: null }, // old row delete: 0 rows
     ]);
@@ -773,6 +866,18 @@ describe('loadTeamDashboard', () => {
       // #2840: no team size in the config, no tee-off: both null, never a guess.
       game: { joinEffect: 'approval', signupsClosed: true, teamSize: null, teeOffAt: null },
     });
+  });
+
+  it.each([
+    ['open and before the deadline', {}, { signupsClosed: false, started: false }],
+    ['past the deadline', { signup_deadline: '2026-01-01T00:00:00Z' }, { signupsClosed: true, started: false }],
+    ['started', { status: 'active' }, { signupsClosed: true, started: true }],
+    ['finished', { status: 'finished' }, { signupsClosed: true, started: true }],
+  ])('p17: %s → the team can change only while open', async (_label, over, expected) => {
+    getGameByShortIdMock.mockResolvedValue(makeGame(over));
+    adminMock = buildSupabaseMock([myRow({ is_team_captain: false, team_request_id: null })]);
+    const view = await loadTeamDashboard(SHORT_ID, CAPTAIN_ID);
+    expect(view.kind !== 'not_found' && view.game).toMatchObject(expected);
   });
 
   it('a solo request → solo', async () => {

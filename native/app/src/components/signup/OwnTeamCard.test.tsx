@@ -24,6 +24,7 @@ const GAME = {
   courseName: null,
   joinEffect: 'instant' as const,
   signupsClosed: false,
+  started: false,
   teamSize: 4,
   teeOffAt: null,
 };
