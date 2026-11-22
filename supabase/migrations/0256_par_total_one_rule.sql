@@ -1,4 +1,4 @@
--- 0257: tee_boxes.par_total_* — one rule with the course form: 54–108.
+-- 0256: tee_boxes.par_total_* — one rule with the course form: 54–108.
 --
 -- Owner-ordered audit 2026-11-20. The par total of a tee is the sum of the
 -- holes' par for that gender (parseCourseHolesAndTees derives it; nobody types
