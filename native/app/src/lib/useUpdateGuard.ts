@@ -15,11 +15,12 @@
 //  - Et annet varsel kan erstatte det, eller Tilbake kan lukke det. `onDismiss`
 //    åpner det på nytt.
 import { useEffect } from 'react';
-import { Alert, AppState, Linking } from 'react-native';
+import { Alert, AppState } from 'react-native';
 import { APP_STORE_URL, GOOGLE_PLAY_MARKET_URL, GOOGLE_PLAY_URL } from '@/lib/app/storeLinks';
 import { fetchMinVersionBody } from '../data/updateCheck';
 import { addForegroundListener } from '../data/syncTriggers';
 import { readAppBuild } from './appBuild';
+import { openFirstLink } from './openFirstLink';
 import { createUpdateCheck, type StorePlatform } from './updateGuard';
 import { UPDATE_GUARD_TEXT } from './updateGuardCopy';
 
@@ -28,19 +29,6 @@ const STORE_LINKS: Record<StorePlatform, string[]> = {
   ios: [APP_STORE_URL],
   android: [GOOGLE_PLAY_MARKET_URL, GOOGLE_PLAY_URL],
 };
-
-/** Sant når en av lenkene åpnet seg. */
-async function openStore(platform: StorePlatform): Promise<boolean> {
-  for (const url of STORE_LINKS[platform]) {
-    try {
-      await Linking.openURL(url);
-      return true;
-    } catch {
-      // `market://` finnes ikke uten Play-appen; neste lenke er https-reserven.
-    }
-  }
-  return false;
-}
 
 export function useUpdateGuard(enabled: boolean): void {
   useEffect(() => {
@@ -66,7 +54,7 @@ export function useUpdateGuard(enabled: boolean): void {
             onPress: () => {
               dialogOpen = false;
               // Åpnet ingen av lenkene seg, er spilleren like langt: vis dialogen igjen.
-              void openStore(platform).then((opened) => {
+              void openFirstLink(STORE_LINKS[platform]).then((opened) => {
                 if (!opened) void run();
               });
             },
