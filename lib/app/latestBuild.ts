@@ -20,14 +20,17 @@
 export const RELEASE_NOTES_MAX_CHARS = 500;
 
 /**
- * What is new in the latest build, one bullet per line, in Norwegian: the same
- * text testers get in TestFlight and Play. Shown as a list in the app's sheet;
- * an empty list shows the sheet without it. Replace it when the number is
- * raised. Build 14 ships before the sheet exists, so no app shows these.
+ * Per platform, because iOS and Android are released separately:
+ * - the build counter (`latestBuild` / `latestVersionCode`);
+ * - `latestVersion`, the semver of that build (`STORE_VERSION` when it was built);
+ * - `notes`, what is new in that build, one bullet per line, in Norwegian: the
+ *   same text testers get in TestFlight or Play for it. Shown as a list in the
+ *   app's sheet; an empty list shows the sheet without it.
+ *
+ * Replace a platform's notes when its number is raised. Build 14 ships before
+ * the sheet exists, so no app shows these notes.
  */
-export const RELEASE_NOTES: readonly string[] = [];
-
 export const LATEST_APP_BUILD = {
-  ios: { latestBuild: 14, latestVersion: '1.2.0', notes: RELEASE_NOTES },
-  android: { latestVersionCode: 14, latestVersion: '1.2.0', notes: RELEASE_NOTES },
+  ios: { latestBuild: 14, latestVersion: '1.2.0', notes: [] as readonly string[] },
+  android: { latestVersionCode: 14, latestVersion: '1.2.0', notes: [] as readonly string[] },
 } as const;
