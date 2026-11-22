@@ -363,7 +363,7 @@ describe('Profile', () => {
 
   it('viser ikke raden når appen er oppdatert (#2975)', async () => {
     await renderScreen();
-    expect(screen.queryByTestId('profile-update-app')).toBeNull();
+    expect(screen.queryByTestId('profile-update-app-row')).toBeNull();
   });
 
   it('kaller raden «Varsler og tema» på Android', async () => {
