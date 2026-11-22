@@ -279,6 +279,26 @@ Den sammenligner kjerneløkka i appen med det samme på nettsiden, rad for rad.
 - Står en rad som villet avvik (kronene, AI-samtykket), skal butikkteksten
   ikke love det nettsiden gjør.
 
+## Når bygget er ute: «Ny versjon er klar.» (#2975)
+
+Appen viser stripa «Ny versjon er klar.» når serveren kjenner et nyere bygg enn det som
+kjører. Tallet står i `lib/app/latestBuild.ts` (`ios.latestBuild`), og
+`/api/app/min-version` viser det.
+
+1. Vent til bygget er ute hos gruppa «Vennegjengen» i TestFlight. Ikke hev tallet når
+   bump-PR-en merges: da finnes ikke bygget hos testerne ennå.
+2. Hev `ios.latestBuild` til det nye buildnummeret i en egen PR. Android har sitt eget tall
+   (`play-store-release.md`), så hev bare det som er ute.
+3. Etter deployen: åpne `https://tornygolf.no/api/app/min-version` og sjekk tallet. Svaret kan
+   caches i 5 minutter.
+
+En test (`native/app/src/lib/latestBuildGuard.test.ts`) holder tallet på eller under
+`STORE_IOS_BUILD_NUMBER`. Den vet ikke om bygget er ute; det sjekker du i steg 1.
+
+«Oppdater» i stripa åpner TestFlight-appen (`NEW_VERSION_LINKS` i `lib/app/storeLinks.ts`).
+Før lanseringsbygget: sett `NEW_VERSION_LINKS.ios` til `[APP_STORE_URL]`. Hvert bygg tar med
+seg lenka det ble bygget med, så eldre TestFlight-bygg åpner fortsatt TestFlight.
+
 ## Nettsiden samme dag
 
 Nettsiden har en bryter for lanseringsdagen (#2562): `NEXT_PUBLIC_APP_LAUNCH`, med regelen i
