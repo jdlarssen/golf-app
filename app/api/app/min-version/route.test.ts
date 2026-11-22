@@ -16,10 +16,14 @@ describe('GET /api/app/min-version', () => {
       ios: {
         minBuild: MIN_APP_VERSION.ios.minBuild,
         latestBuild: LATEST_APP_BUILD.ios.latestBuild,
+        latestVersion: LATEST_APP_BUILD.ios.latestVersion,
+        notes: [...LATEST_APP_BUILD.ios.notes],
       },
       android: {
         minVersionCode: MIN_APP_VERSION.android.minVersionCode,
         latestVersionCode: LATEST_APP_BUILD.android.latestVersionCode,
+        latestVersion: LATEST_APP_BUILD.android.latestVersion,
+        notes: [...LATEST_APP_BUILD.android.notes],
       },
     });
   });
