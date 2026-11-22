@@ -65,6 +65,17 @@ export type SwapValidationInput = {
    * `group_members` som er fasit for det.
    */
   clubMemberIds: string[] | null;
+  /**
+   * The out-player's side in the match (`game_players.team_number`). The
+   * in-player takes this side. `null`/left out = unknown, no team check.
+   */
+  outTeam?: 1 | 2 | null;
+  /**
+   * The in-player's fixed team in the cup (`tournament_participants.team_number`,
+   * set in captain cups). `null`/left out = no fixed team (a reserve), who may
+   * play for either side.
+   */
+  inPersistentTeam?: 1 | 2 | null;
 };
 
 export type SwapValidationError =
@@ -73,6 +84,7 @@ export type SwapValidationError =
   | 'match_has_withdrawal'
   | 'player_not_in_match'
   | 'already_in_match'
+  | 'wrong_team'
   | 'not_candidate'
   | 'not_member'
   | 'profile_incomplete';
@@ -136,6 +148,14 @@ export function validateMatchSwap(
   }
   if (bundle.some((g) => g.playerIds.includes(inUserId))) {
     return { ok: false, error: 'already_in_match' };
+  }
+
+  // 3b. Audit 2026-11-20: the in-player takes the out-player's side. One who
+  //     is fixed on the other team (captain cups) would play against their
+  //     own team.
+  const { outTeam = null, inPersistentTeam = null } = input;
+  if (outTeam !== null && inPersistentTeam !== null && outTeam !== inPersistentTeam) {
+    return { ok: false, error: 'wrong_team' };
   }
 
   // 4. Inn-spilleren må være en kandidat for cupen — samme sett arrangøren får

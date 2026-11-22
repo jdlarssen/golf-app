@@ -170,11 +170,13 @@ describe('submitCupLineup — hemmeligholdet på skrivesiden (SK4)', () => {
         },
         error: null,
       },
+      // Audit 2026-11-20: the stamp comes first, then the slots.
+      { data: [{ id: 'sess-1' }], error: null }, // stempelet
       { data: null, error: null }, // delete gammel kladd
       { data: null, error: null }, // insert plasser
-      // Stemplingen: kun lag 1 er inne.
+      // Re-lesingen etter plassene: kun lag 1 er inne.
       {
-        data: [{ team_1_submitted_at: 'now', team_2_submitted_at: null }],
+        data: { revealed_at: null, team_1_submitted_at: 'now', team_2_submitted_at: null },
         error: null,
       },
     ]);
@@ -291,6 +293,111 @@ describe('submitCupLineup — hemmeligholdet på skrivesiden (SK4)', () => {
   });
 });
 
+/**
+ * Audit 2026-11-20: the lineup is stamped before its slots are written. Only
+ * the call that wins the stamp writes slots, so a double tap with different
+ * choices cannot leave a lineup other than the one that counted as submitted.
+ */
+describe('submitCupLineup — stamp first, then the slots', () => {
+  const OPEN_SESSION = {
+    data: {
+      id: 'sess-1',
+      format: 'foursomes_matchplay',
+      slot_count: 1,
+      revealed_at: null,
+      team_1_submitted_at: null,
+      team_2_submitted_at: null,
+    },
+    error: null,
+  };
+  const submit = async () => {
+    const { submitCupLineup } = await import('./lineupActions');
+    return submitCupLineup(
+      form({
+        id: 'cup-1',
+        session_id: 'sess-1',
+        team: '1',
+        slots: JSON.stringify([{ slotIndex: 0, userIds: ['pl', 'pl2'] }]),
+      }),
+    );
+  };
+  const slotWrites = () =>
+    adminMock.__fromCalls.filter(
+      (c) => c.table === 'cup_lineup_slots' && ['delete', 'insert'].includes(c.method),
+    );
+
+  it('the stamp is written before any slot, bound to an empty stamp and an unrevealed session', async () => {
+    adminMock = buildSupabaseMock([
+      ...accessReads(),
+      OPEN_SESSION,
+      { data: [{ id: 'sess-1' }], error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: { revealed_at: null, team_1_submitted_at: 'now', team_2_submitted_at: null }, error: null },
+    ]);
+    supabaseMock = buildSupabaseMock([]);
+    setUser('cap1');
+
+    expect(await submit()).toEqual({ error: '' });
+    const calls = adminMock.__fromCalls;
+    const stampAt = calls.findIndex((c) => c.table === 'cup_lineup_sessions' && c.method === 'update');
+    const firstSlotWrite = calls.findIndex(
+      (c) => c.table === 'cup_lineup_slots' && ['delete', 'insert'].includes(c.method),
+    );
+    expect(stampAt).toBeGreaterThan(-1);
+    expect(firstSlotWrite).toBeGreaterThan(stampAt);
+    const isArgs = calls.filter((c) => c.method === 'is').map((c) => c.args);
+    expect(isArgs).toEqual([
+      ['team_1_submitted_at', null],
+      ['revealed_at', null],
+    ]);
+  });
+
+  it('the call that loses the stamp writes no slots', async () => {
+    adminMock = buildSupabaseMock([...accessReads(), OPEN_SESSION, { data: [], error: null }]);
+    supabaseMock = buildSupabaseMock([]);
+    setUser('cap1');
+
+    expect(await submit()).toEqual({ error: 'lineup_already_submitted' });
+    expect(slotWrites()).toHaveLength(0);
+  });
+
+  it('the slots fail after the stamp: the stamp is taken back, save_failed', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([
+      ...accessReads(),
+      OPEN_SESSION,
+      { data: [{ id: 'sess-1' }], error: null }, // stamp
+      { data: null, error: null }, // delete
+      { data: null, error: { message: 'insert boom' } }, // insert fails
+      { data: null, error: null }, // stamp undo
+    ]);
+    supabaseMock = buildSupabaseMock([]);
+    setUser('cap1');
+
+    expect(await submit()).toEqual({ error: 'save_failed' });
+    const updates = adminMock.__fromCalls.filter(
+      (c) => c.table === 'cup_lineup_sessions' && c.method === 'update',
+    );
+    expect(updates).toHaveLength(2);
+    expect(updates[1].args[0]).toEqual({ team_1_submitted_at: null, team_1_submitted_by: null });
+    errorSpy.mockRestore();
+  });
+
+  it('a finished cup takes no lineup: cup_finished, nothing written', async () => {
+    adminMock = buildSupabaseMock([
+      { data: { group_id: null, created_by: 'organizer', status: 'finished' }, error: null },
+      PARTICIPANTS,
+      NOT_ADMIN,
+    ]);
+    supabaseMock = buildSupabaseMock([]);
+    setUser('cap1');
+
+    expect(await submit()).toEqual({ error: 'cup_finished' });
+    expect(writeCalls()).toHaveLength(0);
+  });
+});
+
 describe('arrangør-only-handlingene (SK6)', () => {
   it('kapteinen kan ikke låse opp et levert uttak', async () => {
     adminMock = buildSupabaseMock(accessReads());
@@ -399,10 +506,11 @@ describe('arrangør-only-handlingene (SK6)', () => {
         },
         error: null,
       },
+      { data: [{ id: 'sess-1' }], error: null }, // stempelet
       { data: null, error: null }, // delete
       { data: null, error: null }, // insert
       {
-        data: [{ team_1_submitted_at: null, team_2_submitted_at: 'now' }],
+        data: { revealed_at: null, team_1_submitted_at: null, team_2_submitted_at: 'now' },
         error: null,
       },
     ]);
@@ -841,10 +949,11 @@ describe('revealCupLineupSession — målet følger med når kampene kommer (#19
         },
         error: null,
       },
+      { data: [{ id: 'sess-1' }], error: null }, // stempelet
       { data: null, error: null }, // slots delete
       { data: null, error: null }, // slots insert
       {
-        data: [{ team_1_submitted_at: 'now', team_2_submitted_at: 'now' }],
+        data: { revealed_at: null, team_1_submitted_at: 'now', team_2_submitted_at: 'now' },
         error: null,
       },
       ...revealContextReads(),

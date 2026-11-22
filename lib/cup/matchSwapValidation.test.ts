@@ -271,3 +271,31 @@ describe('validateMatchSwap — kamp med registrert trekk (#1814)', () => {
     ).toEqual({ ok: false, error: 'already_started' });
   });
 });
+
+/**
+ * Audit 2026-11-20: in a cup where players have a fixed team (captain cups),
+ * the player swapped in takes the out-player's side of the match. A player who
+ * belongs to the other team must not end up playing against their own team.
+ */
+describe('validateMatchSwap — the player swapped in belongs to the other team', () => {
+  it('refuses when the in-player is fixed on the other team', () => {
+    expect(validateMatchSwap(input({ outTeam: 1, inPersistentTeam: 2 }))).toEqual({
+      ok: false,
+      error: 'wrong_team',
+    });
+  });
+
+  it('allows the in-player fixed on the same team', () => {
+    expect(validateMatchSwap(input({ outTeam: 1, inPersistentTeam: 1 }))).toEqual({
+      ok: true,
+      gameIds: ['host', 'derived'],
+    });
+  });
+
+  it('allows an in-player without a fixed team (a reserve)', () => {
+    expect(validateMatchSwap(input({ outTeam: 2, inPersistentTeam: null }))).toEqual({
+      ok: true,
+      gameIds: ['host', 'derived'],
+    });
+  });
+});

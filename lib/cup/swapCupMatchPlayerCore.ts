@@ -37,6 +37,11 @@ type SwapPlan = {
   teeGender: 'mens' | 'ladies';
 };
 
+/** A row's `team_number` as a side, `null` when the row or the team is missing. */
+function teamOf(row: { team_number: number | null } | null | undefined): 1 | 2 | null {
+  return (row?.team_number as 1 | 2 | null | undefined) ?? null;
+}
+
 /**
  * Lese- og valideringsfasen for et spillerbytte (#1473). Skiller seg fra
  * skrivefasen med vilje: her kan alt avbrytes gratis, etterpå må hver feil
@@ -152,17 +157,26 @@ async function planCupMatchSwap(
     .from('game_players')
     // #1814: `withdrawn_at` leses her for guarden under — en kamp med et
     // registrert trekk kan ikke få noen byttet inn (E6).
-    .select('game_id, user_id, withdrawn_at')
+    .select('game_id, user_id, withdrawn_at, team_number')
     .in('game_id', bundleIds);
-  if (playersError) {
+  // Audit 2026-11-20: the in-player's fixed team (captain cups), so a player of
+  // the other team is not put on this side. No row = not a participant yet.
+  const { data: inParticipant, error: inParticipantError } = await admin
+    .from('tournament_participants')
+    .select('team_number')
+    .eq('tournament_id', tournamentId)
+    .eq('user_id', inUserId)
+    .maybeSingle();
+  if (playersError || inParticipantError) {
     console.error('[cup] swapCupMatchPlayer roster read failed', {
       tournamentId,
       gameId,
-      error: playersError,
+      error: playersError ?? inParticipantError,
     });
     return { error: 'swap_failed' };
   }
 
+  const outRow = (playerRows ?? []).find((p) => p.user_id === outUserId);
   const validation = validateMatchSwap({
     bundle: bundle.map((g) => ({
       gameId: g.id,
@@ -181,6 +195,8 @@ async function planCupMatchSwap(
     clubMemberIds: groupId
       ? (memberRows ?? []).map((m) => m.user_id as string)
       : null,
+    outTeam: teamOf(outRow),
+    inPersistentTeam: teamOf(inParticipant),
   });
   if (!validation.ok) return { error: validation.error };
 

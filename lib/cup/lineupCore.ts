@@ -484,6 +484,9 @@ export async function submitCupLineupCore(
   // ⚠️ Hele hemmeligholdet på skrivesiden: en kaptein kommer ALDRI forbi denne
   // med motstanderlagets nummer, uansett hvordan payloaden ser ut.
   if (!canWriteTeamLineup(access, team)) return { error: 'not_allowed' };
+  // Audit 2026-11-20: a finished cup takes no lineup. Before, the stamp stayed
+  // and only the reveal refused it.
+  if (access.cupStatus === 'finished') return { error: 'cup_finished' };
 
   const admin = getAdminClient();
   const { data: session, error: sessionError } = await admin
@@ -522,45 +525,12 @@ export async function submitCupLineupCore(
   });
   if (!validated.ok) return { error: validated.error };
 
-  // Erstatt kladden i sin helhet: kapteinen kan ha flyttet folk mellom plasser,
-  // og en delvis oppdatering ville etterlatt spøkelser fra forrige lagring.
-  const { error: deleteError } = await admin
-    .from('cup_lineup_slots')
-    .delete()
-    .eq('session_id', sessionId)
-    .eq('team_number', team);
-  if (deleteError) {
-    console.error('[cup] submitCupLineup clear failed', {
-      tournamentId,
-      sessionId,
-      team,
-      error: deleteError,
-    });
-    return { error: 'save_failed' };
-  }
-
-  const { error: insertError } = await admin.from('cup_lineup_slots').insert(
-    validated.slots.map((s) => ({
-      session_id: sessionId,
-      team_number: team,
-      slot_index: s.slotIndex,
-      seat: s.seat,
-      user_id: s.userId,
-    })),
-  );
-  if (insertError) {
-    console.error('[cup] submitCupLineup insert failed', {
-      tournamentId,
-      sessionId,
-      team,
-      error: insertError,
-    });
-    return { error: 'save_failed' };
-  }
-
-  // Leveringsstempelet settes KUN når det ikke alt står et der: to samtidige
-  // kall for samme lag skal ikke kunne skrive over hverandre, og `.is(null)`
-  // gjør det til DB-ens avgjørelse framfor vår.
+  // Audit 2026-11-20: stamp FIRST, then write the slots. The stamp is the
+  // claim: only one call per team wins it (`.is(null)` makes it the DB's
+  // decision), and only the winner writes slots. Before, both calls replaced
+  // the slots and the loser's choices could stay behind a stamp that was not
+  // theirs. `revealed_at` null too, so nothing is written into a revealed
+  // session.
   // Eksplisitte kolonnenavn framfor computed keys: Supabase-typene avviser et
   // objekt med index-signatur, og en feilstavet kolonne ville blitt en stille
   // no-op i stedet for en type-feil.
@@ -576,7 +546,8 @@ export async function submitCupLineupCore(
     .update(stampPatch)
     .eq('id', sessionId)
     .is(stampColumn, null)
-    .select('team_1_submitted_at, team_2_submitted_at');
+    .is('revealed_at', null)
+    .select('id');
   if (stampError) {
     console.error('[cup] submitCupLineup stamp failed', {
       tournamentId,
@@ -587,15 +558,40 @@ export async function submitCupLineupCore(
     return { error: 'save_failed' };
   }
   if (!stamped || stamped.length === 0) {
-    // Noen andre rakk å levere for dette laget mellom lesingen og skrivingen.
+    // Noen andre rakk å levere for dette laget (eller avdekke økta) mellom
+    // lesingen og skrivingen.
     return { error: 'lineup_already_submitted' };
   }
 
-  const bothIn =
-    stamped[0].team_1_submitted_at !== null &&
-    stamped[0].team_2_submitted_at !== null;
+  const slotsError = await writeStampedSlots({
+    tournamentId,
+    sessionId,
+    team,
+    stampedAt,
+    slots: validated.slots,
+  });
+  if (slotsError) return slotsError;
 
   revalidateCup(tournamentId, access.groupId);
+
+  // Both teams in? Read the stamps AFTER our slots are written: the other team
+  // may have stamped while we wrote, and its own reveal attempt then saw our
+  // lineup half-written. Whoever reads last sees both lineups complete.
+  const { data: after, error: afterError } = await admin
+    .from('cup_lineup_sessions')
+    .select('revealed_at, team_1_submitted_at, team_2_submitted_at')
+    .eq('id', sessionId)
+    .maybeSingle();
+  if (afterError) {
+    // The lineup is in; the organiser's «Prøv igjen» runs the reveal (#1901).
+    console.error('[cup] submitCupLineup re-read failed', { tournamentId, sessionId, error: afterError });
+    return OK;
+  }
+  const bothIn =
+    after !== null &&
+    after.revealed_at === null &&
+    after.team_1_submitted_at !== null &&
+    after.team_2_submitted_at !== null;
 
   if (bothIn) {
     const revealError = await revealCupLineupSession(tournamentId, sessionId);
@@ -604,6 +600,62 @@ export async function submitCupLineupCore(
   }
 
   return OK;
+}
+
+/**
+ * Audit 2026-11-20: writes a team's slots after its stamp took. On a failed
+ * write the stamp is taken back (only our own, by its time), so the captain can
+ * submit again instead of leaving a stamped empty lineup.
+ */
+async function writeStampedSlots(args: {
+  tournamentId: string;
+  sessionId: string;
+  team: CupTeamNumber;
+  stampedAt: string;
+  slots: Array<{ slotIndex: number; seat: number; userId: string }>;
+}): Promise<CupLineupActionError | null> {
+  const { tournamentId, sessionId, team, stampedAt, slots } = args;
+  const admin = getAdminClient();
+  const releaseStamp = async (cause: unknown): Promise<CupLineupActionError> => {
+    console.error('[cup] submitCupLineup slots failed', { tournamentId, sessionId, team, error: cause });
+    const clearPatch =
+      team === 1
+        ? { team_1_submitted_at: null, team_1_submitted_by: null }
+        : { team_2_submitted_at: null, team_2_submitted_by: null };
+    const stampColumn =
+      team === 1 ? ('team_1_submitted_at' as const) : ('team_2_submitted_at' as const);
+    const { error: undoError } = await admin
+      .from('cup_lineup_sessions')
+      .update(clearPatch)
+      .eq('id', sessionId)
+      .eq(stampColumn, stampedAt)
+      .is('revealed_at', null);
+    if (undoError) {
+      console.error('[cup] submitCupLineup stamp undo failed', { tournamentId, sessionId, team, error: undoError });
+    }
+    return { error: 'save_failed' };
+  };
+
+  // Erstatt kladden i sin helhet: kapteinen kan ha flyttet folk mellom plasser,
+  // og en delvis oppdatering ville etterlatt spøkelser fra forrige lagring.
+  const { error: deleteError } = await admin
+    .from('cup_lineup_slots')
+    .delete()
+    .eq('session_id', sessionId)
+    .eq('team_number', team);
+  if (deleteError) return releaseStamp(deleteError);
+
+  const { error: insertError } = await admin.from('cup_lineup_slots').insert(
+    slots.map((s) => ({
+      session_id: sessionId,
+      team_number: team,
+      slot_index: s.slotIndex,
+      seat: s.seat,
+      user_id: s.userId,
+    })),
+  );
+  if (insertError) return releaseStamp(insertError);
+  return null;
 }
 
 /**
