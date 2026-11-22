@@ -1435,7 +1435,7 @@ export default async function GameHomePage({
                   requirePeerApproval={game.require_peer_approval}
                   leagueFlight={game.league_round_id != null}
                   holeSegment={game.hole_segment}
-                  startType={game.start_type ?? 'first_tee'}
+                  startType={gwp.game.start_type ?? 'first_tee'}
                   tournamentId={game.tournament_id}
                   gameMode={game.game_mode}
                   teamScoreOwnerId={
