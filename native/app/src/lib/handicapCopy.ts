@@ -41,6 +41,12 @@ const DAY_MS = 24 * HOUR_MS;
 const WEEK_MS = 7 * DAY_MS;
 const MONTH_MS = 30 * DAY_MS;
 
+/** Dager siden epoken for enhetens kalenderdato. */
+function localDayNumber(ms: number): number {
+  const d = new Date(ms);
+  return Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / DAY_MS);
+}
+
 function ago(count: number, one: string, many: string): string {
   return `for ${count} ${count === 1 ? one : many} siden`;
 }
@@ -62,8 +68,11 @@ export function formatRelativeAgoNb(iso: string, nowMs: number = Date.now()): st
   if (minutes < 60) return ago(minutes, 'minutt', 'minutter');
   const hours = Math.round(diff / HOUR_MS);
   if (hours < 24) return ago(hours, 'time', 'timer');
-  if (diff < WEEK_MS) {
-    const days = Math.round(diff / DAY_MS);
+  // Hele dager telles som kalenderdager, ikke 24-timersblokker: mandag 23:30 til
+  // onsdag 00:30 er «i forgårs». Enhetens egen dag (Hermes har ikke Oslo-sonen,
+  // se `display.ts`); nettet teller Oslo-dager.
+  const days = Math.max(1, localDayNumber(nowMs) - localDayNumber(thenMs));
+  if (days < 7) {
     if (days === 1) return 'i går';
     if (days === 2) return 'i forgårs';
     return ago(days, 'døgn', 'døgn');

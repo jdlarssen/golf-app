@@ -65,13 +65,14 @@ export function ActivityLedgerList({ rows }: { rows: ActivityEntry[] }) {
           };
           const baseClass =
             'grid grid-cols-[52px_1fr] items-baseline gap-2.5 px-3.5 py-2.5';
+          const dayLabel = ledgerDayLabel(row.ts, locale);
           const inner = (
             <>
               <span className="font-serif text-xs font-medium tabular-nums text-muted">
                 {formatHHMMOslo(row.ts)}
-                {ledgerDayLabel(row.ts, locale) && (
+                {dayLabel && (
                   <span className="block text-[10px] font-normal leading-tight">
-                    {ledgerDayLabel(row.ts, locale)}
+                    {dayLabel}
                   </span>
                 )}
               </span>

@@ -357,15 +357,23 @@ export function formatRelativeLocale(
   }
   if (locale === 'no') return formatRelativeNbLegacy(iso, nowMs);
 
-  const diff = Math.max(0, nowMs - new Date(iso).getTime());
+  const thenMs = new Date(iso).getTime();
+  if (!Number.isFinite(thenMs)) return '';
+  const diff = Math.max(0, nowMs - thenMs);
   const rtf = new Intl.RelativeTimeFormat(intlLocaleTag(locale), {
     numeric: 'auto',
   });
 
-  if (diff < MINUTE_MS) return rtf.format(-Math.round(diff / SECOND_MS), 'second');
-  if (diff < HOUR_MS) return rtf.format(-Math.round(diff / MINUTE_MS), 'minute');
-  if (diff < DAY_MS) return rtf.format(-Math.round(diff / HOUR_MS), 'hour');
-  if (diff < WEEK_MS) return rtf.format(-Math.round(diff / DAY_MS), 'day');
+  // Same rules as `formatRelativeNb`: the unit is picked after rounding, and
+  // whole days count Oslo calendar dates.
+  const seconds = Math.round(diff / SECOND_MS);
+  if (seconds < 60) return rtf.format(-seconds, 'second');
+  const minutes = Math.round(diff / MINUTE_MS);
+  if (minutes < 60) return rtf.format(-minutes, 'minute');
+  const hours = Math.round(diff / HOUR_MS);
+  if (hours < 24) return rtf.format(-hours, 'hour');
+  const days = Math.max(1, osloDayNumber(nowMs) - osloDayNumber(thenMs));
+  if (days < 7) return rtf.format(-days, 'day');
   if (diff < MONTH_MS) return rtf.format(-Math.round(diff / WEEK_MS), 'week');
   return rtf.format(-Math.round(diff / MONTH_MS), 'month');
 }
