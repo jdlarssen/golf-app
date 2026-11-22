@@ -31,6 +31,7 @@
 // vises, venter til navigatoren er montert og åpner skjermen (`data/pendingAppLink.ts`).
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -52,10 +53,11 @@ import { ensurePushChannel } from './src/data/pushDevice';
 import { FRAUNCES_FILES } from './src/fonts';
 import { RootNavigator } from './src/navigation';
 import { KeyboardInset } from './src/components/KeyboardInset';
-import { NewVersionTop } from './src/components/NewVersionStrip';
+import { NewVersionSheet } from './src/components/newVersion/NewVersionSheet';
 import { Login } from './src/screens/Login';
 import { applyStoredThemePreference } from './src/lib/themePreference';
 import { useUpdateGuard } from './src/lib/useUpdateGuard';
+import { NewVersionProvider } from './src/lib/useNewVersion';
 import { SessionProvider } from './src/session';
 import { getAppLock, loadAppLock } from './src/lib/appLock';
 import { loadSunlight } from './src/lib/sunlight';
@@ -161,24 +163,26 @@ function ReadyApp({ session }: { session: Session | null }) {
   // denne i stedet for sin egen. `initialWindowMetrics` gjør at første bilde
   // tegnes med en gang, uten å vente på målingen.
   //
-  // #2975: stripa «Ny versjon er klar.» står over alt, også innloggingen.
-  // `NewVersionTop` gir appen under seg innfellingen uten statuslinja mens
-  // stripa vises.
+  // #2975: «ny versjon er klar» står rundt alt, også innloggingen. Leverandøren
+  // har samme plass i begge grenene, så den beholder svaret over en innlogging.
+  // Arket er en `Modal` og kan stå hvor som helst i treet.
   if (!session) {
     return (
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <NewVersionTop>
+        <NewVersionProvider enabled>
+          <NewVersionSheet />
           <KeyboardInset>
             <Login />
           </KeyboardInset>
-        </NewVersionTop>
+        </NewVersionProvider>
       </SafeAreaProvider>
     );
   }
 
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <NewVersionTop>
+      <NewVersionProvider enabled>
+        <NewVersionSheet />
         {/* #1954 Del B: edge to edge, Android no longer shrinks the window for the keyboard. */}
         <KeyboardInset>
           <AppLockGate startLocked={startLocked} onUnlocked={onUnlocked}>
@@ -186,6 +190,10 @@ function ReadyApp({ session }: { session: Session | null }) {
               <SessionProvider
                 value={{ userId: session.user.id, email: session.user.email ?? null }}
               >
+                {/* «auto» følger systemets lys/mørk (#1833): mørk tekst på lys app, lys
+                    tekst på mørk. «dark» var en midlertidig sannhet mens skjermene bare
+                    fantes i lys drakt. */}
+                <StatusBar style="auto" />
                 {/* #2216: steget for navn og handicap står foran stacken når
                     profilen ikke er fullført, samme regel som nettsidens `/`. */}
                 <ProfileGate userId={session.user.id}>
@@ -198,7 +206,7 @@ function ReadyApp({ session }: { session: Session | null }) {
             </OwnerGate>
           </AppLockGate>
         </KeyboardInset>
-      </NewVersionTop>
+      </NewVersionProvider>
     </SafeAreaProvider>
   );
 }

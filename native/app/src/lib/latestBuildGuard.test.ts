@@ -4,10 +4,11 @@
 // Et tall over det ville vise «Ny versjon er klar.» for et bygg som ikke finnes.
 //
 // Tallet heves etter at et bygg er ute hos testerne, i en egen PR. Denne testen
-// feiler bare hvis noen hever det forbi bygget som står i configen.
-import { LATEST_APP_BUILD } from '@/lib/app/latestBuild';
+// feiler bare hvis noen hever det forbi bygget som står i configen, eller
+// nyhetene blir lengre enn Play tar imot.
+import { LATEST_APP_BUILD, RELEASE_NOTES_MAX_CHARS } from '@/lib/app/latestBuild';
 import { MIN_APP_VERSION } from '@/lib/app/minVersion';
-import { STORE_ANDROID_VERSION_CODE, STORE_IOS_BUILD_NUMBER } from '../../app.config';
+import { STORE_ANDROID_VERSION_CODE, STORE_IOS_BUILD_NUMBER, STORE_VERSION } from '../../app.config';
 
 describe('LATEST_APP_BUILD mot byggnummeret i app.config.ts', () => {
   it('ligger ikke over iOS-bygget', () => {
@@ -30,5 +31,23 @@ describe('LATEST_APP_BUILD mot byggnummeret i app.config.ts', () => {
     expect(Number.isInteger(LATEST_APP_BUILD.android.latestVersionCode)).toBe(true);
     expect(LATEST_APP_BUILD.ios.latestBuild).toBeGreaterThan(0);
     expect(LATEST_APP_BUILD.android.latestVersionCode).toBeGreaterThan(0);
+  });
+
+  it('har samme versjon som configen når tallet er bygget i configen', () => {
+    if (LATEST_APP_BUILD.ios.latestBuild === Number(STORE_IOS_BUILD_NUMBER)) {
+      expect(LATEST_APP_BUILD.ios.latestVersion).toBe(STORE_VERSION);
+    }
+    if (LATEST_APP_BUILD.android.latestVersionCode === STORE_ANDROID_VERSION_CODE) {
+      expect(LATEST_APP_BUILD.android.latestVersion).toBe(STORE_VERSION);
+    }
+    expect(LATEST_APP_BUILD.ios.latestVersion).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(LATEST_APP_BUILD.android.latestVersion).toMatch(/^\d+\.\d+\.\d+$/);
+  });
+
+  it('har nyheter på høyst 500 tegn, som Play tar imot, og ingen tomme linjer', () => {
+    for (const notes of [LATEST_APP_BUILD.ios.notes, LATEST_APP_BUILD.android.notes]) {
+      expect(notes.join('\n').length).toBeLessThanOrEqual(RELEASE_NOTES_MAX_CHARS);
+      for (const line of notes) expect(line.trim()).not.toBe('');
+    }
   });
 });
