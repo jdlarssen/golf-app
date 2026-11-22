@@ -7257,6 +7257,21 @@
       "submitButtonTextKept": "Submit the cards: {url}",
       "footer": "You're receiving this because you're registered for this game. Log in at <link>tornygolf.no</link> to submit."
     },
+    "leagueRound": {
+      "subjectOpen": "{roundLabel} in {leagueName} is open",
+      "subjectClosing": "{roundLabel} in {leagueName} closes {closesAt, date, ::EEEEdMMM} at {closesAt, time, ::HHmm}",
+      "salutationNamed": "Hi {name}!",
+      "salutationGeneric": "Hi!",
+      "bodyOpen": "Play it when it suits you. The deadline is {closesAt, date, ::EEEEdMMM} at {closesAt, time, ::HHmm}.",
+      "bodyOpenSim": "{courseName}, {teeName} tee. Open the round to see what to set in Trackman. The deadline is {closesAt, date, ::EEEEdMMM} at {closesAt, time, ::HHmm}.",
+      "bodyClosing": "You have not played it yet.",
+      "buttonRound": "Open the round",
+      "buttonRoundText": "Open the round: {url}",
+      "buttonLeague": "Open the league",
+      "buttonLeagueText": "Open the league: {url}",
+      "footer": "You're receiving this email because you're in the league and haven't turned on notifications. Turn them on in <link>your profile</link>, and you'll get the message as a notification instead.",
+      "footerText": "You're receiving this email because you're in the league and haven't turned on notifications. Turn them on in your profile ({url}), and you'll get the message as a notification instead."
+    },
     "missingScoreReminder": {
       "subject": "You have no score on {holeCount, plural, one {hole} other {holes}} {holes} in {gameName}",
       "heading": "You have no score on {holeCount, plural, one {hole} other {holes}} {holes}",

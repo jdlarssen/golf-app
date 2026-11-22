@@ -3,7 +3,12 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import type { TablesUpdate } from '@/lib/database.types';
 import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
 import { dueNotices, noticeRecipients, type LeagueRoundNoticeKind } from '@/lib/league/roundNotices';
+import { firstName } from '@/lib/firstName';
+import { sendLeagueRoundNotification } from '@/lib/mail/leagueRoundNotification';
+import { chunkIds } from './inboxReads';
 import { notify } from './notify';
+import { usersWithPushDevice } from './push/pushDevices';
+import type { NotificationPayload } from './types';
 
 // The league round's two messages (#2638 Del 3): «Runde 3 i Vinterligaen er
 // åpen» when the round opens, and the reminder 48 hours before it closes to
@@ -16,8 +21,11 @@ import { notify } from './notify';
 // therefore send nothing twice. A changed deadline clears the reminder's stamp
 // in the database (0217), so an extended window gets a new reminder.
 //
-// In the app only: `notify` stores the varsel and pushes when the player is
-// away. No mail (the contract).
+// `notify` stores the varsel and pushes when the player is away. A player who
+// is away and has no device to push to gets the message as mail as well
+// (#2974): 6 of the 11 players in the first league had no device, and one of
+// them never opened Tørny, so nothing reached that player. Players with a
+// device get no mail: the push is theirs.
 
 type AdminClient = ReturnType<typeof getAdminClient>;
 
@@ -54,16 +62,19 @@ type FlightRow = { status: string; game_players: Array<{ user_id: string; withdr
  * Throws on a failed read or claim, so the route can count it per round and
  * one round never costs the others their messages (same as the stale sweep).
  * The sends are best-effort: one failed `notify` is logged, the rest go.
- * `sent` counts the `notify` calls that did not throw.
+ * `sent` counts the varsler that landed, `mailed` the mails that went with
+ * them. A mail never moves a stamp: it follows a varsel that has landed, from
+ * the run that won the claim, so it goes at most once per message too.
  */
 export async function runLeagueRoundNotices(
   admin: AdminClient,
   round: LeagueRoundSweepRound,
   now: number,
-): Promise<{ sent: Record<LeagueRoundNoticeKind, number> }> {
+): Promise<{ sent: Record<LeagueRoundNoticeKind, number>; mailed: Record<LeagueRoundNoticeKind, number> }> {
   const sent: Record<LeagueRoundNoticeKind, number> = { league_round_open: 0, league_round_closing: 0 };
+  const mailed: Record<LeagueRoundNoticeKind, number> = { league_round_open: 0, league_round_closing: 0 };
   const due = dueNotices(round, now);
-  if (due.length === 0) return { sent };
+  if (due.length === 0) return { sent, mailed };
 
   const [playersRes, flightsRes] = await Promise.all([
     admin
@@ -90,7 +101,7 @@ export async function runLeagueRoundNotices(
   );
   const leagueName = round.leagues?.name;
   if (!leagueName) throw new Error(`${LOG_PREFIX} round ${round.id} came without its league`);
-  const payload = {
+  const payload: NotificationPayload<'league_round_open'> = {
     league_id: round.league_id,
     league_name: leagueName,
     round_id: round.id,
@@ -131,6 +142,9 @@ export async function runLeagueRoundNotices(
     const results = await Promise.allSettled(
       recipients.map((userId) => notify({ userId, kind, payload })),
     );
+    // The players whose varsel landed while they were away (not in Tørny
+    // right now, not a guest, not a deleted account: `notify` knows).
+    const away: string[] = [];
     results.forEach((r, i) => {
       if (r.status === 'rejected') {
         console.error(`[${LOG_PREFIX}] ${kind} to ${recipients[i]} failed`, { roundId: round.id, err: r.reason });
@@ -138,6 +152,7 @@ export async function runLeagueRoundNotices(
         console.error(`[${LOG_PREFIX}] ${kind} to ${recipients[i]} did not land`, { roundId: round.id });
       } else {
         sent[kind] += 1;
+        if (r.value.shouldAlsoSendMail) away.push(recipients[i]!);
       }
     });
 
@@ -156,6 +171,79 @@ export async function runLeagueRoundNotices(
         console.error(`[${LOG_PREFIX}] ${kind} release failed`, { roundId: round.id, error: releaseError });
       }
     }
+
+    mailed[kind] = await mailPlayersWithoutDevice(admin, away, kind, payload);
   }
-  return { sent };
+  return { sent, mailed };
+}
+
+type MailUser = { id: string; email: string | null; name: string | null; locale: string | null };
+
+/**
+ * The message as mail to the players in `away` who have no device to push to
+ * (#2974). Returns how many mails went. Best-effort, and it never throws: the
+ * varsler have landed and the stamp stands whatever happens here.
+ *
+ * A failed device read mails everyone away: a player with a device then gets
+ * the push and the mail, which is better than a player without one getting
+ * nothing. A failed read of the addresses mails nobody, and one failed mail
+ * is logged while the rest go.
+ */
+async function mailPlayersWithoutDevice(
+  admin: AdminClient,
+  away: readonly string[],
+  kind: LeagueRoundNoticeKind,
+  payload: NotificationPayload<'league_round_open'>,
+): Promise<number> {
+  if (away.length === 0) return 0;
+  try {
+    let withDevice = new Set<string>();
+    try {
+      withDevice = await usersWithPushDevice(admin, away);
+    } catch (err) {
+      console.error(`[${LOG_PREFIX}] ${kind} device read failed, mailing everyone away`, err);
+    }
+    const targets = away.filter((id) => !withDevice.has(id));
+    if (targets.length === 0) return 0;
+
+    const users = new Map<string, MailUser>();
+    for (const ids of chunkIds(targets)) {
+      const { data, error } = await admin
+        .from('users')
+        .select('id, email, name, locale')
+        .in('id', ids)
+        .returns<MailUser[]>();
+      if (error) throw new Error(`users: ${error.message}`);
+      for (const user of data ?? []) users.set(user.id, user);
+    }
+    // In the league's order, and only the ones with an address.
+    const toMail = targets.flatMap((id) => {
+      const user = users.get(id);
+      return user?.email ? [{ ...user, email: user.email }] : [];
+    });
+
+    const results = await Promise.allSettled(
+      toMail.map((user) =>
+        sendLeagueRoundNotification({
+          to: user.email,
+          playerFirstName: firstName(user.name),
+          kind,
+          payload,
+          locale: user.locale,
+        }),
+      ),
+    );
+    let mailed = 0;
+    results.forEach((r, i) => {
+      if (r.status === 'rejected') {
+        console.error(`[${LOG_PREFIX}] ${kind} mail to ${toMail[i]!.id} failed`, r.reason);
+      } else {
+        mailed += 1;
+      }
+    });
+    return mailed;
+  } catch (err) {
+    console.error(`[${LOG_PREFIX}] ${kind} mail failed`, { roundId: payload.round_id, err });
+    return 0;
+  }
 }

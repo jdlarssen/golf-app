@@ -14,7 +14,11 @@ export const runLeagueRoundNotices = vi.fn(
     _admin: unknown,
     _round: LeagueRoundSweepRound,
     _now: number,
-  ): Promise<{ sent: { league_round_open: number; league_round_closing: number } }> => ({
+  ): Promise<{
+    sent: { league_round_open: number; league_round_closing: number };
+    mailed: { league_round_open: number; league_round_closing: number };
+  }> => ({
     sent: { league_round_open: 0, league_round_closing: 0 },
+    mailed: { league_round_open: 0, league_round_closing: 0 },
   }),
 );
