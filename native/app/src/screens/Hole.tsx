@@ -185,6 +185,7 @@ import { useDeviceOnline } from '../lib/useDeviceOnline';
 import { useRoundSyncState } from '../lib/useRoundSyncState';
 import { syncChipText } from '../lib/syncChipCopy';
 import { GameLoadFailed } from '../components/GameLoadFailed';
+import { HOLE_TEXT_CAP } from '../components/hole/holeTextCap';
 
 /**
  * Hint-linja under et utastet kort. Ordrett webbens streng
@@ -347,6 +348,7 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
         subtitle: topLine || undefined,
         tone: 'gold',
         sunlight,
+        textCap: HOLE_TEXT_CAP,
       }),
       headerRight: () => (
         <HoleTopTools
@@ -375,7 +377,7 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
   if (!me || !hole) {
     return (
       <View style={ui.centered} testID="hole-missing">
-        <Text style={ui.error}>
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.error}>
           {me ? `Fant ikke hull ${holeNumber} på denne banen.` : 'Du er ikke spiller her.'}
         </Text>
       </View>
@@ -1023,7 +1025,7 @@ function HoleView({
         {/* #2220: et levert kort i en runde som pågår får vite hvem som kan åpne
             det. Et avsluttet spill kan bare admin åpne, på nettsiden. */}
         {locked ? (
-          <Text style={ui.muted} testID="hole-locked">
+          <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.muted} testID="hole-locked">
             {bundle.game.status !== 'active'
               ? 'Spillet er ikke aktivt. Føringen er låst.'
               : collapsed
@@ -1064,10 +1066,10 @@ function HoleView({
             har ingen overskrift, som på artboardet. */}
         {sunlight ? null : (
           <View style={styles.flightHead}>
-            <Text style={[styles.flightKicker, { color: colors.muted }]} accessibilityRole="header">
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.flightKicker, { color: colors.muted }]} accessibilityRole="header">
               {`Flighten på hull ${holeNumber}`}
             </Text>
-            <Text style={[styles.flightCount, { color: colors.muted }]} testID="flight-count">
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.flightCount, { color: colors.muted }]} testID="flight-count">
               {`${enteredCount} av ${rowCount} tastet`}
             </Text>
           </View>
@@ -1163,13 +1165,13 @@ function HoleView({
               onPress={() => goToHole(bridge.holeNumber)}
               testID="hole-bridge"
             >
-              <Text style={ui.buttonText}>{bridgeLabel(bridge.holeNumber)}</Text>
+              <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.buttonText}>{bridgeLabel(bridge.holeNumber)}</Text>
             </Pressable>
           ) : (
             <Pressable style={ui.button} onPress={onSubmit} testID="hole-submit">
               {/* Begge veier går til Scorecard — kø-vakta og hull-dialogen har ett
                   hjem der (#1918). */}
-              <Text style={ui.buttonText}>
+              <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.buttonText}>
                 {teamDelivers ? 'Lever lagets kort' : 'Lever scorekort'}
               </Text>
             </Pressable>
@@ -1181,7 +1183,7 @@ function HoleView({
             onPress={() => goToHole(boundary.holeNumber)}
             testID="hole-boundary-link"
           >
-            <Text style={ui.buttonSecondaryText}>{bridgeLabel(boundary.holeNumber)}</Text>
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.buttonSecondaryText}>{bridgeLabel(boundary.holeNumber)}</Text>
           </Pressable>
         ) : null}
         </View>
@@ -1415,13 +1417,13 @@ function PlayerCard({
     >
       <View style={styles.cardHead}>
         <View style={styles.nameRow}>
-          <Text style={[ui.body, isMe && styles.meName]}>
+          <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[ui.body, isMe && styles.meName]}>
             {displayName(player)}
             {isMe ? ' (deg)' : ''}
           </Text>
           {submitted ? (
             <View style={ui.badge}>
-              <Text style={ui.badgeText} testID={`player-${entry.user_id}-submitted`}>
+              <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.badgeText} testID={`player-${entry.user_id}-submitted`}>
                 {SUBMITTED_BADGE}
               </Text>
             </View>
@@ -1429,7 +1431,7 @@ function PlayerCard({
         </View>
         {extra != null && extra !== 0 ? (
           <View style={ui.badge}>
-            <Text style={[ui.badgeText, ui.num]} testID={`player-${entry.user_id}-extra`}>
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[ui.badgeText, ui.num]} testID={`player-${entry.user_id}-extra`}>
               {signedStrokes(extra)}
             </Text>
           </View>
@@ -1450,7 +1452,7 @@ function PlayerCard({
         testID={`player-${entry.user_id}-undo`}
       />
       {score?.strokes == null && !locked ? (
-        <Text style={ui.muted} testID={`player-${entry.user_id}-hint`}>
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.muted} testID={`player-${entry.user_id}-hint`}>
           {TAP_INSTRUCTION}
         </Text>
       ) : null}
@@ -1487,7 +1489,7 @@ function UndoStrokes({
       accessibilityRole="button"
       accessibilityLabel={label}
     >
-      <Text style={ui.linkText}>Angre</Text>
+      <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.linkText}>Angre</Text>
     </Pressable>
   );
 }
@@ -1515,16 +1517,16 @@ function Stepper({
   const stepTextStyle = [styles.stepText, { color: colors.onPrimary }];
   return (
     <View style={styles.stepperRow}>
-      <Text style={[ui.muted, styles.stepperLabel]}>{label}</Text>
+      <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[ui.muted, styles.stepperLabel]}>{label}</Text>
       <Pressable
         style={stepStyle}
         onPress={() => onChange(-1)}
         disabled={disabled}
         testID={`${testIDPrefix}-minus`}
       >
-        <Text style={stepTextStyle}>−</Text>
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={stepTextStyle}>−</Text>
       </Pressable>
-      <Text style={[ui.value, ui.num, styles.stepValue]} testID={`${testIDPrefix}-value`}>
+      <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[ui.value, ui.num, styles.stepValue]} testID={`${testIDPrefix}-value`}>
         {value ?? '—'}
       </Text>
       <Pressable
@@ -1533,7 +1535,7 @@ function Stepper({
         disabled={disabled}
         testID={`${testIDPrefix}-plus`}
       >
-        <Text style={stepTextStyle}>+</Text>
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={stepTextStyle}>+</Text>
       </Pressable>
     </View>
   );

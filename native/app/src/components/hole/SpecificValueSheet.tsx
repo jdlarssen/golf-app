@@ -16,6 +16,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MAX_STROKES } from '../../../../../lib/scorecard/strokeEntry';
 import { FONTS, fraunces, sheetGrabber, sheetScrim, useTheme } from '../../theme';
+import { HOLE_TEXT_CAP } from './holeTextCap';
 
 export type SpecificValueSheetProps = {
   open: boolean;
@@ -77,7 +78,7 @@ export function SpecificValueSheet({
           testID="specific-value-sheet"
         >
           <View style={[styles.handle, { backgroundColor: sheetGrabber(scheme) }]} />
-          <Text style={[ui.kicker, styles.kicker]} accessibilityRole="header">
+          <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[ui.kicker, styles.kicker]} accessibilityRole="header">
             Spesifikk score
           </Text>
           <View style={styles.grid}>
@@ -94,7 +95,7 @@ export function SpecificValueSheet({
                 accessibilityRole="button"
                 accessibilityLabel={`Sett score til ${v}`}
               >
-                <Text style={cellText}>{v}</Text>
+                <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={cellText}>{v}</Text>
               </Pressable>
             ))}
             <Pressable
@@ -107,7 +108,7 @@ export function SpecificValueSheet({
               accessibilityRole="button"
               accessibilityLabel="Fjern score"
             >
-              <Text style={cellText}>X</Text>
+              <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={cellText}>X</Text>
             </Pressable>
           </View>
           {strike ? (
@@ -120,10 +121,10 @@ export function SpecificValueSheet({
               testID="specific-value-strike"
               accessibilityRole="button"
             >
-              <Text style={[styles.strikeText, { color: colors.text }]}>{strike.label}</Text>
+              <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.strikeText, { color: colors.text }]}>{strike.label}</Text>
             </Pressable>
           ) : null}
-          <Text style={[styles.caption, { color: colors.muted }]}>
+          <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.caption, { color: colors.muted }]}>
             Trykk for å sette. X fjerner.
           </Text>
         </View>

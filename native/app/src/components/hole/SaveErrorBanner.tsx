@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { FONTS, interLine, useTheme } from '../../theme';
 import { VarselIcon } from '../icons/Icons';
+import { HOLE_TEXT_CAP } from './holeTextCap';
 
 /**
  * Lerretet bryter teksten med `text-wrap: balance`, som setter de to setningene
@@ -27,7 +28,7 @@ export function SaveErrorBanner({ text }: { text: string }) {
       testID="hole-save-error"
     >
       <VarselIcon color={colors.danger} size={18} strokeWidth={2} />
-      <Text
+      <Text maxFontSizeMultiplier={HOLE_TEXT_CAP}
         style={[styles.text, { color: colors.danger }]}
         onTextLayout={(event) => {
           if (!breakAtSentence && event.nativeEvent.lines.length > 1 && text.includes('. ')) {

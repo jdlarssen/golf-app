@@ -30,6 +30,7 @@ import type { BingoBangoBongoHoleInput } from '../../../../../lib/scoring/modes/
 import { setBingoBangoBongoHole } from '../../data/choices';
 import { describeChoiceFailure } from '../../lib/actionFeedback';
 import { TAP, useTheme } from '../../theme';
+import { HOLE_TEXT_CAP } from './holeTextCap';
 
 /** Nøkkel, overskrift og forklaring — webbens copy, ord for ord. */
 const CATEGORIES = [
@@ -127,14 +128,14 @@ export function BingoBangoBongoCard({
 
   return (
     <View style={ui.card} testID="bbb-card">
-      <Text style={ui.body}>Bingo Bango Bongo</Text>
-      <Text style={ui.muted}>
+      <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.body}>Bingo Bango Bongo</Text>
+      <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.muted}>
         Tre poeng per hull — ett for hver prestasjon. Alle i flighten kan
         registrere.
       </Text>
 
       {loaded ? null : (
-        <Text style={ui.muted} testID="bbb-notice">
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.muted} testID="bbb-notice">
           Fikk ikke tak i registreringene for dette hullet. De dukker opp når
           nettet er tilbake.
         </Text>
@@ -144,7 +145,7 @@ export function BingoBangoBongoCard({
         const selected = current[category.key];
         return (
           <View key={category.key} style={styles.row} testID={`bbb-row-${category.key}`}>
-            <Text style={ui.muted}>
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.muted}>
               {category.label} · {category.description}
             </Text>
             <View style={styles.chips}>
@@ -178,7 +179,7 @@ export function BingoBangoBongoCard({
       })}
 
       {error ? (
-        <Text style={ui.error} testID="bbb-error">
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.error} testID="bbb-error">
           {error}
         </Text>
       ) : null}
@@ -218,7 +219,7 @@ function Chip({
       onPress={onPress}
       testID={testID}
     >
-      <Text style={[selected ? ui.body : ui.muted, filled && { color: colors.onPrimary }]}>
+      <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[selected ? ui.body : ui.muted, filled && { color: colors.onPrimary }]}>
         {label}
       </Text>
     </Pressable>

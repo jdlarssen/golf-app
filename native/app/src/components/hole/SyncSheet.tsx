@@ -39,6 +39,7 @@ import {
   type ThemeColors,
   useTheme,
 } from '../../theme';
+import { HOLE_TEXT_CAP } from './holeTextCap';
 
 /** Webbens `RETRY_MIN_FEEDBACK_MS`, som SyncBanner: «Sender…» skal rekke å synes. */
 const RETRY_MIN_FEEDBACK_MS = 500;
@@ -145,7 +146,7 @@ export function SyncSheet({
         >
           <View style={[styles.handle, { backgroundColor: sheetGrabber(scheme) }]} />
           <View>
-            <Text
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP}
               style={[styles.title, { color: quarantined ? colors.danger : colors.text }]}
               accessibilityRole="header"
               testID="sync-sheet-title"
@@ -153,7 +154,7 @@ export function SyncSheet({
               {quarantined ? quarantineHolesText(state.quarantinedHoles) : SYNC_CHIP_TEXT.sheetTitle}
             </Text>
             {pending || !quarantined ? (
-              <Text style={[styles.body, { color: colors.muted }]} testID="sync-sheet-body">
+              <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.body, { color: colors.muted }]} testID="sync-sheet-body">
                 {pending
                   ? `${online ? '' : `${SYNC_CHIP_TEXT.noCoverage} `}${pendingText({
                       // Slagene nevner bare hull med slag; står bare utslagsvalg
@@ -169,7 +170,7 @@ export function SyncSheet({
           </View>
 
           {state.quarantineLockedHoles.length > 0 ? (
-            <Text style={[styles.body, { color: colors.muted }]} testID="sync-sheet-locked">
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.body, { color: colors.muted }]} testID="sync-sheet-locked">
               {SYNC_BANNER_TEXT.quarantineLockedHint}
             </Text>
           ) : null}
@@ -184,7 +185,7 @@ export function SyncSheet({
                   testID={`sync-sheet-retake-${n}`}
                   accessibilityRole="link"
                 >
-                  <Text style={[styles.retakeText, { color: colors.danger }]}>{retakeHoleText(n)}</Text>
+                  <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.retakeText, { color: colors.danger }]}>{retakeHoleText(n)}</Text>
                 </Pressable>
               ))}
             </View>
@@ -199,7 +200,7 @@ export function SyncSheet({
                   accessibilityElementsHidden
                 >
                   {row.map((cell) => (
-                    <Text key={cell.hole} style={[styles.number, { color: colors.muted }]}>
+                    <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} key={cell.hole} style={[styles.number, { color: colors.muted }]}>
                       {cell.hole}
                     </Text>
                   ))}
@@ -216,7 +217,7 @@ export function SyncSheet({
                         accessible
                         accessibilityLabel={cellA11yLabel(cell.hole, cell.state)}
                       >
-                        <Text style={[styles.cellMark, { color: sunlight ? colors.text : tone.fg }]}>
+                        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.cellMark, { color: sunlight ? colors.text : tone.fg }]}>
                           {SYNC_CELL_TEXT[cell.state].mark}
                         </Text>
                       </View>
@@ -235,8 +236,8 @@ export function SyncSheet({
             testID="sync-legend"
           >
             {present.map((s) => (
-              <Text key={s} style={[styles.legendText, { color: colors.muted }]} testID={`sync-legend-${s}`}>
-                <Text style={{ color: cellTone(s, colors).mark, fontFamily: FONTS.sansSemiBold }}>
+              <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} key={s} style={[styles.legendText, { color: colors.muted }]} testID={`sync-legend-${s}`}>
+                <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={{ color: cellTone(s, colors).mark, fontFamily: FONTS.sansSemiBold }}>
                   {SYNC_CELL_TEXT[s].mark}
                 </Text>{' '}
                 {SYNC_CELL_TEXT[s].label}
@@ -248,7 +249,7 @@ export function SyncSheet({
               Karantene sendes aldri av seg selv. */}
           {pending ? (
             <View style={[styles.noteBox, { backgroundColor: colors.trackBg }, edge]} testID="sync-sheet-note">
-              <Text style={[styles.note, { color: colors.muted }]}>{SYNC_CHIP_TEXT.keepGoing}</Text>
+              <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.note, { color: colors.muted }]}>{SYNC_CHIP_TEXT.keepGoing}</Text>
             </View>
           ) : null}
 
@@ -266,7 +267,7 @@ export function SyncSheet({
                 accessibilityRole="button"
                 accessibilityState={{ disabled: retrying }}
               >
-                <Text style={[styles.actionText, { color: colors.primary }]}>
+                <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.actionText, { color: colors.primary }]}>
                   {retrying ? SYNC_BANNER_TEXT.retrying : SYNC_CHIP_TEXT.retryNow}
                 </Text>
               </Pressable>
@@ -277,7 +278,7 @@ export function SyncSheet({
               testID="sync-sheet-continue"
               accessibilityRole="button"
             >
-              <Text style={[styles.actionText, { color: colors.onPrimary }]}>{SYNC_CHIP_TEXT.continueRound}</Text>
+              <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.actionText, { color: colors.onPrimary }]}>{SYNC_CHIP_TEXT.continueRound}</Text>
             </Pressable>
           </View>
         </View>
@@ -323,7 +324,7 @@ const styles = StyleSheet.create({
   numbers: { flexDirection: 'row', gap: 4 },
   number: { flex: 1, textAlign: 'center', fontSize: 10, fontFamily: FONTS.sans, fontVariant: ['tabular-nums'] },
   cells: { flexDirection: 'row', gap: 4 },
-  cell: { flex: 1, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  cell: { flex: 1, minHeight: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   cellMark: { fontSize: 13, fontFamily: FONTS.sansSemiBold },
   pad: { flex: 1 },
   legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 14, rowGap: 4 },
@@ -331,7 +332,7 @@ const styles = StyleSheet.create({
   noteBox: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
   note: { ...NOTE_LINE, fontFamily: FONTS.sans },
   actions: { flexDirection: 'row', gap: 8 },
-  action: { flex: 1, height: 48, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  action: { flex: 1, minHeight: 48, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   actionText: { fontSize: 14, fontFamily: FONTS.sansSemiBold },
   disabled: { opacity: 0.5 },
 });

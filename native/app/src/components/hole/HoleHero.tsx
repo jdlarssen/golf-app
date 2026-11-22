@@ -13,6 +13,7 @@
 // (`Hole.tsx`). Størrelsen på nummeret er temaets (`hole.numberSize`).
 import { StyleSheet, Text, View } from 'react-native';
 import { FONTS, fraunces, frauncesLine, interLine, useTheme } from '../../theme';
+import { HOLE_BOX_TEXT_CAP, HOLE_TEXT_CAP } from './holeTextCap';
 
 export type HoleHeroProps = {
   holeNumber: number;
@@ -31,7 +32,7 @@ export function HoleHero({ holeNumber, totalHoles, par, strokeIndex, sunlight = 
   // negativ marg gir samme plass i raden uten at «7»-streken kuttes.
   const tracking = size * (sunlight ? 0.03 : 0.02);
   const number = (
-    <Text
+    <Text maxFontSizeMultiplier={HOLE_BOX_TEXT_CAP}
       style={[
         {
           fontFamily: sunlight ? FONTS.holeNumberSun : FONTS.holeNumber,
@@ -58,26 +59,26 @@ export function HoleHero({ holeNumber, totalHoles, par, strokeIndex, sunlight = 
     >
       {sunlight ? (
         <View>
-          <Text style={[styles.kickerSun, { color: colors.text }]}>Hull</Text>
+          <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.kickerSun, { color: colors.text }]}>Hull</Text>
           {number}
         </View>
       ) : (
         <View style={styles.numberGroup}>
           <View>
-            <Text style={[styles.kicker, { color: colors.accentText }]}>Hull</Text>
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.kicker, { color: colors.accentText }]}>Hull</Text>
             {number}
           </View>
-          <Text style={[styles.total, { color: colors.muted }]}>{`av ${totalHoles}`}</Text>
+          <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.total, { color: colors.muted }]}>{`av ${totalHoles}`}</Text>
         </View>
       )}
       <View style={styles.parColumn}>
-        <Text
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP}
           style={[sunlight ? styles.parSun : styles.par, { color: colors.text }]}
           testID="hole-hero-par"
         >
           {`Par ${par}`}
         </Text>
-        <Text
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP}
           style={[sunlight ? styles.indexSun : styles.index, { color: sunlight ? colors.text : colors.muted }]}
           testID="hole-hero-index"
         >
