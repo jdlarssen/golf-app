@@ -180,4 +180,36 @@ describe('fetchRoundHistory', () => {
 
     await expect(subject().fetchRoundHistory(ME)).rejects.toThrow('banene nede');
   });
+
+  // Audit 2026-11-20: Rundedagboka sends every finished round's id in the
+  // URL. PostgREST fails past roughly 200 uuids (#2214), so the strokes are
+  // read in slices of at most 100 rounds.
+  it('reads the strokes in slices of at most 100 rounds and keeps every round', async () => {
+    const { queryStub, routeFrom, stepArgs } = mocks();
+    const ids = Array.from({ length: 250 }, (_, i) => `g${i}`);
+    const players = queryStub({
+      data: ids.map((id) => playerRow(id, '2026-05-01T08:00:00.000Z')),
+      error: null,
+    });
+    const slices = [0, 100, 200].map((start) =>
+      queryStub({
+        data: [{ game_id: `g${start}`, hole_number: 1, strokes: 5, putts: null }],
+        error: null,
+      }),
+    );
+    routeFrom({
+      game_players: [players],
+      scores: slices,
+      course_holes: [queryStub({ data: [HOLE_ONE], error: null })],
+      tee_boxes: [queryStub({ data: [], error: null })],
+    });
+
+    const rounds = await subject().fetchRoundHistory(ME);
+
+    const sent = slices.map((stub) => stepArgs(stub, 'in')[0]?.[1] as string[]);
+    expect(sent.map((slice) => slice.length)).toEqual([100, 100, 50]);
+    expect(sent.flat()).toEqual(ids);
+    expect(rounds).toHaveLength(250);
+    expect(rounds.filter((r) => r.brutto === 5).map((r) => r.gameId).sort()).toEqual(['g0', 'g100', 'g200']);
+  });
 });
