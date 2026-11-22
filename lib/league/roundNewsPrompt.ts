@@ -79,7 +79,9 @@ export function buildRoundNewsFacts(
     total: r.value,
     behindLeader: r.behind,
   }));
-  const roundMetric = summary.pointsBased ? 'stablefordpoeng, flest er best' : 'slag mot par, lavest er best';
+  // «poeng», never «stablefordpoeng» (the owner 23.11): the model repeats the
+  // word it is given.
+  const roundMetric = summary.pointsBased ? 'poeng, flest er best' : 'slag mot par, lavest er best';
 
   return {
     leagueName: summary.leagueName,
@@ -129,6 +131,7 @@ export function buildRoundNewsPrompt(facts: RoundNewsFacts): RoundNewsPrompt {
     'Lik plass betyr delt plass. Si aldri at noen «vant» en delt plass.',
     'Er roundBestShown false, står ikke rundens beste i fakta-objektet. Skriv da ALDRI at noen vant runden, var best eller tok førsteplassen, og kall ingen «rundens beste». Skriv om plassene som står der. Er tableLeaderShown false, gjelder det samme for tabellen: skriv aldri hvem som leder den.',
     'Verdien i «round» er roundMetric. Totalen i «table» er tableMetric, som kan være noe annet enn rundeverdien.',
+    'Skriv «poeng», aldri «stablefordpoeng» eller «stableford».',
     'Navn: bruk navnet NØYAKTIG slik det står i «name», hver eneste gang. Aldri fullt navn, aldri bare fornavn når navnet har en bokstav bak, aldri kallenavn, aldri anførselstegn rundt navn. Du trenger ikke nevne alle.',
     'Noen spillere mangler i fakta-objektet fordi de selv har sagt nei til tekster fra språkmodellen, og noen har ikke spilt runden. Nevn bare spillerne som står der. Du kan si hvor mange som spilte (playedThisRound av playersInLeague), men gjett aldri hvem som mangler eller hvorfor.',
     'Skrivestil: varier setningslengden, noen korte. Sammensatte ord skrives i ett («tredjeplass», ikke «tredje plass»). Høyst én tankestrek i hele saken.',

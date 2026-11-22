@@ -54,8 +54,8 @@ describe('buildRoundNewsFacts', () => {
       roundsPlayed: 1,
       roundsTotal: 10,
       countingRounds: 8,
-      roundMetric: 'stablefordpoeng, flest er best',
-      tableMetric: 'sum av de 8 beste rundene (stablefordpoeng, flest er best)',
+      roundMetric: 'poeng, flest er best',
+      tableMetric: 'sum av de 8 beste rundene (poeng, flest er best)',
       roundBestShown: true,
       tableLeaderShown: true,
       courseName: 'Byneset North',
@@ -112,6 +112,9 @@ describe('buildRoundNewsPrompt', () => {
     expect(system).toContain('NØYAKTIG slik det står i «name»');
     // The evaluator's finding (23.11): without the round best in the facts,
     // «B vant runden» passed every check.
+    // The owner 23.11: «poeng» is enough.
+    expect(system).toContain('aldri «stablefordpoeng»');
+    expect(JSON.stringify(facts)).not.toMatch(/stableford/i);
     expect(system).toContain('Er roundBestShown false');
     expect(system).toContain('tableLeaderShown false');
   });
