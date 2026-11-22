@@ -4252,7 +4252,7 @@
       "juniorsParRemoveLabel": "Remove juniors' override",
       "genderParLadies": "ladies",
       "genderParJuniors": "juniors",
-      "confirmUsedChanges": "{count, plural, one {The course has been used in one round.} other {The course has been used in # rounds.}} Changing par, index, slope or CR can change the results of those rounds. Save anyway?"
+      "confirmUsedChanges": "{count, plural, one {The course is used in one game.} other {The course is used in # games.}} Changing par, index, slope or CR can change the results. Save anyway?"
     }
   },
   "admin": {

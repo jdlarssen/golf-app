@@ -344,7 +344,7 @@ describe('CourseForm — asks before par, index or rating changes on a used cour
 
     expect(confirmSpy).toHaveBeenCalledTimes(1);
     expect(confirmSpy.mock.calls[0][0]).toBe(
-      'Banen er brukt i 2 runder. Endrer du par, indeks, slope eller CR, kan resultatene i disse rundene endre seg. Vil du lagre likevel?',
+      'Banen er brukt i 2 spill. Endrer du par, indeks, slope eller CR, kan det endre resultatene. Vil du lagre likevel?',
     );
   });
 
@@ -364,7 +364,7 @@ describe('CourseForm — asks before par, index or rating changes on a used cour
     fireEvent.click(screen.getByRole('button', { name: 'Lagre' }));
 
     expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(confirmSpy.mock.calls[0][0]).toMatch(/^Banen er brukt i én runde\./);
+    expect(confirmSpy.mock.calls[0][0]).toMatch(/^Banen er brukt i ett spill\./);
   });
 
   it('a «No» to the question keeps the form unsent', () => {

@@ -4252,7 +4252,7 @@
       "juniorsParRemoveLabel": "Fjern junior-overstyring",
       "genderParLadies": "damer",
       "genderParJuniors": "junior",
-      "confirmUsedChanges": "{count, plural, one {Banen er brukt i én runde.} other {Banen er brukt i # runder.}} Endrer du par, indeks, slope eller CR, kan resultatene i disse rundene endre seg. Vil du lagre likevel?"
+      "confirmUsedChanges": "{count, plural, one {Banen er brukt i ett spill.} other {Banen er brukt i # spill.}} Endrer du par, indeks, slope eller CR, kan det endre resultatene. Vil du lagre likevel?"
     }
   },
   "admin": {
