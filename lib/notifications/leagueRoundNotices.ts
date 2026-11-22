@@ -4,7 +4,13 @@ import type { TablesUpdate } from '@/lib/database.types';
 import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
 import { dueNotices, noticeRecipients, type LeagueRoundNoticeKind } from '@/lib/league/roundNotices';
 import { firstName } from '@/lib/firstName';
-import { sendLeagueRoundNotification } from '@/lib/mail/leagueRoundNotification';
+import { getLigaSnapshot } from '@/lib/league/getLigaSnapshot';
+import { generateRoundNews } from '@/lib/league/roundNews';
+import { buildRoundSummary } from '@/lib/league/roundSummary';
+import {
+  sendLeagueRoundNotification,
+  type LeagueRoundMailSummary,
+} from '@/lib/mail/leagueRoundNotification';
 import { chunkIds } from './inboxReads';
 import { notify } from './notify';
 import { usersWithPushDevice } from './push/pushDevices';
@@ -26,6 +32,13 @@ import type { NotificationPayload } from './types';
 // (#2974): 6 of the 11 players in the first league had no device, and one of
 // them never opened Tørny, so nothing reached that player. Players with a
 // device get no mail: the push is theirs.
+//
+// The opening message of a round that has a closed round before it carries a
+// summary of that round in the mail (#2979): the numbers from the league
+// table and a short news story, the same for everyone. Then the mail goes to
+// every player who is away, with a device or not. The summary is in the mail
+// only: a varsel is stored, and a name in a stored payload must be scrubbed
+// when that player deletes the account (0253).
 
 type AdminClient = ReturnType<typeof getAdminClient>;
 
@@ -172,7 +185,9 @@ export async function runLeagueRoundNotices(
       }
     }
 
-    mailed[kind] = await mailPlayersWithoutDevice(admin, away, kind, payload);
+    const summary =
+      kind === 'league_round_open' && away.length > 0 ? await previousRoundSummary(admin, round, now) : null;
+    mailed[kind] = await mailAwayPlayers(admin, away, kind, payload, summary);
   }
   return { sent, mailed };
 }
@@ -180,28 +195,58 @@ export async function runLeagueRoundNotices(
 type MailUser = { id: string; email: string | null; name: string | null; locale: string | null };
 
 /**
- * The message as mail to the players in `away` who have no device to push to
- * (#2974). Returns how many mails went. Best-effort, and it never throws: the
- * varsler have landed and the stamp stands whatever happens here.
- *
- * A failed device read mails everyone away: a player with a device then gets
- * the push and the mail, which is better than a player without one getting
- * nothing. A failed read of the addresses mails nobody, and one failed mail
- * is logged while the rest go.
+ * The round that closed before `round`, for the opening mail (#2979): its
+ * numbers from the league snapshot (the table the league page shows) and the
+ * news story the language model wrote from them. Null when there is no such
+ * round, when nobody played it, or when the table could not be read; a null
+ * story means the numbers go alone. Never throws: the mail then goes as it
+ * did before, without a summary.
  */
-async function mailPlayersWithoutDevice(
+async function previousRoundSummary(
+  admin: AdminClient,
+  round: LeagueRoundSweepRound,
+  now: number,
+): Promise<LeagueRoundMailSummary | null> {
+  try {
+    const snapshot = await getLigaSnapshot(round.league_id);
+    if (!snapshot) return null;
+    const summary = buildRoundSummary(snapshot, round.id, now);
+    if (!summary) return null;
+    return { summary, story: await generateRoundNews(admin, summary, round.label) };
+  } catch (err) {
+    console.error(`[${LOG_PREFIX}] round summary failed, the mail goes without it`, { roundId: round.id, err });
+    return null;
+  }
+}
+
+/**
+ * The message as mail to the players in `away`. Returns how many mails went.
+ * Best-effort, and it never throws: the varsler have landed and the stamp
+ * stands whatever happens here.
+ *
+ * Without a summary the mail is for the players with no device to push to
+ * (#2974). A failed device read mails everyone away: a player with a device
+ * then gets the push and the mail, which is better than a player without one
+ * getting nothing. With a summary (#2979) everyone away gets the mail, so the
+ * whole league reads the same text. A failed read of the addresses mails
+ * nobody, and one failed mail is logged while the rest go.
+ */
+async function mailAwayPlayers(
   admin: AdminClient,
   away: readonly string[],
   kind: LeagueRoundNoticeKind,
   payload: NotificationPayload<'league_round_open'>,
+  summary: LeagueRoundMailSummary | null,
 ): Promise<number> {
   if (away.length === 0) return 0;
   try {
     let withDevice = new Set<string>();
-    try {
-      withDevice = await usersWithPushDevice(admin, away);
-    } catch (err) {
-      console.error(`[${LOG_PREFIX}] ${kind} device read failed, mailing everyone away`, err);
+    if (!summary) {
+      try {
+        withDevice = await usersWithPushDevice(admin, away);
+      } catch (err) {
+        console.error(`[${LOG_PREFIX}] ${kind} device read failed, mailing everyone away`, err);
+      }
     }
     const targets = away.filter((id) => !withDevice.has(id));
     if (targets.length === 0) return 0;
@@ -230,6 +275,7 @@ async function mailPlayersWithoutDevice(
           kind,
           payload,
           locale: user.locale,
+          ...(summary ? { summary } : {}),
         }),
       ),
     );

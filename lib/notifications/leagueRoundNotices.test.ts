@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   createAdminClientMock,
   type QueryOp,
@@ -74,13 +74,23 @@ vi.mock('./notify', () => ({ notify: vi.fn(async () => ({ shouldAlsoSendMail: fa
 vi.mock('@/lib/mail/leagueRoundNotification', () => ({
   sendLeagueRoundNotification: vi.fn(async () => {}),
 }));
+// #2979: the round before. No summary unless a test says so.
+vi.mock('@/lib/league/getLigaSnapshot', () => ({ getLigaSnapshot: vi.fn(async () => null) }));
+vi.mock('@/lib/league/roundSummary', () => ({ buildRoundSummary: vi.fn(() => null) }));
+vi.mock('@/lib/league/roundNews', () => ({ generateRoundNews: vi.fn(async () => null) }));
 
+import { getLigaSnapshot } from '@/lib/league/getLigaSnapshot';
+import { generateRoundNews } from '@/lib/league/roundNews';
+import { buildRoundSummary, type RoundSummary } from '@/lib/league/roundSummary';
 import { sendLeagueRoundNotification } from '@/lib/mail/leagueRoundNotification';
 import { notify } from './notify';
 import { runLeagueRoundNotices, type LeagueRoundSweepRound } from './leagueRoundNotices';
 
 const notifyMock = vi.mocked(notify);
 const mailMock = vi.mocked(sendLeagueRoundNotification);
+const snapshotMock = vi.mocked(getLigaSnapshot);
+const summaryMock = vi.mocked(buildRoundSummary);
+const newsMock = vi.mocked(generateRoundNews);
 const claims = () => fake.ops.filter((op) => op.kind === 'update');
 const deviceReads = () => fake.ops.filter((op) => (DEVICE_TABLES as readonly string[]).includes(op.table));
 
@@ -437,5 +447,101 @@ describe('runLeagueRoundNotices: mail to the players without a device', () => {
     err.mockRestore();
     expect(mailMock).toHaveBeenCalledTimes(2);
     expect(claims()).toHaveLength(1);
+  });
+});
+
+/**
+ * #2979: the opening message of a round with a closed round before it carries
+ * that round's summary in the mail, the same for everyone. Then every player
+ * who is away gets the mail, with a device or not. What the summary holds is
+ * `lib/league/roundSummary.test.ts`; the story is `lib/league/roundNews.test.ts`.
+ */
+describe('runLeagueRoundNotices: the summary of the round before', () => {
+  const SNAPSHOT = { league: { name: 'Vinterligaen' } } as unknown as NonNullable<Awaited<ReturnType<typeof getLigaSnapshot>>>;
+  const SUMMARY = { roundId: 'runde-2', roundLabel: 'Runde 2' } as unknown as RoundSummary;
+  const mailedTo = () => mailMock.mock.calls.map((c) => c[0].to);
+
+  beforeEach(() => {
+    notifyMock.mockImplementation(async () => ({ shouldAlsoSendMail: true, inserted: true }));
+    snapshotMock.mockImplementation(async () => SNAPSHOT);
+    summaryMock.mockImplementation(() => SUMMARY);
+    newsMock.mockImplementation(async () => 'Kari N. tok runden. Runde 3 er åpen nå.');
+    db.devices.apns_tokens = ['kari'];
+  });
+
+  afterEach(() => {
+    notifyMock.mockImplementation(async () => ({ shouldAlsoSendMail: false }));
+    snapshotMock.mockImplementation(async () => null);
+    summaryMock.mockImplementation(() => null);
+    newsMock.mockImplementation(async () => null);
+  });
+
+  it('everyone away gets the mail with the same summary and story, a player with a device too', async () => {
+    await expect(run(round())).resolves.toEqual(
+      result({ league_round_open: 2, league_round_closing: 0 }, { league_round_open: 2 }),
+    );
+
+    expect(snapshotMock).toHaveBeenCalledWith(LEAGUE_ID);
+    expect(summaryMock).toHaveBeenCalledWith(SNAPSHOT, ROUND_ID, NOW);
+    expect(newsMock).toHaveBeenCalledWith(fake.client, SUMMARY, 'Runde 3');
+    expect(newsMock).toHaveBeenCalledTimes(1);
+    // No device read: the summary is for the whole league.
+    expect(deviceReads()).toEqual([]);
+    expect(mailedTo()).toEqual(['kari@example.test', 'lise@example.test']);
+    expect(mailMock.mock.calls.map((c) => c[0].summary)).toEqual([
+      { summary: SUMMARY, story: 'Kari N. tok runden. Runde 3 er åpen nå.' },
+      { summary: SUMMARY, story: 'Kari N. tok runden. Runde 3 er åpen nå.' },
+    ]);
+  });
+
+  it('no story: the numbers go alone', async () => {
+    newsMock.mockImplementation(async () => null);
+    await run(round());
+    expect(mailMock.mock.calls.map((c) => c[0].summary)).toEqual([
+      { summary: SUMMARY, story: null },
+      { summary: SUMMARY, story: null },
+    ]);
+  });
+
+  it('no round before (or nobody played it): the mail is as before, only for the player without a device', async () => {
+    summaryMock.mockImplementation(() => null);
+    await expect(run(round())).resolves.toEqual(
+      result({ league_round_open: 2, league_round_closing: 0 }, { league_round_open: 1 }),
+    );
+    expect(newsMock).not.toHaveBeenCalled();
+    expect(mailedTo()).toEqual(['lise@example.test']);
+    expect('summary' in mailMock.mock.calls[0]![0]).toBe(false);
+  });
+
+  it.each([
+    ['the table cannot be read', () => snapshotMock.mockRejectedValueOnce(new Error('connection reset'))],
+    ['the league is gone', () => snapshotMock.mockResolvedValueOnce(null)],
+    ['the story throws', () => newsMock.mockRejectedValueOnce(new Error('boom'))],
+  ])('%s: the mail goes without a summary, and the stamp is kept', async (_name, arrange) => {
+    arrange();
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await expect(run(round())).resolves.toEqual(
+      result({ league_round_open: 2, league_round_closing: 0 }, { league_round_open: 1 }),
+    );
+    err.mockRestore();
+    expect(mailedTo()).toEqual(['lise@example.test']);
+    expect(claims()).toHaveLength(1);
+  });
+
+  it('the reminder never carries a summary, and the table is not read for it', async () => {
+    const r = round({ opening_notice_sent_at: '2026-10-24T00:10:00Z', closes_at: new Date(NOW + 20 * HOUR).toISOString() });
+    await expect(run(r)).resolves.toEqual(
+      result({ league_round_open: 0, league_round_closing: 2 }, { league_round_closing: 1 }),
+    );
+    expect(snapshotMock).not.toHaveBeenCalled();
+    expect(mailedTo()).toEqual(['lise@example.test']);
+  });
+
+  it('nobody away: the table is not read and the model is not asked', async () => {
+    notifyMock.mockImplementation(async () => ({ shouldAlsoSendMail: false, inserted: true }));
+    await run(round());
+    expect(snapshotMock).not.toHaveBeenCalled();
+    expect(newsMock).not.toHaveBeenCalled();
+    expect(mailMock).not.toHaveBeenCalled();
   });
 });

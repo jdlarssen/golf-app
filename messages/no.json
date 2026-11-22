@@ -7270,7 +7270,11 @@
       "buttonLeague": "Åpne ligaen",
       "buttonLeagueText": "Åpne ligaen: {url}",
       "footer": "Du får denne e-posten fordi du er med i ligaen og ikke har slått på varsler. Slå dem på i <link>profilen din</link>, så får du beskjeden som varsel i stedet.",
-      "footerText": "Du får denne e-posten fordi du er med i ligaen og ikke har slått på varsler. Slå dem på i profilen din ({url}), så får du beskjeden som varsel i stedet."
+      "footerText": "Du får denne e-posten fordi du er med i ligaen og ikke har slått på varsler. Slå dem på i profilen din ({url}), så får du beskjeden som varsel i stedet.",
+      "footerSummary": "Du får denne e-posten fordi du er med i ligaen.",
+      "summaryHeading": "Slik gikk {roundLabel}",
+      "summaryBest": "Rundens beste: {names} ({value}). {played} av {total} spilte runden.",
+      "summaryTable": "Tabellen etter {rounds, plural, one {# runde} other {# runder}}"
     },
     "missingScoreReminder": {
       "subject": "Du mangler slag på hull {holes} i {gameName}",

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { SendArgs, SendResult } from './__tests__/_helpers';
+import type { RoundSummary } from '@/lib/league/roundSummary';
 import type { LeagueRoundNotificationParams } from './leagueRoundNotification';
 
 // Approval-style tests (Type B, see lib/mail/AGENTS.md): snapshot subject +
@@ -47,6 +48,13 @@ function headingHtml(html: string): string {
   return m[1].trim();
 }
 
+// #2979: the summary block starts at its heading and ends with the table.
+function summaryHtml(html: string): string {
+  const m = html.match(/<h3 [^>]*>[\s\S]*?<\/table>/);
+  if (!m) throw new Error('Summary block not found in HTML');
+  return m[0].replace(/\n\s+/g, '\n').trim();
+}
+
 const LEAGUE_ID = '11111111-1111-1111-1111-111111111111';
 const ROUND_ID = '22222222-2222-2222-2222-222222222222';
 
@@ -72,6 +80,50 @@ const baseParams = {
   kind: 'league_round_open',
   payload,
 } satisfies LeagueRoundNotificationParams;
+
+const row = (userId: string, place: number, name: string | null, value: number, behind: number) => ({
+  userId,
+  place,
+  name,
+  value,
+  behind,
+});
+
+const roundOneRows = [
+  row('ole', 1, 'Ole H.', 44, 0),
+  row('lysb', 2, 'Mathias L.', 43, 1),
+  row('atle', 3, 'Atle T.', 42, 2),
+  row('karl', 3, 'Karl', 42, 2),
+  row('phil', 5, 'Philip M.', 36, 8),
+];
+const roundOne: RoundSummary = {
+  leagueName: 'Vinterliga 2026-2027',
+  roundId: 'r1',
+  roundLabel: 'Runde 1',
+  courseName: 'Byneset North',
+  simulator: true,
+  model: 'best_n',
+  pointsBased: true,
+  roundsPlayed: 1,
+  roundsTotal: 10,
+  countingRounds: 8,
+  playersInLeague: 6,
+  playedThisRound: 5,
+  round: roundOneRows,
+  table: roundOneRows,
+};
+const strokeRound: RoundSummary = {
+  ...roundOne,
+  roundLabel: 'Runde 2',
+  model: 'total',
+  pointsBased: false,
+  roundsPlayed: 2,
+  countingRounds: null,
+  round: [row('a', 1, 'Anne A.', -2, 0), row('b', 1, null, -2, 0), row('c', 3, 'Cato C.', 3, 5)],
+  table: [row('c', 1, 'Cato C.', 0, 0), row('a', 2, 'Anne A.', 1, 1), row('b', 3, null, 7, 7)],
+};
+const STORY =
+  'Ti av elleve spillere tok seg gjennom Byneset North på skjermen, og Ole H. kom ut med 44 poeng. Runde 2 er åpen nå.';
 
 describe('sendLeagueRoundNotification', () => {
   it('default: the round is open, with the deadline and a button to the league', async () => {
@@ -256,6 +308,172 @@ describe('sendLeagueRoundNotification', () => {
       Tørny — fire up your golf tournament in a couple of minutes.
       "
     `);
+  });
+
+  // #2979: the round before, under the button. One text for the whole league.
+  it('the opening mail with a summary: the news story, the round best and the table, and a footer without the push hint', async () => {
+    const mail = await send({ ...baseParams, payload: simPayload, summary: { summary: roundOne, story: STORY } });
+    expect(mail.subject).toMatchInlineSnapshot(`"Runde 3 i Vinterliga 2026-2027 er åpen"`);
+    expect(mail.text).toMatchInlineSnapshot(`
+      "Runde 3 i Vinterliga 2026-2027 er åpen
+
+      Hei Per!
+
+      Byneset North, tee 57 – 5745 m. Åpne runden for å se hva du skal stille inn i Trackman. Fristen er søndag 20. des. kl. 23:59.
+
+      Åpne runden: https://tornygolf.no/liga/11111111-1111-1111-1111-111111111111/runde/22222222-2222-2222-2222-222222222222/spill
+
+      Slik gikk Runde 1
+
+      Ti av elleve spillere tok seg gjennom Byneset North på skjermen, og Ole H. kom ut med 44 poeng. Runde 2 er åpen nå.
+
+      Rundens beste: Ole H. (44). 5 av 6 spilte runden.
+
+      Tabellen etter 1 runde
+      1. Ole H. 44
+      2. Mathias L. 43
+      3. Atle T. 42
+      3. Karl 42
+      5. Philip M. 36
+
+      Du får denne e-posten fordi du er med i ligaen.
+
+      Tørny — fyr opp golfturneringen på et par minutter.
+      "
+    `);
+    expect(summaryHtml(mail.html)).toMatchInlineSnapshot(`
+      "<h3 style="font-family:Georgia,'Times New Roman',serif;font-size:18px;line-height:1.2;margin:32px 0 12px;color:#1A2E1F;font-weight:500;border-top:1px solid #E5E0D3;padding-top:24px;">
+      Slik gikk Runde 1
+      </h3>
+      <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+      Ti av elleve spillere tok seg gjennom Byneset North på skjermen, og Ole H. kom ut med 44 poeng. Runde 2 er åpen nå.
+      </p>
+      <p style="font-size:14px;line-height:1.5;margin:0 0 16px;color:#4A3F30;">
+      Rundens beste: Ole H. (44). 5 av 6 spilte runden.
+      </p>
+      <p style="font-size:14px;line-height:1.5;margin:0 0 4px;font-weight:600;">
+      Tabellen etter 1 runde
+      </p>
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="font-size:15px;line-height:1.5;">
+      <tr>
+      <td style="width:32px;padding:2px 0;color:#4A3F30;">1.</td>
+      <td style="padding:2px 0;">Ole H.</td>
+      <td align="right" style="padding:2px 0;font-weight:600;">44</td>
+      </tr>
+      <tr>
+      <td style="width:32px;padding:2px 0;color:#4A3F30;">2.</td>
+      <td style="padding:2px 0;">Mathias L.</td>
+      <td align="right" style="padding:2px 0;font-weight:600;">43</td>
+      </tr>
+      <tr>
+      <td style="width:32px;padding:2px 0;color:#4A3F30;">3.</td>
+      <td style="padding:2px 0;">Atle T.</td>
+      <td align="right" style="padding:2px 0;font-weight:600;">42</td>
+      </tr>
+      <tr>
+      <td style="width:32px;padding:2px 0;color:#4A3F30;">3.</td>
+      <td style="padding:2px 0;">Karl</td>
+      <td align="right" style="padding:2px 0;font-weight:600;">42</td>
+      </tr>
+      <tr>
+      <td style="width:32px;padding:2px 0;color:#4A3F30;">5.</td>
+      <td style="padding:2px 0;">Philip M.</td>
+      <td align="right" style="padding:2px 0;font-weight:600;">36</td>
+      </tr>
+      </table>"
+    `);
+  });
+
+  it('a summary without a story sends the numbers alone', async () => {
+    const mail = await send({ ...baseParams, summary: { summary: roundOne, story: null } });
+    expect(mail.text).toMatchInlineSnapshot(`
+      "Runde 3 i Vinterliga 2026-2027 er åpen
+
+      Hei Per!
+
+      Spill den når det passer deg. Fristen er søndag 20. des. kl. 23:59.
+
+      Åpne ligaen: https://tornygolf.no/liga/11111111-1111-1111-1111-111111111111
+
+      Slik gikk Runde 1
+
+      Rundens beste: Ole H. (44). 5 av 6 spilte runden.
+
+      Tabellen etter 1 runde
+      1. Ole H. 44
+      2. Mathias L. 43
+      3. Atle T. 42
+      3. Karl 42
+      5. Philip M. 36
+
+      Du får denne e-posten fordi du er med i ligaen.
+
+      Tørny — fyr opp golfturneringen på et par minutter.
+      "
+    `);
+  });
+
+  it('a stroke league shows strokes to par, a shared best and a nameless player', async () => {
+    const mail = await send({ ...baseParams, summary: { summary: strokeRound, story: null } });
+    expect(mail.text).toMatchInlineSnapshot(`
+      "Runde 3 i Vinterliga 2026-2027 er åpen
+
+      Hei Per!
+
+      Spill den når det passer deg. Fristen er søndag 20. des. kl. 23:59.
+
+      Åpne ligaen: https://tornygolf.no/liga/11111111-1111-1111-1111-111111111111
+
+      Slik gikk Runde 2
+
+      Rundens beste: Anne A. og En spiller (−2). 5 av 6 spilte runden.
+
+      Tabellen etter 2 runder
+      1. Cato C. E
+      2. Anne A. +1
+      3. En spiller +7
+
+      Du får denne e-posten fordi du er med i ligaen.
+
+      Tørny — fyr opp golfturneringen på et par minutter.
+      "
+    `);
+  });
+
+  it('English: the labels follow the recipient, the story stays Norwegian', async () => {
+    const mail = await send({ ...baseParams, locale: 'en', summary: { summary: roundOne, story: STORY } });
+    expect(mail.text).toMatchInlineSnapshot(`
+      "Runde 3 in Vinterliga 2026-2027 is open
+
+      Hi Per!
+
+      Play it when it suits you. The deadline is Sunday, Dec 20 at 23:59.
+
+      Open the league: https://tornygolf.no/en/liga/11111111-1111-1111-1111-111111111111
+
+      How Runde 1 went
+
+      Ti av elleve spillere tok seg gjennom Byneset North på skjermen, og Ole H. kom ut med 44 poeng. Runde 2 er åpen nå.
+
+      Best in the round: Ole H. (44). 5 of 6 played the round.
+
+      The table after 1 round
+      1. Ole H. 44
+      2. Mathias L. 43
+      3. Atle T. 42
+      3. Karl 42
+      5. Philip M. 36
+
+      You're receiving this email because you're in the league.
+
+      Tørny — fire up your golf tournament in a couple of minutes.
+      "
+    `);
+  });
+
+  it('a story with markup is escaped', async () => {
+    const mail = await send({ ...baseParams, summary: { summary: roundOne, story: 'Ole H. <b>vant</b> & lo.' } });
+    expect(summaryHtml(mail.html)).toContain('Ole H. &lt;b&gt;vant&lt;/b&gt; &amp; lo.');
   });
 
   it('a league name with markup is escaped in the heading', async () => {
