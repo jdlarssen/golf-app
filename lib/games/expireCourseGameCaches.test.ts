@@ -34,6 +34,10 @@ describe('expireCourseGameCaches', () => {
     expect(expireGameCacheMock.mock.calls).toEqual([['game-a'], ['game-b']]);
     const read = fake.ops.find((op) => op.table === 'games');
     expect(read?.filters).toContainEqual(expect.objectContaining({ column: 'course_id', value: 'course-1' }));
+    // Finished rounds are frozen; leaving them out keeps the read small.
+    expect(read?.filters).toContainEqual(
+      expect.objectContaining({ op: 'in', column: 'status', value: ['draft', 'scheduled', 'active'] }),
+    );
   });
 
   it('a failed read is logged and never stops the save that already landed', async () => {

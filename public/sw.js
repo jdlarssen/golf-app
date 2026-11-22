@@ -203,22 +203,46 @@ self.addEventListener('fetch', (event) => {
 
   // Cache-first for hashed static assets (/_next/*).
   if (url.pathname.startsWith('/_next/')) {
+    // Work that may run after the response: re-stamping a hit as recent.
+    let afterServe = null;
     const served = (async () => {
       const cache = await caches.open(RUNTIME_CACHE);
       const cached = await cache.match(request);
-      if (cached) return cached;
+      if (cached) {
+        // The trim below drops the oldest entries first (insertion order), so
+        // an asset still in use moves to the end on every hit. Otherwise a
+        // chunk that survives many deploys unchanged would be dropped while
+        // the page still loads it.
+        const copy = cached.clone();
+        afterServe = cache
+          .delete(request)
+          .then(() => cache.put(request, copy))
+          .catch(() => {});
+        return cached;
+      }
+      let fresh;
       try {
-        const fresh = await fetch(request);
-        await cache.put(request, fresh.clone());
-        return fresh;
+        fresh = await fetch(request);
       } catch {
         return Response.error();
       }
+      // A failed cache write (quota, a 206 or `Vary: *` response) must not
+      // turn a good network response into an error.
+      try {
+        await cache.put(request, fresh.clone());
+      } catch {
+        // Best effort: served uncached.
+      }
+      return fresh;
     })();
     event.respondWith(served);
     // Pruned once the asset is stored; waitUntil keeps the worker alive.
     if (typeof event.waitUntil === 'function') {
-      event.waitUntil(served.then(() => trimStaticAssets()));
+      event.waitUntil(
+        served
+          .then(() => afterServe)
+          .then(() => trimStaticAssets()),
+      );
     }
   }
 });
