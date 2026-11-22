@@ -208,6 +208,11 @@ const ALLOWED: Record<string, Allowed> = {
     receivers: ['admin'],
     reason: '(c) serverside utsending',
   },
+  'lib/notifications/leagueRoundNotices.ts': {
+    receivers: ['admin'],
+    reason:
+      '(c) serverside utsending (#2974): rundevarselet på e-post til spillere uten enhet med push; adressen brukes bare som mottaker',
+  },
   'lib/league/setFlightMarkerCore.ts': {
     receivers: ['admin'],
     reason: '(c) serverside utsending av overleveringsvarselet til flightkameraten (#2814)',
