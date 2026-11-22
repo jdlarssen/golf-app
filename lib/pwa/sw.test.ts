@@ -41,7 +41,10 @@ function bootSw() {
   const listeners: Record<string, (event: unknown) => unknown> = {};
   const store = new Map<string, FakeResponse>();
 
+  // Like the Cache API: a put removes a matching entry and appends the new
+  // one, so the key moves to the end of the insertion order.
   const put = vi.fn(async (req: { url: string }, res: FakeResponse) => {
+    store.delete(absolute(req));
     store.set(absolute(req), res);
   });
   const addAll = vi.fn(async (urls: string[]) => {
