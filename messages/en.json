@@ -7228,7 +7228,7 @@
       "bodyText": "Unfortunately, your request to join {gameName} was not approved.",
       "reasonPrefix": "Reason: \"{reason}\"",
       "closing": "Maybe next time. Good luck on the course anyway.",
-      "footer": "Questions? Contact the organiser directly — Tørny does not relay messages on behalf of admins."
+      "footer": "Questions? Contact the organiser directly. Tørny does not relay messages."
     },
     "registrationRequest": {
       "subject": "New sign-up for {gameName}",
