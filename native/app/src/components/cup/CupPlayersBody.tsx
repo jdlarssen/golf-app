@@ -3,12 +3,13 @@
 // `cup_signup` åpner. Kandidatene er serverens (`getCupCandidatePlayers`), og det er
 // serveren som sjekker dem. En startet cup har en låst liste.
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import type { AppCupEnrolled, AppCupParticipantsView } from '../../../../../lib/cup/appCupSetupView';
 import { PICKER_VISIBLE_ROWS, pickerRows } from '../../../../../lib/league/pickerRows';
 import { addCupParticipant, fetchCupParticipants, setCupParticipantRole } from '../../data/cupSetup';
 import { ROLE_TEXT } from '../../lib/cupLineupCopy';
+import { useLatestLoad } from '../../lib/useLatestLoad';
 import {
   hcpLine,
   participantFailureText,
@@ -53,12 +54,11 @@ export function CupPlayersBody({
   const [search, setSearch] = useState('');
   const [showAll, setShowAll] = useState(false);
 
-  // Bare det sist startede kallet får skrive: et eldre svar kan komme etter et nyere.
-  const loadSeq = useRef(0);
+  const latest = useLatestLoad();
   const load = useCallback(async () => {
-    const seq = ++loadSeq.current;
+    const token = latest.begin();
     const result = await fetchCupParticipants(cupId);
-    if (seq !== loadSeq.current) return;
+    if (!latest.isCurrent(token)) return;
     if (result.ok) {
       setView(result.view);
       setFailure(null);
@@ -66,7 +66,7 @@ export function CupPlayersBody({
       if (result.reason === 'not_found' || result.reason === 'not_manager') setView(null);
       setFailure(result.reason);
     }
-  }, [cupId]);
+  }, [cupId, latest]);
 
   useFocusEffect(
     useCallback(() => {

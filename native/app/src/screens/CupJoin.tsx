@@ -17,6 +17,7 @@ import type { AppCupJoinView } from '../../../../lib/cup/appCupSetupView';
 import { WebLinkButton } from '../components/WebLinkButton';
 import { fetchCupJoin, joinCup, leaveCup } from '../data/cupSetup';
 import { openOrReturn } from '../lib/backTo';
+import { useLatestLoad } from '../lib/useLatestLoad';
 import {
   JOIN_TEXT,
   SETUP_APP_TEXT,
@@ -41,15 +42,18 @@ export function CupJoin({ route, navigation }: ScreenProps<'CupJoin'>) {
   // Knappen er deaktivert først når `busy` er tegnet. Refen stopper trykk nummer to før det.
   const sending = useRef(false);
 
+  const latest = useLatestLoad();
   const load = useCallback(async () => {
+    const token = latest.begin();
     const result = await fetchCupJoin(shortId);
+    if (!latest.isCurrent(token)) return;
     if (result.ok) {
       setView(result.view);
       setFailure(null);
     } else {
       setFailure(result.reason);
     }
-  }, [shortId]);
+  }, [shortId, latest]);
 
   useFocusEffect(
     useCallback(() => {

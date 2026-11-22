@@ -22,6 +22,7 @@ import { StatusPill } from '../components/league/LeaguePills';
 import { fetchCup, type CupLoadFailure } from '../data/cup';
 import { startCup } from '../data/cupSetup';
 import { openOrReturn } from '../lib/backTo';
+import { useLatestLoad } from '../lib/useLatestLoad';
 import {
   CUP_APP_TEXT,
   CUP_TEXT,
@@ -64,13 +65,12 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
   // Knappen er deaktivert først når `starting` er tegnet. Refen stopper trykk nummer to før det.
   const sending = useRef(false);
 
-  // Bare det sist startede kallet får skrive: et eldre svar kan komme etter et nyere.
-  const loadSeq = useRef(0);
+  const latest = useLatestLoad();
   const load = useCallback(async () => {
-    const seq = ++loadSeq.current;
+    const token = latest.begin();
     setLoading(true);
     const result = await fetchCup(cupId);
-    if (seq !== loadSeq.current) return;
+    if (!latest.isCurrent(token)) return;
     if (result.ok) {
       setView(result.view);
       setFailure(null);
@@ -81,7 +81,7 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
     }
     setLoading(false);
     setPulling(false);
-  }, [cupId]);
+  }, [cupId, latest]);
 
   useFocusEffect(
     useCallback(() => {

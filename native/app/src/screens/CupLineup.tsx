@@ -24,6 +24,7 @@ import {
 import { openOrReturn } from '../lib/backTo';
 import { LINEUP_TEXT, lineupFailureText, lineupLoadFailureText } from '../lib/cupLineupCopy';
 import { SETUP_APP_TEXT, setupLoadFailureText } from '../lib/cupSetupCopy';
+import { useLatestLoad } from '../lib/useLatestLoad';
 import type { ScreenProps } from '../navigation';
 import { FONTS, interLine, TAP, useTheme } from '../theme';
 
@@ -42,8 +43,11 @@ export function CupLineup({ route, navigation }: ScreenProps<'CupLineup'>) {
   // Knappen er deaktivert først når `busy` er tegnet. Refen stopper trykk nummer to før det.
   const sending = useRef(false);
 
+  const latest = useLatestLoad();
   const load = useCallback(async () => {
+    const token = latest.begin();
     const result = await fetchCupLineup(cupId);
+    if (!latest.isCurrent(token)) return;
     if (result.ok) {
       setView(result.view);
       setFailure(null);
@@ -51,7 +55,7 @@ export function CupLineup({ route, navigation }: ScreenProps<'CupLineup'>) {
       if (result.reason === 'not_found' || result.reason === 'not_allowed') setView(null);
       setFailure(result.reason);
     }
-  }, [cupId]);
+  }, [cupId, latest]);
 
   useFocusEffect(
     useCallback(() => {

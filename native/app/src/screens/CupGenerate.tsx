@@ -37,6 +37,7 @@ import { backTo, openOrReturn } from '../lib/backTo';
 import { GENERATE_TEXT, generateFailureText } from '../lib/cupGenerateCopy';
 import { SETUP_APP_TEXT, setupLoadFailureText } from '../lib/cupSetupCopy';
 import { formatMessage } from '../lib/kavalkadeCopy';
+import { useLatestLoad } from '../lib/useLatestLoad';
 import type { ScreenProps } from '../navigation';
 import { FONTS, interLine, TAP, useTheme } from '../theme';
 
@@ -68,12 +69,11 @@ export function CupGenerate({ route, navigation }: ScreenProps<'CupGenerate'>) {
   // lesing ville vist dem som om de alltid var der. Da ville neste forsøk laget alle på nytt.
   const sentFrom = useRef<number | null>(null);
 
-  // Bare det sist startede kallet får skrive: et eldre svar kan komme etter et nyere.
-  const loadSeq = useRef(0);
+  const latest = useLatestLoad();
   const load = useCallback(async () => {
-    const seq = ++loadSeq.current;
+    const token = latest.begin();
     const result = await fetchCupGenerate(cupId);
-    if (seq !== loadSeq.current) return;
+    if (!latest.isCurrent(token)) return;
     if (result.ok) {
       setView(result.view);
       setFailure(null);
@@ -81,7 +81,7 @@ export function CupGenerate({ route, navigation }: ScreenProps<'CupGenerate'>) {
       if (result.reason === 'not_found' || result.reason === 'not_manager') setView(null);
       setFailure(result.reason);
     }
-  }, [cupId]);
+  }, [cupId, latest]);
 
   const toCup = useCallback(
     (notice: CupArrival) => {

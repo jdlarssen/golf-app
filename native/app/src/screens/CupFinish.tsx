@@ -12,6 +12,7 @@ import { fetchCupManage, finishCup, finishCupMatch } from '../data/cupManage';
 import { backTo, openOrReturn } from '../lib/backTo';
 import { useLeaveWhenFocused } from '../lib/useLeaveWhenFocused';
 import { CUP_TEXT, matchesSummary } from '../lib/cupCopy';
+import { useLatestLoad } from '../lib/useLatestLoad';
 import {
   FINISH_APP_TEXT,
   FINISH_TEXT,
@@ -41,12 +42,11 @@ export function CupFinish({ route, navigation }: ScreenProps<'CupFinish'>) {
   const [error, setError] = useState<string | null>(null);
   const [matchDone, setMatchDone] = useState(false);
 
-  // Bare det sist startede kallet får skrive: et eldre svar kan komme etter et nyere.
-  const loadSeq = useRef(0);
+  const latest = useLatestLoad();
   const load = useCallback(async () => {
-    const seq = ++loadSeq.current;
+    const token = latest.begin();
     const result = await fetchCupManage(cupId);
-    if (seq !== loadSeq.current) return result.ok ? result.view : null;
+    if (!latest.isCurrent(token)) return result.ok ? result.view : null;
     if (result.ok) {
       setView(result.view);
       setFailure(null);
@@ -55,7 +55,7 @@ export function CupFinish({ route, navigation }: ScreenProps<'CupFinish'>) {
     if (result.reason === 'not_found' || result.reason === 'not_manager') setView(null);
     setFailure(result.reason);
     return null;
-  }, [cupId]);
+  }, [cupId, latest]);
 
   useFocusEffect(
     useCallback(() => {

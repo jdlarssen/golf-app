@@ -286,3 +286,17 @@ describe('uten nett', () => {
     expect(screen.queryByTestId('cup-finish-retry')).toBeNull();
   });
 });
+
+describe('eldre svar', () => {
+  it('et eldre svar som kommer etter et nyere, overskriver ikke skjermen', async () => {
+    let releaseOld: (load: Load) => void = () => {};
+    const { fetchCupManage } = jest.requireMock('../data/cupManage') as { fetchCupManage: jest.Mock };
+    fetchCupManage.mockImplementationOnce(() => new Promise((r) => (releaseOld = r)));
+    answer({ ok: true, view: room({ progress: { played: 5, total: 8 }, activeMatches: [levert] }) });
+    await renderFinish();
+    await refocus();
+    expect(screen.getByTestId('cup-finish-progress')).toHaveTextContent('5 av 8 matcher spilt');
+    await act(async () => releaseOld({ ok: true, view: room({ progress: { played: 3, total: 8 }, activeMatches: [levert] }) }));
+    expect(screen.getByTestId('cup-finish-progress')).toHaveTextContent('5 av 8 matcher spilt');
+  });
+});

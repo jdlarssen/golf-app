@@ -23,6 +23,7 @@ import {
 import { backTo } from '../lib/backTo';
 import { useLeaveWhenFocused } from '../lib/useLeaveWhenFocused';
 import { CUP_TEXT } from '../lib/cupCopy';
+import { useLatestLoad } from '../lib/useLatestLoad';
 import {
   MANAGE_APP_TEXT,
   WITHDRAW_TEXT,
@@ -46,8 +47,11 @@ export function CupWithdraw({ route, navigation }: ScreenProps<'CupWithdraw'>) {
   const leaveWhenFocused = useLeaveWhenFocused(navigation);
   const [error, setError] = useState<string | null>(null);
 
+  const latest = useLatestLoad();
   const load = useCallback(async () => {
+    const token = latest.begin();
     const result = await fetchCupWithdrawal(cupId, userId);
+    if (!latest.isCurrent(token)) return;
     if (result.ok) {
       setView(result.view);
       setFailure(null);
@@ -62,7 +66,7 @@ export function CupWithdraw({ route, navigation }: ScreenProps<'CupWithdraw'>) {
     } else {
       setFailure(result.reason);
     }
-  }, [cupId, userId]);
+  }, [cupId, userId, latest]);
 
   useFocusEffect(
     useCallback(() => {

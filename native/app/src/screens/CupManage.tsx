@@ -18,6 +18,7 @@ import { ChevronIcon } from '../components/icons/Icons';
 import { fetchCupManage, setCupPlayOn } from '../data/cupManage';
 import { openOrReturn } from '../lib/backTo';
 import { CUP_TEXT } from '../lib/cupCopy';
+import { useLatestLoad } from '../lib/useLatestLoad';
 import {
   FINISH_TEXT,
   MANAGE_APP_TEXT,
@@ -61,8 +62,11 @@ function CupManageRoom({ route, navigation }: ScreenProps<'CupManage'>) {
     [navigation],
   );
 
+  const latest = useLatestLoad();
   const load = useCallback(async () => {
+    const token = latest.begin();
     const result = await fetchCupManage(cupId);
+    if (!latest.isCurrent(token)) return;
     if (result.ok) {
       setView(result.view);
       setFailure(null);
@@ -72,7 +76,7 @@ function CupManageRoom({ route, navigation }: ScreenProps<'CupManage'>) {
       setFailure(result.reason);
     }
     setPulling(false);
-  }, [cupId]);
+  }, [cupId, latest]);
 
   useFocusEffect(
     useCallback(() => {
