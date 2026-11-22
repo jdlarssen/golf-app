@@ -119,6 +119,20 @@ export type RunFinishPipelineInput = {
   /** Log prefix. `'endGame'` / `'endGameWithSideWinners'` from the web,
    *  `'finishPipeline'` from the sweep. */
   logContext?: string;
+  /**
+   * Audit 2026-11-20: where the SLOW, best-effort part of the tail runs
+   * (achievement notices, the AI round report, the audit row, the
+   * «Resultatet er klart» notices and mail, the weekly repeat). The web finish
+   * passes Next's `after()`, so the server action returns right after the
+   * persistence steps: Next flushes `revalidateTag` only when the action
+   * returns, and until then every board reads the cached «active» game.
+   * Without it (the sweep) the whole tail runs before this returns, as before.
+   * A returned promise is awaited (the fallback when `after()` is unavailable).
+   */
+  defer?: (task: () => Promise<void>) => void | Promise<void>;
+  /** Called when the slow part is done (or failed), e.g. to expire the game
+   *  cache again for what it wrote (the round report). */
+  onTailDone?: () => void;
 };
 
 export type RunFinishPipelineResult = {
@@ -194,15 +208,7 @@ export async function runFinishPipeline(
   supabase: SupabaseClient<Database>,
   input: RunFinishPipelineInput,
 ): Promise<RunFinishPipelineResult> {
-  const {
-    game,
-    players,
-    endedAt,
-    actor,
-    suppressPerGameNotifications = false,
-    auditExtras,
-    logContext = 'finishPipeline',
-  } = input;
+  const { game, endedAt, logContext = 'finishPipeline' } = input;
 
   // Claim before any work — see the file header. 0 rows back = someone else
   // owns this finish.
@@ -232,6 +238,35 @@ export async function runFinishPipeline(
   // #941: fryser WHS score-differensial per spiller. Best-effort — se
   // persistScoreDifferentials for fullstendig begrunnelse.
   await persistScoreDifferentials(game.id);
+
+  // Audit 2026-11-20: everything below is slow and best-effort. With `defer`
+  // it runs after the response, so the finish returns (and its cache expiry
+  // reaches the boards) without waiting for the AI report and the mail.
+  const slowTail = async (): Promise<void> => {
+    try {
+      await runSlowTail(input);
+    } catch (e) {
+      console.error(`[${logContext}] finish tail threw`, e);
+    } finally {
+      input.onTailDone?.();
+    }
+  };
+  if (input.defer) await input.defer(slowTail);
+  else await slowTail();
+
+  return { ran: true };
+}
+
+/** The slow, best-effort part of the tail (see `defer`), in its documented order. */
+async function runSlowTail(input: RunFinishPipelineInput): Promise<void> {
+  const {
+    game,
+    players,
+    actor,
+    suppressPerGameNotifications = false,
+    auditExtras,
+    logContext = 'finishPipeline',
+  } = input;
 
   // #947: best-effort bragd-varsel til spillere som låste opp et øyeblikk
   // (hole-in-one/eagle/turkey/snowman) i runden. Feiler aldri ut avslutningen.
@@ -325,8 +360,6 @@ export async function runFinishPipeline(
   } catch (e) {
     console.error(`[${logContext}] weekly repeat threw`, e);
   }
-
-  return { ran: true };
 }
 
 /**
