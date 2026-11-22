@@ -239,6 +239,16 @@ export async function deleteCourse(courseId: string) {
   } catch (err) {
     console.error('[deleteCourse] delete failed', { courseId, error: err });
   }
+  if (!deleted) {
+    // 0 rows can also mean the course was already gone (a double tap, another
+    // tab). Then the admin's wish is met: say deleted, not failed.
+    const { data: stillThere, error: checkError } = await supabase
+      .from('courses')
+      .select('id')
+      .eq('id', courseId)
+      .maybeSingle();
+    deleted = !checkError && !stillThere;
+  }
   if (!deleted) redirect({ href: '/admin/courses?error=delete_failed', locale });
 
   // #1045: a deleted course must drop off `/baner` immediately, not after the

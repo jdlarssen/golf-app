@@ -279,6 +279,31 @@ describe('sw.js — static asset pruning', () => {
     expect(keys).toContain(`${ORIGIN}/offline-en.html`);
   });
 
+  it('keeps an asset that is still in use: a hit moves it to the back of the queue', async () => {
+    const sw = bootSw();
+    sw.online('chunk');
+    await sw.asset('/_next/static/chunks/long-lived.js');
+    for (let i = 0; i < 199; i++) await sw.asset(`/_next/static/chunks/a-${i}.js`);
+    // The page loads the long-lived chunk again (a cache hit)…
+    await sw.asset('/_next/static/chunks/long-lived.js');
+    // …and a new deploy adds more chunks than the cap allows.
+    for (let i = 0; i < 20; i++) await sw.asset(`/_next/static/chunks/b-${i}.js`);
+
+    const keys = [...sw.store.keys()];
+    expect(keys).toContain(`${ORIGIN}/_next/static/chunks/long-lived.js`);
+    expect(keys).not.toContain(`${ORIGIN}/_next/static/chunks/a-0.js`);
+  });
+
+  it('a failed cache write still serves the network response', async () => {
+    const sw = bootSw();
+    sw.online('fresh-chunk');
+    sw.put.mockRejectedValueOnce(new Error('QuotaExceededError'));
+
+    const res = await sw.asset('/_next/static/chunks/big.js');
+
+    expect(res.tag).toBe('fresh-chunk');
+  });
+
   it('still serves a cached asset without touching the network', async () => {
     const sw = bootSw();
     sw.seed('/_next/static/chunks/a.js', 'cached-a');

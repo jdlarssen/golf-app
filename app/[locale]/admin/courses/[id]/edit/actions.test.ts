@@ -500,11 +500,13 @@ describe('row checks and game caches (audit 2026-11-20)', () => {
     expect(lastRedirect()).toBe(`/admin/courses/${courseId}/edit?error=db_course`);
   });
 
-  it('deleteCourse: a delete that removed 0 rows says delete_failed, not deleted', async () => {
+  it('deleteCourse: a delete that removed 0 rows while the course is still there says delete_failed', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, email: 'admin@example.com', name: 'Jørgen' }, error: null },
       { data: [], error: null },
       { data: [], error: null },
+      // follow-up read: the course still exists (RLS refused the delete)
+      { data: { id: courseId }, error: null },
     ]);
     setupAdminAuth();
 
@@ -513,6 +515,24 @@ describe('row checks and game caches (audit 2026-11-20)', () => {
 
     expect(lastRedirect()).toBe('/admin/courses?error=delete_failed');
     expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('deleteCourse — already gone', () => {
+  it('a delete that removed 0 rows because the course was already gone says deleted', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, email: 'admin@example.com', name: 'Jørgen' }, error: null },
+      { data: [], error: null },
+      { data: [], error: null },
+      // follow-up read: no course
+      { data: null, error: null },
+    ]);
+    setupAdminAuth();
+
+    const { deleteCourse } = await import('./actions');
+    await expect(deleteCourse(courseId)).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/admin/courses?status=deleted');
   });
 });
 
