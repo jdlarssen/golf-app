@@ -14,7 +14,10 @@ import { CreateCourse } from './CreateCourse';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 // Sperra mens lagringen pågår er kjørt i ekte navigator: `CreateGame.navigator.test.tsx`.
-jest.mock('@react-navigation/native', () => ({ usePreventRemove: jest.fn() }));
+jest.mock('@react-navigation/native', () => ({
+  usePreventRemove: jest.fn(),
+  useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
+}));
 jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 jest.mock('../data/syncTriggers', () => ({ isDeviceOnline: jest.fn(() => true) }));
 jest.mock('../data/createCourse', () => ({ createCourse: jest.fn() }));

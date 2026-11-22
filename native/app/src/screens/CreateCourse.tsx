@@ -24,6 +24,7 @@ import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../componen
 import { createCourse } from '../data/createCourse';
 import { isDeviceOnline } from '../data/syncTriggers';
 import { backTo } from '../lib/backTo';
+import { useLeaveWhenFocused } from '../lib/useLeaveWhenFocused';
 import { COURSE_TEXT, describeCourseProblem, describeCourseSaveFailure } from '../lib/courseCopy';
 import { courseDraftProblem, emptyCourseDraft, parseCourseDraft } from '../lib/courseDraft';
 import type { ScreenProps } from '../navigation';
@@ -46,29 +47,40 @@ export function CreateCourse({ navigation, route }: ScreenProps<'CreateCourse'>)
   // lagrede banen ble ikke valgt. Settes rett før `backTo`, så sperra slipper den
   // gjennom, samme mønster som `EndGame.tsx`.
   const leavingRef = useRef(false);
+  // `busy` is drawn one render late; the ref stops a second tap before that.
+  const saving = useRef(false);
+  const leaveWhenFocused = useLeaveWhenFocused(navigation);
   usePreventRemove(busy, ({ data }) => {
     if (leavingRef.current) navigation.dispatch(data.action);
   });
 
   async function save() {
     // Dobbelttrykk-låsen står først: kallet er ikke idempotent.
-    if (blocked) return;
+    if (blocked || saving.current) return;
     if (!isDeviceOnline()) {
       setFailure(describeCourseSaveFailure('network'));
       return;
     }
+    saving.current = true;
     setBusy(true);
     setFailure(null);
     try {
       const result = await createCourse(parseCourseDraft(draft));
       if (result.ok) {
-        leavingRef.current = true;
-        backTo(navigation, 'CreateGame', { createdCourseId: result.courseId });
+        // A screen opened on top (a push notification) stays in front; the
+        // wizard gets the course when this screen is in front again.
+        const createdCourseId = result.courseId;
+        leaveWhenFocused(() => {
+          leavingRef.current = true;
+          backTo(navigation, 'CreateGame', { createdCourseId });
+        });
         return;
       }
       setFailure(describeCourseSaveFailure(result.code));
     } catch {
       setFailure(describeCourseSaveFailure('db'));
+    } finally {
+      saving.current = false;
     }
     // Bevisst utenfor `finally`: på suksess er skjermen borte.
     setBusy(false);

@@ -129,6 +129,7 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
   // #2381: tilbake fra vennesiden henter lista på nytt (godta og fjern skjer
   // der). Første visning hentes alt i effekten over.
   const focusedBefore = useRef(false);
+  const acting = useRef(false);
   useFocusEffect(
     useCallback(() => {
       if (!focusedBefore.current) {
@@ -164,10 +165,14 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
       lineFor: (status: S) => StatusLine | null,
       onStatus?: (status: S) => void,
     ) => {
+      // `busy` is drawn one render late; the ref stops a second tap before that.
+      if (acting.current) return;
+      acting.current = true;
       setBusy(key);
       setLine(null);
       setShareNote(null);
       const result = await action();
+      acting.current = false;
       setBusy(null);
       if (!result.ok) {
         setLine({ text: friendsFailureLine(result.reason), tone: 'error' });

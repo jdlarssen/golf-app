@@ -114,6 +114,7 @@ import type { MarkerOptionsResponse } from '../../../../lib/league/appLeagueView
 import { drainQueue } from '../data/syncWorker';
 import { describeSubmitFailure } from '../lib/actionFeedback';
 import { backTo, openOrReturn } from '../lib/backTo';
+import { useLeaveWhenFocused } from '../lib/useLeaveWhenFocused';
 import {
   bridgeHole,
   gameHoleNumbers,
@@ -212,6 +213,11 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   const [noticeText, setNoticeText] = useState<string | null>(null);
   // #2299: «Se over og lever scorekortet» ruller hit, til toppen av scorekortet.
   const scrollRef = useRef<ScrollView>(null);
+  // A card on its way to the server: a second tap (or a second «Lever likevel»
+  // dialog) does not send it again.
+  const submitting = useRef(false);
+  const confirming = useRef(false);
+  const leaveWhenFocused = useLeaveWhenFocused(navigation);
   const scorecardTop = useRef(0);
   // Hvor rulla står og hvor leverknappen er, til bunnlinja. Bare om linja
   // står, er state, og den settes bare når svaret snur (siste svar i en ref).
@@ -634,6 +640,17 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   };
 
   const doSubmit = async () => {
+    // `busy` is drawn one render late; the ref stops a second tap before that.
+    if (submitting.current) return;
+    submitting.current = true;
+    try {
+      await sendCard();
+    } finally {
+      submitting.current = false;
+    }
+  };
+
+  const sendCard = async () => {
     setBusy(true);
     setErrorText(null);
     setNoticeText(null);
@@ -666,7 +683,8 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
         void refresh();
         return;
       }
-      backTo(navigation, 'GameHome', { gameId });
+      // A screen opened on top while the card was on its way stays in front.
+      leaveWhenFocused(() => backTo(navigation, 'GameHome', { gameId }));
       return;
     }
     setBusy(false);
@@ -697,11 +715,17 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     queueCounts && queueCounts.strokes === 0 ? TEE_SHOTS_APP_TEXT.syncingTeeShots : 'Synker slag …';
 
   const onSubmitPress = () => {
-    if (queueBlocked || busy || teeShotLock || markerBlocked) return;
+    if (queueBlocked || busy || submitting.current || confirming.current) return;
+    if (teeShotLock || markerBlocked) return;
     if (missing === 0) {
       void doSubmit();
       return;
     }
+    // A second fast tap would open a second dialog.
+    confirming.current = true;
+    const closed = () => {
+      confirming.current = false;
+    };
     // Siste setning er webbens `game.submit.confirmBase` (#2220): bare
     // arrangøren kan åpne et levert kort igjen.
     Alert.alert(
@@ -710,14 +734,21 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
         ? `${missing} hull står uten slag. De blir stående som ikke spilt for hele laget. Dette kan bare angres av arrangøren.`
         : `${missing} hull står uten slag. De blir stående som ikke spilt. Dette kan bare angres av arrangøren.`,
       [
-        { text: 'Avbryt', style: 'cancel' },
-        { text: 'Lever likevel', onPress: () => void doSubmit() },
+        { text: 'Avbryt', style: 'cancel', onPress: closed },
+        {
+          text: 'Lever likevel',
+          onPress: () => {
+            closed();
+            void doSubmit();
+          },
+        },
       ],
+      { onDismiss: closed },
     );
   };
 
   const onDeliverForPress = () => {
-    if (queueBlocked || busy || teeShotLock || markerBlocked) return;
+    if (queueBlocked || busy || submitting.current || teeShotLock || markerBlocked) return;
     void doSubmit();
   };
 

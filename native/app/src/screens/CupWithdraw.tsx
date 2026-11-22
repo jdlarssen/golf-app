@@ -9,7 +9,7 @@
 // Konsekvensene regnes av samme regelmodul som skrivingen, på serveren. Husregelen
 // for destruktive flyter: egen skjerm, aldri en dialog.
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppCupWithdrawalView } from '../../../../lib/cup/appCupManageView';
@@ -21,6 +21,7 @@ import {
   withdrawSelfFromCup,
 } from '../data/cupManage';
 import { backTo } from '../lib/backTo';
+import { useLeaveWhenFocused } from '../lib/useLeaveWhenFocused';
 import { CUP_TEXT } from '../lib/cupCopy';
 import {
   MANAGE_APP_TEXT,
@@ -41,6 +42,8 @@ export function CupWithdraw({ route, navigation }: ScreenProps<'CupWithdraw'>) {
   const [failure, setFailure] = useState<string | null>(null);
   const [choices, setChoices] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
+  const sending = useRef(false);
+  const leaveWhenFocused = useLeaveWhenFocused(navigation);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -73,11 +76,15 @@ export function CupWithdraw({ route, navigation }: ScreenProps<'CupWithdraw'>) {
   };
 
   const run = async (action: () => ReturnType<typeof withdrawSelfFromCup>, done: (partial: boolean) => void) => {
+    // `busy` is drawn one render late; the ref stops a second tap before that.
+    if (sending.current) return;
+    sending.current = true;
     setBusy(true);
     setError(null);
     const result = await action();
+    sending.current = false;
     if (result.ok) {
-      done(result.partial === true);
+      leaveWhenFocused(() => done(result.partial === true));
       return;
     }
     setError(withdrawFailureText(result.reason));

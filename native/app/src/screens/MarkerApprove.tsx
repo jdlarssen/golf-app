@@ -9,7 +9,7 @@
 // Kortet er det klassiske scorekortet, UT og INN med PAR og SLAG og BRUTTO
 // under, som på godkjenningsskjermen. «Send tilbake» åpner det samme arket med
 // valgfri grunn. Markøren endrer aldri et slag; spilleren retter selv.
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { buildScorecardGrid } from '../../../../lib/scorecard/scorecardGrid';
@@ -56,11 +56,32 @@ export function MarkerApprove({ route, navigation }: ScreenProps<'MarkerApprove'
   const [sent, setSent] = useState<'approved' | 'rejected' | null>(null);
   const [rejecting, setRejecting] = useState(false);
   const [reasonDraft, setReasonDraft] = useState('');
+  // `busy` is drawn one render late; the ref stops a second tap before that.
+  const answering = useRef(false);
 
-  const reload = useCallback(async () => {
-    const result = await fetchMarkerCard(leagueId, gameId, playerUserId);
-    setLoad(result.ok ? { status: 'ready', card: result.card } : { status: 'failed' });
-  }, [leagueId, gameId, playerUserId]);
+  /**
+   * Reads the card again. After an answer the save went through, so a failed
+   * read keeps the card and its «sendt» line instead of a load error.
+   */
+  const reload = useCallback(
+    async ({ keepCard = false }: { keepCard?: boolean } = {}) => {
+      const result = await fetchMarkerCard(leagueId, gameId, playerUserId);
+      setLoad((was) =>
+        result.ok
+          ? { status: 'ready', card: result.card }
+          : keepCard && was.status === 'ready'
+            ? was
+            : { status: 'failed' },
+      );
+    },
+    [leagueId, gameId, playerUserId],
+  );
+
+  /** «Prøv igjen»: the spinner shows while it asks again. */
+  const retry = () => {
+    setLoad({ status: 'loading' });
+    void reload();
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -79,6 +100,16 @@ export function MarkerApprove({ route, navigation }: ScreenProps<'MarkerApprove'
   }, [navigation, card]);
 
   const answer = async (decision: 'approve' | 'reject', reason?: string) => {
+    if (answering.current) return;
+    answering.current = true;
+    try {
+      await sendAnswer(decision, reason);
+    } finally {
+      answering.current = false;
+    }
+  };
+
+  const sendAnswer = async (decision: 'approve' | 'reject', reason?: string) => {
     setBusy(decision);
     setError(null);
     const result =
@@ -95,7 +126,7 @@ export function MarkerApprove({ route, navigation }: ScreenProps<'MarkerApprove'
     if (decision === 'reject') setReasonDraft('');
     // Hent kortet på nytt: det er serveren som sier hvor kortet står nå.
     try {
-      await reload();
+      await reload({ keepCard: true });
     } finally {
       setBusy(null);
     }
@@ -113,7 +144,7 @@ export function MarkerApprove({ route, navigation }: ScreenProps<'MarkerApprove'
         ) : (
           <>
             <Text style={ui.body}>{MARKER_TEXT.loadFailed}</Text>
-            <Pressable style={ui.buttonSecondary} onPress={() => void reload()} accessibilityRole="button">
+            <Pressable style={ui.buttonSecondary} onPress={retry} accessibilityRole="button" testID="marker-retry">
               <Text style={ui.buttonSecondaryText}>{MARKER_TEXT.retry}</Text>
             </Pressable>
           </>

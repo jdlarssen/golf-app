@@ -37,7 +37,7 @@
 // skjemaet kan ikke åpnes med et halvgammelt eller manglende øyeblikksbilde.
 // Raden MÅ være lastet før feltene tegnes — «er noe endret?» finnes ikke uten
 // et utgangspunkt, og uten det spørsmålet er «Lagre» bare en knapp som gjetter.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -51,6 +51,7 @@ import {
 } from 'react-native';
 import { fetchOwnProfile, saveProfile } from '../data/profile';
 import { backTo } from '../lib/backTo';
+import { useLeaveWhenFocused } from '../lib/useLeaveWhenFocused';
 import { PROFILE_TEXT, describeProfileSaveFailure } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
 import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
@@ -158,6 +159,9 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
   const [loadFailed, setLoadFailed] = useState(false);
   const [values, setValues] = useState<FormValues | null>(null);
   const [pending, setPending] = useState(false);
+  // `pending` is drawn one render late; the ref stops a second tap before that.
+  const saving = useRef(false);
+  const leaveWhenFocused = useLeaveWhenFocused(navigation);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -197,7 +201,8 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
    * «Lagrer …» leser som at appen hang hvis navigeringen skulle utebli.
    */
   const onSave = useCallback(() => {
-    if (!values) return;
+    if (!values || saving.current) return;
+    saving.current = true;
     setPending(true);
     setError(null);
     void saveProfile({
@@ -212,6 +217,7 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
       level: values.level,
     })
       .then((result) => {
+        saving.current = false;
         setPending(false);
         if (result.ok) {
           // #1979: kom du hit fra veiviseren, skal du TILBAKE dit — ikke inn i
@@ -224,18 +230,20 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
             return;
           }
           // Tilbake til rommet med kvitteringen. Rommet viser banneret og
-          // henter raden på nytt — det er der den nye verdien skal leses.
-          backTo(navigation, 'Profile', { saved: true });
+          // henter raden på nytt — det er der den nye verdien skal leses. En
+          // skjerm som ble åpnet oppå imens, blir stående i front.
+          leaveWhenFocused(() => backTo(navigation, 'Profile', { saved: true }));
           return;
         }
         setError(describeProfileSaveFailure(result.reason));
       })
       .catch((err: unknown) => {
         console.error('[EditProfile] lagring kastet', err);
+        saving.current = false;
         setPending(false);
         setError(describeProfileSaveFailure('update_failed'));
       });
-  }, [navigation, returnTo, values]);
+  }, [navigation, returnTo, values, leaveWhenFocused]);
 
   if (loadFailed) {
     return (

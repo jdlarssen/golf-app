@@ -344,6 +344,42 @@ describe('Scorecard — markøren i en simulatorliga (#2661)', () => {
     expect(screen.queryByTestId('submit-partial')).toBeNull();
   });
 
+  // Et dobbelttrykk sender kortet én gang, og et svar som kommer mens en annen
+  // skjerm ligger oppå (et push-varsel), flytter deg ikke bort fra den.
+  it('sender én gang ved dobbelttrykk, og blir stående når en annen skjerm er i front', async () => {
+    const { submitCard } = require('../data/submitCard') as { submitCard: jest.Mock };
+    let answer: (value: unknown) => void = () => {};
+    submitCard.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    mockState.bundle = { ...simBundle, players: mockRevealBundle.players };
+    mockState.scores = [
+      ...fullCard,
+      ...fullCard.map((score) => ({ ...score, id: score.id.replace(':me:', ':other:'), userId: 'other' })),
+    ];
+    const nav = stackNavigation([
+      { name: 'Home' },
+      { name: 'GameHome', params: { gameId: SIM_GAME } },
+      { name: 'Scorecard', params: { gameId: SIM_GAME } },
+    ]);
+    await render(scorecardElement(SIM_GAME, jest.fn(), nav));
+    await fireEvent.press(await screen.findByTestId('marker-option-per'));
+    await waitFor(() => expect(screen.getByTestId('submit-scorecard')).toBeEnabled());
+    const button = screen.getByTestId('submit-scorecard');
+    await act(async () => {
+      fireEvent.press(button);
+      fireEvent.press(button);
+    });
+    expect(submitCard).toHaveBeenCalledTimes(1);
+
+    nav.isFocused.mockReturnValue(false);
+    await act(async () => answer({ ok: true, alreadySubmitted: false, alsoDelivered: 0 }));
+    expect(nav.popTo).not.toHaveBeenCalled();
+  });
+
   it('har flightkameraten ført kortet mitt, står linja i stedet for velgeren', async () => {
     const { fetchMarkerOptions } = require('../data/marker') as { fetchMarkerOptions: jest.Mock };
     fetchMarkerOptions.mockResolvedValue({

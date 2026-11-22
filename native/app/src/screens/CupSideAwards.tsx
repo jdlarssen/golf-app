@@ -7,7 +7,7 @@
 // valgene og tellerne står tomme til arrangøren selv fyller dem. Rapporten kommer
 // med `fetchCupManage` (`sideReports`); en tjener som ikke har den, gir ingen bokser.
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { AppCupManageView, AppCupSideAward } from '../../../../lib/cup/appCupManageView';
 import { girReportsFor, slotReportsFor, type CupGirReport, type CupSlotReports } from '../../../../lib/cup/cupSideReports';
@@ -163,6 +163,8 @@ function WinnerCard({
   const [search, setSearch] = useState('');
   const [showAll, setShowAll] = useState(false);
   const [busy, setBusy] = useState(false);
+  // `busy` is drawn one render late; the ref stops a second tap before that.
+  const sending = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -180,6 +182,8 @@ function WinnerCard({
   };
 
   const submit = async () => {
+    if (sending.current) return;
+    sending.current = true;
     setBusy(true);
     setError(null);
     const result = await registerSideAwardWinner(cupId, award.id, choice === NONE ? null : choice);
@@ -189,6 +193,7 @@ function WinnerCard({
     } else {
       setError(sideAwardFailureText(result.reason));
     }
+    sending.current = false;
     setBusy(false);
   };
 
@@ -285,11 +290,15 @@ function GirCard({
   const [team1, setTeam1] = useState(award.team1Count === null ? '' : String(award.team1Count));
   const [team2, setTeam2] = useState(award.team2Count === null ? '' : String(award.team2Count));
   const [busy, setBusy] = useState(false);
+  // `busy` is drawn one render late; the ref stops a second tap before that.
+  const sending = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const filled = team1 !== '' && team2 !== '';
 
   const submit = async () => {
+    if (sending.current) return;
+    sending.current = true;
     setBusy(true);
     setError(null);
     const result = await registerGirCounts(cupId, award.id, Number(team1), Number(team2));
@@ -299,6 +308,7 @@ function GirCard({
     } else {
       setError(sideAwardFailureText(result.reason, award.maxPerTeam));
     }
+    sending.current = false;
     setBusy(false);
   };
 

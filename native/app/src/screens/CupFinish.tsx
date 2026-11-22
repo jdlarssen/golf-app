@@ -4,12 +4,13 @@
 // `GET /api/cup/[id]/manage`, og vakta er kjernen på serveren. Peer-godkjenningen
 // slakkes aldri. Alt krever nett.
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppCupFinishMatch, AppCupManageView } from '../../../../lib/cup/appCupManageView';
 import { fetchCupManage, finishCup, finishCupMatch } from '../data/cupManage';
 import { backTo, openOrReturn } from '../lib/backTo';
+import { useLeaveWhenFocused } from '../lib/useLeaveWhenFocused';
 import { CUP_TEXT, matchesSummary } from '../lib/cupCopy';
 import {
   FINISH_APP_TEXT,
@@ -34,6 +35,9 @@ export function CupFinish({ route, navigation }: ScreenProps<'CupFinish'>) {
   const [failure, setFailure] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // `busy` is drawn one render late; the ref stops a second tap before that.
+  const sending = useRef(false);
+  const leaveWhenFocused = useLeaveWhenFocused(navigation);
   const [error, setError] = useState<string | null>(null);
   const [matchDone, setMatchDone] = useState(false);
 
@@ -95,12 +99,22 @@ export function CupFinish({ route, navigation }: ScreenProps<'CupFinish'>) {
   const leave = () => backTo(navigation, 'CupManage', { cupId });
 
   const submitCup = async () => {
+    if (sending.current) return;
+    sending.current = true;
+    try {
+      await sendCupFinish();
+    } finally {
+      sending.current = false;
+    }
+  };
+
+  const sendCupFinish = async () => {
     setBusy(true);
     setError(null);
     setMatchDone(false);
     const result = await finishCup(cupId, anyway);
     if (result.ok) {
-      backTo(navigation, 'Cup', { cupId, notice: 'cup_finished' });
+      leaveWhenFocused(() => backTo(navigation, 'Cup', { cupId, notice: 'cup_finished' }));
       return;
     }
     const fresh = await load();
@@ -114,6 +128,16 @@ export function CupFinish({ route, navigation }: ScreenProps<'CupFinish'>) {
   };
 
   const submitMatch = async (match: AppCupFinishMatch) => {
+    if (sending.current) return;
+    sending.current = true;
+    try {
+      await sendMatchFinish(match);
+    } finally {
+      sending.current = false;
+    }
+  };
+
+  const sendMatchFinish = async (match: AppCupFinishMatch) => {
     setBusy(true);
     setError(null);
     const result = await finishCupMatch(cupId, match.gameId, match.blocksFinish);
