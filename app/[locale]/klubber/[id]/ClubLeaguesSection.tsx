@@ -56,7 +56,10 @@ export function ClubLeaguesSection({
                 </SmartLink>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
-                    {tStatus(liga.status as Parameters<typeof tStatus>[0])}
+                    {/* Audit 2026-11-20: members see a draft league as «not started», not «Utkast». */}
+                    {liga.status === 'draft'
+                      ? t('notStarted')
+                      : tStatus(liga.status as Parameters<typeof tStatus>[0])}
                   </span>
                   {canManage && (
                     <SmartLink

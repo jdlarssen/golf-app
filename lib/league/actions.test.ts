@@ -1233,3 +1233,144 @@ describe('league round actions — bound to the league, read errors are update_f
     expect({ result, writes: writes().length }).toEqual({ result: { error: 'update_failed' }, writes: 0 });
   });
 });
+
+/**
+ * Audit 2026-11-20: a league starts only from draft and finishes only from
+ * active. The status write carries the expected status, so a replayed or
+ * double-tapped post cannot reopen a finished league or start it twice.
+ */
+describe('startLeague / finishLeague — the status write carries the expected status', () => {
+  const adminRole = { data: { is_admin: true }, error: null };
+  const form = () => {
+    const fd = new FormData();
+    fd.set('league_id', 'l1');
+    return fd;
+  };
+  const statusEq = () =>
+    supabaseMock.__fromCalls
+      .filter((c) => c.table === 'leagues' && c.method === 'eq' && c.args[0] === 'status')
+      .map((c) => c.args[1]);
+
+  it('startLeague only flips a draft league', async () => {
+    adminMock = buildSupabaseMock([{ data: { group_id: null } }]);
+    supabaseMock = buildSupabaseMock([adminRole, { count: 1 }, { count: 2 }, { data: [{ id: 'l1' }] }]);
+    setUser('admin-1');
+    const { startLeague } = await import('./actions');
+    expect({ result: await startLeague(form()), statusEq: statusEq() }).toEqual({
+      result: { error: '' },
+      statusEq: ['draft'],
+    });
+  });
+
+  it('startLeague on a finished league: wrong_status', async () => {
+    adminMock = buildSupabaseMock([{ data: { group_id: null } }, { data: { status: 'finished' }, error: null }]);
+    supabaseMock = buildSupabaseMock([adminRole, { count: 1 }, { count: 2 }, { data: [] }]);
+    setUser('admin-1');
+    const { startLeague } = await import('./actions');
+    expect(await startLeague(form())).toEqual({ error: 'wrong_status' });
+  });
+
+  it('startLeague twice: the second tap finds the league active and is a no-op success', async () => {
+    adminMock = buildSupabaseMock([{ data: { group_id: null } }, { data: { status: 'active' }, error: null }]);
+    supabaseMock = buildSupabaseMock([adminRole, { count: 1 }, { count: 2 }, { data: [] }]);
+    setUser('admin-1');
+    const { startLeague } = await import('./actions');
+    expect(await startLeague(form())).toEqual({ error: '' });
+  });
+
+  it('finishLeague only flips an active league', async () => {
+    adminMock = buildSupabaseMock([{ data: { group_id: null } }]);
+    supabaseMock = buildSupabaseMock([adminRole, { data: [{ id: 'l1' }] }]);
+    setUser('admin-1');
+    const { finishLeague } = await import('./actions');
+    expect({ result: await finishLeague(form()), statusEq: statusEq() }).toEqual({
+      result: { error: '' },
+      statusEq: ['active'],
+    });
+  });
+
+  it('finishLeague on a draft league: wrong_status', async () => {
+    adminMock = buildSupabaseMock([{ data: { group_id: null } }, { data: { status: 'draft' }, error: null }]);
+    supabaseMock = buildSupabaseMock([adminRole, { data: [] }]);
+    setUser('admin-1');
+    const { finishLeague } = await import('./actions');
+    expect(await finishLeague(form())).toEqual({ error: 'wrong_status' });
+  });
+
+  it('finishLeague twice: the second tap finds it finished and is a no-op success', async () => {
+    adminMock = buildSupabaseMock([{ data: { group_id: null } }, { data: { status: 'finished' }, error: null }]);
+    supabaseMock = buildSupabaseMock([adminRole, { data: [] }]);
+    setUser('admin-1');
+    const { finishLeague } = await import('./actions');
+    expect(await finishLeague(form())).toEqual({ error: '' });
+  });
+});
+
+describe('addLeaguePlayers — a finished league takes no new players (audit 2026-11-20)', () => {
+  it('refuses with league_finished and writes nothing', async () => {
+    adminMock = buildSupabaseMock([{ data: { group_id: null } }]);
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: { group_id: null, status: 'finished' }, error: null },
+    ]);
+    setUser('admin-1');
+    const fd = new FormData();
+    fd.set('league_id', 'l1');
+    fd.set('player_ids', JSON.stringify(['u1']));
+    const { addLeaguePlayers } = await import('./actions');
+    const result = await addLeaguePlayers(fd);
+    const upserts = supabaseMock.__fromCalls.filter((c) => c.table === 'league_players' && c.method === 'upsert');
+    expect({ result, upserts: upserts.length }).toEqual({ result: { error: 'league_finished' }, upserts: 0 });
+  });
+
+  it('an active league still takes players', async () => {
+    adminMock = buildSupabaseMock([{ data: { group_id: null } }]);
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: { group_id: null, status: 'active' }, error: null },
+      { data: null, error: null }, // upsert
+    ]);
+    setUser('admin-1');
+    const fd = new FormData();
+    fd.set('league_id', 'l1');
+    fd.set('player_ids', JSON.stringify(['u1']));
+    const { addLeaguePlayers } = await import('./actions');
+    expect(await addLeaguePlayers(fd)).toEqual({ error: '' });
+  });
+});
+
+describe('round window edits — a close before the open is «window» (audit 2026-11-20)', () => {
+  // The CHECK (closes_at > opens_at, 0080) refuses the row; the organiser gets
+  // the same message as when adding a round, not «could not save».
+  const checkViolation = {
+    data: null,
+    error: {
+      code: '23514',
+      message: 'new row for relation "league_rounds" violates check constraint "league_rounds_check"',
+    },
+  };
+
+  it('updateLeagueRound', async () => {
+    adminMock = buildSupabaseMock([{ data: { group_id: null } }]);
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }, checkViolation]);
+    setUser('admin-1');
+    const fd = new FormData();
+    fd.set('round_id', 'r1');
+    fd.set('league_id', 'l1');
+    fd.set('closes_at', '2026-12-01T20:00');
+    const { updateLeagueRound } = await import('./actions');
+    expect(await updateLeagueRound(fd)).toEqual({ error: 'window' });
+  });
+
+  it('overrideRoundWindow', async () => {
+    adminMock = buildSupabaseMock([{ data: { group_id: null } }]);
+    supabaseMock = buildSupabaseMock([{ data: { is_admin: true }, error: null }, checkViolation]);
+    setUser('admin-1');
+    const fd = new FormData();
+    fd.set('round_id', 'r1');
+    fd.set('league_id', 'l1');
+    fd.set('closes_at', '2026-12-01T20:00');
+    const { overrideRoundWindow } = await import('./actions');
+    expect(await overrideRoundWindow(fd)).toEqual({ error: 'window' });
+  });
+});

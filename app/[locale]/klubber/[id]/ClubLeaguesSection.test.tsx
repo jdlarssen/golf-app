@@ -16,7 +16,9 @@ describe('ClubLeaguesSection (#480)', () => {
     expect(screen.getByText('Høstserien')).toBeInTheDocument();
     // Status badge uses the human label, not the raw enum value.
     expect(screen.getByText('Pågår')).toBeInTheDocument();
-    expect(screen.getByText('Utkast')).toBeInTheDocument();
+    // Audit 2026-11-20: a draft league reads «Ikke startet» for members, not «Utkast».
+    expect(screen.getByText('Ikke startet')).toBeInTheDocument();
+    expect(screen.queryByText('Utkast')).toBeNull();
     const ligaLink = screen.getByText('Vårserien').closest('a');
     expect(ligaLink).toHaveAttribute('href', '/liga/l1');
   });
