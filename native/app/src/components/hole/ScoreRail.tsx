@@ -34,6 +34,7 @@ import { scoreTone, type ScoreTone } from '../../../../../lib/scoring/scoreTone'
 import { scoreToneColor } from '../../lib/scoreToneColor';
 import { SHORT_LABELS, termText } from '../../lib/strokeTermText';
 import { FONTS, fraunces, sheetShadowColor, TAP, useTheme, type ThemeColors } from '../../theme';
+import { HOLE_TEXT_CAP } from './holeTextCap';
 
 /** Ett tall på skinna, med resultatet regnet ut av kalleren. */
 export type RailOption = {
@@ -194,7 +195,7 @@ export function ScoreRail({
     return (
       <View style={section} testID="score-rail">
         {handle}
-        <Text style={[styles.allScored, { color: colors.muted }]} testID="score-rail-all-scored">
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.allScored, { color: colors.muted }]} testID="score-rail-all-scored">
           {ALL_SCORED}
         </Text>
         <Pressable
@@ -203,7 +204,7 @@ export function ScoreRail({
           accessibilityRole="button"
           testID="score-rail-next-hole"
         >
-          <Text style={[styles.nextHoleText, { color: colors.onPrimary }]}>{nextLabel}</Text>
+          <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.nextHoleText, { color: colors.onPrimary }]}>{nextLabel}</Text>
         </Pressable>
       </View>
     );
@@ -223,7 +224,7 @@ export function ScoreRail({
       {handle}
       {sunlight ? null : (
         <View style={styles.header}>
-          <Text
+          <Text maxFontSizeMultiplier={HOLE_TEXT_CAP}
             style={[styles.heading, { color: colors.text }]}
             numberOfLines={1}
             accessibilityRole="header"
@@ -232,7 +233,7 @@ export function ScoreRail({
             {active.name}
           </Text>
           {strokesLine ? (
-            <Text
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP}
               style={[styles.headingNote, { color: colors.muted }]}
               accessibilityLabel={strokesLine.label}
               testID="score-rail-strokes"
@@ -275,13 +276,13 @@ export function ScoreRail({
             <Pressable
               key={option.strokes}
               onPress={() => onPick(option.strokes)}
-              style={[styles.option, { height: hole.railButton, backgroundColor: fill }, frame]}
+              style={[styles.option, { minHeight: hole.railButton, backgroundColor: fill }, frame]}
               testID={`rail-option-${option.strokes}`}
               accessibilityRole="button"
               accessibilityState={{ selected }}
               accessibilityLabel={labelText(option)}
             >
-              <Text
+              <Text maxFontSizeMultiplier={HOLE_TEXT_CAP}
                 style={[
                   fraunces(600, hole.railNumber, hole.railNumber),
                   { color: ink },
@@ -289,7 +290,7 @@ export function ScoreRail({
               >
                 {option.strokes}
               </Text>
-              <Text
+              <Text maxFontSizeMultiplier={HOLE_TEXT_CAP}
                 style={[
                   styles.optionDetail,
                   {
@@ -313,7 +314,7 @@ export function ScoreRail({
           style={[
             styles.option,
             {
-              height: hole.railButton,
+              minHeight: hole.railButton,
               borderWidth: hole.borderW,
               borderColor: sunlight ? colors.text : colors.border,
               backgroundColor: sunlight ? colors.bg : colors.surface,
@@ -325,13 +326,13 @@ export function ScoreRail({
         >
           {sunlight ? (
             <>
-              <Text style={[styles.otherTop, { color: colors.text }]}>{otherTop}</Text>
-              <Text style={[styles.otherLabelSun, { color: colors.text }]}>Annet</Text>
+              <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.otherTop, { color: colors.text }]}>{otherTop}</Text>
+              <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.otherLabelSun, { color: colors.text }]}>Annet</Text>
             </>
           ) : (
             <>
-              <Text style={[styles.otherText, { color: colors.text }]}>Annet</Text>
-              <Text style={[styles.otherHint, { color: colors.muted }]} testID="rail-other-hint">
+              <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.otherText, { color: colors.text }]}>Annet</Text>
+              <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.otherHint, { color: colors.muted }]} testID="rail-other-hint">
                 {otherHint}
               </Text>
             </>
@@ -348,7 +349,7 @@ export function ScoreRail({
             accessibilityRole="button"
             accessibilityLabel={`-1 for ${active.name}`}
           >
-            <Text style={[styles.stepText, { color: colors.text }]}>−</Text>
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.stepText, { color: colors.text }]}>−</Text>
           </Pressable>
           <Pressable
             onPress={() => onStep(1)}
@@ -357,7 +358,7 @@ export function ScoreRail({
             accessibilityRole="button"
             accessibilityLabel={`+1 for ${active.name}`}
           >
-            <Text style={[styles.stepText, { color: colors.text }]}>+</Text>
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.stepText, { color: colors.text }]}>+</Text>
           </Pressable>
           <Pressable
             onPress={onUndo}
@@ -366,7 +367,7 @@ export function ScoreRail({
             accessibilityRole="button"
             accessibilityLabel={`Nullstill scoren for ${active.name}`}
           >
-            <Text style={[styles.undoText, { color: colors.muted }]}>Angre</Text>
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.undoText, { color: colors.muted }]}>Angre</Text>
           </Pressable>
         </View>
       ) : null}
@@ -386,7 +387,7 @@ export function ScoreRail({
                 accessibilityState={{ checked: true }}
                 accessibilityLabel="Registrer putter"
               >
-                <Text style={[styles.puttsLabel, { color: colors.muted }]}>{PUTTS_LABEL}</Text>
+                <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.puttsLabel, { color: colors.muted }]}>{PUTTS_LABEL}</Text>
               </Pressable>
               {/* key: «5+»-stepperen skal ikke følge skinna til neste spiller. */}
               <PuttsChips
@@ -405,7 +406,7 @@ export function ScoreRail({
               accessibilityState={{ checked: false }}
               accessibilityLabel="Registrer putter"
             >
-              <Text style={[styles.linkText, { color: colors.primary }]}>Registrer putter</Text>
+              <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.linkText, { color: colors.primary }]}>Registrer putter</Text>
             </Pressable>
           ) : null}
           {skipTo != null ? (
@@ -416,7 +417,7 @@ export function ScoreRail({
               accessibilityRole="button"
               accessibilityLabel={`Hopp over, gå til ${skipTo}`}
             >
-              <Text style={[styles.linkText, { color: colors.primary }]}>{`Neste: ${skipTo}`}</Text>
+              <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.linkText, { color: colors.primary }]}>{`Neste: ${skipTo}`}</Text>
             </Pressable>
           ) : null}
         </View>
@@ -472,7 +473,7 @@ function PuttsChips({
           accessibilityState={{ selected: value === n }}
           accessibilityLabel={`${n} ${n === 1 ? 'putt' : 'putter'} på ${name}`}
         >
-          <Text style={chipText(value === n)}>{n}</Text>
+          <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={chipText(value === n)}>{n}</Text>
         </Pressable>
       ))}
       {!showStepper ? (
@@ -486,7 +487,7 @@ function PuttsChips({
           accessibilityRole="button"
           accessibilityLabel={`Tre eller flere putter på ${name}`}
         >
-          <Text style={chipText(false)}>{`${PLUS_START}+`}</Text>
+          <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={chipText(false)}>{`${PLUS_START}+`}</Text>
         </Pressable>
       ) : (
         <View
@@ -504,9 +505,9 @@ function PuttsChips({
             accessibilityRole="button"
             accessibilityLabel={`Færre putter på ${name}`}
           >
-            <Text style={chipText(false)}>−</Text>
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={chipText(false)}>−</Text>
           </Pressable>
-          <Text style={chipText(false)} accessibilityLabel={`${stepperValue} putter`}>
+          <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={chipText(false)} accessibilityLabel={`${stepperValue} putter`}>
             {stepperValue}
           </Text>
           <Pressable
@@ -517,7 +518,7 @@ function PuttsChips({
             accessibilityRole="button"
             accessibilityLabel={`Flere putter på ${name}`}
           >
-            <Text style={chipText(false)}>+</Text>
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={chipText(false)}>+</Text>
           </Pressable>
         </View>
       )}
@@ -597,7 +598,7 @@ const styles = StyleSheet.create({
   puttsLabel: { fontSize: 12, fontFamily: FONTS.sans },
   chips: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, flexShrink: 1 },
   chip: {
-    height: TAP,
+    minHeight: TAP,
     minWidth: TAP,
     borderRadius: TAP / 2,
     alignItems: 'center',
@@ -615,6 +616,6 @@ const styles = StyleSheet.create({
   chipStep: { width: TAP, height: TAP, alignItems: 'center', justifyContent: 'center' },
   dimmed: { opacity: 0.4 },
   allScored: { fontSize: 14, fontFamily: FONTS.sans, textAlign: 'center', paddingVertical: 8 },
-  nextHole: { height: 52, borderRadius: 999, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  nextHole: { minHeight: 52, borderRadius: 999, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   nextHoleText: { fontSize: 16, fontFamily: FONTS.sansSemiBold },
 });

@@ -39,6 +39,7 @@ import {
   UtenNettIcon,
   UtslagHakeIcon,
 } from '../icons/Icons';
+import { HOLE_TEXT_CAP } from './holeTextCap';
 
 /** Hva raden viser til høyre, og om den kan åpnes. */
 export type ContestRowState = 'report' | 'answered' | 'offline' | 'failed';
@@ -79,14 +80,14 @@ export function ContestRow({
     >
       <View style={[styles.iconBox, { backgroundColor: colors.primary }]}>{icon(colors.surface)}</View>
       <View style={styles.rowText}>
-        <Text style={[styles.rowTitle, { color: colors.text }]}>{title}</Text>
-        <Text style={[styles.rowSubtitle, { color: subtitleColor }]} numberOfLines={1} testID={`${testID}-subtitle`}>
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.rowTitle, { color: colors.text }]}>{title}</Text>
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.rowSubtitle, { color: subtitleColor }]} numberOfLines={1} testID={`${testID}-subtitle`}>
           {subtitle}
         </Text>
       </View>
       {state === 'report' ? (
         <View style={[styles.pill, { backgroundColor: colors.primary }]}>
-          <Text style={[styles.pillText, { color: colors.onPrimary }]}>{SIDE_CONTEST_TEXT.report}</Text>
+          <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.pillText, { color: colors.onPrimary }]}>{SIDE_CONTEST_TEXT.report}</Text>
         </View>
       ) : state === 'answered' ? (
         <ChevronIcon direction="right" color={colors.muted} size={20} strokeWidth={2} />
@@ -180,8 +181,8 @@ export function ContestSheet({
               <View style={[styles.handle, { backgroundColor: colors.border }]} />
               <View style={styles.head}>
                 <View style={styles.headText}>
-                  <Text style={[styles.kicker, { color: colors.accentText }]}>{kicker}</Text>
-                  <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header">
+                  <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.kicker, { color: colors.accentText }]}>{kicker}</Text>
+                  <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.title, { color: colors.text }]} accessibilityRole="header">
                     {title}
                   </Text>
                 </View>
@@ -212,7 +213,7 @@ export function ContestSheet({
                   ) : (
                     <FeilIcon color={colors.danger} size={18} />
                   )}
-                  <Text
+                  <Text maxFontSizeMultiplier={HOLE_TEXT_CAP}
                     style={[
                       styles.noticeText,
                       { color: notice.kind === 'offline' ? colors.warningText : colors.danger },
@@ -225,7 +226,7 @@ export function ContestSheet({
               {children}
               <View style={styles.statusBox} accessibilityLiveRegion="polite" testID={`${testID}-status`}>
                 {saved ? <UtslagHakeIcon color={colors.successText} size={14} strokeWidth={2.4} /> : null}
-                <Text
+                <Text maxFontSizeMultiplier={HOLE_TEXT_CAP}
                   style={[
                     styles.status,
                     saved
@@ -242,7 +243,7 @@ export function ContestSheet({
                 accessibilityRole="button"
                 testID={`${testID}-done`}
               >
-                <Text style={[styles.doneText, { color: colors.onPrimary }]}>{SIDE_CONTEST_TEXT.done}</Text>
+                <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.doneText, { color: colors.onPrimary }]}>{SIDE_CONTEST_TEXT.done}</Text>
               </Pressable>
             </ScrollView>
           </View>
@@ -255,7 +256,7 @@ export function ContestSheet({
 /** Spørsmålet over lista. */
 export function SheetQuestion({ text }: { text: string }) {
   const { colors } = useTheme();
-  return <Text style={[styles.question, { color: colors.muted }]}>{text}</Text>;
+  return <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.question, { color: colors.muted }]}>{text}</Text>;
 }
 
 /** Kortet linjene står i. */
@@ -308,7 +309,7 @@ export function ContestLine({
       testID={testID}
     >
       <Faces faces={faces} />
-      <Text style={[styles.lineName, { color: colors.text }, checked && styles.lineNameChecked]}>{label}</Text>
+      <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.lineName, { color: colors.text }, checked && styles.lineNameChecked]}>{label}</Text>
       {kind === 'radio' ? <Radio checked={checked} /> : <Checkbox checked={checked} />}
     </Pressable>
   );
@@ -337,7 +338,7 @@ function Faces({ faces }: { faces: readonly LineFace[] }) {
               index > 0 && { marginLeft: -6, borderWidth: 2, borderColor: colors.surface },
             ]}
           >
-            <Text style={[styles.initials, { color: colors.text }]}>{face.initials}</Text>
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.initials, { color: colors.text }]}>{face.initials}</Text>
           </View>
         ),
       )}
@@ -413,7 +414,7 @@ export function DistanceField({
       testID={testID}
     >
       <View style={[styles.distanceRow, disabled && styles.lineDisabled]}>
-        <Text style={[styles.distanceLabel, { color: colors.text }]}>{SIDE_CONTEST_TEXT.distanceLabel}</Text>
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.distanceLabel, { color: colors.text }]}>{SIDE_CONTEST_TEXT.distanceLabel}</Text>
         <View style={styles.stepper}>
           <StepButton
             plus={false}
@@ -439,7 +440,7 @@ export function DistanceField({
               testID={`${testID}-input`}
             />
             <View style={styles.metreBox}>
-              <Text style={[styles.metre, { color: colors.muted }]}>{SIDE_CONTEST_TEXT.metre}</Text>
+              <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.metre, { color: colors.muted }]}>{SIDE_CONTEST_TEXT.metre}</Text>
             </View>
           </View>
           <StepButton

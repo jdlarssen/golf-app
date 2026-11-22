@@ -20,7 +20,7 @@ describe('SyncChip', () => {
   it('trykk åpner arket, og brikka er minst 44 høy', async () => {
     const onPress = jest.fn();
     await render(<SyncChip state="pending" text="3 slag på telefonen" expanded sunlight={false} onPress={onPress} />);
-    expect(screen.getByTestId('sync-chip')).toHaveStyle({ height: 44 });
+    expect(screen.getByTestId('sync-chip')).toHaveStyle({ minHeight: 44 });
     await fireEvent.press(screen.getByTestId('sync-chip'));
     expect(onPress).toHaveBeenCalledTimes(1);
   });

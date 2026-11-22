@@ -5,6 +5,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { TEE_STARTER_TEXT } from '../../lib/holesCopy';
 import { FONTS, TAP, fraunces, interLine, useTheme } from '../../theme';
+import { HOLE_TEXT_CAP } from './holeTextCap';
 
 export function TeeStarterPicker({
   question,
@@ -25,7 +26,7 @@ export function TeeStarterPicker({
       style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
       testID="tee-starter-picker"
     >
-      <Text style={[styles.question, { color: colors.text }]} accessibilityRole="header">
+      <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.question, { color: colors.text }]} accessibilityRole="header">
         {question}
       </Text>
       <View style={styles.buttons}>
@@ -37,14 +38,14 @@ export function TeeStarterPicker({
             style={[styles.button, { backgroundColor: colors.bg, borderColor: colors.border }]}
             testID={`tee-starter-${option.userId}`}
           >
-            <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
+            <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.name, { color: colors.text }]} numberOfLines={1}>
               {option.name}
             </Text>
           </Pressable>
         ))}
       </View>
       {saveFailed ? (
-        <Text
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP}
           style={[styles.error, { color: colors.danger }]}
           accessibilityLiveRegion="polite"
           testID="tee-starter-error"

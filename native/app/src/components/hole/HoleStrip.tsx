@@ -14,6 +14,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { FONTS, fraunces, frauncesFamily, TAP, useTheme } from '../../theme';
+import { HOLE_BOX_TEXT_CAP } from './holeTextCap';
 
 const HALF = 9;
 
@@ -81,7 +82,7 @@ export function HoleStrip({
                     : { borderWidth: hole.borderW, borderColor: colors.border },
               ]}
             >
-              <Text
+              <Text maxFontSizeMultiplier={HOLE_BOX_TEXT_CAP}
                 style={[
                   styles.number,
                   isCurrent
@@ -108,7 +109,7 @@ export function HoleStrip({
         >
           {/* To linjer, «10–» over «18», som designet: det er ikke plass til
               begge på én linje etter ni hull. */}
-          <Text style={[styles.chipText, { color: colors.muted }]}>{`${otherHoles[0]}–\n${otherHoles[otherHoles.length - 1]}`}</Text>
+          <Text maxFontSizeMultiplier={HOLE_BOX_TEXT_CAP} style={[styles.chipText, { color: colors.muted }]}>{`${otherHoles[0]}–\n${otherHoles[otherHoles.length - 1]}`}</Text>
         </Pressable>
       ) : null}
     </View>

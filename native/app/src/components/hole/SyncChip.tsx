@@ -14,6 +14,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { SyncChipState } from '../../../../../lib/sync/roundSyncState';
 import { SYNC_CHIP_TEXT } from '../../lib/syncChipCopy';
 import { FONTS, TAP, type ThemeColors, useTheme, withAlpha } from '../../theme';
+import { HOLE_TEXT_CAP } from './holeTextCap';
 
 type Tone = { bg: string; border: string; text: string; dot: string };
 
@@ -59,14 +60,14 @@ export function SyncChip({
       accessibilityState={{ expanded }}
     >
       <View style={[styles.dot, { backgroundColor: tone.dot }]} testID={`sync-chip-dot-${state}`} />
-      <Text style={[styles.text, { color: sunlight ? colors.text : tone.text }]}>{text}</Text>
+      <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.text, { color: sunlight ? colors.text : tone.text }]}>{text}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   pill: {
-    height: TAP,
+    minHeight: TAP,
     paddingHorizontal: 14,
     borderRadius: 999,
     flexDirection: 'row',

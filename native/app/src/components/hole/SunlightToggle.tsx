@@ -11,6 +11,7 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { SolIcon } from '../icons/Icons';
 import { FONTS, TAP, useTheme } from '../../theme';
+import { HOLE_TEXT_CAP } from './holeTextCap';
 
 export function SunlightToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   const { colors } = useTheme();
@@ -26,7 +27,7 @@ export function SunlightToggle({ on, onToggle }: { on: boolean; onToggle: () => 
       {on ? (
         <>
           <SolIcon color={colors.bg} size={18} strokeWidth={2.2} />
-          <Text style={[styles.label, { color: colors.bg }]}>Sollys på</Text>
+          <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.label, { color: colors.bg }]}>Sollys på</Text>
         </>
       ) : (
         <SolIcon color={colors.text} size={20} strokeWidth={1.8} />
@@ -38,7 +39,7 @@ export function SunlightToggle({ on, onToggle }: { on: boolean; onToggle: () => 
 const styles = StyleSheet.create({
   round: { width: TAP, height: TAP, alignItems: 'center', justifyContent: 'center' },
   pill: {
-    height: TAP,
+    minHeight: TAP,
     paddingHorizontal: 16,
     borderRadius: TAP / 2,
     flexDirection: 'row',
