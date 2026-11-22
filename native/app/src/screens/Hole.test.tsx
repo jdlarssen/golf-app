@@ -588,7 +588,7 @@ describe('Hole', () => {
     // Laget som er på tur, har den øverst i skinna (#2385); lavsiden får
     // ingen, og raden sier «Scratch».
     expect(screen.getByTestId('score-rail-strokes')).toHaveTextContent('Får 1 slag');
-    expect(screen.getByTestId('flight-row-rival-a-note').props.children).toBe(`${strokesLine(0)} · venter`);
+    expect(screen.getByTestId('flight-row-rival-a-note').props.children).toBe(`${strokesLine(0, true)} · venter`);
 
     // Jeg taster, men raden er kapteinens («makker» er lex-min av laget).
     await fireEvent.press(screen.getByTestId('rail-option-4'));
@@ -1075,9 +1075,28 @@ describe('Hole', () => {
     });
     expect(screen.getByLabelText('Sett 4 slag for Meg Selv: Par')).toBeTruthy();
     // Slagene er tildelingen og står; poengene er borte.
-    expect(screen.getByTestId('flight-row-mate-note').props.children).toBe(strokesLine(1));
+    expect(screen.getByTestId('flight-row-mate-note').props.children).toBe(strokesLine(1, false));
     await fireEvent.press(screen.getByTestId('rail-other'));
     expect(screen.getByTestId('specific-value-strike')).toHaveTextContent('Stryk');
+  });
+
+  // «Scratch» står bare for den som ikke får slag på noe hull i runden. Makker
+  // med banehandicap 1 får slaget på SI 1 og ingen på hull 2: ingen linje der.
+  it('viser «Scratch» bare for en spiller uten slag på runden', async () => {
+    mockState.bundle = {
+      ...mockSoloBundle,
+      players: [
+        { ...PLAYER_BASE, userId: 'me', name: 'Meg Selv', courseHandicap: 18 },
+        { ...PLAYER_BASE, userId: 'mate', name: 'Makker Makkersen', courseHandicap: 1 },
+        { ...PLAYER_BASE, userId: 'zero', name: 'Null Nilsen', courseHandicap: 0 },
+      ],
+    };
+    await renderHole(2);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('flight-row-zero-note').props.children).toBe('Scratch · venter');
+    });
+    expect(screen.getByTestId('flight-row-mate-note').props.children).toBe('venter');
   });
 
   // Bingo Bango Bongo er formatet uten skinne (`formatUsesScoreRail`): kortene
