@@ -123,6 +123,27 @@ describe('EditProfile', () => {
     }
   });
 
+  it('profilen kom ikke: «Prøv igjen» henter den på nytt', async () => {
+    fetchOwnProfileMock.mockRejectedValueOnce(new Error('nett'));
+    const quiet = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await render(
+        <EditProfile
+          {...({
+            navigation: { navigate: jest.fn(), goBack: jest.fn() },
+            route: { params: undefined },
+          } as unknown as ScreenProps<'EditProfile'>)}
+        />,
+      );
+      await fireEvent.press(await screen.findByTestId('edit-profile-retry'));
+      expect(await screen.findByTestId('edit-profile-save')).toBeTruthy();
+      expect(screen.queryByTestId('edit-profile-load-error')).toBeNull();
+      expect(fetchOwnProfileMock).toHaveBeenCalledTimes(2);
+    } finally {
+      quiet.mockRestore();
+    }
+  });
+
   // Kontrollrunden på #2624: med tastaturet oppe dekker tastaturet systemlinja,
   // og luften for linja skal ikke legges til i tillegg (som RejectSheet).
   it('dropper luften for systemlinja mens tastaturet er oppe', async () => {

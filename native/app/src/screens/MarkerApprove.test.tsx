@@ -65,3 +65,22 @@ it('viser kortet, godkjenner gjennom scorekort-ruta og viser hvor kortet står e
   await waitFor(() => expect(screen.getByTestId('marker-state-approved')).toBeTruthy());
   expect(screen.queryByTestId('marker-approve')).toBeNull();
 });
+
+it('godkjent, men kortet kunne ikke leses på nytt: kortet står, ingen lastefeil', async () => {
+  const { fetchMarkerCard } = jest.requireMock('../data/marker') as { fetchMarkerCard: jest.Mock };
+  mockCards = [card('pending')];
+  const props = {
+    navigation: { setOptions: jest.fn() },
+    route: { key: 'marker', name: 'MarkerApprove', params: { leagueId: 'liga-vinter', gameId: 'g1', userId: 'anders' } },
+  };
+  await render(<MarkerApprove {...(props as unknown as ScreenProps<'MarkerApprove'>)} />);
+  await waitFor(() => expect(screen.getByTestId('marker-screen')).toBeTruthy());
+
+  const readsBefore = fetchMarkerCard.mock.calls.length;
+  fetchMarkerCard.mockResolvedValueOnce({ ok: false, reason: 'network' });
+  await fireEvent.press(screen.getByTestId('marker-approve'));
+
+  await waitFor(() => expect(fetchMarkerCard).toHaveBeenCalledTimes(readsBefore + 1));
+  expect(screen.getByTestId('marker-screen')).toBeTruthy();
+  expect(screen.queryByTestId('marker-error')).toBeNull();
+});

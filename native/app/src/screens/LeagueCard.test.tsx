@@ -5,7 +5,7 @@
 // «Prøv igjen», og kortet fra ruta vises med navnet, runden, resultatlinja og
 // netto per hull i slagspill.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { buildScorecardGrid, stablefordPointsFnFor } from '../../../../lib/scorecard/scorecardGrid';
 import type { LeagueCardResponse } from '../../../../lib/league/appLeagueView';
 import type { LeagueCardResult } from '../data/leagueCard';
@@ -102,4 +102,23 @@ describe('#2829: NETTO i summene', () => {
     expect(screen.queryByTestId('total-netto')).toBeNull();
     expect(screen.getByTestId('total-poeng')).toBeTruthy();
   });
+});
+
+it('«Prøv igjen» viser at det hentes mens svaret er på vei', async () => {
+  let answer: (value: LeagueCardResult) => void = () => {};
+  (fetchLeagueCard as jest.Mock)
+    .mockResolvedValueOnce({ ok: false, reason: 'load_failed' })
+    .mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)));
+  const props = {
+    navigation: { setOptions: jest.fn() },
+    route: { key: 'card', name: 'LeagueCard', params: { leagueId: 'liga-vinter', gameId: 'g1', userId: 'anders' } },
+  };
+  await render(<LeagueCard {...(props as unknown as ScreenProps<'LeagueCard'>)} />);
+  await waitFor(() => expect(screen.getByTestId('league-card-error')).toBeTruthy());
+
+  await fireEvent.press(screen.getByTestId('league-card-retry'));
+  expect(screen.getByTestId('league-card-loading')).toBeTruthy();
+
+  await act(async () => answer({ ok: true, card: CARD }));
+  expect(screen.getByTestId('league-card-screen')).toBeTruthy();
 });

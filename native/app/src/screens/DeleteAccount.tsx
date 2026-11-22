@@ -61,6 +61,8 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
   // Koden, ikke bare setningen: et avslag du løser på nettsiden får en knapp
   // dit under setningen.
   const [notice, setNotice] = useState<AccountDeleteFailure | null>(null);
+  // `attempt` teller «Prøv igjen»: hvert trykk spør serveren på nytt.
+  const [attempt, setAttempt] = useState(0);
 
   // Status og navn hentes i parallell: navnet pynter på én setning, statusen
   // avgjør hva skjermen i det hele tatt er. Skjermen venter derfor bare på
@@ -79,7 +81,7 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [attempt]);
 
   useEffect(() => {
     let cancelled = false;
@@ -209,6 +211,17 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
           <Text style={ui.body} testID="delete-account-unreachable">
             {unreachableText}
           </Text>
+          <Pressable
+            style={ui.buttonSecondary}
+            onPress={() => {
+              setStatus(null);
+              setAttempt((n) => n + 1);
+            }}
+            accessibilityRole="button"
+            testID="delete-account-retry"
+          >
+            <Text style={ui.buttonSecondaryText}>{ACCOUNT_TEXT.retry}</Text>
+          </Pressable>
         </View>
       ) : (
         <Pressable

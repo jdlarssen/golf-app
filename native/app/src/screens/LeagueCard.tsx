@@ -37,7 +37,9 @@ export function LeagueCard({ route, navigation }: ScreenProps<'LeagueCard'>) {
 
   const [load, setLoad] = useState<Load>({ status: 'loading' });
 
+  // «Prøv igjen»: the spinner shows while it asks again.
   const reload = useCallback(async () => {
+    setLoad({ status: 'loading' });
     const result = await fetchLeagueCard(leagueId, gameId, userId);
     setLoad(result.ok ? { status: 'ready', card: result.card } : { status: 'failed' });
   }, [leagueId, gameId, userId]);
@@ -69,7 +71,12 @@ export function LeagueCard({ route, navigation }: ScreenProps<'LeagueCard'>) {
         ) : (
           <>
             <Text style={ui.body}>{LEAGUE_CARD_TEXT.loadFailed}</Text>
-            <Pressable style={ui.buttonSecondary} onPress={() => void reload()} accessibilityRole="button">
+            <Pressable
+              style={ui.buttonSecondary}
+              onPress={() => void reload()}
+              accessibilityRole="button"
+              testID="league-card-retry"
+            >
               <Text style={ui.buttonSecondaryText}>{LEAGUE_CARD_TEXT.retry}</Text>
             </Pressable>
           </>
