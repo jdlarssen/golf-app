@@ -191,14 +191,15 @@ filteret er i orden. `https://www.tornygolf.no/.well-known/assetlinks.json` må 
 med JSON, ikke 308. Det krever at `www`-domenet i Vercel står på «serve production» (kommentaren
 i `proxy.ts`); proxyen sender fortsatt alle vanlige sider videre til `tornygolf.no`.
 
-## Når bygget er ute: «Ny versjon er klar.» (#2975)
+## Når bygget er ute: «Versjon … er klar» (#2975)
 
-Stripa «Ny versjon er klar.» følger tallet `android.latestVersionCode` i
-`lib/app/latestBuild.ts`. Regelen står i `app-store-release.md` §«Når bygget er ute».
+Arket «Versjon … er klar» følger `android.latestVersionCode` i `lib/app/latestBuild.ts`.
+Regelen står i `app-store-release.md` §«Når bygget er ute».
 
 1. Vent til Play har publisert bygget i lukket testing (Alpha). Ikke hev tallet når bump-PR-en
    merges: Google-gjennomgangen kan ta dager.
-2. Hev `android.latestVersionCode` til den nye `versionCode` i en egen PR.
+2. Hev `android.latestVersionCode` til den nye `versionCode` i en egen PR, med `latestVersion`.
+   Nyhetene (`RELEASE_NOTES`) er de samme som i Play-utgivelsen, høyst 500 tegn.
 3. Etter deployen: åpne `https://tornygolf.no/api/app/min-version` og sjekk tallet.
 
 «Oppdater» åpner Play-oppføringen. Den viser testsporet for testerne og produksjon for alle

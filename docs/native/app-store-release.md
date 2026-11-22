@@ -279,25 +279,30 @@ Den sammenligner kjerneløkka i appen med det samme på nettsiden, rad for rad.
 - Står en rad som villet avvik (kronene, AI-samtykket), skal butikkteksten
   ikke love det nettsiden gjør.
 
-## Når bygget er ute: «Ny versjon er klar.» (#2975)
+## Når bygget er ute: «Versjon … er klar» (#2975)
 
-Appen viser stripa «Ny versjon er klar.» når serveren kjenner et nyere bygg enn det som
-kjører. Tallet står i `lib/app/latestBuild.ts` (`ios.latestBuild`), og
-`/api/app/min-version` viser det.
+Appen viser et ark nederst, «Versjon 1.2.0 (15) er klar», når serveren kjenner et nyere bygg
+enn det som kjører. Under arket står nyhetene som punkter. Etter «Senere» står en prikk på
+profil-pillen og raden «Oppdater appen» på Profil til appen er oppdatert. Alt dette kommer fra
+`lib/app/latestBuild.ts`, og `/api/app/min-version` viser det.
 
 1. Vent til bygget er ute hos gruppa «Vennegjengen» i TestFlight. Ikke hev tallet når
    bump-PR-en merges: da finnes ikke bygget hos testerne ennå.
-2. Hev `ios.latestBuild` til det nye buildnummeret i en egen PR. Android har sitt eget tall
-   (`play-store-release.md`), så hev bare det som er ute.
+2. Lag en egen PR som endrer `lib/app/latestBuild.ts`:
+   - `ios.latestBuild` til det nye buildnummeret, og `latestVersion` til `STORE_VERSION`;
+   - `RELEASE_NOTES` til nyhetene, én linje per punkt. Bruk samme tekst som testerne får i
+     TestFlight og Play. Høyst 500 tegn til sammen, fordi Play ikke tar mer.
+   Android har sitt eget tall (`play-store-release.md`), så hev bare det som er ute.
 3. Etter deployen: åpne `https://tornygolf.no/api/app/min-version` og sjekk tallet. Svaret kan
    caches i 5 minutter.
 
 En test (`native/app/src/lib/latestBuildGuard.test.ts`) holder tallet på eller under
-`STORE_IOS_BUILD_NUMBER`. Den vet ikke om bygget er ute; det sjekker du i steg 1.
+`STORE_IOS_BUILD_NUMBER` og nyhetene under 500 tegn. Den vet ikke om bygget er ute; det sjekker
+du i steg 1.
 
-«Oppdater» i stripa åpner TestFlight-appen (`NEW_VERSION_LINKS` i `lib/app/storeLinks.ts`).
-Før lanseringsbygget: sett `NEW_VERSION_LINKS.ios` til `[APP_STORE_URL]`. Hvert bygg tar med
-seg lenka det ble bygget med, så eldre TestFlight-bygg åpner fortsatt TestFlight.
+«Oppdater» åpner TestFlight-appen (`NEW_VERSION_LINKS` i `lib/app/storeLinks.ts`). Før
+lanseringsbygget: sett `NEW_VERSION_LINKS.ios` til `[APP_STORE_URL]`. Hvert bygg tar med seg
+lenka det ble bygget med, så eldre TestFlight-bygg åpner fortsatt TestFlight.
 
 ## Nettsiden samme dag
 
