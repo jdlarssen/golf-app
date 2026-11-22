@@ -99,7 +99,7 @@ export const WITHDRAW_SELF = {
 export const PLAYER_WITHDRAW = {
   link: 'Trekk deg fra spillet',
   bodyPreStart:
-    'Du forsvinner fra påmeldings-lista og scorekortet åpner ikke for deg ved tee-off. Arrangøren får automatisk beskjed hvis du var på lag.',
+    'Du forsvinner fra påmeldingslista og scorekortet åpner ikke for deg ved tee-off. Arrangøren får automatisk beskjed hvis du var på lag.',
   bodyActive:
     'Du trekker deg fra et pågående spill. Scorene dine teller ikke i resultatet, og scorekortet ditt låses. Du kan angre så lenge spillet pågår.',
   confirmCta: 'Trekk meg fra spillet',
@@ -348,7 +348,7 @@ export function describeRosterFailure(reason: RosterActionFailure): string {
     case 'bad-team':
       return 'Ugyldig lagnummer. Velg et lag fra listen.';
     case 'bad-flight':
-      return 'Ugyldig flight-nummer. Velg en positiv flight fra listen.';
+      return 'Ugyldig flight-nummer. Velg en flight fra listen.';
     case 'team-full':
       return 'Det laget er fullt. Velg et annet lag.';
     case 'flight-full':
@@ -399,9 +399,9 @@ export function describeStartRefusal(refusal: StartRoundRefusal): string {
     case 'not_scheduled':
       return 'Spillet kan ikke startes (det er ikke planlagt).';
     case 'tee_missing':
-      return 'Tee-box mangler. Kan ikke beregne handicap.';
+      return 'Teen mangler. Velg tee og prøv igjen.';
     case 'tee_missing_rating':
-      return 'Den valgte teen mangler rating for en spillers kjønn (M/D/J). Sjekk bane-administrasjon eller endre spillerens tee-kjønn.';
+      return 'Den valgte teen mangler rating for en spillers kjønn (M/D/J). Sjekk banen i baneadministrasjonen, eller endre hvilken tee spilleren bruker.';
     case 'no_players':
       return 'Ingen spillere på dette spillet.';
     // #2207: ingen navneliste. Appens egen setning; profilsperren står bare

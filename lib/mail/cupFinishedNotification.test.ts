@@ -62,14 +62,14 @@ describe('sendCupFinishedNotification', () => {
     expect(payload.text).toMatchInlineSnapshot(`
       "Hei Per!
 
-      Cup-en «Høst-cup 2026» er avgjort.
+      Cupen «Høst-cup 2026» er avgjort.
       Hvordan endte det? Svaret venter på resultatsiden.
 
       Se resultatet: https://tornygolf.no/cup/33333333-3333-3333-3333-333333333333/resultater
       "
     `);
     expect(bodyBlockHtml(payload.html)).toMatchInlineSnapshot(`
-      "Cup-en <strong>Høst-cup 2026</strong> er avgjort.
+      "Cupen <strong>Høst-cup 2026</strong> er avgjort.
       Hvordan endte det? Svaret venter på resultatsiden."
     `);
   });
@@ -123,7 +123,7 @@ describe('sendCupFinishedNotification', () => {
                     Hei Per!
                   </h2>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    Cup-en <strong>Høst-cup 2026</strong> er avgjort.
+                    Cupen <strong>Høst-cup 2026</strong> er avgjort.
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
                     Hvordan endte det? Svaret venter på resultatsiden.

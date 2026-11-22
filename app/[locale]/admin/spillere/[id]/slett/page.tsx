@@ -71,8 +71,9 @@ export default async function DeletePlayerPage({
   const hasPlayed = (gamePlayerCount ?? 0) > 0;
 
   const displayName = target.name?.trim() || target.email;
-  const firstName = target.name?.trim().split(/\s+/)[0] || 'Spilleren';
+  const firstNameOrNull = target.name?.trim().split(/\s+/)[0];
   const tDelete = await getTranslations('admin.players.delete');
+  const firstName = firstNameOrNull || tDelete('playerFallback');
   const tNav = await getTranslations('admin.nav');
 
   return (

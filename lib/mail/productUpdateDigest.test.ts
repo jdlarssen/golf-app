@@ -83,7 +83,7 @@ describe('sendProductUpdateDigest', () => {
       Y
 
       ---
-      Du får denne mailen fordi du er på Tørny.
+      Du får denne e-posten fordi du er på Tørny.
       Meld deg av månedsbrevet: https://tornygolf.no/api/unsubscribe/product-update?token=tok
       Eller styr det fra profilen din: https://tornygolf.no/profile
       "
@@ -128,7 +128,7 @@ describe('sendProductUpdateDigest', () => {
       Y
 
       ---
-      Du får denne mailen fordi du er på Tørny.
+      Du får denne e-posten fordi du er på Tørny.
       Meld deg av månedsbrevet: https://tornygolf.no/api/unsubscribe/product-update?token=tok
       Eller styr det fra profilen din: https://tornygolf.no/profile
       "
@@ -178,7 +178,7 @@ describe('sendProductUpdateDigest', () => {
       Second body
 
       ---
-      Du får denne mailen fordi du er på Tørny.
+      Du får denne e-posten fordi du er på Tørny.
       Meld deg av månedsbrevet: https://tornygolf.no/api/unsubscribe/product-update?token=tok
       Eller styr det fra profilen din: https://tornygolf.no/profile
       "
@@ -239,7 +239,7 @@ describe('sendProductUpdateDigest', () => {
       Prøv det: https://tornygolf.no/admin/games/new
 
       ---
-      Du får denne mailen fordi du er på Tørny.
+      Du får denne e-posten fordi du er på Tørny.
       Meld deg av månedsbrevet: https://tornygolf.no/api/unsubscribe/product-update?token=tok
       Eller styr det fra profilen din: https://tornygolf.no/profile
       "
@@ -394,7 +394,7 @@ describe('sendProductUpdateDigest', () => {
       Ny modus: lag spiller én ball, beste slag velges.
 
       ---
-      Du får denne mailen fordi du er på Tørny.
+      Du får denne e-posten fordi du er på Tørny.
       Meld deg av månedsbrevet: https://tornygolf.no/api/unsubscribe/product-update?token=fixed-token-for-snapshot
       Eller styr det fra profilen din: https://tornygolf.no/profile
       "
@@ -438,7 +438,7 @@ describe('sendProductUpdateDigest', () => {
                     
                   </div>
                   <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E5E0D3;padding-top:24px;">
-                    Du får denne mailen fordi du er på Tørny. <a href="https://tornygolf.no/api/unsubscribe/product-update?token=fixed-token-for-snapshot" style="color:#1B4332;text-decoration:underline;">Meld deg av månedsbrevet</a>, eller styr det fra <a href="https://tornygolf.no/profile" style="color:#1B4332;text-decoration:underline;">profilen din</a>.
+                    Du får denne e-posten fordi du er på Tørny. <a href="https://tornygolf.no/api/unsubscribe/product-update?token=fixed-token-for-snapshot" style="color:#1B4332;text-decoration:underline;">Meld deg av månedsbrevet</a>, eller styr det fra <a href="https://tornygolf.no/profile" style="color:#1B4332;text-decoration:underline;">profilen din</a>.
                   </p>
                 </td></tr>
               </table>

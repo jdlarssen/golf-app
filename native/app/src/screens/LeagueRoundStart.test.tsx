@@ -167,7 +167,7 @@ describe('tegning 5b: avslag', () => {
       { inProgress: ['me'] },
       'Du er allerede med i en flight i denne runden. Spill den ferdig eller trekk deg fra den først.',
     ],
-    ['banen mangler', { ready: false }, 'Runden mangler bane eller tee — si fra til admin.'],
+    ['banen mangler', { ready: false }, 'Runden mangler bane eller tee — si fra til arrangøren.'],
   ])('kjent fra ligaen: %s — boksen rett under tittelen, uten medspillervalg', async (_label, change, text) => {
     const view = leagueView();
     view.rounds[2] = { ...view.rounds[2], ...change };

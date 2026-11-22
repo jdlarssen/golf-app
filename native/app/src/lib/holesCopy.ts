@@ -30,7 +30,7 @@ export const HOLES_TEXT = {
   backSub: 'Hull 10–18',
   waiting: 'Venter',
   revealHiddenTitle: 'Resultatene avsløres etter runden',
-  revealHiddenSub: 'Hull for hull åpnes når admin avslutter spillet.',
+  revealHiddenSub: 'Hull for hull åpnes når arrangøren avslutter spillet.',
   goodLuck: 'Lykke til.',
   /** Bunnteksten når runden er ferdig, som webbens `LeaderboardFooter`. */
   wellPlayed: 'Vel spilt',

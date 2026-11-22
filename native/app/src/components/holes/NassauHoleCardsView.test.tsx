@@ -71,8 +71,8 @@ describe('NassauHoleCardsView (B3)', () => {
 
   it('kamplinja: kampen, initialene, fornavnet («Deg» for den som ser på) og summen', async () => {
     await show(B3);
-    expect(textOf('nassau-match-front9-line')).toBe('Front 9|AS|Anne-Kristine|33');
-    expect(textOf('nassau-match-back9-line')).toBe('Back 9|Du|Deg|34');
+    expect(textOf('nassau-match-front9-line')).toBe('Ut|AS|Anne-Kristine|33');
+    expect(textOf('nassau-match-back9-line')).toBe('Inn|Du|Deg|34');
     expect(textOf('nassau-match-total18-line')).toBe('Totalt|AS|Anne-Kristine|68');
   });
 
@@ -113,7 +113,7 @@ describe('NassauHoleCardsView (B3)', () => {
     expect(screen.getByTestId('nassau-hole-row-meg-won', HIDDEN)).toBeTruthy();
     expect(screen.queryByTestId('nassau-hole-row-anne-won', HIDDEN)).toBeNull();
     expect(textOf('nassau-hole-standing')).toBe(
-      `Back 9|Totalt|Du leder med${NBSP}1|Anne-Kristine leder med${NBSP}1`,
+      `Inn|Totalt|Du leder med${NBSP}1|Anne-Kristine leder med${NBSP}1`,
     );
     // Den valgte mynten har ringen fra tegningen.
     expect(styleOf('nassau-coin-15-won-selected').boxShadow).toBe(
@@ -128,7 +128,7 @@ describe('NassauHoleCardsView (B3)', () => {
     expect(textOf('nassau-hole-card-title')).toBe('Hull 4');
     expect(screen.getByTestId('nassau-coin-4-won-selected', HIDDEN)).toBeTruthy();
     expect(screen.queryByTestId('nassau-coin-15-won-selected', HIDDEN)).toBeNull();
-    expect(textOf('nassau-hole-standing')).toBe('Front 9|Totalt|Delt ledelse|Delt ledelse');
+    expect(textOf('nassau-hole-standing')).toBe('Ut|Totalt|Delt ledelse|Delt ledelse');
 
     expect(screen.getByLabelText('Hull 3')).toBeTruthy();
     await press('nassau-hole-prev');
@@ -160,7 +160,7 @@ describe('NassauHoleCardsView (B3)', () => {
 
   it('en delt kamp: «=»-mynten, «Delt» og summen, uten gullstrek', async () => {
     await show({ a: fours(18), b: fours(18) }, { viewer: 'a' });
-    expect(textOf('nassau-match-front9-line')).toBe('Front 9|=|Delt|36');
+    expect(textOf('nassau-match-front9-line')).toBe('Ut|=|Delt|36');
     expect(screen.queryByTestId('nassau-match-front9-alone', HIDDEN)).toBeNull();
     expect(screen.queryAllByTestId(/^nassau-alone-bar-/, HIDDEN)).toHaveLength(0);
   });
@@ -181,7 +181,7 @@ describe('NassauHoleCardsView (B3)', () => {
 
   it('ingen spilte kampen: «Ingen vinner» uten mynt og sum, og uspilte hull er tomme', async () => {
     await show({ a: [3, ...fours(8)], b: fours(9) }, { viewer: 'a' });
-    expect(textOf('nassau-match-back9-line')).toBe('Back 9|Ingen vinner');
+    expect(textOf('nassau-match-back9-line')).toBe('Inn|Ingen vinner');
     expect(screen.queryByTestId('nassau-match-back9-coin', HIDDEN)).toBeNull();
     expect(screen.getByTestId('nassau-coin-12-unplayed', HIDDEN)).toBeTruthy();
     expect(screen.getByLabelText('Hull 12: ikke spilt')).toBeTruthy();

@@ -65,7 +65,7 @@ export default async function SlettKontoPage({
     : await getPrivateUserFields([userId])
         .then((fields) => fields.get(userId)?.email)
         .catch(() => undefined);
-  const displayName = userProfile?.name?.trim() || ownEmail || 'kontoen din';
+  const displayName = userProfile?.name?.trim() || ownEmail || t('accountFallback');
 
   return (
     <AppShell>

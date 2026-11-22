@@ -103,6 +103,8 @@ const WEB_ONLY: Partial<Record<WebKey, string>> = {
   // Lenka tilbake til `/profile` på webbens sperre-visning. I appen er sperren
   // et banner på samme skjerm, og veien tilbake er `backLabel`.
   blockedBackLink: 'webbens egen lenke fra sperre-visningen; appen har tilbake-knappen',
+  // Webbens oversatte reservenavn; appen er bare norsk og har det som DISPLAY_NAME_FALLBACK.
+  accountFallback: 'appen bruker DISPLAY_NAME_FALLBACK',
 };
 
 describe('describeDeleteBlock', () => {

@@ -94,8 +94,8 @@ const LINEUP_ERRORS: Record<string, string> = {
   profile_read_failed: 'Klarte ikke å hente spillerne. Prøv igjen.',
   invalid_source_match: 'Uttaket ser rart ut. Last siden på nytt og prøv igjen.',
   rollback_failed:
-    'Noen av kampene ble satt opp før det gikk galt, og de ble ikke fjernet igjen. Ta kontakt med administrator for å få ryddet økten.',
-  reveal_undo_failed: 'Kampene ble ikke satt opp, men økten står likevel som avdekket. Ta kontakt med administrator for å få ryddet den.',
+    'Noen av kampene ble satt opp før det gikk galt, og de ble ikke fjernet igjen. Skriv til klubb@tornygolf.no, så rydder vi opp i økten.',
+  reveal_undo_failed: 'Kampene ble ikke satt opp, men økten står likevel som avdekket. Skriv til klubb@tornygolf.no, så rydder vi opp.',
 };
 
 /** Nettets setning for koden. Uten nett og uten innlogging sier det samme som resten av cupen. */

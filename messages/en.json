@@ -1,6 +1,7 @@
 {
   "common": {
     "appName": "Tørny",
+    "back": "Back",
     "metaDescription": "Free golf tournament app. Set up scramble, stableford or match play in minutes, with a live leaderboard and WHS handicaps. 20+ game formats.",
     "guestBadge": "Guest",
     "unconfirmed": "Not confirmed",
@@ -74,7 +75,7 @@
     "someoneFallback": "A friend",
     "somePlayerFallback": "A player",
     "someTeamFallback": "The team",
-    "organizerFallback": "The organizer",
+    "organizerFallback": "The organiser",
     "someGameFallback": "the game",
     "kinds": {
       "invite": {
@@ -141,7 +142,7 @@
       },
       "registrationExpired": {
         "title": "You didn''t get a spot in {gameName}",
-        "detail": "The round started before the organizer got to your request."
+        "detail": "The round started before the organiser got to your request."
       },
       "teamMemberWithdrew": {
         "title": "{withdrawnPlayerName} withdrew",
@@ -149,9 +150,9 @@
       },
       "deliverReminder": {
         "title": "Remember to submit your scorecard",
-        "detail": "Submit your card in {gameName} so the organizer can finish the round.",
+        "detail": "Submit your card in {gameName} so the organiser can finish the round.",
         "titleKept": "Submit the cards you kept",
-        "detailKept": "You kept cards in {gameName} that aren't submitted yet. Submit them so the organizer can finish the round.",
+        "detailKept": "You kept cards in {gameName} that aren't submitted yet. Submit them so the organiser can finish the round.",
         "titleHandedOver": "{markerName} kept your card",
         "detailHandedOver": "Look over your card in {gameName} and submit it."
       },
@@ -432,6 +433,7 @@
       "bullet4": "Your place in rounds that are in progress or haven't started. You're withdrawn automatically, and the rest of the group plays on.",
       "keptHeading": "What is kept",
       "keptBullet": "Results from finished rounds. They stay in the tournament, but with \"Slettet bruker\" in place of your name",
+      "accountFallback": "your account",
       "confirmParagraph": "You are about to permanently delete <strong>{displayName}</strong>. This action cannot be undone.",
       "deleteButton": "Delete my account permanently",
       "deletePending": "Deleting …",
@@ -440,7 +442,7 @@
         "active_games": "You're still organising something that hasn't finished. Finish it, and you can delete your account.",
         "admin_account": "The admin account can't be deleted from here.",
         "sole_club_owner": "You're still the only owner of a club. Make another member the owner, and you can delete your account.",
-        "delete_failed": "Something went wrong while deleting. Please try again, or contact an administrator."
+        "delete_failed": "Something went wrong while deleting. Please try again, or write to personvern@tornygolf.no."
       }
     },
     "historikk": {
@@ -663,7 +665,7 @@
   "prizes": {
     "boardTitle": "Prize table",
     "awardsTitle": "Prize ceremony",
-    "placementLabel": "{position}. place",
+    "placementLabel": "{position, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} place",
     "ldLabel": "Longest drive",
     "ctpLabel": "Closest to the pin",
     "logoAlt": "Sponsor logo",
@@ -831,7 +833,7 @@
       },
       "patsome": {
         "line": "Three team formats, six holes each",
-        "pitch": "You play in pairs: better ball, greensome and foursomes in the same round, six holes of each.",
+        "pitch": "You play in pairs: best ball, greensome and foursomes in the same round, six holes of each.",
         "choose": "Choose patsome"
       },
       "singles_matchplay": {
@@ -910,7 +912,7 @@
       "wolf": {
         "legend": "Wolf setup",
         "scoringLabel": "Scoring",
-        "scoringDescription": "Determines whether Wolf scoring uses players' handicap strokes or whether the lowest raw gross score decides each hole.",
+        "scoringDescription": "Here you choose whether Wolf scoring uses the players' handicap strokes, or whether the lowest raw gross score decides each hole.",
         "scoringNet": "With handicap (net)",
         "scoringGross": "Gross",
         "scoringAriaLabel": "Wolf scoring",
@@ -919,7 +921,7 @@
       "nassau": {
         "legend": "Nassau setup",
         "scoringLabel": "Scoring",
-        "scoringDescription": "Nassau is three competitions in one — front 9, back 9, and full 18. Determines whether handicap or gross decides each portion.",
+        "scoringDescription": "Nassau is three matches in one: the front nine, the back nine and the full 18. Here you choose whether handicap or gross decides each match.",
         "scoringNet": "With handicap (net)",
         "scoringGross": "Gross",
         "scoringAriaLabel": "Nassau scoring"
@@ -981,7 +983,7 @@
         "variantLabel": "Variant",
         "variantAriaLabel": "Shamble variant",
         "variantShambleTitle": "Shamble",
-        "variantShambleDesc": "Best 2 count",
+        "variantShambleDesc": "The best 2 count",
         "variantChampagneTitle": "Champagne Scramble",
         "variantChampagneDesc": "Choose count",
         "countLabel": "Count",
@@ -1220,7 +1222,7 @@
         "toggleAdd": "Add",
         "toggleHide": "Hide",
         "toggleCount": "{count, plural, one {# prize} other {# prizes}}",
-        "placementLabel": "{position}. place",
+        "placementLabel": "{position, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} place",
         "ldLabel": "Longest drive",
         "ctpLabel": "Closest to the pin",
         "prizePlaceholder": "Prize, e.g. dinner for two",
@@ -1298,9 +1300,9 @@
           "sideAndPrizes": "Side tournament and prizes"
         },
         "values": {
-          "handicapNet": "Net, {pct} %",
+          "handicapNet": "Net, {pct}%",
           "handicapGross": "Gross",
-          "handicapTeamAverage": "{pct} % of the team average",
+          "handicapTeamAverage": "{pct}% of the team average",
           "feeNone": "None",
           "feeAmount": "{kr} kr",
           "visibilityLive": "Show everything",
@@ -1674,7 +1676,7 @@
       "bad_registration_mode": "The sign-up setting is invalid. Set it again under \"Who can sign up?\".",
       "bad_registration_type": "The sign-up type is invalid. Choose \"Individual\" or \"Team\".",
       "team_registration_unsupported_mode": "Team sign-up doesn't work with this format. Choose \"Individual\", or pick a format played in teams.",
-      "bad_registration_cap": "The number of spots doesn't fit the format. Set a new number under «Spots and deadline».",
+      "bad_registration_cap": "The number of spots doesn't fit the format. Set a new number under “Spots and deadline”.",
       "bad_signup_deadline": "The signup deadline is invalid. Pick the date and time again.",
       "signup_deadline_after_tee_off": "The signup deadline must be before tee-off.",
       "registration_cap_below_held": "{held, plural, one {# player is} other {# players are}} already in, so the number of spots can't be lower.",
@@ -1699,7 +1701,7 @@
     "createDoor": {
       "kicker": "New game",
       "shortageBannerSome": "You only have {count} registered player{plural}.",
-      "shortageBannerNote": "Best ball needs an even number of players (at least 2), stableford works with 1. Ask an admin to invite more from the",
+      "shortageBannerNote": "Best ball needs an even number of players (at least 2), stableford works with 1. Ask the organiser to invite more from the",
       "shortageBannerLink": "home page",
       "shortageBannerSuffix": ".",
       "revansjeBanner": "Prefilled from {name} — you can change anything.",
@@ -1798,7 +1800,7 @@
           },
           {
             "heading": "Variants of Stableford",
-            "body": "Modified Stableford flips the scale and rewards risk: birdies and eagles are worth far more, while bogeys and double bogeys take points off. Fourball Stableford, often called 4BBB, is played in pairs where only the better points score per hole counts for the team, and WHS recommends 85 per cent of the course handicap there. Par Stableford is a third variant where each hole gives you a plus, a minus or a half against par instead of points. All three use the same distribution of strokes by stroke index, so there is no new sum to learn."
+            "body": "Modified Stableford flips the scale and rewards risk: birdies and eagles are worth far more, while bogeys and double bogeys take points off. Fourball Stableford, often called 4BBB, is played in pairs where only the better points score per hole counts for the team, and WHS recommends 85 per cent of the course handicap there. Both use the same distribution of strokes by stroke index, so there is no new sum to learn."
           }
         ],
         "example": "Hole 3, par 4, SI 5: you have CH 12 and get one extra stroke. You score 5 gross (net 4) → par → 2 points. Hole 15, par 3, SI 17: you score 3 gross (net 3) → par → 2 points. Hole 10, par 5, SI 3: you score 5 gross (net 4) → birdie → 3 points.",
@@ -1817,7 +1819,7 @@
           },
           {
             "q": "Can Stableford be played in teams?",
-            "a": "Yes. Fourball Stableford pairs two players up, and only the better points score per hole counts for the team."
+            "a": "Yes. Fireball Stableford pairs two players up, and only the better points score per hole counts for the team."
           }
         ]
       },
@@ -1837,7 +1839,7 @@
           "The strokes you get from your handicap are applied, and the highest total wins."
         ],
         "long": "Stableford on a pro scale where you are rewarded heavily for the good holes and punished for the really weak ones. Eagle gives 5 points, birdie 2, par 0. Bogey costs 1 point, double bogey or worse costs 3. Your total can drop below zero. Handicap strokes are applied in the usual way, and the highest total after 18 holes wins.",
-        "example": "Hole 6, par 5, SI 1: you have CH 18 and get one extra stroke. You score 5 gross (net 4) → eagle → +5 points. Hole 11, par 4: you score 7 gross (net 6) → double bogey → −3 points. Net for these two holes: +5 + (−3) = +2 points."
+        "example": "Hole 6, par 5, SI 1: you have CH 18 and get one extra stroke. You score 5 gross (net 4) → birdie → +2 points. Hole 11, par 4: you score 7 gross (net 6) → double bogey → −3 points. Net for these two holes: +2 + (−3) = −1 point."
       },
       "solo_strokeplay": {
         "summary": "Ordinary stroke play: you count every shot, and the fewest net strokes wins.",
@@ -1862,8 +1864,8 @@
             "body": "Best ball is played in pairs, and both of you play your own ball for the whole round. On each hole you compare the net scores and the team records the lower one. The other score simply stands. That lets you take turns being aggressive: if your partner is safely on the green in two, you can go straight at the flag without risking anything for the team. Best ball is played as stroke play where the team total after 18 holes decides, or as match play where the lower net wins the hole. Everyone plays their own round, and Tørny has room for up to 20 pairs in the same game."
           },
           {
-            "heading": "Best ball, fourball and fourball better ball",
-            "body": "The names are used interchangeably and broadly mean the same thing: two players, a ball each, the better score counts. Fourball is the name the rule book uses, better ball is what the clubs say, and best ball is what the group says on the first tee. The format is often confused with foursomes, which is something else entirely, because there the pair shares one ball and plays alternate shots. In a scramble everyone hits, but the team plays on from the best shot with one ball. In best ball you always play your own ball until it is holed, or until you can see you cannot contribute."
+            "heading": "Best ball, fourball and fireball",
+            "body": "The names are used interchangeably and broadly mean the same thing: two players, a ball each, the better score counts. Fourball is the name the rule book uses, fireball is what the clubs say, and best ball is what the group says on the first tee. The format is often confused with foursomes, which is something else entirely, because there the pair shares one ball and plays alternate shots. In a scramble everyone hits, but the team plays on from the best shot with one ball. In best ball you always play your own ball until it is holed, or until you can see you cannot contribute."
           },
           {
             "heading": "Handicap in best ball",
@@ -1890,7 +1892,7 @@
           },
           {
             "q": "Are fourball and best ball the same thing?",
-            "a": "In practice yes. Fourball is the rule book name, while best ball and better ball are the everyday names for the same format."
+            "a": "In practice yes. Fourball is the rule book name, while best ball and fireball are the everyday names for the same format."
           }
         ]
       },
@@ -1916,7 +1918,7 @@
           },
           {
             "heading": "Common house rules",
-            "body": "Most social rounds add a minimum requirement that each player must contribute a certain number of drives, typically three or four over 18 holes. It stops the team leaning on the longest hitter and keeps everyone involved. If the organiser turns on «Whose tee shot» when setting up the tournament, Tørny keeps the count: the team taps whose tee shot they used, and the card can't be delivered until everyone has enough. Some add a rule that approach shots into the green must come from different players. Ambrose is the same idea with a different handicap sum, and Florida scramble takes the owner of the chosen ball out of play for the next shot. Agree the rules on the first tee, not on the 14th."
+            "body": "Most social rounds add a minimum requirement that each player must contribute a certain number of drives, typically three or four over 18 holes. It stops the team leaning on the longest hitter and keeps everyone involved. If the organiser turns on “Whose tee shot” when setting up the tournament, Tørny keeps the count: the team taps whose tee shot they used, and the card can't be delivered until everyone has enough. Some add a rule that approach shots into the green must come from different players. Ambrose is the same idea with a different handicap sum, and Florida scramble takes the owner of the chosen ball out of play for the next shot. Agree the rules on the first tee, not on the 14th."
           }
         ],
         "example": "Hole 2, par 4: A hits 200 m straight, B hits 185 m into the rough, C hits 220 m down the fairway — you choose C's spot. Everyone drops at 220 m and plays. The best second shot finishes 4 m from the hole. Everyone drops and putts, and the closest holes it in 2 putts. Team score: 4 (2 shots + 2 putts).",
@@ -2395,12 +2397,12 @@
       "cupDecidedWalkover": "The match is settled without play — {names} withdrew too close to the start, so it goes to {team} as a walkover.",
       "cupPlayOnPending": "Choice pending — {names} withdrew, and the organiser has not yet decided whether {partner} plays alone.",
       "backToHome": "Back to home",
-      "draftBanner": "Draft — admin is still planning. Details may change.",
+      "draftBanner": "Draft — the organiser is still planning. Details may change.",
       "bannerSubmitted": "Scorecard submitted.",
       "bannerSubmittedPartial": "Submitted, but not all of your flightmates' cards. Someone may have submitted them or entered a hole on them in the meantime.",
       "bannerSubmittedHandedOver": "Your card is submitted. Your flightmates get their cards and submit them themselves.",
-      "rejectionBannerPrefix": "Your scorecard was rejected: «",
-      "rejectionBannerSuffix": "». Edit your holes and resubmit.",
+      "rejectionBannerPrefix": "Your scorecard was rejected: “",
+      "rejectionBannerSuffix": "”. Edit your holes and resubmit.",
       "rejectionBannerNoReason": "Your scorecard was rejected, with no reason given. Edit your holes and resubmit.",
       "pendingApprovals": "{count, plural, one {1 player is waiting for your approval} other {# players are waiting for your approval}}",
       "reviewLink": "Review",
@@ -2457,7 +2459,7 @@
       "ctaHolesFilled": "{count} of {total} holes entered",
       "ctaSubmittedPendingApproval": "Scorecard submitted — waiting for approval from another player.",
       "ctaSubmittedPendingMarker": "Your card is in. Now it waits for your marker.",
-      "ctaSubmittedApproved": "Scorecard submitted and approved. Waiting for admin to finish the game.",
+      "ctaSubmittedApproved": "Scorecard submitted and approved. Waiting for the organiser to finish the game.",
       "ctaDeliverFlight": "{count, plural, one {Submit the card you kept} other {Submit the cards you kept ({count})}}",
       "ctaContinueToSibling": "Continue to hole {hole} · {format}",
       "draftTeamsLabel": "Teams",
@@ -2541,7 +2543,7 @@
         "handOver": "You are the marker for {names}. {names} gets their card and submits it themselves.",
         "handOverMany": "You are the marker for {names}. They get their cards and submit them themselves.",
         "markedBy": "{name} is your marker. Submit without changes and the card is approved. Change something and {name} approves the change.",
-        "returnedBy": "{name} sent the card back. Fix it and send it to {name} again. If you disagree, the organizer can approve the card instead.",
+        "returnedBy": "{name} sent the card back. Fix it and send it to {name} again. If you disagree, the organiser can approve the card instead.",
         "assignedTo": "The card goes to {name} when you submit it."
       },
       "unknownCourse": "(unknown course)",
@@ -2628,7 +2630,7 @@
       "approvePending": "Approving …",
       "rejectButton": "Reject",
       "rejectReasonLabel": "Reason for rejection (brief)",
-      "rejectReasonPlaceholder": "E.g. «Hole 7 was 5 strokes, not 4.»",
+      "rejectReasonPlaceholder": "E.g. “Hole 7 was 5 strokes, not 4.”",
       "cancelButton": "Cancel",
       "sendRejection": "Send rejection",
       "rejectPending": "Rejecting …",
@@ -2638,16 +2640,16 @@
     "finish": {
       "kicker": "Finish game",
       "heading": "Finish game",
-      "subtitleSide": "Choose side-tournament winners for «{name}». The game will be locked when you confirm.",
-      "subtitlePlain": "Lock «{name}» and open the leaderboard for everyone.",
+      "subtitleSide": "Choose side-tournament winners for “{name}”. The game will be locked when you confirm.",
+      "subtitlePlain": "Lock “{name}” and open the leaderboard for everyone.",
       "missingCount": "{count, plural, one {1 player hasn't submitted:} other {# players haven't submitted:}}",
       "missingNote": "If you finish now, these players will be recorded as not submitted. Their scores still count in the results.",
       "unapprovedCount": "{count, plural, one {Waiting for 1 scorecard to be approved:} other {Waiting for # scorecards to be approved:}}",
       "unapprovedNote": "A co-player must approve each scorecard before you can finish. Ask them to open the game and approve, then you can finish here.",
-      "approveOverrideNote": "If you can't reach them, you can approve on behalf of the group as the organiser under «Manage players».",
+      "approveOverrideNote": "If you can't reach them, you can approve on behalf of the group as the organiser under “Manage players”.",
       "approveOverrideCta": "Approve on behalf of the group",
       "ownCardAwaitsMarker": "Your marker approves the card. Then the round finishes on its own and counts in the league.",
-      "ownCardNoPeer": "No co-player can approve your card. Go to «Manage players», open your card with «Open for editing» and come back here. Then you can finish the game even though your card isn't submitted. Your strokes count.",
+      "ownCardNoPeer": "No co-player can approve your card. Go to “Manage players”, open your card with “Open for editing” and come back here. Then you can finish the game even though your card isn't submitted. Your strokes count.",
       "ownCardCta": "Manage players",
       "backToGame": "Back to game",
       "withdrawLabel": "Mark as withdrawn",
@@ -2695,9 +2697,9 @@
     },
     "delete": {
       "kicker": "Delete game",
-      "heading": "Delete «{name}»?",
+      "heading": "Delete “{name}”?",
       "permanentLabel": "Permanently deleted",
-      "gameEntry": "The game «{name}»",
+      "gameEntry": "The game “{name}”",
       "playerCount": "{count, plural, one {1 player in the game} other {# players in the game}}",
       "scoreCount": "{count, plural, one {1 score row} other {# score rows}}",
       "cannotUndo": "This action cannot be undone.",
@@ -2731,7 +2733,7 @@
     },
     "withdraw": {
       "kicker": "Withdraw",
-      "heading": "Withdraw from «{name}»?",
+      "heading": "Withdraw from “{name}”?",
       "errors": {
         "withdraw_failed": "Could not withdraw you from the game. Please try again or contact the organiser.",
         "captain_has_team": "You're the captain, and teammates have said yes. Hand the captaincy to a teammate before you withdraw.",
@@ -2745,7 +2747,7 @@
       "activeItems": {
         "scoresNotRanked": "Your scores won't count in the standings",
         "cardLocked": "Your scorecard will be locked for further entry",
-        "shownAsWithdrawn": "You will be shown as «Withdrawn» under the leaderboard"
+        "shownAsWithdrawn": "You will be shown as “Withdrawn” under the leaderboard"
       },
       "activeNote": "You can undo and resume from the start page while the game is active.",
       "preStartItems": {
@@ -2806,7 +2808,7 @@
     "players": {
       "kicker": "Players",
       "heading": "Players",
-      "subtitle": "Manage who's in «{name}».",
+      "subtitle": "Manage who's in “{name}”.",
       "rosterSection": "In the game",
       "signupsLink": "Signups",
       "signupsWaiting": "{count} waiting",
@@ -2843,7 +2845,7 @@
       "approvalHint": "If a co-player can't approve a scorecard, you can approve on behalf of the flight here. Then you can finish the game.",
       "ownCard": {
         "needsPeer": "A co-player has to approve your own card. You can't do that yourself.",
-        "noPeer": "No co-player can approve your card right now. Reopen it with «Open for editing» in the player list. Then you can finish the game even though your card isn't submitted. Your strokes count."
+        "noPeer": "No co-player can approve your card right now. Reopen it with “Open for editing” in the player list. Then you can finish the game even though your card isn't submitted. Your strokes count."
       },
       "pendingInvitesSection": "Invited (awaiting sign-in)",
       "cancelInviteButton": "Cancel",
@@ -2899,7 +2901,7 @@
       "rosterSearch": "Add from players you know",
       "rosterSearchPlaceholder": "Search co-players…",
       "rosterSearchAriaLabel": "Search co-players",
-      "rosterNoResults": "No results for «{query}».",
+      "rosterNoResults": "No results for “{query}”.",
       "rosterAddButton": "+ Add",
       "rosterAddPending": "Adding …",
       "rosterOr": "or",
@@ -3009,8 +3011,8 @@
     "goneMember": "someone no longer on the team",
     "partialLine": "A card on the team is delivered. You can only swap while everyone has enough.",
     "boxTitle": "{who} tee {total, plural, one {shot} other {shots}}",
-    "boxSwap": "Everyone needs at least {min} tee shots before {delivery, select, team {the team card can be delivered} other {anyone on the team can deliver}}. Tap «Edit holes» and switch to {names} on {holes, plural, one {# hole} other {# holes}} where {surplus} stands.",
-    "boxPickOpen": "Everyone needs at least {min} tee shots before {delivery, select, team {the team card can be delivered} other {anyone on the team can deliver}}. Tap «Edit holes» and pick {names} on the holes without a tee shot.",
+    "boxSwap": "Everyone needs at least {min} tee shots before {delivery, select, team {the team card can be delivered} other {anyone on the team can deliver}}. Tap “Edit holes” and switch to {names} on {holes, plural, one {# hole} other {# holes}} where {surplus} stands.",
+    "boxPickOpen": "Everyone needs at least {min} tee shots before {delivery, select, team {the team card can be delivered} other {anyone on the team can deliver}}. Tap “Edit holes” and pick {names} on the holes without a tee shot.",
     "boxEdit": "Edit holes",
     "organizerLine": "{name} has {count} of {min} tee shots"
   },
@@ -3036,13 +3038,14 @@
       "backAriaLabel": "Back to tournament",
       "leaderboardAriaLabel": "View leaderboard",
       "pageHeading": "Hole {n} · {game}",
+      "teamWithNames": "Team {number} · {names}",
       "playerFallback": "Player",
       "missingFlightScores": "{count, plural, one {1 score missing on this hole} other {# scores missing on this hole}}"
     },
     "scoreCard": {
       "tapInstruction": "Tap to set par. Use − / +.",
       "submittedBadge": "Submitted",
-      "strokesBadge": "+{n, plural, one {# STROKE} other {# STROKES}}",
+      "strokesBadge": "+{n, plural, one {# stroke} other {# strokes}}",
       "increaseAriaLabel": "+1 for {name}",
       "decreaseAriaLabel": "-1 for {name}",
       "moreAriaLabel": "Pick specific score for {name}",
@@ -3159,7 +3162,7 @@
         "not_authenticated": "You must be logged in to make a pick.",
         "invalid_choice": "Invalid choice.",
         "partner_required": "You must pick a partner.",
-        "partner_must_be_null": "Partner must not be set for Lone/Blind Wolf.",
+        "partner_must_be_null": "Lone Wolf and Blind Wolf play without a partner. Remove the partner and try again.",
         "partner_cannot_be_wolf": "You cannot pick yourself as a partner.",
         "invalid_hole": "Invalid hole number.",
         "not_wolf_on_hole": "You are not the Wolf on this hole, so you cannot pick.",
@@ -3377,7 +3380,7 @@
       "live": "Live",
       "tiedRank": "Tied for {rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
       "hullForHullHeading": "Hole by hole",
-      "hullForHullRevealSub": "Hole by hole opens when the admin ends the round.",
+      "hullForHullRevealSub": "Hole by hole opens when the organiser ends the round.",
       "leaderboardHeading": "Leaderboard",
       "teamLeaderboardHeading": "Team leaderboard",
       "hullNumber": "Hole {number}",
@@ -3441,6 +3444,7 @@
       "kicker": "Duel",
       "backAriaLabel": "Back",
       "barAriaLabel": "{nameA} {scoreA} vs {nameB} {scoreB}",
+      "versus": " vs ",
       "halvedLegend": "halved",
       "verdictTie": "Tied {scoreA}{sep}{scoreB}.",
       "verdictWinTiebreak": "{winner} won.",
@@ -3459,7 +3463,7 @@
     "state35": {
       "segmentHalfLabel": "Holes {from}–{to}",
       "lockedHeading": "See you at hole {last}",
-      "lockedSub": "Holes {from}–{to} are revealed when the organizer ends the game."
+      "lockedSub": "Holes {from}–{to} are revealed when the organiser ends the game."
     },
     "nassau": {
       "front9Label": "Front 9",
@@ -3477,7 +3481,7 @@
       "sectionsPending": "Waiting for holes played",
       "sectionsPendingNote": "The match is decided once everyone has played its holes.",
       "sectionTied": "Tied 1st",
-      "revealHiddenSub": "Nassau's three bets are kept secret until admin finishes the game.",
+      "revealHiddenSub": "Nassau's three matches are kept secret until the organiser finishes the game.",
       "seire": "wins",
       "seier": "win",
       "sweepLabel": "Swept the board",
@@ -3517,7 +3521,7 @@
     },
     "skins": {
       "carriedNote": "{count, plural, one{# skin} other{# skins}} carried over. The last played hole was halved.",
-      "revealHiddenSub": "The skins pot is kept secret until admin finishes the game.",
+      "revealHiddenSub": "The skins pot is kept secret until the organiser finishes the game.",
       "skinLabel": "{count, plural, one {skin} other {skins}}",
       "skinCount": "{count, plural, one {1 skin} other {# skins}}",
       "atStakeLabel": "{count, plural, one {1 skin at stake} other {# skins at stake}}",
@@ -3553,8 +3557,8 @@
     },
     "matchplay": {
       "matchCannotShow": "Match cannot be displayed",
-      "singlesDistribution": "Players are not correctly distributed across two sides. Check the admin flow and ensure each side has one player.",
-      "teamDistribution": "Players are not correctly distributed across two teams of two. Check the admin flow.",
+      "singlesDistribution": "The players are not split correctly into two sides. Ask the organiser to open the game and put one player on each side.",
+      "teamDistribution": "The players are not split correctly into two teams of two. Ask the organiser to open the game and fix the teams.",
       "subtitle1v1": "1 vs 1 · Hole by hole",
       "subtitle2v2bestball": "2 vs 2 · Best ball per hole",
       "subtitle2v2alternate": "2 vs 2 · Alternate shot",
@@ -3571,7 +3575,7 @@
       "tableNote": "Numbers are gross. A dot means a stroke on that hole, and the small number below is net — net decides who wins the hole."
     },
     "wolf": {
-      "revealHiddenSub": "Wolf points are kept secret until admin finishes the game.",
+      "revealHiddenSub": "Wolf points are kept secret until the organiser finishes the game.",
       "packLeaderKronet": "Pack leader crowned",
       "wolfSubtitle": "Wolf · {scoring}",
       "wolfHullPlayed": "{count} Wolf holes",
@@ -3591,7 +3595,7 @@
       "andreSide": "Others",
       "wolfLabel": "Wolf:",
       "bruttoLabel": "gross {count}",
-      "hullForHullRevealSub": "Hole by hole opens when admin finishes the game."
+      "hullForHullRevealSub": "Hole by hole opens when the organiser finishes the game."
     },
     "board": {
       "title": "The board",
@@ -3683,14 +3687,15 @@
       "podiumSubtitle": "{format} · After {holes} holes"
     },
     "shamble": {
-      "revealHiddenSub": "Scores are kept secret until admin finishes the game.",
+      "revealHiddenSub": "Scores are kept secret until the organiser finishes the game.",
       "noTeamsScored": "No teams have scored",
       "teller": "Counts",
       "tellerIkke": "Does not count",
-      "spiltHullOf18": "played {played}/18 holes"
+      "spiltHullOf18": "played {played}/18 holes",
+      "bestCount": "best {count}"
     },
     "patsome": {
-      "revealHiddenSub": "Points are kept secret until admin finishes the game.",
+      "revealHiddenSub": "Points are kept secret until the organiser finishes the game.",
       "totalLabel": "total",
       "podiumSubtitle": "Patsome · {scoring}"
     },
@@ -3703,7 +3708,7 @@
     "revealHidden": {
       "kicker": "Hidden",
       "heading": "Revealed at the end",
-      "description": "The standings stay hidden until the organizer ends the game."
+      "description": "The standings stay hidden until the organiser ends the game."
     },
     "holes": {
       "unknownPlayer": "(unknown player)",
@@ -3715,7 +3720,7 @@
       "frontNineLabel": "Out · holes 1–9",
       "backNineLabel": "In · holes 10–18",
       "hiddenBackNineHeading": "See you at hole {last}",
-      "hiddenBackNineSub": "Holes {from}–{to} are revealed when the organizer ends the game.",
+      "hiddenBackNineSub": "Holes {from}–{to} are revealed when the organiser ends the game.",
       "totalLabel": "Total",
       "holesWon": "{count} holes won",
       "summaryUt": "Out",
@@ -3731,7 +3736,7 @@
       "parGenderJuniors": "Juniors: {par}"
     },
     "bingoBangoBongo": {
-      "revealHiddenSub": "Bingo Bango Bongo scores are hidden until the admin ends the game.",
+      "revealHiddenSub": "Bingo Bango Bongo scores are hidden until the organiser ends the game.",
       "subtitle": "Bingo Bango Bongo",
       "podiumSubtitle": "Bingo Bango Bongo · Points",
       "holesSubtitle": "Bingo Bango Bongo",
@@ -3743,7 +3748,7 @@
       "firstInHole": "first in the hole"
     },
     "nines": {
-      "revealHiddenSub": "Scores are hidden until the admin ends the game.",
+      "revealHiddenSub": "Scores are hidden until the organiser ends the game.",
       "variantNines": "Nines",
       "variantSplitSixes": "Split Sixes",
       "holesScored": "{count} holes scored",
@@ -3753,10 +3758,10 @@
       "podiumHullScored": "{count} holes"
     },
     "roundRobin": {
-      "revealHiddenSub": "Round Robin scores are hidden until the admin ends the game.",
+      "revealHiddenSub": "Round Robin scores are hidden until the organiser ends the game.",
       "subtitle": "Round Robin · {allowancePct}% handicap",
       "hullLabel": "holes",
-      "slotLabel": "Slot {slot}",
+      "slotLabel": "Part {slot}",
       "tiedInline": "· Tied for {rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
       "segmentSummaryKicker": "Segment summary",
       "segmentLabel": "Segment {number} · {holes}",
@@ -3775,7 +3780,7 @@
       "tapetLabel": "{count} lost"
     },
     "aceyDeucey": {
-      "revealHiddenSub": "Acey Deucey scores are hidden until the admin ends the game.",
+      "revealHiddenSub": "Acey Deucey scores are hidden until the organiser ends the game.",
       "subtitle": "Acey Deucey · {scoring}",
       "podiumSubtitle": "Acey Deucey · {scoring}",
       "aceDeuce": "{aces} ace · {deuces} deuce",
@@ -3878,7 +3883,7 @@
           "penalty": "Penalty points"
         },
         "achievementsHint": "stackable, can be triggered multiple times in a round",
-        "adminChosen": "(admin choice)",
+        "adminChosen": "(chosen by the organiser)",
         "rows": {
           "bestNetto18": "Best net total 18",
           "bestNettoF9": "Best net front 9",
@@ -4041,8 +4046,8 @@
       "rate_limited": "You have requested a lot of codes in a short time. Wait fifteen minutes and try again.",
       "rate_limited_minute": "You can request a new code in a minute.",
       "rate_limited_quota": "We can't send more codes right now. Try again later.",
-      "user_not_found": "This email isn't registered. Ask an admin for an invitation.",
-      "invite_expired": "Your invitation has expired. Ask the organizer to send a new one.",
+      "user_not_found": "This email isn't registered. Ask the organiser for an invitation.",
+      "invite_expired": "Your invitation has expired. Ask the organiser to send a new one.",
       "disposable_email": "Disposable emails don't work here. Use a regular address and you're good to go.",
       "code_invalid": "Wrong code. Check your email and try again.",
       "code_expired": "The code is wrong or has expired. Check that you typed it correctly. You can also ask for a new code.",
@@ -4140,9 +4145,9 @@
       "tee_required": "At least one tee must be added.",
       "tee_partial_rating": "Each tee must have both slope and CR (or neither) per gender. You cannot save half-sets.",
       "tee_no_rating": "Each tee must have at least one complete rating set (slope + CR) per gender.",
-      "db_course": "Something went wrong whilst saving. Please try again.",
-      "db_holes": "Something went wrong whilst saving. Please try again.",
-      "db_tees": "Something went wrong whilst saving. Please try again."
+      "db_course": "Something went wrong while saving. Please try again.",
+      "db_holes": "Something went wrong while saving. Please try again.",
+      "db_tees": "Something went wrong while saving. Please try again."
     },
     "adminErrors": {
       "tee_required": "At least one tee box must be added.",
@@ -4191,7 +4196,7 @@
       "gridIndexRound1": "Index round 1",
       "gridIndexRound2": "Index round 2",
       "indexCellLabelRound2": "Stroke index for hole {number}, round 2",
-      "nineHint": "If the scorecard has two indices per hole, enter both. If it has only one, tap «Split» to get odd numbers for the first round and even for the second. Holes 10–18 are the same holes.",
+      "nineHint": "If the scorecard has two indices per hole, enter both. If it has only one, tap “Split” to get odd numbers for the first round and even for the second. Holes 10–18 are the same holes.",
       "splitButton": "Split: odd round 1, even round 2",
       "splitDone": "Split. Fix the numbers if the scorecard says otherwise.",
       "parTapHint": "Tap par to switch 3 → 4 → 5",
@@ -4279,17 +4284,17 @@
       "emptyFinishedHeading": "No signed rounds yet.",
       "emptyFinishedBody": "Results from finished games will appear here as rounds are completed.",
       "emptyOngoingHeading": "No games yet.",
-      "emptyOngoingBody": "Tap «{createLabel}» to set up the first round.",
+      "emptyOngoingBody": "Tap “{createLabel}” to set up the first round.",
       "tapHint": "Tap a game to edit the log.",
       "unknownCourse": "(unknown course)",
       "errors": {
         "not_found": "Game not found."
       },
       "statusMessages": {
-        "created": "Game «{name}» was saved as a draft.",
-        "started": "Game «{name}» has been started.",
-        "deleted": "Game «{name}» has been deleted.",
-        "cancelled": "«{name}» has been cancelled. {count, plural, one {# player has} other {# players have}} been told."
+        "created": "Game “{name}” was saved as a draft.",
+        "started": "Game “{name}” has been started.",
+        "deleted": "Game “{name}” has been deleted.",
+        "cancelled": "“{name}” has been cancelled. {count, plural, one {# player has} other {# players have}} been told."
       }
     },
     "dashboard": {
@@ -4371,7 +4376,7 @@
       "playerNoClub": "Not in a club yet",
       "newPlayerSubtitle": "This is where you set up rounds and find your crew and your club.",
       "playerJoinLabel": "Join in",
-      "playerTerminName": "Fixture list",
+      "playerTerminName": "Find tournaments",
       "playerTerminLine": "Open rounds you can sign up for",
       "playerClubInviteName": "Your club",
       "playerClubInviteLine": "Is your club on Tørny? Ask for an invite link, and the club will show up here.",
@@ -4431,15 +4436,15 @@
         "not_active": "The game is not active and cannot be ended.",
         "not_editable": "The game can no longer be edited because it has already been started or ended.",
         "not_deletable": "The game cannot be deleted because it has already been started or ended.",
-        "unknown": "Something went wrong. Please try again.",
+        "unknown": "Something went wrong. Try again, or reload the page.",
         "no_players": "No players on this game.",
         "not_all_submitted": "All players must have submitted a scorecard before the game can be ended.",
         "not_all_approved": "All scorecards must be approved before the game can be ended.",
         "db_finish": "Could not end the game. Please try again.",
-        "db_tee": "Could not read the tee box from the database. Please try again.",
-        "tee_missing": "Tee box missing. Cannot calculate handicap.",
-        "tee_missing_rating": "The selected tee is missing a rating for a player's gender (M/D/J). Check course administration or change the player's tee gender.",
-        "db_roster": "Could not read the player list from the database.",
+        "db_tee": "Could not read the tee. Please try again.",
+        "tee_missing": "The tee is missing. Choose a tee and try again.",
+        "tee_missing_rating": "The selected tee is missing a rating for a player's gender (M/D/J). Check course administration or change which tee the player uses.",
+        "db_roster": "Could not read the player list. Please try again.",
         "db_players": "Could not update the players. Please try again.",
         "withdraw_stale": "The player is already withdrawn or no longer on the list.",
         "reinstate_stale": "The player is already back in the game or no longer on the list.",
@@ -4453,7 +4458,7 @@
         "uneven_teams": "A team has too few or too many players. Move players between the teams before you start the round.",
         "flight_full": "The selected flight is full (maximum 4 players). Choose a different flight.",
         "signups_not_scheduled": "Only scheduled games can have signups closed or reopened.",
-        "bad_flight": "Invalid flight number. Choose a positive flight from the list.",
+        "bad_flight": "Invalid flight number. Choose a flight from the list.",
         "bad_interval": "Choose 8, 10 or 12 minutes between the flights.",
         "team_full": "That team is full. Choose a different team.",
         "bad_team": "Invalid team number. Choose a team from the list.",
@@ -4468,7 +4473,7 @@
         "guest_invalid_hcp": "The handicap must be a number between 0 and 54. Enter plus handicaps with a leading +.",
         "guest_invalid_tee": "Pick a tee category for the guest.",
         "guest_auth_create_failed": "Couldn't create the guest. Try again.",
-        "guest_profile_update_failed": "Something went wrong while saving the guest. Try again.",
+        "guest_profile_update_failed": "The guest was not saved. Try again.",
         "guest_roster_insert_failed": "The guest wasn't added to the game. Try again.",
         "game_full": "The game is full. Remove someone to add more.",
         "cup_finished": "The cup is finished. The match can't be started or reopened.",
@@ -4519,7 +4524,7 @@
         "admin_approved": "Scorecard approved on behalf of the flight.",
         "finished": "Game ended. Leaderboard is open to all.",
         "scorecard_reopened": "Scorecard reopened for editing.",
-        "game_reopened": "Game is active again. Open the cards that need fixing under «Submitted scorecards».",
+        "game_reopened": "Game is active again. Open the cards that need fixing under “Submitted scorecards”.",
         "invite_added": "Player added to the roster.",
         "invite_sent": "Invitation sent.",
         "invite_held": "Invitation saved. The email goes out when the game is published.",
@@ -4533,7 +4538,7 @@
         "player_removed_team_short": "Player removed. Team {team} now plays with {count}, and the team handicap is worked out for {count, plural, one {# player} other {# players}}.",
         "player_removed_team_short_shamble": "Player removed. Team {team} now plays with {count} and counts its best scores on each hole, as before.",
         "player_removed_team_uneven": "Player removed. Team {team} only has {count, plural, one {# player} other {# players}} now. {missing, plural, one {Move a player there} other {Move # players there}} before the round can start.",
-        "signups_closed": "Signups closed. New requests will be declined.",
+        "signups_closed": "Sign-ups closed. New requests will be declined.",
         "signups_reopened": "Signups reopened.",
         "guest_added": "The guest has been added to the game.",
         "hole_reminded": "Reminder sent.",
@@ -4577,8 +4582,8 @@
         "draftEditButton": "Edit draft",
         "scheduledStartBody": "Starting the round locks the course handicap for each player, closes editing, and lets players begin entering strokes.",
         "scheduledStartBodyAutoStart": "Starting the round locks the course handicap for each player, closes editing, and lets players begin entering strokes. The round starts automatically at tee-off ({time}) if you have not started it before then.",
-        "scheduledEditBody": "The game is in the planned stage. You can still change the course, tee-off time, players, teams, and settings until the round starts.",
-        "scheduledEditBodyAutoStart": "The game is in the planned stage. You can still change the course, tee-off time, players, teams, and settings until the round starts, either automatically at tee-off or manually by you.",
+        "scheduledEditBody": "The game is planned. You can still change the course, tee-off time, players, teams, and settings until the round starts.",
+        "scheduledEditBodyAutoStart": "The game is planned. You can still change the course, tee-off time, players, teams, and settings until the round starts, either automatically at tee-off or manually by you.",
         "scheduledStartBlockedLead": "The round won't start until this is sorted:",
         "unassignedFlightsLinked": "Players have not been assigned to flights yet. Assign them on the <link>start list</link>.",
         "scheduledEditButton": "Edit game",
@@ -4600,7 +4605,7 @@
         "endGameConfirm": "End the game? All participants will see the leaderboard afterwards.",
         "reopenGame": "Reopen game",
         "reopeningGame": "Reopening…",
-        "reopenGameConfirm": "Reopen the game? The results will be hidden again. Players stay submitted, so open the cards that need fixing under «Submitted scorecards».",
+        "reopenGameConfirm": "Reopen the game? The results will be hidden again. Players stay submitted, so open the cards that need fixing under “Submitted scorecards”.",
         "reopenScorecard": "Open for editing",
         "reopeningScorecardBusy": "Reopening…",
         "reopenScorecardConfirm": "Open {name}''s scorecard for editing? Any approval will be removed and the player must resubmit.",
@@ -4613,7 +4618,7 @@
         "searchPlaceholder": "Search registered players…",
         "searchAriaLabel": "Search registered players",
         "allOnRoster": "All registered players are already on the roster.",
-        "noResults": "No results for «{query}».",
+        "noResults": "No results for “{query}”.",
         "addButton": "+ Add",
         "addingBusy": "Inviting…",
         "addAria": "Add {name}",
@@ -4706,7 +4711,7 @@
       },
       "delete": {
         "kicker": "Confirm deletion",
-        "heading": "Delete «{name}»?",
+        "heading": "Delete “{name}”?",
         "permanentLabel": "Deleted permanently",
         "cannotUndo": "This action cannot be undone.",
         "buttonActive": "Delete ongoing game forever",
@@ -4719,7 +4724,7 @@
         "warnings": {
           "scheduled": "The game is scheduled and players have been invited. They will not receive a cancellation notice — you will need to inform them yourself.",
           "active": "The game is in progress. Deletion removes all strokes registered so far, and players lose their round without warning.",
-          "finished": "The game is finished. The leaderboard and results will be permanently deleted. Players who have bookmarked the link will get a 404."
+          "finished": "The game is finished. The leaderboard and results will be permanently deleted. Players who have bookmarked the link will land on a page that does not exist."
         },
         "players": "{count, plural, one {# player in the game} other {# players in the game}}",
         "scoreRows": "{count, plural, one {# score row} other {# score rows}}",
@@ -4728,7 +4733,7 @@
       "finish": {
         "topBarKicker": "Finish game",
         "title": "Finish game",
-        "subtitle": "Select side tournament winners for «{name}». The game will be locked when you confirm.",
+        "subtitle": "Select side tournament winners for “{name}”. The game will be locked when you confirm.",
         "missingHeader": "{count, plural, one {1 player has not submitted:} other {{count} players have not submitted:}}",
         "missingBody": "If you finish now, these players will be listed as <bold>not submitted</bold>. Their scores still count in the result."
       },
@@ -4760,10 +4765,10 @@
       "finishAnyway": {
         "topBarKicker": "Finish game",
         "title": "Finish anyway?",
-        "subtitle": "Some players have not submitted a scorecard in «{name}».",
+        "subtitle": "Some players have not submitted a scorecard in “{name}”.",
         "missingHeader": "{count, plural, one {1 player has not submitted:} other {{count} players have not submitted:}}",
         "markWithdrawn": "Mark as withdrawn",
-        "bodyWithWd": "If you finish now, players without a tick will be listed as <notDelivered>not submitted</notDelivered>. Scores they registered still count in the result. Players with a tick are marked as <withdrawn>Withdrawn</withdrawn> and will not count in the rankings. You can undo a withdrawal later as long as the game is active. The rest will be locked and the leaderboard will open for everyone.",
+        "bodyWithWd": "If you finish now, players without a tick will be listed as <notDelivered>not submitted</notDelivered>. Scores they registered still count in the result. Players with a tick are marked as <withdrawn>Withdrawn</withdrawn> and will not count in the rankings. You can undo a withdrawal later by reopening the game. The rest will be locked and the leaderboard will open for all players.",
         "bodyNoWd": "If you finish now, these players will be listed as <notDelivered>not submitted</notDelivered>. Scores they registered still count in the result. The rest will be locked and the leaderboard will open for everyone.",
         "submitButton": "Finish anyway",
         "submittingBusy": "Finishing …",
@@ -4878,7 +4883,7 @@
         "approveButton": "Approve",
         "rejectButton": "Decline …",
         "rejectModalTitle": "Decline signup from {name}?",
-        "rejectModalTeamCascade": "The entire team «{name}» will be declined at the same time.",
+        "rejectModalTeamCascade": "The entire team “{name}” will be declined at the same time.",
         "rejectReasonLabel": "Optional reason",
         "rejectReasonPlaceholder": "(optional) — shown in the notification to the player",
         "rejectSubmitButton": "Decline signup",
@@ -4928,9 +4933,9 @@
       "withdraw": {
         "topBarKicker": "Withdraw player",
         "title": "Withdraw player?",
-        "subtitle": "{name} in «{game}».",
+        "subtitle": "{name} in “{game}”.",
         "warningBody": "{name} will be marked as Withdrawn.",
-        "bodyText": "The player's scores no longer count in the rankings. The player appears as «Withdrawn» below the leaderboard and in the player list. You can undo this later as long as the game is active.",
+        "bodyText": "The player's scores no longer count in the rankings. The player appears as “Withdrawn” below the leaderboard and in the player list. You can undo this later as long as the game is active.",
         "submitButton": "Withdraw {name}",
         "submittingBusy": "Withdrawing …",
         "cancel": "Cancel",
@@ -4976,8 +4981,8 @@
       "countPending": "· {count} pending",
       "errors": {
         "email_required": "Please enter an email address.",
-        "already_invited": "There is already a pending invitation for this address. Use «Resend» instead.",
-        "log_failed": "Invitation sent, but logging failed.",
+        "already_invited": "There is already a pending invitation for this address. Use “Resend” instead.",
+        "log_failed": "Invitation sent, but the log was not updated.",
         "mail_failed": "The invitation was saved, but the email didn't go through. Try resending it.",
         "resend_failed": "Could not resend the invitation. Please try again.",
         "resend_game_locked": "The round has already started, so you can't resend the invitation.",
@@ -5014,7 +5019,7 @@
       "searchPlaceholder": "Search by name or email",
       "searchAriaLabel": "Search the player list",
       "emptyNoPlayers": "No registered players yet.",
-      "emptyNoMatch": "No results for «{query}».",
+      "emptyNoMatch": "No results for “{query}”.",
       "emptyNoPlayedThisYear": "No one has played this year yet.",
       "emptyNoGuests": "No guests.",
       "filterGroupLabel": "Filter the player list",
@@ -5093,6 +5098,7 @@
         "kicker": "Confirm deletion",
         "heading": "Delete {name}?",
         "body": "The account and email address ({email}) will be freed. {firstName} has never played a round, so no history will be lost.",
+        "playerFallback": "The player",
         "bodyPlayed": "The account and email address ({email}) will be freed. {firstName} has played rounds — the results stay in the tournaments, shown as \"Slettet bruker\".",
         "cannotUndo": "This action cannot be undone.",
         "submitButton": "Confirm deletion",
@@ -5115,7 +5121,7 @@
       "heading": "Registered courses",
       "countLine": "{n, plural, one {# course · sorted newest first} other {# courses · sorted newest first}}",
       "emptyHeading": "No courses yet.",
-      "emptyBody": "Tap «+ New» to add the first course to the catalogue.",
+      "emptyBody": "Tap “+ New” to add the first course to the catalogue.",
       "colCourse": "Course",
       "colTees": "Tees",
       "tapHint": "Tap a course to edit the catalogue.",
@@ -5125,8 +5131,8 @@
         "delete_failed": "Failed to delete the course. Please try again in a moment."
       },
       "statusMessages": {
-        "created": "Course «{name}» was saved.",
-        "updated": "Course «{name}» was updated.",
+        "created": "Course “{name}” was saved.",
+        "updated": "Course “{name}” was updated.",
         "deleted": "Course was deleted."
       },
       "sortNewest": "Newest first",
@@ -5143,8 +5149,8 @@
       "searchAriaLabel": "Search by course name",
       "searchPlaceholder": "Search by course name…",
       "sortLabel": "Sort",
-      "emptyFilterAndQuery": "No courses match «{query}» and the filter.",
-      "emptyQuery": "No courses match «{query}».",
+      "emptyFilterAndQuery": "No courses match “{query}” and the filter.",
+      "emptyQuery": "No courses match “{query}”.",
       "emptyFilter": "No courses match the filter.",
       "edit": {
         "brassRibbon": "Edit course",
@@ -5175,7 +5181,7 @@
       },
       "archivedTees": {
         "summaryLabel": "Archived tees ({count})",
-        "body": "These tees have been removed from active display but are retained for games that use them. Reopen a tee to bring it back into the edit form and the new-game selector.",
+        "body": "These tees have been removed from active display but are retained for games that use them. Reopen a tee and it is back in the course form and in the tee choice for new games.",
         "archivedDate": "Archived {date}",
         "nameConflict": "Name conflict with an active tee. Rename after reopening",
         "reopenButton": "Reopen",
@@ -5183,10 +5189,10 @@
       },
       "delete": {
         "brassRibbon": "Confirm deletion",
-        "heading": "Delete «{name}»?",
+        "heading": "Delete “{name}”?",
         "permanentLabel": "Will be permanently deleted",
         "hullCount": "{count, plural, one {# hole} other {# holes}}",
-        "courseItem": "The course «{name}»",
+        "courseItem": "The course “{name}”",
         "teeCount": "{count, plural, one {# tee box} other {# tee boxes}}",
         "cannotUndo": "This action cannot be undone.",
         "submitButton": "Delete course permanently",
@@ -5204,7 +5210,7 @@
       "title": "Game formats",
       "subtitle": "This is step 2 as the person setting up a round sees it.",
       "errors": {
-        "missing_slug": "Format slug is missing from the request.",
+        "missing_slug": "The format was not found. Reload the page and try again.",
         "bad_intent": "Invalid occasion type.",
         "not_found": "Format not found.",
         "last_primary": "Cannot remove the last primary for this occasion. Activate another format as primary first.",
@@ -5214,7 +5220,7 @@
       },
       "status": {
         "updated": "Change saved.",
-        "noop": "No change (the value was already set)."
+        "noop": "No change. The value was already set."
       },
       "intentLabels": {
         "kompis": "Friends",
@@ -5252,7 +5258,8 @@
           "cupEligibleOff": "cup-eligible off",
           "activated": "activated",
           "deactivated": "deactivated",
-          "moved": "moved from position {from} to {to}"
+          "moved": "moved from position {from} to {to}",
+          "changed": "changed"
         }
       }
     },
@@ -5262,7 +5269,7 @@
       "errors": {
         "title_required": "Title is required.",
         "body_required": "Body text is required.",
-        "link_must_be_internal": "Link must point to an internal route (must start with «/»).",
+        "link_must_be_internal": "Link must point to an internal route (must start with “/”).",
         "cta_without_link": "Button text requires a link to be filled in.",
         "publish_failed": "Failed to publish. Please try again in a moment.",
         "edit_failed": "Failed to save the change. Please try again in a moment."
@@ -5273,15 +5280,15 @@
       },
       "publishSection": "Publish new update",
       "titleLabel": "Title",
-      "titleHint": "Short and specific. E.g. «Texas scramble is here»",
+      "titleHint": "Short and specific. E.g. “Texas scramble is here”",
       "bodyLabel": "Body",
       "bodyPlaceholder": "What's new? 1–3 sentences. Plain language.",
       "bodyHint": "Max 400 characters. Write as if texting a club mate.",
       "linkLabel": "Link (optional)",
       "linkPrefix": "Link:",
-      "linkHint": "Internal route, must start with «/». E.g. /admin/games/new",
+      "linkHint": "Internal route, must start with “/”. E.g. /admin/games/new",
       "ctaLabel": "Button text (optional)",
-      "ctaHint": "Shown only when a link is filled in. E.g. «Try it», «See more».",
+      "ctaHint": "Shown only when a link is filled in. E.g. “Try it”, “See more”.",
       "publishButton": "Publish",
       "publishingBusy": "Publishing…",
       "previousSection": "Previous updates",
@@ -5479,7 +5486,7 @@
       }
     },
     "leave": {
-      "heading": "Leave «{name}»?",
+      "heading": "Leave “{name}”?",
       "description": "You will lose access to the club's tournaments. The owner can add you again if you ask.",
       "confirmText": "You are leaving {name}. This action cannot be undone.",
       "leaveButton": "Leave club",
@@ -5491,7 +5498,7 @@
       }
     },
     "remove": {
-      "heading": "Remove «{name}»?",
+      "heading": "Remove “{name}”?",
       "description": "{name} will immediately lose access to the club''s tournaments. An owner can add them again.",
       "confirmText": "You are removing {name} from {clubName}.",
       "removeButton": "Remove from club",
@@ -5565,7 +5572,7 @@
       "pageTitle": "Leagues",
       "pageSubtitle": "Individual season series over several rounds.",
       "deletedBanner": "League deleted.",
-      "deletedBannerNamed": "The league «{name}» has been deleted.",
+      "deletedBannerNamed": "The league “{name}” has been deleted.",
       "emptyState": "No leagues yet.",
       "emptyStateLink": "Create a league",
       "emptyStateSuffix": "to get started.",
@@ -5608,7 +5615,7 @@
         "players_failed": "The league was created but the participants failed. Check the detail page.",
         "missing": "Some required fields are missing.",
         "season_over": "The season has already ended. Pick dates in the future.",
-        "unexpected": "Unexpected error: {code}",
+        "unexpected": "Something went wrong. Try again, or get in touch if it keeps happening.",
         "sim_settings": "The round settings are invalid. Pick from the lists.",
         "hcp_allowance_pct": "The handicap percentage must be a whole number from 1 to 100.",
         "hcp_max_strokes": "Max strokes must be a whole number from 1 to 54, or empty."
@@ -5868,7 +5875,7 @@
       "kicker": "Clubhouse",
       "brassRibbon": "Confirm deletion",
       "permanentLabel": "Permanently deleted",
-      "confirmTitle": "Delete «{name}»?",
+      "confirmTitle": "Delete “{name}”?",
       "roundCount": "{count, plural, one {# round} other {# rounds}} and their play windows",
       "playerCount": "{count, plural, one {# participant} other {# participants}}",
       "flightNote": "{count, plural, one {# flight} other {# flights}} will remain as standalone games (the league link is removed).",
@@ -5945,7 +5952,7 @@
         "join_failed": "Something went wrong. Please try again."
       },
       "meldAv": {
-        "heading": "Withdraw from «{name}»?",
+        "heading": "Withdraw from “{name}”?",
         "subtitle": "You will be removed from the season standings, but you can rejoin as long as the league has not started.",
         "confirmButton": "Withdraw",
         "confirmPending": "Withdrawing …",
@@ -5961,9 +5968,9 @@
       "runde": {
         "kicker": "Start round",
         "windowUpcoming": "The round is not open yet. Come back when the play window starts.",
-        "windowClosed": "The round is closed for submissions. Contact the admin if you think this is a mistake.",
+        "windowClosed": "The round is closed for submissions. Contact the organiser if you think this is a mistake.",
         "backToLeague": "Back to league",
-        "missingSetup": "The round is missing a course or tee — the admin will complete the setup soon.",
+        "missingSetup": "The round is missing a course or tee — the organiser will complete the setup soon.",
         "markerRule": "Choose who you're playing with. You need at least one playing partner (marker rule).",
         "simulatorRule": "Choose who is in the simulator with you. You pick your marker when you hand in the round.",
         "noCoPlayers": "No other participants in the league. You need at least one playing partner (marker rule).",
@@ -5984,7 +5991,7 @@
           "need_marker": "You must select at least one playing partner.",
           "outside_window": "The round is not open for play right now.",
           "already_played": "You have already played this round.",
-          "round_not_ready": "The round is missing a course or tee — let the admin know.",
+          "round_not_ready": "The round is missing a course or tee — let the organiser know.",
           "not_member": "One or more of the selected players are not participants in the league.",
           "members_failed": "Could not fetch the participant list. Try again in a moment.",
           "league_not_active": "The league is not active.",
@@ -6059,7 +6066,7 @@
         "profile_incomplete": "Add your handicap to your profile first.",
         "read_failed": "Couldn't check the sign-up. Please try again.",
         "save_failed": "Couldn't save. Please try again.",
-        "unexpected": "Unexpected error: {code}"
+        "unexpected": "Something went wrong. Try again, or get in touch if it keeps happening."
       }
     },
     "intro": {
@@ -6158,7 +6165,7 @@
         "not_joined": "You're not on the roster for this cup.",
         "read_failed": "Couldn't check the signup. Please try again.",
         "save_failed": "Couldn't save. Please try again.",
-        "unexpected": "Unexpected error: {code}"
+        "unexpected": "Something went wrong. Try again, or get in touch if it keeps happening."
       }
     },
     "plan": {
@@ -6213,7 +6220,7 @@
         "not_draft": "The cup has already started, so the setup is locked.",
         "plan_save_failed": "Couldn't save the setup. Please try again.",
         "plan_matches_not_updated": "The setup is saved, but the matches didn't pick it up. Please try again.",
-        "unexpected": "Unexpected error: {code}"
+        "unexpected": "Something went wrong. Try again, or get in touch if it keeps happening."
       }
     },
     "participants": {
@@ -6282,7 +6289,7 @@
         "invalid_team": "Invalid team.",
         "not_allowed": "Only the organiser can set teams and captains.",
         "plan_save_failed": "Couldn't save the change. Please try again.",
-        "unexpected": "Unexpected error: {code}"
+        "unexpected": "Something went wrong. Try again, or get in touch if it keeps happening."
       }
     },
     "lineup": {
@@ -6350,8 +6357,8 @@
         "insert_failed": "Couldn't create the matches. Please try again.",
         "profile_read_failed": "Couldn't load the players. Please try again.",
         "invalid_source_match": "That lineup looks off. Reload the page and try again.",
-        "unexpected": "Something went wrong ({code}).",
-        "rollback_failed": "Some matches were set up before something went wrong, and they weren't removed again. Contact an administrator to get the session cleaned up.",
+        "unexpected": "Something went wrong. Try again, or get in touch if it keeps happening.",
+        "rollback_failed": "Some matches were set up before something went wrong, and they weren't removed again. Write to klubb@tornygolf.no and we will clean up the session.",
         "reveal_undo_failed": "The matches weren't set up, but the session still shows as revealed. Contact an administrator to get it cleaned up."
       }
     },
@@ -6395,7 +6402,7 @@
       "playOnChoose": "Choose for the match",
       "matchesHeading": "Matches",
       "emptyRoster": "No players yet. The roster is built from the matches.",
-      "emptyMatches": "No matches yet. Open «Assign & generate» above to set up the fixtures.",
+      "emptyMatches": "No matches yet. Open “Assign & generate” above to set up the fixtures.",
       "openCupPage": "Open cup page",
       "openResults": "View results page",
       "matchesSummary": "First to {points} points · {finished} of {total} {total, plural, one {match} other {matches}} played",
@@ -6437,7 +6444,7 @@
         "withdrawal_undone": "The withdrawal is undone. The matches stand as before.",
         "play_on_saved": "The choice is saved."
       },
-      "deletedMessage": "The cup «{name}» has been deleted.",
+      "deletedMessage": "The cup “{name}” has been deleted.",
       "headerSubtitlePending": "{team1} vs {team2} · points target set at start",
       "matchesSummaryPending": "Points target set at start · {finished} of {total} {total, plural, one {match} other {matches}} played",
       "headerSubtitlePendingActive": "{team1} vs {team2} · the winner is decided when the cup finishes",
@@ -6474,7 +6481,7 @@
         "not_member": "That player is no longer a member of the club.",
         "too_many_players": "The cup is full — a personal cup holds up to {cap} players. Remove a participant first, or swap in someone who has already signed up.",
         "swap_failed": "Could not swap the player. Try again.",
-        "unexpected": "Unexpected error: {code}",
+        "unexpected": "Something went wrong. Try again, or get in touch if it keeps happening.",
         "wrong_team": "That player is on the other team and cannot be swapped in here."
       }
     },
@@ -6512,7 +6519,7 @@
         "too_many_matches": "A personal cup allows at most {max} matches. For more, create a club cup.",
         "too_many_players": "A personal cup allows at most {max} players. For more, create a club cup.",
         "tee_off_in_past": "The tee-off time can't be in the past. Pick a time from now on.",
-        "rollback_failed": "Some matches were created before something went wrong, and they weren't removed again. Contact an administrator to get the cup cleaned up."
+        "rollback_failed": "Some matches were created before something went wrong, and they weren't removed again. Write to klubb@tornygolf.no and we will clean up the cup."
       },
       "formatGreensome": "Greensome",
       "formatChapman": "Chapman",
@@ -6546,9 +6553,9 @@
     },
     "delete": {
       "brassRibbon": "Confirm deletion",
-      "heading": "Delete «{name}»?",
+      "heading": "Delete “{name}”?",
       "permanentHeading": "Permanently deleted",
-      "cupEntry": "The cup «{name}»",
+      "cupEntry": "The cup “{name}”",
       "rosterEntry": "Team roster and master leaderboard",
       "neverPlayedNote": "{count} generated {count, plural, one {match} other {matches}} that were never played will be permanently deleted.",
       "matchesNote": "{count} played {count, plural, one {match} other {matches}} will remain as standalone games (the cup link is removed).",
@@ -6579,7 +6586,7 @@
         "cup_win_points": "Points for a win must be a number above 0, with at most one decimal.",
         "cup_tie_points": "Points for a tie must be 0 or more, with at most one decimal.",
         "cup_insert_failed": "Failed to create the cup. Please try again.",
-        "unexpected": "Unexpected error: {code}"
+        "unexpected": "Something went wrong. Try again, or get in touch if it keeps happening."
       }
     },
     "public": {
@@ -6713,7 +6720,7 @@
     "finishedEmpty": "You have no finished rounds yet."
   },
   "discover": {
-    "pageTitle": "Fixture list",
+    "pageTitle": "Find tournaments",
     "metaTitle": "Find tournaments",
     "metaDescription": "Open golf tournaments you can join. See what's on, or log in and set up your own.",
     "kicker": "Find tournaments",
@@ -6903,7 +6910,7 @@
     "teamSuccessFailedFix": "You can fix them from the team dashboard.",
     "slotFailReason": {
       "alreadyRegistered": "Already signed up",
-      "dbError": "Database error",
+      "dbError": "Something went wrong. Try again.",
       "unexpected": "Something went wrong"
     },
     "goToTeamDashboard": "Go to team dashboard",
@@ -7238,14 +7245,14 @@
       "heading": "Submit your scorecard",
       "salutationNamed": "Hi {name}!",
       "salutationGeneric": "Hi!",
-      "body": "You've finished playing <strong>{gameName}</strong> but haven't submitted your scorecard yet. Submit it so the organizer can finish the round. It only takes a few seconds.",
-      "bodyText": "You've finished playing {gameName} but haven't submitted your scorecard yet. Submit it so the organizer can finish the round. It only takes a few seconds.",
+      "body": "You've finished playing <strong>{gameName}</strong> but haven't submitted your scorecard yet. Submit it so the organiser can finish the round. It only takes a few seconds.",
+      "bodyText": "You've finished playing {gameName} but haven't submitted your scorecard yet. Submit it so the organiser can finish the round. It only takes a few seconds.",
       "submitButton": "Submit scorecard",
       "submitButtonText": "Submit scorecard: {url}",
       "subjectKept": "Submit the cards you kept in {gameName}",
       "headingKept": "Submit the cards you kept",
-      "bodyKept": "You kept cards in <strong>{gameName}</strong> that haven't been submitted yet. Submit them in one tap so the organizer can finish the round.",
-      "bodyTextKept": "You kept cards in {gameName} that haven't been submitted yet. Submit them in one tap so the organizer can finish the round.",
+      "bodyKept": "You kept cards in <strong>{gameName}</strong> that haven't been submitted yet. Submit them in one tap so the organiser can finish the round.",
+      "bodyTextKept": "You kept cards in {gameName} that haven't been submitted yet. Submit them in one tap so the organiser can finish the round.",
       "submitButtonKept": "Submit the cards",
       "submitButtonTextKept": "Submit the cards: {url}",
       "footer": "You're receiving this because you're registered for this game. Log in at <link>tornygolf.no</link> to submit."
@@ -7434,17 +7441,17 @@
     "errorPermission": "You do not have access",
     "errorRateLimit": "Too many requests — wait a moment",
     "errorGeneric": "Could not save",
-    "abandonedMessage": "Could not save {count, plural, one {1 stroke} other {# strokes}}. Contact the organizer.",
+    "abandonedMessage": "Could not save {count, plural, one {1 stroke} other {# strokes}}. Contact the organiser.",
     "quarantineHoles": "{count, plural, one {Hole {holes} was not saved.} other {Holes {holes} were not saved.}}",
     "quarantineOtherGame": "{count, plural, one {One stroke from another round was not saved.} other {# strokes from another round were not saved.}}",
     "quarantineGlobalGame": "{count, plural, one {One stroke was not saved.} other {# strokes were not saved.}}",
     "quarantineOpenHole": "Open hole {holeNumber}",
     "quarantineOpenGame": "Open the round",
     "quarantineRecoveryHint": "Re-enter the stroke while the round is still active and the app will try to send it again.",
-    "quarantineLockedHint": "The card has been submitted or the round is over, so the change wasn't saved. The organizer can reopen the card if the number needs fixing.",
+    "quarantineLockedHint": "The card has been submitted or the round is over, so the change wasn't saved. The organiser can reopen the card if the number needs fixing.",
     "quarantineDetailsTitle": "Technical details",
     "quarantineDismiss": "Dismiss",
-    "quarantineDismissConfirm": "Remove this notice? The strokes were never sent to the organizer. The numbers only remain on this phone.",
+    "quarantineDismissConfirm": "Remove this notice? The strokes were never sent to the organiser. The numbers only remain on this phone.",
     "errorWithQueue": "{error}. {count, plural, one {1 stroke} other {# strokes}} waiting.",
     "queueWaiting": "{count, plural, one {1 stroke} other {# strokes}} waiting to be saved.",
     "retry": "Try again",
@@ -7469,7 +7476,7 @@
     "blockedFootnote": "The app isn't allowed to open Settings for you.",
     "emailBackstop": "You'll still get email notifications in the meantime.",
     "iosInstallTitle": "Add Tørny to your home screen first",
-    "iosInstallBody": "Tap Share → «Add to Home Screen», then you can turn on notifications.",
+    "iosInstallBody": "Tap Share → “Add to Home Screen”, then you can turn on notifications.",
     "nudgeTitle": "Get notified straight away",
     "nudgeBody": "Turn on notifications and we'll let you know when you're invited, a scorecard needs approving, or results are in.",
     "nudgeLater": "Not now",
@@ -7599,8 +7606,8 @@
   "installInstructions": {
     "titleSafari": "How to install Tørny",
     "titleOtherBrowser": "Switch to Safari to install",
-    "iosStep2": "Scroll down and tap «Add to Home Screen».",
-    "iosStep3": "Tap «Add» in the top right.",
+    "iosStep2": "Scroll down and tap “Add to Home Screen”.",
+    "iosStep3": "Tap “Add” in the top right.",
     "iosOtherDescription": "On iPhone, only Safari can add Tørny to your home screen. Other iOS browsers don't support it.",
     "iosOtherInstructions": "Open tornygolf.no in Safari and try again.",
     "unsupportedDescription": "Your browser can't add Tørny to your home screen automatically.",
@@ -7872,7 +7879,7 @@
           "feature": "Join straight from the browser",
           "other": "Everyone needs the app"
         },
-        { "feature": "Norwegian all the way", "other": "English first" },
+        { "feature": "Built for Norway", "other": "English first" },
         { "feature": "No ads", "other": "Ads in the free version" },
         { "feature": "Cup, league and side contests", "other": "Varies" },
         { "feature": "Prize pot with Vipps", "other": "Sorted out separately" },
@@ -8395,7 +8402,7 @@
     "next": "Next: {text}",
     "nowShowing": "Showing now: {text}",
     "nowHidden": "Showing now: the podium with hidden cards",
-    "notStarted": "The TV shows «{status}» until you start.",
+    "notStarted": "The TV shows “{status}” until you start.",
     "allShown": "Every card is turned.",
     "playersHaveResult": "The players already have the result in the app.",
     "error": "Could not connect. Try again.",

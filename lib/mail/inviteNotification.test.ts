@@ -83,14 +83,14 @@ describe('sendInviteNotification', () => {
     expect(payload.text).toMatchInlineSnapshot(`
       "Du er invitert til Tørny
 
-      Jørgen har invitert deg til en golf-turnering i Tørny.
+      Jørgen har invitert deg til en golfturnering i Tørny.
 
       Gå til https://tornygolf.no/login?email=venn%40example.com, skriv inn denne e-posten, og logg inn med koden du får tilsendt.
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
     `);
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"<strong>Jørgen</strong> har invitert deg til en golf-turnering i Tørny."`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"<strong>Jørgen</strong> har invitert deg til en golfturnering i Tørny."`);
   });
 
   it('med gameName: subject + body har spill-konteksten', async () => {
@@ -126,8 +126,8 @@ describe('sendInviteNotification', () => {
 
       Jørgen har invitert deg til spillet Stiklestad 25. mai på Tørny.
 
-      Spillformat: Best ball — Dere er to på lag, og på hvert hull teller bare den beste netto-scoren av dere to.
-      Les mer om spillformatene: https://tornygolf.no/spillformater
+      Spillform: Best ball — Dere er to på lag, og på hvert hull teller bare den beste nettoscoren av dere to.
+      Les mer om spillformene: https://tornygolf.no/spillformater
 
       Gå til https://tornygolf.no/login?email=venn%40example.com, skriv inn denne e-posten, og logg inn med koden du får tilsendt.
 
@@ -135,9 +135,9 @@ describe('sendInviteNotification', () => {
       "
     `);
     expect(modeHintHtml(payload.html)).toMatchInlineSnapshot(`
-      "<strong>Spillformat: Best ball</strong><br>
-                    Dere er to på lag, og på hvert hull teller bare den beste netto-scoren av dere to.<br>
-                    <a href="https://tornygolf.no/spillformater" style="color:#1B4332;font-weight:600;text-decoration:underline;">Les mer om spillformatene</a>"
+      "<strong>Spillform: Best ball</strong><br>
+                    Dere er to på lag, og på hvert hull teller bare den beste nettoscoren av dere to.<br>
+                    <a href="https://tornygolf.no/spillformater" style="color:#1B4332;font-weight:600;text-decoration:underline;">Les mer om spillformene</a>"
     `);
   });
 
@@ -323,7 +323,7 @@ describe('sendInviteNotification', () => {
                     Du er invitert
                   </h2>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    <strong>Jørgen</strong> har invitert deg til en golf-turnering i Tørny.
+                    <strong>Jørgen</strong> har invitert deg til en golfturnering i Tørny.
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 32px;">
                     For å komme i gang: gå til <a href="https://tornygolf.no/login?email=venn%40example.com" style="color:#1B4332;font-weight:600;text-decoration:underline;">tornygolf.no</a>, skriv inn denne e-posten, og logg inn med koden du får tilsendt.

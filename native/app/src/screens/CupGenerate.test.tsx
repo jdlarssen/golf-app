@@ -329,7 +329,7 @@ describe('steg 2', () => {
     (createCupMatches as jest.Mock).mockResolvedValueOnce({ ok: false, reason: 'rollback_failed' });
     const navigation = await toPreview();
     await submit();
-    expect(screen.getByTestId('cup-generate-error')).toHaveTextContent(/Ta kontakt med administrator/);
+    expect(screen.getByTestId('cup-generate-error')).toHaveTextContent(/Skriv til klubb@tornygolf.no/);
     expect(navigation.popTo).not.toHaveBeenCalled();
 
     answer(view({ existingMatchCount: 1 }));

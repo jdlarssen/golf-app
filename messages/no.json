@@ -1,6 +1,7 @@
 {
   "common": {
     "appName": "Tørny",
+    "back": "Tilbake",
     "metaDescription": "Gratis turneringsapp for golf. Sett opp scramble, stableford eller matchplay på et par minutter, med live leaderboard og WHS-handicap. Over 20 spillformer.",
     "guestBadge": "Gjest",
     "unconfirmed": "Ikke bekreftet",
@@ -27,7 +28,7 @@
   "onboarding": {
     "errors": {
       "name_required": "Du må fylle inn navn.",
-      "hcp_invalid": "Handicap-index må være et tall mellom 0 og 54. Bruk +-knappen for plusshandicap.",
+      "hcp_invalid": "Handicapindeks må være et tall mellom 0 og 54. Bruk +-knappen for plusshandicap.",
       "unknown": "Noe gikk galt. Prøv igjen."
     },
     "kicker": "Velkommen til Tørny",
@@ -383,7 +384,7 @@
     "logoutPending": "Logger ut …",
     "errors": {
       "name_required": "Du må fylle inn navn.",
-      "hcp_invalid": "Handicap-index må være et tall mellom 0 og 54. Bruk +-knappen for plusshandicap.",
+      "hcp_invalid": "Handicapindeks må være et tall mellom 0 og 54. Bruk +-knappen for plusshandicap.",
       "gender_required": "Velg kjønn.",
       "level_invalid": "Ugyldig spillerklasse.",
       "unknown": "Noe gikk galt. Prøv igjen."
@@ -432,6 +433,7 @@
       "bullet4": "Plassen din i runder som pågår eller ikke har startet. Du blir trukket automatisk, og resten av gruppa spiller videre.",
       "keptHeading": "Dette beholdes",
       "keptBullet": "Resultatene fra fullførte runder. De blir stående i turneringen, men med «Slettet bruker» i stedet for navnet ditt",
+      "accountFallback": "kontoen din",
       "confirmParagraph": "Du er i ferd med å slette <strong>{displayName}</strong> permanent. Handlingen kan ikke angres.",
       "deleteButton": "Slett kontoen min for alltid",
       "deletePending": "Sletter …",
@@ -440,7 +442,7 @@
         "active_games": "Du arrangerer fortsatt noe som ikke er avsluttet. Avslutt det, så kan du slette kontoen.",
         "admin_account": "Admin-kontoen kan ikke slettes herfra.",
         "sole_club_owner": "Du er fortsatt eneste eier av en klubb. Gjør et annet medlem til eier, så kan du slette kontoen.",
-        "delete_failed": "Noe gikk galt ved sletting. Prøv igjen, eller ta kontakt med administrator."
+        "delete_failed": "Noe gikk galt ved sletting. Prøv igjen, eller skriv til personvern@tornygolf.no."
       }
     },
     "historikk": {
@@ -456,10 +458,10 @@
       "trendNow": "Nå",
       "trendBest": "Beste",
       "trendAriaLabel": "{count, plural, one {Formkurve over 1 fullført runde, fra eldst til nyest.} other {Formkurve over # fullførte runder, fra eldst til nyest.}}",
-      "diffHeading": "Handicap-form",
+      "diffHeading": "Handicapform",
       "diffSeriesLabel": "Differanse",
       "diffWindow": "{count, plural, one {Siste runde} other {Siste # runder}}",
-      "diffAriaLabel": "{count, plural, one {Handicap-form over 1 fullført runde, fra eldst til nyest.} other {Handicap-form over # fullførte runder, fra eldst til nyest.}}",
+      "diffAriaLabel": "{count, plural, one {Handicapform over 1 fullført runde, fra eldst til nyest.} other {Handicapform over # fullførte runder, fra eldst til nyest.}}",
       "tabStats": "Statistikk",
       "tabRounds": "Runder",
       "tabsAriaLabel": "Velg visning",
@@ -469,7 +471,7 @@
       "coursesColAvg": "Snitt",
       "coursesColBest": "Beste",
       "coursesEmpty": "Spill en komplett 18-hulls-runde for å se snitt og beste per bane.",
-      "puttsHeading": "Putte-snitt",
+      "puttsHeading": "Puttsnitt",
       "puttsSubtitle": "Putter per hull teller fra første hull du fører. Snittet krever en hel runde.",
       "puttsColPph": "PPH",
       "puttsColRounds": "Runder",
@@ -477,7 +479,7 @@
       "puttsColBest": "Beste",
       "puttsEmpty": "Før putter på en hel runde for å se snittet ditt.",
       "puttsNearMiss": "Du mangler putt på {missingHoles} hull i {partialRounds, plural, one {# runde} other {# runder}}.",
-      "achievementsHeading": "Bragd-veggen",
+      "achievementsHeading": "Bragdveggen",
       "achievementsSubtitle": "Bragdene dine gjennom årene, på ett brett.",
       "achievementsBadge_holeInOne": "Hole-in-one",
       "achievementsBadge_eagle": "Eagle",
@@ -507,7 +509,7 @@
     "myStats": {
       "heading": "Mine tall",
       "roundsPlayed": "Runder spilt",
-      "grossAverage": "Brutto-snitt",
+      "grossAverage": "Bruttosnitt",
       "bestRound": "Beste runde"
     },
     "theme": {
@@ -691,7 +693,7 @@
       }
     },
     "modeSelector": {
-      "legend": "Velg spillmodus",
+      "legend": "Velg spillform",
       "tiles": {
         "stableford": {
           "title": "Stableford",
@@ -715,7 +717,7 @@
         },
         "ambrose": {
           "title": "Ambrose",
-          "description": "Lag à 2, 3 eller 4. Alle slår, beste ball velges. Lag-handicap jevner ut forskjellene mellom lagene."
+          "description": "Lag à 2, 3 eller 4. Alle slår, beste ball velges. Laghandicap jevner ut forskjellene mellom lagene."
         },
         "florida_scramble": {
           "title": "Florida Scramble",
@@ -766,7 +768,7 @@
       },
       "modified_stableford": {
         "line": "Stableford der poengene kan gå i minus",
-        "pitch": "Stableford med proff-skala. Birdie og bedre gir mye, mens et dårlig hull gir minuspoeng. For dem som liker å satse.",
+        "pitch": "Stableford med proffskala. Birdie og bedre gir mye, mens et dårlig hull gir minuspoeng. For dem som liker å satse.",
         "choose": "Velg modifisert stableford"
       },
       "solo_strokeplay": {
@@ -831,7 +833,7 @@
       },
       "patsome": {
         "line": "Tre lagformer, seks hull av hver",
-        "pitch": "Dere er to på lag og spiller beste ball, greensome og foursomes i samme runde, seks hull av hver.",
+        "pitch": "Dere er to på lag og spiller best ball, greensome og foursomes i samme runde, seks hull av hver.",
         "choose": "Velg patsome"
       },
       "singles_matchplay": {
@@ -893,14 +895,14 @@
     },
     "cupSetup": {
       "clubBanner": "Denne cupen settes opp for <strong>{clubName}</strong>. Bare medlemmer i klubben kan være med.",
-      "cupNameLabel": "Cup-navn",
+      "cupNameLabel": "Cupnavn",
       "cupNamePlaceholder": "Tørny Cup 2026 — Sommer-runde",
-      "teamNamesLegend": "Lag-navn",
+      "teamNamesLegend": "Lagnavn",
       "team1Label": "Lag 1",
       "team1Placeholder": "Team Skog",
       "team2Label": "Lag 2",
       "team2Placeholder": "Team Sjø",
-      "pointsWeightLegend": "Poeng-vekting",
+      "pointsWeightLegend": "Poengvekting",
       "pointsWeightHint": "Valgfritt. Endrer du fra standard 1 poeng for seier / 0,5 for delt, skjules «først til X»-varslet. Vinneren avgjøres i stedet når cupen avsluttes.",
       "winPointsLabel": "Poeng for seier",
       "tiePointsLabel": "Poeng ved delt",
@@ -910,7 +912,7 @@
       "wolf": {
         "legend": "Wolf-oppsett",
         "scoringLabel": "Scoring",
-        "scoringDescription": "Velger om Wolf-scoringen bruker spillernes handicap-slag, eller om beste rene bruttoslag avgjør hvert hull.",
+        "scoringDescription": "Her velger du om Wolf-scoringen bruker spillernes handicap-slag, eller om beste rene bruttoslag avgjør hvert hull.",
         "scoringNet": "Med handicap (netto)",
         "scoringGross": "Brutto",
         "scoringAriaLabel": "Wolf-scoring",
@@ -919,7 +921,7 @@
       "nassau": {
         "legend": "Nassau-oppsett",
         "scoringLabel": "Scoring",
-        "scoringDescription": "Nassau er tre konkurranser i én — front 9, back 9, og totalt 18. Velger om handicap eller brutto avgjør hver del.",
+        "scoringDescription": "Nassau er tre oppgjør i ett: de første ni hullene, de siste ni og alle 18 samlet. Her velger du om handicap eller brutto avgjør hvert oppgjør.",
         "scoringNet": "Med handicap (netto)",
         "scoringGross": "Brutto",
         "scoringAriaLabel": "Nassau-scoring"
@@ -981,7 +983,7 @@
         "variantLabel": "Variant",
         "variantAriaLabel": "Shamble-variant",
         "variantShambleTitle": "Shamble",
-        "variantShambleDesc": "Best 2 teller",
+        "variantShambleDesc": "De 2 beste teller",
         "variantChampagneTitle": "Champagne Scramble",
         "variantChampagneDesc": "Velg antall",
         "countLabel": "Antall som teller",
@@ -1067,13 +1069,13 @@
         "visibilityLiveDesc": "Netto-tall synlige fra hull 1 (standard)",
         "visibilityRevealTitle": "Avslør på slutten",
         "visibilityRevealDesc": "Brutto under runden, netto avsløres når spillet avsluttes",
-        "visibilityLockedNote": "Kan ikke endres etter spill-start.",
+        "visibilityLockedNote": "Kan ikke endres etter spillstart.",
         "sideTournamentLegend": "Sideturnering",
         "sideTournamentTitle": "Legg til sideturnering",
         "sideTournamentDesc": "Poeng for lengste drive og nærmest pinnen.",
         "sideLdLegend": "Lengste drive: antall hull",
         "sideCtpLegend": "Nærmest pinnen: antall hull",
-        "sideLockedNote": "Kan ikke endres etter spill-start.",
+        "sideLockedNote": "Kan ikke endres etter spillstart.",
         "sideLdHoleLabel": "Hull for lengste drive",
         "sideLdHoleLabelNumbered": "Hull for lengste drive {position}",
         "sideCtpHoleLabel": "Hull for nærmest pinnen",
@@ -1391,7 +1393,7 @@
         "repeatOff": "Gjentas ikke"
       },
       "formatHeading": "3. Format",
-      "modeLockedNote": "Kan ikke endres etter spill-start.",
+      "modeLockedNote": "Kan ikke endres etter spillstart.",
       "lockedTeamSize": "{size} spillere per lag",
       "lockedTag": "låst",
       "panelTitleBasics": "Grunnoppsett",
@@ -1458,21 +1460,21 @@
         "onePerSide": "én spiller på hver side",
         "bestBallMin": "minst 2 spillere (partall, fordelt 2 per lag)",
         "bestBallOdd": "partall antall spillere (lag à 2)",
-        "bestBallAssign": "lag-fordeling (2 per lag)",
-        "flightAssign": "flight-fordeling",
+        "bestBallAssign": "lagfordeling (2 per lag)",
+        "flightAssign": "flightfordeling",
         "min2players": "minst 2 spillere",
         "evenCount": "partall antall spillere",
-        "parAssign": "lag-fordeling (par à 2)",
+        "parAssign": "lagfordeling (par à 2)",
         "minCountPlayers": "minst {count} spillere",
         "teamOdd2": "partall antall spillere (lag à 2)",
         "teamOdd4": "antall spillere delelig på 4 (lag à 4)",
         "teamOdd4Short": "antall spillere som kan deles i lag på 4 og 3 (lag à 4)",
         "teamOdd3": "antall spillere delelig på 3 (lag à 3)",
         "teamOdd3Short": "antall spillere som kan deles i lag på 3 og 2 (lag à 3)",
-        "teamAssign2": "lag-fordeling (lag à 2)",
-        "teamAssign4": "lag-fordeling (lag à 4)",
-        "teamAssign3": "lag-fordeling (lag à 3)",
-        "teamHandicapPct": "lag-handicap i prosent av lagets snitt (0–100)",
+        "teamAssign2": "lagfordeling (lag à 2)",
+        "teamAssign4": "lagfordeling (lag à 4)",
+        "teamAssign3": "lagfordeling (lag à 3)",
+        "teamHandicapPct": "laghandicap i prosent av lagets snitt (0–100)",
         "wolfUnderMin": "{remaining} {remaining, plural, one {spiller} other {spillere}} til (minst 3)",
         "wolfTooMany": "for mange spillere — Wolf tar 3 til 5",
         "nassauMin": "{remaining, plural, one {minst 1 spiller til} other {minst 2 spillere}}",
@@ -1487,10 +1489,10 @@
         "aceyTooMany": "for mange spillere — Acey Deucey krever nøyaktig 4",
         "patsomeUnderMin": "{remaining, plural, one {minst 1 spiller til} other {minst {remaining} spillere til}}",
         "patsomeOdd": "partall antall spillere (lag à 2)",
-        "patsomeAssign": "lag-fordeling (lag à 2)",
+        "patsomeAssign": "lagfordeling (lag à 2)",
         "teamMatchplayUnderMin": "{remaining, plural, one {1 spiller til} other {{remaining} spillere til}}",
         "teamMatchplayTooMany": "for mange spillere (2 på hver side)",
-        "teamMatchplayAssign": "side-fordeling (2 på hver side)",
+        "teamMatchplayAssign": "sidefordeling (2 på hver side)",
         "soloMin": "minst én spiller",
         "accountPlayer": "en spiller med konto",
         "invalidAllowance": "gyldig HCP-andel",
@@ -1521,7 +1523,7 @@
     },
     "formatLock": {
       "prefix": "Format:",
-      "lockedNote": "Kan ikke endres etter spill-start."
+      "lockedNote": "Kan ikke endres etter spillstart."
     },
     "disabledHint": {
       "step1NoIntent": "Velg hva slags arrangement først",
@@ -1615,30 +1617,30 @@
       },
       "sumEquivalent": "Valget ditt tilsvarer {sumPct} % av summen av banehandicapene.",
       "texas": {
-        "legend": "Lag-handicap",
+        "legend": "Laghandicap",
         "description": "Laget spiller på en andel av snittet av spillernes banehandicap. 100 = hele snittet, 50 = halve. Tørny regner det om til slag per hull.",
         "nettoHelper2": "NGF-standard for 2-mannslag: 50 (25 % av summen).",
         "nettoHelper3": "NGF-standard for 3-mannslag: 45 (15 % av summen).",
         "nettoHelper4": "NGF-standard for 4-mannslag: 40 (10 % av summen).",
-        "bruttoHelper": "Ingen lag-handicap — laveste bruttoscore per hull per lag vinner. Scratch-format.",
-        "inputLabel": "Prosent av lagets snitt-handicap"
+        "bruttoHelper": "Ingen laghandicap — laveste bruttoscore per hull per lag vinner. Scratch-format.",
+        "inputLabel": "Prosent av lagets snitthandicap"
       },
       "ambrose": {
-        "legend": "Lag-handicap",
+        "legend": "Laghandicap",
         "description": "Laget spiller på en andel av snittet av spillernes banehandicap. 100 = hele snittet, 50 = halve. Tørny regner det om til slag per hull.",
         "nettoHelper2": "Ambrose-formelen gir alltid halve snittet: 50 (25 % av summen for 2-mannslag).",
         "nettoHelper3": "Ambrose-formelen gir alltid halve snittet: 50 (16,7 % av summen for 3-mannslag).",
         "nettoHelper4": "Ambrose-formelen gir alltid halve snittet: 50 (12,5 % av summen for 4-mannslag).",
-        "bruttoHelper": "Ingen lag-handicap — laveste bruttoscore per hull per lag vinner. Scratch-format.",
-        "inputLabel": "Prosent av lagets snitt-handicap"
+        "bruttoHelper": "Ingen laghandicap — laveste bruttoscore per hull per lag vinner. Scratch-format.",
+        "inputLabel": "Prosent av lagets snitthandicap"
       },
       "florida": {
-        "legend": "Lag-handicap",
+        "legend": "Laghandicap",
         "description": "Laget spiller på en andel av snittet av spillernes banehandicap. 100 = hele snittet, 50 = halve. Tørny regner det om til slag per hull.",
         "nettoHelper3": "NGF-standard for 3-mannslag: 45 (15 % av summen).",
         "nettoHelper4": "NGF-standard for 4-mannslag: 40 (10 % av summen).",
-        "bruttoHelper": "Ingen lag-handicap — laveste bruttoscore per hull per lag vinner. Scratch-format.",
-        "inputLabel": "Prosent av lagets snitt-handicap"
+        "bruttoHelper": "Ingen laghandicap — laveste bruttoscore per hull per lag vinner. Scratch-format.",
+        "inputLabel": "Prosent av lagets snitthandicap"
       }
     },
     "errors": {
@@ -1665,12 +1667,12 @@
       "db_players": "Klarte ikke å lagre spillerne. Prøv igjen om litt.",
       "cup_roster_locked": "Dette er en cupkamp. Bytt spilleren på cupsiden i stedet.",
       "not_editable": "Spillet kan ikke redigeres lenger fordi det allerede er startet eller avsluttet.",
-      "mode_required": "Du må velge en spillmodus før du kan publisere spillet.",
-      "unsupported_mode_size_combo": "Den valgte lagstørrelsen er ikke støttet for denne spillmodusen ennå.",
+      "mode_required": "Du må velge en spillform før du kan publisere spillet.",
+      "unsupported_mode_size_combo": "Den valgte lagstørrelsen er ikke støttet for denne spillformen ennå.",
       "min_players_for_mode": "Formatet trenger flere spillere. Legg til noen før du publiserer.",
       "too_many_players_for_mode": "Du har valgt flere spillere enn formatet tar. Ta bort noen før du publiserer.",
-      "mode_locked_after_publish": "Spillmodus kan ikke endres etter at spillet er publisert. Slett spillet og opprett et nytt hvis du vil bytte modus.",
-      "invalid_game_mode": "Den valgte spillmodusen er ikke tilgjengelig. Velg en annen modus og prøv igjen.",
+      "mode_locked_after_publish": "Spillform kan ikke endres etter at spillet er publisert. Slett spillet og opprett et nytt hvis du vil bytte modus.",
+      "invalid_game_mode": "Den valgte spillformen er ikke tilgjengelig. Velg en annen modus og prøv igjen.",
       "bad_registration_mode": "Valget for hvem som kan melde seg på er ugyldig. Sett det på nytt under «Hvem kan melde seg på?».",
       "bad_registration_type": "Typen påmelding er ugyldig. Velg «Individuelt» eller «Lag».",
       "team_registration_unsupported_mode": "Lagpåmelding funker ikke med dette formatet. Velg «Individuelt», eller bytt til et format som spilles i lag.",
@@ -1688,18 +1690,18 @@
       "shortageBannerSuffix": "-siden.",
       "cupBanner": {
         "linked": "Matchen kobles til cupen {name}.",
-        "fourball": "Spillmodusen er låst til four-ball matchplay (2 vs 2).",
-        "foursomes": "Spillmodusen er låst til foursomes matchplay (2 vs 2, vekselslag).",
-        "greensome": "Spillmodusen er låst til greensome matchplay (2 vs 2, velg-beste-tee + vekselslag).",
-        "chapman": "Spillmodusen er låst til chapman matchplay (2 vs 2, dobbel tee, bytt ball + vekselslag).",
-        "gruesome": "Spillmodusen er låst til gruesome matchplay (2 vs 2, begge teer ut, motstanderlaget velger ball + vekselslag).",
-        "singles": "Spillmodusen er låst til matchplay (1 vs 1)."
+        "fourball": "Spillformen er låst til four-ball matchplay (2 vs 2).",
+        "foursomes": "Spillformen er låst til foursomes matchplay (2 vs 2, vekselslag).",
+        "greensome": "Spillformen er låst til greensome matchplay (2 vs 2, velg-beste-tee + vekselslag).",
+        "chapman": "Spillformen er låst til chapman matchplay (2 vs 2, dobbel tee, bytt ball + vekselslag).",
+        "gruesome": "Spillformen er låst til gruesome matchplay (2 vs 2, begge teer ut, motstanderlaget velger ball + vekselslag).",
+        "singles": "Spillformen er låst til matchplay (1 vs 1)."
       }
     },
     "createDoor": {
       "kicker": "Nytt spill",
       "shortageBannerSome": "Du har bare {count} registrert{suffix} spiller{plural}.",
-      "shortageBannerNote": "Best ball trenger et partall spillere (minst 2), stableford holder med 1. Be admin invitere flere fra",
+      "shortageBannerNote": "Best ball trenger et partall spillere (minst 2), stableford holder med 1. Be arrangøren invitere flere fra",
       "shortageBannerLink": "forsiden",
       "shortageBannerSuffix": ".",
       "revansjeBanner": "Forhåndsutfylt fra {name} — alt kan endres.",
@@ -1716,14 +1718,14 @@
     }
   },
   "formatGuide": {
-    "sheetAriaLabel": "Spillformater, slik funker de",
-    "sheetTitle": "Spillformater",
+    "sheetAriaLabel": "Spillformer, slik funker de",
+    "sheetTitle": "Spillformer",
     "sheetSubtitle": "Slik funker de. Trykk for å lese mer.",
     "closeButton": "Lukk",
-    "listMetaTitle": "Spillformater",
+    "listMetaTitle": "Spillformer",
     "listMetaDescription": "Regler og poengberegning for over 20 spillformer i golf: scramble, stableford, matchplay, wolf, skins og flere til. Med eksempler og netto handicap.",
     "listBackLabel": "Hjem",
-    "listKicker": "Spillformater",
+    "listKicker": "Spillformer",
     "listPageSubtitle": "Trykk på et format for å se hvordan det funker. Da tør du å bli med uansett hva som settes opp.",
     "helper": {
       "title": "Hvilket format passer dere?",
@@ -1757,9 +1759,9 @@
         "bingo_bango_bongo": "Poeng for første ball på green, nærmest flagget og første i hullet. Også den som er ny, kan ta poeng på hvert hull."
       }
     },
-    "detailBackLabel": "Alle spillformater",
-    "detailKicker": "Spillformat",
-    "detailFallbackMeta": "Spillformat",
+    "detailBackLabel": "Alle spillformer",
+    "detailKicker": "Spillform",
+    "detailFallbackMeta": "Spillform",
     "detailHowItWorks": "Slik fungerer det",
     "detailExample": "Konkret eksempel",
     "detailFaqHeading": "Spørsmål som går igjen",
@@ -1790,7 +1792,7 @@
           },
           {
             "heading": "Handicap og tildelte slag",
-            "body": "Alt i stableford avgjøres av netto, så handicapet er selve motoren. Tørny regner først banehandicapet ditt: hcp-indeksen ganget med slope delt på 113, pluss forskjellen mellom course rating og par på teen du spiller fra. Deretter fordeles slagene etter stroke index på scorekortet. Har du 12 i banehandicap, får du ett ekstra slag på de tolv hullene med lavest stroke index. Har du 22, får du ett slag på alle 18 hull og et ekstra på de fire vanskeligste. WHS anbefaler 95 prosent av banehandicapet i store individuelle stableford-turneringer, og den som setter opp runden i Tørny velger andelen selv. Bytter du tee, endrer banehandicapet seg, og det er nettopp det slope er til for."
+            "body": "Alt i stableford avgjøres av netto, så handicapet er selve motoren. Tørny regner først banehandicapet ditt: hcp-indeksen ganget med slope delt på 113, pluss forskjellen mellom course rating og par på teen du spiller fra. Deretter fordeles slagene etter stroke index på scorekortet. Har du 12 i banehandicap, får du ett ekstra slag på de tolv hullene med lavest stroke index. Har du 22, får du ett slag på alle 18 hull og et ekstra på de fire vanskeligste. WHS anbefaler 95 prosent av banehandicapet i store individuelle stablefordturneringer, og den som setter opp runden i Tørny velger andelen selv. Bytter du tee, endrer banehandicapet seg, og det er nettopp det slope er til for."
           },
           {
             "heading": "Når skal du plukke opp ballen",
@@ -1798,7 +1800,7 @@
           },
           {
             "heading": "Varianter av stableford",
-            "body": "Modifisert stableford snur skalaen og premierer risiko: birdie og eagle gir mye mer, mens bogey og dobbeltbogey trekker fra. Fireball stableford, ofte kalt 4BBB, spilles i par der bare den beste poengsummen per hull teller for laget, og WHS anbefaler 85 prosent av banehandicapet der. Par-stableford er en tredje variant der du får pluss, minus eller null mot par på hvert hull i stedet for poeng. Alle tre bruker samme fordeling av tildelte slag etter stroke index, så du trenger ikke lære et nytt regnestykke."
+            "body": "Modifisert stableford snur skalaen og premierer risiko: birdie og eagle gir mye mer, mens bogey og dobbeltbogey trekker fra. Fireball stableford, ofte kalt 4BBB, spilles i par der bare den beste poengsummen per hull teller for laget, og WHS anbefaler 85 prosent av banehandicapet der. Begge bruker samme fordeling av tildelte slag etter stroke index, så du trenger ikke lære et nytt regnestykke."
           }
         ],
         "example": "Hull 3, par 4, SI 5: du har CH 12 og får ett ekstraslag. Du scorer 5 brutto (netto 4) → par → 2 poeng. Hull 15, par 3, SI 17: du scorer 3 brutto (netto 3) → par → 2 poeng. Hull 10, par 5, SI 3: du scorer 5 brutto (netto 4) → birdie → 3 poeng.",
@@ -1830,27 +1832,27 @@
         ]
       },
       "modified_stableford": {
-        "summary": "Stableford med proff-skala: du blir belønnet hardt for å satse, men straffet for de virkelig dårlige hullene. Her kan poengene gå i minus.",
+        "summary": "Stableford med proffskala: du blir belønnet hardt for å satse, men straffet for de virkelig dårlige hullene. Her kan poengene gå i minus.",
         "points": [
           "Birdie gir 2 poeng, eagle 5, albatross 8. Par gir 0.",
           "Bogey trekker 1 poeng, dobbeltbogey eller verre trekker 3. Du kan altså havne under null.",
           "Slagene du får på handikap regnes med, og høyest poengsum vinner."
         ],
-        "long": "Stableford med proff-skala der du premieres tungt for de gode prestasjonene og straffes for de virkelig svake. Eagle gir 5 poeng, birdie 2, par 0. Bogey trekker 1 poeng, dobbeltbogey eller verre trekker 3. Du kan havne under null på totalen. Handikap-slagene regnes inn på vanlig måte, og høyest sum etter 18 hull vinner.",
-        "example": "Hull 6, par 5, SI 1: du har CH 18 og får ett ekstraslag. Du scorer 5 brutto (netto 4) → eagle → +5 poeng. Hull 11, par 4: du scorer 7 brutto (netto 6) → dobbeltbogey → −3 poeng. Netto for disse to hullene: +5 + (−3) = +2 poeng."
+        "long": "Stableford med proffskala der du premieres tungt for de gode prestasjonene og straffes for de virkelig svake. Eagle gir 5 poeng, birdie 2, par 0. Bogey trekker 1 poeng, dobbeltbogey eller verre trekker 3. Du kan havne under null på totalen. Handikap-slagene regnes inn på vanlig måte, og høyest sum etter 18 hull vinner.",
+        "example": "Hull 6, par 5, SI 1: du har CH 18 og får ett ekstraslag. Du scorer 5 brutto (netto 4) → birdie → +2 poeng. Hull 11, par 4: du scorer 7 brutto (netto 6) → dobbeltbogey → −3 poeng. Netto for disse to hullene: +2 + (−3) = −1 poeng."
       },
       "solo_strokeplay": {
-        "summary": "Vanlig slagspill: du teller alle slagene dine, og færrest netto-slag vinner.",
+        "summary": "Vanlig slagspill: du teller alle slagene dine, og færrest nettoslag vinner.",
         "points": [
           "Netto er totalen din minus slagene du får på handikap.",
           "Du spiller for deg selv, ingen lag.",
           "Lavest sum etter 18 hull vinner."
         ],
-        "long": "Klassisk slagspill: du teller alle slagene dine gjennom hele runden og trekker fra handikap-slagene til slutt. Ingen lagkamerater, ingen hull-per-hull-oppgjør, bare du mot banen. Den som ender med færrest netto-slag etter 18 hull, vinner.",
+        "long": "Klassisk slagspill: du teller alle slagene dine gjennom hele runden og trekker fra handikap-slagene til slutt. Ingen lagkamerater, ingen hull-per-hull-oppgjør, bare du mot banen. Den som ender med færrest nettoslag etter 18 hull, vinner.",
         "example": "Du spiller en runde med CH 10. Bruttoscore er 85. Netto = 85 − 10 = 75. Konkurrenten din scorer 83 brutto med CH 7, netto 76. Du vinner med netto 75 mot 76. Ett dårlig hull gjør deg ikke ferdig, men alt teller til slutt."
       },
       "best_ball": {
-        "summary": "Dere er to på lag, og på hvert hull teller bare den beste netto-scoren av dere to.",
+        "summary": "Dere er to på lag, og på hvert hull teller bare den beste nettoscoren av dere to.",
         "points": [
           "Begge spiller hele runden, men laget tar med den laveste av de to på hvert hull.",
           "Netto er antall slag minus slagene du får på hullet.",
@@ -1859,7 +1861,7 @@
         "sections": [
           {
             "heading": "Reglene i best ball",
-            "body": "Best ball spilles i par, og begge spiller sin egen ball hele runden. På hvert hull sammenligner dere netto-scorene, og laget noterer den laveste. Den andre scoren blir bare stående. Det gjør at dere kan spille aggressivt etter tur: ligger makkeren trygt på green i to, kan du gå rett på flagget uten å risikere noe for laget. Best ball spilles som slagspill der lagets sum etter 18 hull avgjør, eller som matchplay der laveste netto vinner hullet. Alle går sin egen runde, og i Tørny er det plass til opptil 20 par i samme spill."
+            "body": "Best ball spilles i par, og begge spiller sin egen ball hele runden. På hvert hull sammenligner dere nettoscorene, og laget noterer den laveste. Den andre scoren blir bare stående. Det gjør at dere kan spille aggressivt etter tur: ligger makkeren trygt på green i to, kan du gå rett på flagget uten å risikere noe for laget. Best ball spilles som slagspill der lagets sum etter 18 hull avgjør, eller som matchplay der laveste netto vinner hullet. Alle går sin egen runde, og i Tørny er det plass til opptil 20 par i samme spill."
           },
           {
             "heading": "Best ball, fourball og fireball",
@@ -1878,7 +1880,7 @@
         "faq": [
           {
             "q": "Hva er forskjellen på best ball og scramble?",
-            "a": "I best ball spiller begge sin egen ball hele hullet, og laget tar den beste netto-scoren. I scramble slår alle, dere velger det beste slaget og spiller videre derfra med én ball."
+            "a": "I best ball spiller begge sin egen ball hele hullet, og laget tar den beste nettoscoren. I scramble slår alle, dere velger det beste slaget og spiller videre derfra med én ball."
           },
           {
             "q": "Hvor mye handicap får man i best ball?",
@@ -1886,7 +1888,7 @@
           },
           {
             "q": "Teller begge scorene i best ball?",
-            "a": "Nei, bare den laveste netto-scoren per hull. Den andre noteres ikke for laget."
+            "a": "Nei, bare den laveste nettoscoren per hull. Den andre noteres ikke for laget."
           },
           {
             "q": "Er fourball og best ball det samme?",
@@ -1912,7 +1914,7 @@
           },
           {
             "heading": "Handicap i texas scramble",
-            "body": "Scramble er et lagformat, så handicapet regnes for laget, ikke for hver enkelt. Tørny finner først banehandicapet ditt ut fra hcp-indeksen din, slope og course rating på teen du spiller fra. Deretter legges banehandicapet til alle på laget sammen, og laget får en prosent av summen. Tørny foreslår NGF-satsene når du lager runden: 25 prosent for lag på to, 15 for lag på tre og 10 for lag på fire. Arrangøren kan justere tallet før start. Grunnen til at andelen er så lav, er enkel: fire spillere som plukker beste ball scorer langt bedre enn hver av dem gjør alene, så fullt handicap ville gitt vill overkompensasjon. Lag-handicapet fordeles på hullene etter stroke index og trekkes fra lagets bruttototal."
+            "body": "Scramble er et lagformat, så handicapet regnes for laget, ikke for hver enkelt. Tørny finner først banehandicapet ditt ut fra hcp-indeksen din, slope og course rating på teen du spiller fra. Deretter legges banehandicapet til alle på laget sammen, og laget får en prosent av summen. Tørny foreslår NGF-satsene når du lager runden: 25 prosent for lag på to, 15 for lag på tre og 10 for lag på fire. Arrangøren kan justere tallet før start. Grunnen til at andelen er så lav, er enkel: fire spillere som plukker beste ball scorer langt bedre enn hver av dem gjør alene, så fullt handicap ville gitt vill overkompensasjon. Laghandicapet fordeles på hullene etter stroke index og trekkes fra lagets bruttototal."
           },
           {
             "heading": "Vanlige husregler",
@@ -1930,8 +1932,8 @@
             "a": "Ikke etter regelboka, men de fleste turneringer krever tre eller fire utslag per spiller på 18 hull. Avtal det før dere går ut, så slipper dere diskusjonen på siste hull."
           },
           {
-            "q": "Hvordan regnes lag-handicapet i texas scramble?",
-            "a": "Tørny legger sammen banehandicapet til alle på laget og gir laget en prosent av summen. Forslaget følger NGF: 25 prosent for lag på to, 15 for lag på tre, 10 for lag på fire. I veiviseren setter du tallet som prosent av lagets snitt-handicap, så forslaget for et lag på tre står som 45. Arrangøren kan justere det når runden opprettes."
+            "q": "Hvordan regnes laghandicapet i texas scramble?",
+            "a": "Tørny legger sammen banehandicapet til alle på laget og gir laget en prosent av summen. Forslaget følger NGF: 25 prosent for lag på to, 15 for lag på tre, 10 for lag på fire. I veiviseren setter du tallet som prosent av lagets snitthandicap, så forslaget for et lag på tre står som 45. Arrangøren kan justere det når runden opprettes."
           },
           {
             "q": "Kan vi legge ballen bedre der vi velger å spille fra?",
@@ -1946,8 +1948,8 @@
           "Lag-handikapet bygger på alle på laget, så sterke og svake lag stiller likere.",
           "Lavest lagtotal etter handikap vinner."
         ],
-        "long": "Ambrose er en scramble-variant med et lag-handicap som veier inn alle spillernes nivå. Alle slår fra tee, dere plukker beste utslag og alle slår derfra igjen. Slik fortsetter dere hull for hull. Lag-handicapet beregnes som sum-CH delt på to ganger lagstørrelsen (12,5 % for 4-mannslag), og det trekkes fra lagets brutto-total.",
-        "example": "Lag på 4: CH 8, 12, 16 og 20 → sum-CH 56. Lag-handicap = 56 ÷ (2 × 4) = 7. Hull 5, par 5: alle slår fra tee, beste utslag 240 m på fairway. Dere chipper til 2 m på neste slag (alle spiller derfra). En av spillerne putter inn. Lagets brutto hull-score: 3. Netto etter 18 hull: brutto-total − 7."
+        "long": "Ambrose er en scramble-variant med et laghandicap som veier inn alle spillernes nivå. Alle slår fra tee, dere plukker beste utslag og alle slår derfra igjen. Slik fortsetter dere hull for hull. Laghandicapet beregnes som sum-CH delt på to ganger lagstørrelsen (12,5 % for 4-mannslag), og det trekkes fra lagets brutto-total.",
+        "example": "Lag på 4: CH 8, 12, 16 og 20 → sum-CH 56. Laghandicap = 56 ÷ (2 × 4) = 7. Hull 5, par 5: alle slår fra tee, beste utslag 240 m på fairway. Dere chipper til 2 m på neste slag (alle spiller derfra). En av spillerne putter inn. Lagets brutto hullscore: 3. Netto etter 18 hull: brutto-total − 7."
       },
       "florida_scramble": {
         "summary": "Som Texas scramble, men med én ekstra regel: den som slo det valgte slaget, står over neste slag. Lag à 3 eller 4.",
@@ -1956,7 +1958,7 @@
           "Slik bytter dere på, og alle er med gjennom hullet. Laget får én score per hull.",
           "Laget får et felles handikap som trekkes fra. Lavest lagtotal vinner."
         ],
-        "long": "Florida Scramble er en Texas-scramble-variant med én viktig regel: den spilleren som slo det valgte slaget, hopper over neste slag. Resten av laget slår, og dere velger igjen det beste blant de gjenværende. Slik rullerer dere gjennom hullet, og alle bidrar. Laget spiller lag à 3 eller 4, og lag-handicapet (10–15 % av sum-CH) trekkes fra totalen.",
+        "long": "Florida Scramble er en Texas-scramble-variant med én viktig regel: den spilleren som slo det valgte slaget, hopper over neste slag. Resten av laget slår, og dere velger igjen det beste blant de gjenværende. Slik rullerer dere gjennom hullet, og alle bidrar. Laget spiller lag à 3 eller 4, og laghandicapet (10–15 % av sum-CH) trekkes fra totalen.",
         "example": "Hull 8, par 4, lag på 4 (A, B, C, D): A slår det beste utslaget. A hopper over neste slag, så B, C og D slår fra det stedet. C slår best. C hopper over, og A, B og D putter fra 3 m. B er best og går i hull. Lagets score: 1 (A sitt utslag) + 1 (C sitt andre) + 1 (B putter inn) = 3."
       },
       "singles_matchplay": {
@@ -1966,17 +1968,17 @@
           "Slagene du får på handikap er med når hullet avgjøres.",
           "Den som leder med flere hull enn det er igjen å spille, har vunnet."
         ],
-        "long": "Du spiller én mot én, hull for hull. Den som bruker færrest netto-slag på et hull vinner hullet. Det er antall vunne hull som avgjør kampen — ikke total score. Handikap-slagene er med i beregningen, og den spilleren som leder med flere hull enn det er igjen å spille, har vunnet og kampen stoppes der.",
+        "long": "Du spiller én mot én, hull for hull. Den som bruker færrest nettoslag på et hull vinner hullet. Det er antall vunne hull som avgjør kampen — ikke total score. Handikap-slagene er med i beregningen, og den spilleren som leder med flere hull enn det er igjen å spille, har vunnet og kampen stoppes der.",
         "example": "Hull 4, par 4: du scorer 4 (netto 4), motspiller scorer 5 (netto 4 med ett slag). Likt → hull deles. Hull 9, par 3: du scorer 3 (netto 3), motspiller scorer 4 (netto 4). Du vinner hullet og leder 1 up. Etter 16 hull: du leder 3 up med 2 hull igjen → 3&2, kampen er avgjort."
       },
       "fourball_matchplay": {
         "summary": "To mot to, hull for hull. Hver spiller spiller sin egen ball, og lagets beste score teller på hvert hull.",
         "points": [
-          "Laget med best netto-score vinner hullet.",
+          "Laget med best nettoscore vinner hullet.",
           "Det er antall vunne hull som avgjør, ikke total score.",
           "Laget som leder med flere hull enn det er igjen, har vunnet."
         ],
-        "long": "To lag på to mot hverandre, og alle fire spiller sin egen ball. På hvert hull er det lagets beste netto-score som teller. Det laget med lavest beste netto vinner hullet. Det er antall vunne hull som avgjør, ikke total score, og laget som leder med flere hull enn det er igjen, har vunnet.",
+        "long": "To lag på to mot hverandre, og alle fire spiller sin egen ball. På hvert hull er det lagets beste nettoscore som teller. Det laget med lavest beste netto vinner hullet. Det er antall vunne hull som avgjør, ikke total score, og laget som leder med flere hull enn det er igjen, har vunnet.",
         "example": "Hull 5, par 4: side 1 scorer A netto 4, B netto 5 → lagets beste er 4. Side 2 scorer C netto 3, D netto 6 → lagets beste er 3. Side 2 vinner hullet. Hull 10, par 3: begge lag har lagets beste netto 3 → hullet deles. Etter 14 hull leder side 1 med 5 up og 4 hull igjen → 5&4, matchen er avgjort."
       },
       "foursomes_matchplay": {
@@ -1986,7 +1988,7 @@
           "Laget med best score vinner hullet — det er hull som teller, ikke total.",
           "Laget som leder med flere hull enn det er igjen, har vunnet."
         ],
-        "long": "To lag à to, men begge lag deler én ball og slår annenhver gang hele runden. Den ene partneren slår på oddetallshull fra tee, den andre på partallshull. Derfra bytter dere systematisk. Lag-handicapet er basert på halvparten av differansen mellom lagenes sum-CH. Det laget med lavest score vinner hullet, og laget som leder med flere hull enn det er igjen, har vunnet.",
+        "long": "To lag à to, men begge lag deler én ball og slår annenhver gang hele runden. Den ene partneren slår på oddetallshull fra tee, den andre på partallshull. Derfra bytter dere systematisk. Laghandicapet er basert på halvparten av differansen mellom lagenes sum-CH. Det laget med lavest score vinner hullet, og laget som leder med flere hull enn det er igjen, har vunnet.",
         "example": "Lag A (spiller 1 og 2) vs. lag B (spiller 3 og 4). Hull 3 (oddetall): spiller 1 slår ut, spiller 2 slår andreslag, spiller 1 tredjeslaget og spiller 2 putter — lagets score 4. Lag B: spiller 3 slår ut, de bytter, spiller 3 putter inn på 3. Lag B vinner hullet. Hull 4 (partall): spiller 2 i lag A slår ut, og slik fortsetter dere annenhver gjennom runden."
       },
       "greensome_matchplay": {
@@ -2007,11 +2009,11 @@
           },
           {
             "heading": "Handicap i greensome",
-            "body": "Greensome bruker en 60/40-blanding: 60 prosent av det laveste banehandicapet i paret pluss 40 prosent av det høyeste. Tørny regner begge banehandicapene fra hcp-indeks, slope og course rating, blander dem og runder av til lag-handicapet. Har dere 8 og 18, blir regnestykket 0,6 ganger 8 pluss 0,4 ganger 18, altså 12. I matchplay er det differansen mellom de to lagenes handicap som gis, fordelt etter stroke index nedover fra det vanskeligste hullet. Vektingen er skjev med vilje: siden dere alltid kan velge det beste utslaget, blir det oftest den beste spilleren i paret som legger grunnlaget, og da skal laget ligge nærmere det laveste handicapet enn snittet."
+            "body": "Greensome bruker en 60/40-blanding: 60 prosent av det laveste banehandicapet i paret pluss 40 prosent av det høyeste. Tørny regner begge banehandicapene fra hcp-indeks, slope og course rating, blander dem og runder av til laghandicapet. Har dere 8 og 18, blir regnestykket 0,6 ganger 8 pluss 0,4 ganger 18, altså 12. I matchplay er det differansen mellom de to lagenes handicap som gis, fordelt etter stroke index nedover fra det vanskeligste hullet. Vektingen er skjev med vilje: siden dere alltid kan velge det beste utslaget, blir det oftest den beste spilleren i paret som legger grunnlaget, og da skal laget ligge nærmere det laveste handicapet enn snittet."
           },
           {
             "heading": "Greensome, foursomes og chapman",
-            "body": "I foursomes slår bare én av dere ut, dere bytter på annethvert hull, og lag-handicapet er 50 prosent av summen. Chapman, også kalt pinehurst, går et steg lenger: begge slår ut, begge slår andreslaget med den andres ball, og så velger dere én ball å spille alternate med inn til hull. Gruesome er versjonen der motstanderen bestemmer hvilket av utslagene deres dere må spille videre med, og den er like ubarmhjertig som navnet lover. Alle fire er i familie, men handicap-regnestykket er ulikt, så sjekk hvilket dere faktisk spiller før dere går ut."
+            "body": "I foursomes slår bare én av dere ut, dere bytter på annethvert hull, og laghandicapet er 50 prosent av summen. Chapman, også kalt pinehurst, går et steg lenger: begge slår ut, begge slår andreslaget med den andres ball, og så velger dere én ball å spille alternate med inn til hull. Gruesome er versjonen der motstanderen bestemmer hvilket av utslagene deres dere må spille videre med, og den er like ubarmhjertig som navnet lover. Alle fire er i familie, men handicap-regnestykket er ulikt, så sjekk hvilket dere faktisk spiller før dere går ut."
           }
         ],
         "example": "Hull 6, par 4: A slår 210 m til fairway, B slår 195 m i ruff. Dere velger A sitt utslag. B (partneren) slår neste, 160 m til green. A putter til 1 m, B putter inn. Lagets score: 4. Motstanderlaget velger sitt beste utslag, spiller seg inn og fullfører på 5. Dere vinner hullet.",
@@ -2041,7 +2043,7 @@
           "Velg den beste ballen etter andreslagene, og spill annenhver til hullet er i mål.",
           "Laget med best score vinner hullet — det er hull som teller, ikke total."
         ],
-        "long": "To mot to, og Chapman (også kjent som Pinehurst) har en ekstra vri. Begge slår fra tee, men så bytter dere: du slår partnerens ball som andreslag, og partneren din slår din ball. Etter andreslagene velger dere hvilken ball dere vil gå videre med, og derfra spiller dere annethvert slag til hullet er i mål. Lag-handicap beregnes som greensome-formelen (60/40-blanding).",
+        "long": "To mot to, og Chapman (også kjent som Pinehurst) har en ekstra vri. Begge slår fra tee, men så bytter dere: du slår partnerens ball som andreslag, og partneren din slår din ball. Etter andreslagene velger dere hvilken ball dere vil gå videre med, og derfra spiller dere annethvert slag til hullet er i mål. Laghandicap beregnes som greensome-formelen (60/40-blanding).",
         "example": "Hull 11, par 4: A og B slår begge ut. Så bytter dere: A slår andreslaget med B sin ball, og B slår andreslaget med A sin ball. A sin ball ligger best, så dere spiller videre med den. B slo andreslaget med den ballen, så A slår tredjeslaget inn på green, og B putter i hull. Lagets score: 4 (utslag A, andreslag B, tredjeslag A, putt B)."
       },
       "gruesome_matchplay": {
@@ -2051,7 +2053,7 @@
           "Partneren til den som eier den valgte ballen slår neste slag, så spiller dere vekselvis derfra.",
           "Laget med lavest score vinner hullet. I matchplay teller vunne hull, ikke sammenlagt score."
         ],
-        "long": "Gruesome er foursomes med en ekstra utfordring: motstanderlaget velger hvilken av de to tee-ballene dere må spille videre med. De velger typisk den verste. Etter at valget er gjort, slår partneren til den som eier den valgte ballen det neste slaget, og dere spiller annenhver derfra som vanlig foursomes. Lag-handicap beregnes som i foursomes (50 % av sum-CH-differansen).",
+        "long": "Gruesome er foursomes med en ekstra utfordring: motstanderlaget velger hvilken av de to tee-ballene dere må spille videre med. De velger typisk den verste. Etter at valget er gjort, slår partneren til den som eier den valgte ballen det neste slaget, og dere spiller annenhver derfra som vanlig foursomes. Laghandicap beregnes som i foursomes (50 % av sum-CH-differansen).",
         "example": "Hull 2, par 5: A slår til 230 m på fairway, B slår til 200 m i bunker. Motstanderlaget sier «B sin» (den i bunkeren). A (partneren til B) slår ballen ut av bunkeren, B slår tredjeslaget inn på green, A putter til 1 m, og B putter inn. Lagets score: 5. Motstanderlaget, som er i ordinær foursomes-turnus selv, fullfører på 4 og vinner hullet."
       },
       "wolf": {
@@ -2210,7 +2212,7 @@
           },
           {
             "heading": "Handicap i bingo bango bongo",
-            "body": "Dette er det ene formatet i Tørny der banehandicapet ikke gjør noe. Poengene kommer fra rekkefølge og presisjon, ikke fra score, så det finnes ingen slag å trekke fra. Spillet jevner seg ut på egen hånd: den som slår kortest kommer først til ballen sin og får flest sjanser til bingo, mens den som slår langt får flere korte innspill og dermed flere bango-poeng. Vil dere likevel jevne ut mer, er tee-valget verktøyet, så la spillerne med høyest hcp-indeks slå fra en kortere tee. Fører dere slagene i Tørny i tillegg, får dere en helt vanlig netto-score på siden uten at den rører bingo bango bongo-poengene."
+            "body": "Dette er det ene formatet i Tørny der banehandicapet ikke gjør noe. Poengene kommer fra rekkefølge og presisjon, ikke fra score, så det finnes ingen slag å trekke fra. Spillet jevner seg ut på egen hånd: den som slår kortest kommer først til ballen sin og får flest sjanser til bingo, mens den som slår langt får flere korte innspill og dermed flere bango-poeng. Vil dere likevel jevne ut mer, er tee-valget verktøyet, så la spillerne med høyest hcp-indeks slå fra en kortere tee. Fører dere slagene i Tørny i tillegg, får dere en helt vanlig nettoscore på siden uten at den rører bingo bango bongo-poengene."
           },
           {
             "heading": "Innsats og gruppestørrelse",
@@ -2276,8 +2278,8 @@
           "I Champagne Scramble velger arrangøren om én, to eller tre scorer skal telle.",
           "Lavest sammenlagt for laget vinner."
         ],
-        "long": "Alle slår fra tee, og laget velger det beste utslaget. Derfra spiller alle sin egen ball inn til hullet. Det er ikke én lag-ball som i scramble — hver spiller scorer for seg. Lagets hull-score settes til summen av de to (eller arrangørvalgt antall) laveste individuelle scorene på hullet. I Champagne Scramble-varianten velger arrangøren om det er én, to eller tre scorer som skal telle.",
-        "example": "Hull 9, par 5, 4-mannslag (shamble-variant, 2 scorer teller): alle slår, C sitt utslagsted velges. A scorer 5, B 6, C 5, D 7 på hullet. To laveste: A og C, begge netto 4 etter handikap. Lag-hull-score = 4 + 4 = 8. Lag 2 på samme hull: to laveste netto er 5 + 4 = 9. Lag 1 vinner hullet i eventuell per-hull-sammenligning."
+        "long": "Alle slår fra tee, og laget velger det beste utslaget. Derfra spiller alle sin egen ball inn til hullet. Det er ikke én lag-ball som i scramble — hver spiller scorer for seg. Lagets hullscore settes til summen av de to (eller arrangørvalgt antall) laveste individuelle scorene på hullet. I Champagne Scramble-varianten velger arrangøren om det er én, to eller tre scorer som skal telle.",
+        "example": "Hull 9, par 5, 4-mannslag (shamble-variant, 2 scorer teller): alle slår, C sitt utslagsted velges. A scorer 5, B 6, C 5, D 7 på hullet. To laveste: A og C, begge netto 4 etter handikap. Lag-hullscore = 4 + 4 = 8. Lag 2 på samme hull: to laveste netto er 5 + 4 = 9. Lag 1 vinner hullet i eventuell per-hull-sammenligning."
       },
       "patsome": {
         "summary": "Dere er på lag à to og spiller 18 hull i tre lagformer, seks hull av hver.",
@@ -2395,7 +2397,7 @@
       "cupDecidedWalkover": "Kampen er avgjort uten spill — {names} trakk seg for tett på start, så walkover til {team}.",
       "cupPlayOnPending": "Valg venter — {names} trakk seg, og arrangøren har ikke bestemt ennå om {partner} skal spille alene.",
       "backToHome": "Tilbake til hjem",
-      "draftBanner": "Utkast — admin planlegger fortsatt. Detaljer kan endre seg.",
+      "draftBanner": "Utkast — arrangøren planlegger fortsatt. Detaljer kan endre seg.",
       "bannerSubmitted": "Scorekortet er levert.",
       "bannerSubmittedPartial": "Levert, men ikke alle makkerkortene. Noen kan ha levert dem eller ført hull på dem i mellomtiden.",
       "bannerSubmittedHandedOver": "Kortet ditt er levert. Flightkameratene får kortene sine og sender dem inn selv.",
@@ -2457,7 +2459,7 @@
       "ctaHolesFilled": "{count} av {total} hull tastet inn",
       "ctaSubmittedPendingApproval": "Scorekort levert — venter på godkjenning fra en medspiller.",
       "ctaSubmittedPendingMarker": "Kortet er levert. Nå venter det på markøren.",
-      "ctaSubmittedApproved": "Scorekort levert og godkjent. Venter på at admin avslutter spillet.",
+      "ctaSubmittedApproved": "Scorekort levert og godkjent. Venter på at arrangøren avslutter spillet.",
       "ctaDeliverFlight": "{count, plural, one {Lever kortet du har ført} other {Lever kortene du har ført ({count})}}",
       "ctaContinueToSibling": "Videre til hull {hole} · {format}",
       "draftTeamsLabel": "Lag",
@@ -2638,7 +2640,7 @@
     "finish": {
       "kicker": "Avslutt spillet",
       "heading": "Avslutt spill",
-      "subtitleSide": "Velg sideturnerings-vinnere for «{name}». Spillet låses når du bekrefter.",
+      "subtitleSide": "Velg sideturneringsvinnere for «{name}». Spillet låses når du bekrefter.",
       "subtitlePlain": "Lås «{name}» og åpne leaderboardet for alle.",
       "missingCount": "{count, plural, one {1 spiller har ikke levert:} other {# spillere har ikke levert:}}",
       "missingNote": "Avslutter du nå, blir disse stående som ikke levert. Scorene deres teller fortsatt i resultatet.",
@@ -2740,7 +2742,7 @@
       "captainHasTeamBody": "Du er kaptein, og noen på laget har takket ja. Gi kapteinsbindet til en av dem på lagsiden først. Da kan du trekke deg.",
       "captainHasTeamLink": "Til lagsiden",
       "warningActive": "Du trekker deg fra et pågående spill. Scorene dine teller ikke i resultatet, og scorekortet ditt låses. Du kan angre så lenge spillet pågår.",
-      "warningPreStart": "Du forsvinner fra påmeldings-lista og scorekortet åpner ikke for deg ved tee-off. Arrangøren får automatisk beskjed hvis du var på lag.",
+      "warningPreStart": "Du forsvinner fra påmeldingslista og scorekortet åpner ikke for deg ved tee-off. Arrangøren får automatisk beskjed hvis du var på lag.",
       "whatHappensLabel": "Dette skjer",
       "activeItems": {
         "scoresNotRanked": "Scorene dine teller ikke i rangeringen",
@@ -2893,7 +2895,7 @@
         "guest_claim_not_guest": "Denne spilleren er ikke en gjest i dette spillet.",
         "guest_email_taken": "E-posten har allerede en Tørny-konto. Resultatet kan ikke flyttes dit.",
         "guest_claim_failed": "Noe gikk galt med sendingen. Prøv igjen.",
-        "guest_claim_mail_failed": "Kontoen er klar, men mailen kom ikke ut. Gjesten kan logge inn med {email} likevel, eller du kan sende på nytt.",
+        "guest_claim_mail_failed": "Kontoen er klar, men e-posten kom ikke ut. Gjesten kan logge inn med {email} likevel, eller du kan sende på nytt.",
         "invites_failed": "Spillet er publisert, men ikke alle e-postinvitasjonene gikk ut. Send dem på nytt her."
       },
       "rosterSearch": "Legg til fra spillere du kjenner",
@@ -2904,7 +2906,7 @@
       "rosterAddPending": "Legger til …",
       "rosterOr": "eller",
       "inviteByEmail": "Inviter ny spiller på e-post",
-      "inviteEmailPlaceholder": "eksempel@gmail.no",
+      "inviteEmailPlaceholder": "navn@example.com",
       "inviteEmailAriaLabel": "E-post",
       "inviteButton": "Send invitasjon",
       "invitePending": "Sender …",
@@ -3036,6 +3038,7 @@
       "backAriaLabel": "Tilbake til turneringen",
       "leaderboardAriaLabel": "Vis leaderboard",
       "pageHeading": "Hull {n} · {game}",
+      "teamWithNames": "Lag {number} · {names}",
       "playerFallback": "Spiller",
       "missingFlightScores": "{count, plural, one {1 score mangler på hullet} other {# scorer mangler på hullet}}"
     },
@@ -3147,7 +3150,7 @@
       "catchUpLineOther": "{name} ligger {gap} poeng bak lederen og er ulv på dette hullet.",
       "stakeLine": "Innsatsen er {stake} ganger etter delte hull.",
       "partnerButton": "Partner: {name}",
-      "partnerButtonSubtitle": "Vinner-siden får {points} hver",
+      "partnerButtonSubtitle": "Vinnersiden får {points} hver",
       "loneWolfButton": "Lone Wolf",
       "loneWolfSubtitle": "Alene mot resten. Vinner du, får du {points}.",
       "loneWolfSubtitleReveal": "Alene mot resten",
@@ -3159,7 +3162,7 @@
         "not_authenticated": "Du må være logget inn for å velge.",
         "invalid_choice": "Ugyldig valg.",
         "partner_required": "Du må velge en partner.",
-        "partner_must_be_null": "Partner skal ikke være satt for Lone/Blind Wolf.",
+        "partner_must_be_null": "Lone Wolf og Blind Wolf spiller uten partner. Fjern partneren og prøv igjen.",
         "partner_cannot_be_wolf": "Du kan ikke velge deg selv som partner.",
         "invalid_hole": "Ugyldig hull-nummer.",
         "not_wolf_on_hole": "Du er ikke Wolf på dette hullet, så du kan ikke velge.",
@@ -3377,9 +3380,9 @@
       "live": "Live",
       "tiedRank": "Delt {rank}. plass",
       "hullForHullHeading": "Hull for hull",
-      "hullForHullRevealSub": "Hull for hull åpnes når admin avslutter spillet.",
+      "hullForHullRevealSub": "Hull for hull åpnes når arrangøren avslutter spillet.",
       "leaderboardHeading": "Leaderboard",
-      "teamLeaderboardHeading": "Lag-leaderboard",
+      "teamLeaderboardHeading": "Lagleaderboard",
       "hullNumber": "Hull {number}",
       "parSiChip": "Par {par} · SI {si}",
       "podiumKicker": "Podium",
@@ -3441,6 +3444,7 @@
       "kicker": "Duell",
       "backAriaLabel": "Tilbake",
       "barAriaLabel": "{nameA} {scoreA} mot {nameB} {scoreB}",
+      "versus": " mot ",
       "halvedLegend": "delt",
       "verdictTie": "Uavgjort {scoreA}{sep}{scoreB}.",
       "verdictWinTiebreak": "{winner} vant.",
@@ -3462,35 +3466,35 @@
       "lockedSub": "Hull {from}–{to} vises når arrangøren avslutter spillet."
     },
     "nassau": {
-      "front9Label": "For 9",
-      "back9Label": "Bak 9",
+      "front9Label": "Ut",
+      "back9Label": "Inn",
       "totalLabel": "Totalt",
-      "noSections": "Ingen seksjoner",
+      "noSections": "Ingen oppgjør",
       "pushedNote": "{sections} endte delt.",
-      "unitSections": "seksjoner",
-      "front9Heading": "Front 9",
+      "unitSections": "oppgjør",
+      "front9Heading": "Ut",
       "front9Sub": "Hull 1–9",
-      "back9Heading": "Back 9",
+      "back9Heading": "Inn",
       "back9Sub": "Hull 10–18",
       "total18Heading": "Totalt 18 hull",
       "total18Sub": "Hele runden",
       "sectionsPending": "Venter på spilte hull",
       "sectionsPendingNote": "Kampen er avgjort når alle har spilt hullene.",
       "sectionTied": "Delt 1. plass",
-      "revealHiddenSub": "Nassau-rundens tre konkurranser holdes hemmelig til admin avslutter spillet.",
+      "revealHiddenSub": "Nassau-rundens tre oppgjør holdes hemmelig til arrangøren avslutter spillet.",
       "seire": "seire",
       "seier": "seier",
       "sweepLabel": "Hele tavla",
-      "sweepSubtitle": "Tok alle tre seksjoner",
-      "sectionVunnetLabel": "Seksjoner vunnet",
+      "sweepSubtitle": "Tok alle tre oppgjør",
+      "sectionVunnetLabel": "Oppgjør vunnet",
       "totalEffectiveStrokesLabel": "slag",
       "sectionBrutto": "{gross} brutto",
       "sectionHullSpilt": "{holes} hull spilt",
       "hullVenter": "Venter",
       "board": {
-        "title": "Tre kamper i én",
+        "title": "Tre oppgjør i ett",
         "kicker": "{game} · Nassau · {scoring, select, gross {brutto} other {netto}}",
-        "subtitle": "Front 9, back 9 og hele runden",
+        "subtitle": "Ut, inn og hele runden",
         "stateDecided": "Avgjort",
         "stateLive": "{done} av {total} hull",
         "stateWaiting": "Ikke startet",
@@ -3498,7 +3502,7 @@
         "pushed": "Delt",
         "noWinner": "Ingen vinner",
         "you": "Deg",
-        "viewerRank": "Du: {tied, select, true {delt } other {}}{rank}.",
+        "viewerRank": "Du: {tied, select, true {delt } other {}}plass {rank}",
         "viewerRankGap": "Du: {tied, select, true {delt } other {}}{rank}. · {gap} bak",
         "viewerLead": "Du leder",
         "viewerLeadBy": "Du leder med {lead}",
@@ -3517,7 +3521,7 @@
     },
     "skins": {
       "carriedNote": "{count, plural, one{# skin} other{# skins}} hang igjen. Siste spilte hull ble delt.",
-      "revealHiddenSub": "Skins-potten holdes hemmelig til admin avslutter spillet.",
+      "revealHiddenSub": "Skins-potten holdes hemmelig til arrangøren avslutter spillet.",
       "skinLabel": "{count, plural, one {skin} other {skins}}",
       "skinCount": "{count, plural, one {1 skin} other {# skins}}",
       "atStakeLabel": "{count, plural, one {1 skin på spill} other {# skins på spill}}",
@@ -3553,10 +3557,10 @@
     },
     "matchplay": {
       "matchCannotShow": "Matchen kan ikke vises",
-      "singlesDistribution": "Spillere er ikke korrekt fordelt på to sider. Sjekk admin-flyten og at hver side har én spiller.",
-      "teamDistribution": "Spillere er ikke korrekt fordelt på to lag med to spillere hver. Sjekk admin-flyten.",
+      "singlesDistribution": "Spillerne er ikke fordelt riktig på to sider. Be arrangøren åpne spillet og sette én spiller på hver side.",
+      "teamDistribution": "Spillerne er ikke fordelt riktig på to lag med to spillere hver. Be arrangøren åpne spillet og rette opp lagene.",
       "subtitle1v1": "1 mot 1 · Hull-for-hull",
-      "subtitle2v2bestball": "2 mot 2 · Lag-best per hull",
+      "subtitle2v2bestball": "2 mot 2 · Lagbest per hull",
       "subtitle2v2alternate": "2 mot 2 · Vekselslag",
       "colHull": "Hull",
       "colPar": "Par",
@@ -3571,7 +3575,7 @@
       "tableNote": "Tallene er brutto. Prikk betyr slag på hullet, og det lille tallet under er netto — netto avgjør hvem som vinner hullet."
     },
     "wolf": {
-      "revealHiddenSub": "Wolf-poeng holdes hemmelig til admin avslutter spillet.",
+      "revealHiddenSub": "Wolf-poeng holdes hemmelig til arrangøren avslutter spillet.",
       "packLeaderKronet": "Pack-leder kåret",
       "wolfSubtitle": "Wolf · {scoring}",
       "wolfHullPlayed": "{count} Wolf-hull",
@@ -3591,7 +3595,7 @@
       "andreSide": "Andre",
       "wolfLabel": "Wolf:",
       "bruttoLabel": "brutto {count}",
-      "hullForHullRevealSub": "Hull for hull åpnes når admin avslutter spillet."
+      "hullForHullRevealSub": "Hull for hull åpnes når arrangøren avslutter spillet."
     },
     "board": {
       "title": "Tavla",
@@ -3683,14 +3687,15 @@
       "podiumSubtitle": "{format} · Etter {holes} hull"
     },
     "shamble": {
-      "revealHiddenSub": "Poengsummen holdes hemmelig til admin avslutter spillet.",
+      "revealHiddenSub": "Poengsummen holdes hemmelig til arrangøren avslutter spillet.",
       "noTeamsScored": "Ingen lag scoret",
       "teller": "Teller",
       "tellerIkke": "Teller ikke",
-      "spiltHullOf18": "spilt {played}/18 hull"
+      "spiltHullOf18": "spilt {played}/18 hull",
+      "bestCount": "beste {count}"
     },
     "patsome": {
-      "revealHiddenSub": "Poengene holdes hemmelig til admin avslutter spillet.",
+      "revealHiddenSub": "Poengene holdes hemmelig til arrangøren avslutter spillet.",
       "totalLabel": "totalt",
       "podiumSubtitle": "Patsome · {scoring}"
     },
@@ -3731,7 +3736,7 @@
       "parGenderJuniors": "Junior: {par}"
     },
     "bingoBangoBongo": {
-      "revealHiddenSub": "Bingo Bango Bongo-poeng holdes hemmelig til admin avslutter spillet.",
+      "revealHiddenSub": "Bingo Bango Bongo-poeng holdes hemmelig til arrangøren avslutter spillet.",
       "subtitle": "Bingo Bango Bongo",
       "podiumSubtitle": "Bingo Bango Bongo · Poeng",
       "holesSubtitle": "Bingo Bango Bongo",
@@ -3743,7 +3748,7 @@
       "firstInHole": "først i hull"
     },
     "nines": {
-      "revealHiddenSub": "Poengene holdes hemmelig til admin avslutter spillet.",
+      "revealHiddenSub": "Poengene holdes hemmelig til arrangøren avslutter spillet.",
       "variantNines": "Nines",
       "variantSplitSixes": "Split Sixes",
       "holesScored": "{count} hull scoret",
@@ -3753,12 +3758,12 @@
       "podiumHullScored": "{count} hull"
     },
     "roundRobin": {
-      "revealHiddenSub": "Round Robin-poeng holdes hemmelig til admin avslutter spillet.",
-      "subtitle": "Round Robin · {allowancePct}% handicap",
+      "revealHiddenSub": "Round Robin-poeng holdes hemmelig til arrangøren avslutter spillet.",
+      "subtitle": "Round Robin · {allowancePct} % handicap",
       "hullLabel": "hull",
-      "slotLabel": "Slot {slot}",
+      "slotLabel": "Del {slot}",
       "tiedInline": "· Delt {rank}. plass",
-      "segmentSummaryKicker": "Segment-sammendrag",
+      "segmentSummaryKicker": "Segmentsammendrag",
       "segmentLabel": "Segment {number} · {holes}",
       "medLabel": "med {partner}",
       "vsLabel": "vs",
@@ -3775,7 +3780,7 @@
       "tapetLabel": "{count} tapt"
     },
     "aceyDeucey": {
-      "revealHiddenSub": "Acey Deucey-poeng holdes hemmelig til admin avslutter spillet.",
+      "revealHiddenSub": "Acey Deucey-poeng holdes hemmelig til arrangøren avslutter spillet.",
       "subtitle": "Acey Deucey · {scoring}",
       "podiumSubtitle": "Acey Deucey · {scoring}",
       "aceDeuce": "{aces} ace · {deuces} deuce",
@@ -3799,11 +3804,11 @@
         "penalty": "Minuspoeng"
       },
       "awards": {
-        "bestNetto18": "Best netto 18 hull:",
-        "bestNettoFront9": "Best netto front 9:",
-        "bestNettoBack9": "Best netto back 9:",
-        "bestBrutto18Team": "Best brutto totalt 18 (lag):",
-        "bestBrutto18Individual": "Best brutto totalt 18 ({name}):",
+        "bestNetto18": "Beste netto 18 hull:",
+        "bestNettoFront9": "Beste netto første ni:",
+        "bestNettoBack9": "Beste netto siste ni:",
+        "bestBrutto18Team": "Beste brutto totalt 18 (lag):",
+        "bestBrutto18Individual": "Beste brutto totalt 18 ({name}):",
         "kingPar3Team": "Konge på par-3 (lag):",
         "kingPar3Individual": "Konge på par-3 ({name}):",
         "kingPar5Team": "Konge på par-5 (lag):",
@@ -3816,14 +3821,14 @@
         "mostAlbatrossesIndividual": "Flest albatrosser ({name}):",
         "mostHoleInOnesTeam": "Flest hole-in-one (lag):",
         "mostHoleInOnesIndividual": "Flest hole-in-one ({name}):",
-        "cleanFront9": "Rein front-9 ({name}):",
-        "cleanBack9": "Rein back-9 ({name}):",
+        "cleanFront9": "Ren første ni ({name}):",
+        "cleanBack9": "Ren siste ni ({name}):",
         "noDoublePlusRound": "Ren runde — ingen double ({name}):",
         "longestBogeyFreeStreak": "Lengste bogey-fri ({detail}):",
-        "bestBruttoF9Team": "Best brutto front 9 (lag):",
-        "bestBruttoF9Individual": "Best brutto front 9 ({name}):",
-        "bestBruttoB9Team": "Best brutto back 9 (lag):",
-        "bestBruttoB9Individual": "Best brutto back 9 ({name}):",
+        "bestBruttoF9Team": "Beste brutto første ni (lag):",
+        "bestBruttoF9Individual": "Beste brutto første ni ({name}):",
+        "bestBruttoB9Team": "Beste brutto siste ni (lag):",
+        "bestBruttoB9Individual": "Beste brutto siste ni ({name}):",
         "mostBirdiesTeam": "Flest birdier (lag):",
         "mostBirdiesIndividual": "Flest birdier ({name}):",
         "mostParsTeam": "Flest pars+ (lag):",
@@ -3877,25 +3882,25 @@
           "achievements": "Bragder",
           "penalty": "Minuspoeng"
         },
-        "achievementsHint": "kan stables, kan utløses flere ganger samme runde",
-        "adminChosen": "(admin-valgt)",
+        "achievementsHint": "kan samles opp, kan utløses flere ganger samme runde",
+        "adminChosen": "(valgt av arrangøren)",
         "rows": {
-          "bestNetto18": "Beste nettototalt 18",
-          "bestNettoF9": "Beste nettofront 9",
-          "bestNettoB9": "Beste nettoback 9",
-          "bestBrutto18": "Beste bruttototalt 18",
+          "bestNetto18": "Beste netto totalt 18",
+          "bestNettoF9": "Beste netto første ni",
+          "bestNettoB9": "Beste netto siste ni",
+          "bestBrutto18": "Beste brutto totalt 18",
           "kingPar3": "Konge på par-3",
           "kingPar4": "Konge på par-4",
           "kingPar5": "Konge på par-5",
           "mostEagles": "Flest eagles+",
           "mostAlbatrosses": "Flest albatrosser",
           "mostHoleInOnes": "Flest hole-in-one",
-          "cleanFront9": "Rein front-9",
-          "cleanBack9": "Rein back-9",
+          "cleanFront9": "Ren første ni",
+          "cleanBack9": "Ren siste ni",
           "noDoublePlusRound": "Ren runde — ingen double",
           "longestBogeyFreeStreak": "Lengste bogey-fri rekke",
-          "bestBruttoF9": "Beste bruttofront 9",
-          "bestBruttoB9": "Beste bruttoback 9",
+          "bestBruttoF9": "Beste brutto første ni",
+          "bestBruttoB9": "Beste brutto siste ni",
           "mostBirdies": "Flest birdier",
           "mostPars": "Flest pars+",
           "lowestSingleHole": "Lavest enkelthull brutto",
@@ -4041,10 +4046,10 @@
       "rate_limited": "Du har bedt om mange koder på kort tid. Vent et kvarter og prøv igjen.",
       "rate_limited_minute": "Du kan be om ny kode om ett minutt.",
       "rate_limited_quota": "Vi får ikke sendt flere koder akkurat nå. Prøv igjen senere.",
-      "user_not_found": "Denne mailen er ikke registrert. Be admin om en invitasjon.",
+      "user_not_found": "Denne e-posten er ikke registrert. Be arrangøren om en invitasjon.",
       "invite_expired": "Invitasjonen din er utløpt. Be arrangøren om å sende en ny.",
       "disposable_email": "Engangs-e-post går ikke. Bruk en vanlig e-postadresse, så er du i gang.",
-      "code_invalid": "Feil kode. Sjekk mailen og prøv igjen.",
+      "code_invalid": "Feil kode. Sjekk e-posten og prøv igjen.",
       "code_expired": "Koden stemmer ikke, eller den er gått ut. Sjekk at du skrev den riktig. Du kan også be om en ny kode.",
       "link_expired": "Lenken er gått ut. Be om ny kode.",
       "unknown": "Noe gikk galt. Prøv igjen."
@@ -4062,13 +4067,13 @@
     "verifyCode": {
       "pending": "Logger inn …",
       "kicker": "Steg 2 av 2",
-      "heading": "Skriv inn koden fra mailen",
+      "heading": "Skriv inn koden fra e-posten",
       "sentTo": "Vi sendte den til <strong>{email}</strong>.",
       "changeEmailShort": "Feil adresse?",
       "codeLabel": "Kode",
       "codeHint": "Koden har åtte siffer. På iPhone kan du trykke på koden over tastaturet.",
       "submitButton": "Logg inn",
-      "noMailTitle": "Kom ikke mailen?",
+      "noMailTitle": "Kom ikke e-posten?",
       "resendIn": "Ny kode om {time}",
       "resendLink": "Send ny kode",
       "spamHint": "Se i søppelposten. Den kommer fra Tørny og kan ta et par minutter.",
@@ -4336,9 +4341,9 @@
       "tilesLanseringer": "Lanseringer",
       "tilesCuper": "Cuper",
       "tilesLigaer": "Ligaer",
-      "tilesFormats": "Format-styring",
+      "tilesFormats": "Formatstyring",
       "tilesKlubber": "Klubber",
-      "tilesSpillformater": "Spillformater",
+      "tilesSpillformater": "Spillformer",
       "tilesIdeer": "Innsendte ideer",
       "metaIdeer": "{n, plural, one {# ny idé} other {# nye ideer}}",
       "metaIdeerNone": "Ingen ubygde ideer",
@@ -4351,7 +4356,7 @@
       "metaSpillformater": "Bli kjent med formatene",
       "playerBaner": "Baner",
       "playerBanerMeta": "Finn en bane, eller legg til en ny",
-      "playerSpillformater": "Spillformater",
+      "playerSpillformater": "Spillformer",
       "playerSpillformaterMeta": "Bli kjent med formatene",
       "playerClubsLabel": "Klubbene dine",
       "newRoundTitle": "Lag en ny runde",
@@ -4371,7 +4376,7 @@
       "playerNoClub": "Ikke med i en klubb ennå",
       "newPlayerSubtitle": "Her setter du opp runder og finner gjengen og klubben din.",
       "playerJoinLabel": "Bli med",
-      "playerTerminName": "Terminlista",
+      "playerTerminName": "Finn turneringer",
       "playerTerminLine": "Åpne runder du kan melde deg på",
       "playerClubInviteName": "Klubben din",
       "playerClubInviteLine": "Har klubben Tørny? Be om en invitasjonslenke, så havner klubben her.",
@@ -4431,15 +4436,15 @@
         "not_active": "Spillet er ikke aktivt og kan ikke avsluttes.",
         "not_editable": "Spillet kan ikke redigeres lenger fordi det allerede er startet eller avsluttet.",
         "not_deletable": "Spillet kan ikke slettes fordi det allerede er startet eller avsluttet.",
-        "unknown": "Noe gikk galt. Prøv igjen.",
+        "unknown": "Noe gikk galt. Prøv igjen, eller last siden på nytt.",
         "no_players": "Ingen spillere på dette spillet.",
         "not_all_submitted": "Alle spillere må ha levert scorekort før spillet kan avsluttes.",
         "not_all_approved": "Alle scorekort må være godkjent før spillet kan avsluttes.",
         "db_finish": "Klarte ikke å avslutte spillet. Prøv igjen.",
-        "db_tee": "Klarte ikke å lese tee-boksen fra databasen. Prøv igjen.",
-        "tee_missing": "Tee-box mangler. Kan ikke beregne handicap.",
-        "tee_missing_rating": "Den valgte teen mangler rating for en spillers kjønn (M/D/J). Sjekk bane-administrasjon eller endre spillerens tee-kjønn.",
-        "db_roster": "Klarte ikke å lese spillerlisten fra databasen.",
+        "db_tee": "Klarte ikke å lese teen. Prøv igjen.",
+        "tee_missing": "Teen mangler. Velg tee og prøv igjen.",
+        "tee_missing_rating": "Den valgte teen mangler rating for en spillers kjønn (M/D/J). Sjekk banen i baneadministrasjonen, eller endre hvilken tee spilleren bruker.",
+        "db_roster": "Klarte ikke å lese spillerlisten. Prøv igjen.",
         "db_players": "Klarte ikke å oppdatere spillerne. Prøv igjen.",
         "withdraw_stale": "Spilleren er allerede trukket eller står ikke lenger på lista.",
         "reinstate_stale": "Spilleren er allerede med igjen eller står ikke lenger på lista.",
@@ -4453,7 +4458,7 @@
         "uneven_teams": "Et lag har for få eller for mange spillere. Flytt spillere mellom lagene før du starter runden.",
         "flight_full": "Den valgte flighten er full (maks 4 spillere). Velg en annen flight.",
         "signups_not_scheduled": "Kun planlagte spill kan stenge eller gjenåpne påmeldingen.",
-        "bad_flight": "Ugyldig flight-nummer. Velg en positiv flight fra listen.",
+        "bad_flight": "Ugyldig flight-nummer. Velg en flight fra listen.",
         "bad_interval": "Velg 8, 10 eller 12 minutter mellom flightene.",
         "team_full": "Det laget er fullt. Velg et annet lag.",
         "bad_team": "Ugyldig lagnummer. Velg et lag fra listen.",
@@ -4468,7 +4473,7 @@
         "guest_invalid_hcp": "Handicapet må være et tall mellom 0 og 54. Plusshandicap tastes med + foran.",
         "guest_invalid_tee": "Velg tee-kategori for gjesten.",
         "guest_auth_create_failed": "Klarte ikke å opprette gjesten. Prøv igjen.",
-        "guest_profile_update_failed": "Noe gikk galt da gjesten ble lagret. Prøv igjen.",
+        "guest_profile_update_failed": "Gjesten ble ikke lagret. Prøv igjen.",
         "guest_roster_insert_failed": "Gjesten ble ikke lagt til i spillet. Prøv igjen.",
         "game_full": "Spillet er fullt. Fjern noen for å legge til flere.",
         "cup_finished": "Cupen er avsluttet. Kampen kan ikke startes eller gjenåpnes.",
@@ -4533,7 +4538,7 @@
         "player_removed_team_short": "Spilleren er fjernet. Lag {team} spiller nå med {count}, og lagets handicap regnes for {count, plural, one {# spiller} other {# spillere}}.",
         "player_removed_team_short_shamble": "Spilleren er fjernet. Lag {team} spiller nå med {count} og teller de beste scorene sine på hvert hull, som før.",
         "player_removed_team_uneven": "Spilleren er fjernet. Lag {team} har bare {count, plural, one {# spiller} other {# spillere}} nå. {missing, plural, one {Flytt en spiller dit} other {Flytt # spillere dit}} før runden kan starte.",
-        "signups_closed": "Påmeldingen er stengt. Nye søknader avvises.",
+        "signups_closed": "Påmeldingen er stengt. Nye forespørsler avvises.",
         "signups_reopened": "Påmeldingen er gjenåpnet.",
         "guest_added": "Gjesten er lagt til i spillet.",
         "hole_reminded": "Påminnelsen er sendt.",
@@ -4561,7 +4566,7 @@
         "teamCount": "Antall sider",
         "teamCountDefault": "Antall lag",
         "gameMode": "Spillform",
-        "hcpAllowance": "Handicap-justering",
+        "hcpAllowance": "Handicapjustering",
         "peerApproval": "Godkjenning fra flighten",
         "peerApprovalOn": "På",
         "peerApprovalOff": "Av",
@@ -4577,8 +4582,8 @@
         "draftEditButton": "Rediger utkast",
         "scheduledStartBody": "Når du starter runden låses banehandicap for hver spiller, redigering stenges, og spillerne kan begynne å taste slag.",
         "scheduledStartBodyAutoStart": "Når du starter runden låses banehandicap for hver spiller, redigering stenges, og spillerne kan begynne å taste slag. Runden starter automatisk ved tee-off ({time}) hvis du ikke har startet den før.",
-        "scheduledEditBody": "Spillet er i planlagt-fasen. Du kan fortsatt endre bane, tee-off, spillere, lag og innstillinger inntil runden startes.",
-        "scheduledEditBodyAutoStart": "Spillet er i planlagt-fasen. Du kan fortsatt endre bane, tee-off, spillere, lag og innstillinger inntil runden startes, enten automatisk ved tee-off eller manuelt av deg.",
+        "scheduledEditBody": "Spillet er planlagt. Du kan fortsatt endre bane, tee-off, spillere, lag og innstillinger inntil runden startes.",
+        "scheduledEditBodyAutoStart": "Spillet er planlagt. Du kan fortsatt endre bane, tee-off, spillere, lag og innstillinger inntil runden startes, enten automatisk ved tee-off eller manuelt av deg.",
         "scheduledStartBlockedLead": "Runden starter ikke før dette er ordnet:",
         "unassignedFlightsLinked": "Spillerne er ikke fordelt i flighter ennå. Del dem inn på <link>Startlista</link>.",
         "scheduledEditButton": "Rediger spillet",
@@ -4619,7 +4624,7 @@
         "addAria": "Legg til {name}",
         "orSeparator": "eller",
         "emailHeading": "Inviter ny spiller på e-post",
-        "emailPlaceholder": "eksempel@gmail.no",
+        "emailPlaceholder": "navn@example.com",
         "emailAriaLabel": "E-post",
         "sendInviteButton": "Send invitasjon",
         "sendingBusy": "Sender …"
@@ -4717,9 +4722,9 @@
           "delete_failed": "Slettingen feilet. Prøv igjen om litt."
         },
         "warnings": {
-          "scheduled": "Spillet er planlagt og spillerne er invitert. De får ingen melding om at det er kansellert. Du må evt. si fra selv.",
+          "scheduled": "Spillet er planlagt og spillerne er invitert. De får ingen melding om at det er avlyst. Du må evt. si fra selv.",
           "active": "Spillet pågår nå. Sletting fjerner alle slag som er registrert så langt, og spillerne mister runden sin uten varsel.",
-          "finished": "Spillet er avsluttet. Leaderboard og resultater forsvinner permanent. Spillere som har bokmerket lenken får 404."
+          "finished": "Spillet er avsluttet. Leaderboard og resultater forsvinner permanent. Spillere som har bokmerket lenken får en side som ikke finnes."
         },
         "players": "{count, plural, one {# spiller i spillet} other {# spillere i spillet}}",
         "scoreRows": "{count, plural, one {# slaggerad} other {# slaggerader}}",
@@ -4728,7 +4733,7 @@
       "finish": {
         "topBarKicker": "Avslutt spillet",
         "title": "Avslutt spill",
-        "subtitle": "Velg sideturnerings-vinnere for «{name}». Spillet låses når du bekrefter.",
+        "subtitle": "Velg sideturneringsvinnere for «{name}». Spillet låses når du bekrefter.",
         "missingHeader": "{count, plural, one {1 spiller har ikke levert:} other {{count} spillere har ikke levert:}}",
         "missingBody": "Avslutter du nå, blir disse stående som <bold>ikke levert</bold>. Scorene deres teller fortsatt i resultatet."
       },
@@ -4763,7 +4768,7 @@
         "subtitle": "Noen har ikke levert scorekort i «{name}».",
         "missingHeader": "{count, plural, one {1 spiller har ikke levert:} other {{count} spillere har ikke levert:}}",
         "markWithdrawn": "Marker som trukket",
-        "bodyWithWd": "Avslutter du nå, blir spillere uten hake stående som <notDelivered>ikke levert</notDelivered>. Scorene de rakk å registrere teller fortsatt i resultatet. Spillere med hake markeres som <withdrawn>Trukket</withdrawn> og teller ikke i rangeringen. Du kan angre trekk etterpå ved å åpne spillet igjen. Resten låses og leaderboard åpnes for alle.",
+        "bodyWithWd": "Avslutter du nå, blir spillere uten hake stående som <notDelivered>ikke levert</notDelivered>. Scorene de rakk å registrere teller fortsatt i resultatet. Spillere med hake markeres som <withdrawn>Trukket</withdrawn> og teller ikke i rangeringen. Du kan angre trekk etterpå ved å åpne spillet igjen. Resten låses og leaderboard åpnes for alle deltakerne.",
         "bodyNoWd": "Avslutter du nå, blir disse stående som <notDelivered>ikke levert</notDelivered>. Scorene de rakk å registrere teller fortsatt i resultatet. Resten låses og leaderboard åpnes for alle.",
         "submitButton": "Avslutt likevel",
         "submittingBusy": "Avslutter …",
@@ -4977,7 +4982,7 @@
       "errors": {
         "email_required": "Du må fylle inn en e-postadresse.",
         "already_invited": "Det finnes allerede en ventende invitasjon til denne adressen. Bruk \"Send på nytt\" istedenfor.",
-        "log_failed": "Invitasjonen ble sendt, men loggføring feilet.",
+        "log_failed": "Invitasjonen ble sendt, men loggen ble ikke oppdatert.",
         "mail_failed": "Invitasjonen ble lagret, men e-posten kom ikke fram. Prøv å sende på nytt.",
         "resend_failed": "Klarte ikke sende invitasjonen på nytt. Prøv igjen.",
         "resend_game_locked": "Runden har allerede startet, så du kan ikke sende invitasjonen på nytt.",
@@ -5093,7 +5098,8 @@
         "kicker": "Bekreft sletting",
         "heading": "Slett {name}?",
         "body": "Kontoen og e-postadressen ({email}) frigjøres. {firstName} har aldri spilt en runde, så ingen historikk forsvinner.",
-        "bodyPlayed": "Kontoen og e-postadressen ({email}) frigjøres. {firstName} har spilt runder — resultatene beholdes i turneringene, men vises som «Slettet bruker».",
+        "playerFallback": "Spilleren",
+      "bodyPlayed": "Kontoen og e-postadressen ({email}) frigjøres. {firstName} har spilt runder — resultatene beholdes i turneringene, men vises som «Slettet bruker».",
         "cannotUndo": "Handlingen kan ikke angres.",
         "submitButton": "Bekreft sletting",
         "deletingBusy": "Sletter …",
@@ -5175,7 +5181,7 @@
       },
       "archivedTees": {
         "summaryLabel": "Arkiverte tees ({count})",
-        "body": "Disse tee-ene er fjernet fra aktiv visning, men beholdes for spillene som bruker dem. Gjenåpne en tee for å få den tilbake i edit-formen og i nytt-spill-velgeren.",
+        "body": "Disse tee-ene er fjernet fra aktiv visning, men beholdes for spillene som bruker dem. Gjenåpne en tee, så er den tilbake i banens skjema og i teevalget for nye spill.",
         "archivedDate": "Arkivert {date}",
         "nameConflict": "Navnekollisjon med aktiv tee. Endre navn etter gjenåpning",
         "reopenButton": "Gjenåpne",
@@ -5200,11 +5206,11 @@
       }
     },
     "formats": {
-      "kicker": "Format-styring",
-      "title": "Spillformatene",
+      "kicker": "Formatstyring",
+      "title": "Spillformene",
       "subtitle": "Slik ser steg 2 ut for den som lager en runde.",
       "errors": {
-        "missing_slug": "Format-slug mangler i forespørselen.",
+        "missing_slug": "Formatet ble ikke funnet. Last siden på nytt og prøv igjen.",
         "bad_intent": "Ugyldig arrangement-type.",
         "not_found": "Formatet ble ikke funnet.",
         "last_primary": "Kan ikke fjerne siste primær-format for dette arrangementet. Aktiver et annet format som primær først.",
@@ -5214,7 +5220,7 @@
       },
       "status": {
         "updated": "Endringen er lagret.",
-        "noop": "Ingen endring (verdien var allerede satt)."
+        "noop": "Ingen endring. Verdien var allerede slik."
       },
       "intentLabels": {
         "kompis": "Kompis",
@@ -5252,13 +5258,14 @@
           "cupEligibleOff": "cup-kvalifisert av",
           "activated": "aktivert",
           "deactivated": "deaktivert",
-          "moved": "flyttet fra plass {from} til {to}"
+          "moved": "flyttet fra plass {from} til {to}",
+          "changed": "endret"
         }
       }
     },
     "launches": {
       "title": "Lanseringer",
-      "subtitle": "Publiser nyheter til brukerne dine — som drypp i appen og månedlig oppsummering på mail.",
+      "subtitle": "Publiser nyheter til brukerne dine — som drypp i appen og månedlig oppsummering på e-post.",
       "errors": {
         "title_required": "Du må fylle inn en tittel.",
         "body_required": "Du må fylle inn brødtekst.",
@@ -5563,7 +5570,7 @@
       "createButton": "+ Ny liga",
       "brassRibbon": "Ligaer",
       "pageTitle": "Ligaer",
-      "pageSubtitle": "Individuelle sesong-serier over flere runder.",
+      "pageSubtitle": "Individuelle sesongserier over flere runder.",
       "deletedBanner": "Ligaen er slettet.",
       "deletedBannerNamed": "Ligaen «{name}» er slettet.",
       "emptyState": "Ingen ligaer ennå.",
@@ -5589,26 +5596,26 @@
       "kicker": "Klubbhuset",
       "brassRibbon": "Ny liga",
       "pageTitle": "Opprett liga",
-      "pageSubtitle": "Sett opp en sesong-serie og inviter vennene dine.",
-      "clubPageSubtitle": "Sett opp en sesong-serie for {clubName}.",
+      "pageSubtitle": "Sett opp en sesongserie og inviter vennene dine.",
+      "clubPageSubtitle": "Sett opp en sesongserie for {clubName}.",
       "klubbLigaBrassRibbon": "Ny klubb-liga",
       "clubContextBanner": "Denne ligaen settes opp for {clubName}. Bare medlemmer i klubben kan være med.",
       "errors": {
         "name": "Liganavnet må være mellom 1 og 80 tegn.",
-        "dates": "Sesong-datoene er ugyldige. Sjekk at sluttdato er etter startdato.",
-        "standings_model": "Velg en sesong-modell.",
+        "dates": "Sesongdatoene er ugyldige. Sjekk at sluttdato er etter startdato.",
+        "standings_model": "Velg en sesongmodell.",
         "format": "Velg en spillform.",
-        "course_scope": "Velg et bane-omfang.",
-        "course": "Bane og tee må velges for dette bane-omfanget.",
-        "penalty": "Straffe-slag over par må være et tall.",
+        "course_scope": "Velg et baneomfang.",
+        "course": "Bane og tee må velges for dette baneomfanget.",
+        "penalty": "Straffeslag over par må være et tall.",
         "best_n": "Antall beste runder må være et helt tall på minst 1.",
         "players": "Deltakerlisten er ugyldig.",
         "insert_failed": "Klarte ikke å opprette ligaen. Prøv igjen.",
-        "rounds_failed": "Ligaen ble opprettet, men noen runder feilet. Sjekk detalj-siden.",
-        "players_failed": "Ligaen ble opprettet, men deltakerne feilet. Sjekk detalj-siden.",
+        "rounds_failed": "Ligaen ble opprettet, men noen runder feilet. Sjekk detaljsiden.",
+        "players_failed": "Ligaen ble opprettet, men deltakerne feilet. Sjekk detaljsiden.",
         "missing": "Noen påkrevde felt mangler.",
         "season_over": "Sesongen er allerede over. Velg datoer fram i tid.",
-        "unexpected": "Uventet feil: {code}",
+        "unexpected": "Noe gikk galt. Prøv igjen, eller ta kontakt hvis det fortsetter.",
         "sim_settings": "Rundeinnstillingene er ugyldige. Velg fra listene.",
         "hcp_allowance_pct": "Handicapprosenten må være et helt tall fra 1 til 100.",
         "hcp_max_strokes": "Maks slag må være et helt tall fra 1 til 54 eller stå tomt."
@@ -5639,8 +5646,8 @@
       "hcpMaxStrokesLabel": "Maks slag",
       "hcpMaxStrokesPlaceholder": "Ingen tak",
       "hcpHint": "Prosenten regnes av banehandicapet. Maks slag gjelder etter prosenten, og står feltet tomt, er det ikke noe tak. WHS anbefaler 95 % for slagspill og stableford.",
-      "courseScopeHeading": "Bane-omfang",
-      "courseScopeLegend": "Bane-omfang",
+      "courseScopeHeading": "Baneomfang",
+      "courseScopeLegend": "Baneomfang",
       "scopeFixedBothLabel": "Fast bane og tee",
       "scopeFixedBothDesc": "Alle runder spilles på samme bane og tee.",
       "scopeFixedCourseLabel": "Fast bane, tee per runde",
@@ -5653,7 +5660,7 @@
       "teePlaceholder": "Velg tee …",
       "multiCourseHint": "Bane og tee velges per runde etterpå.",
       "setupHeading": "Oppsett",
-      "standingsModelLabel": "Sesong-modell",
+      "standingsModelLabel": "Sesongmodell",
       "standingsModelTotalLabel": "Total",
       "standingsModelTotalDescStroke": "Sum mot par over alle runder.",
       "standingsModelTotalDescPoints": "Sum av stableford-poeng over alle runder.",
@@ -5668,7 +5675,7 @@
       "bestNLabel": "Antall beste runder (N)",
       "missedRoundLabel": "Manglende runde",
       "missedPenaltyStrokeLabel": "Straffescore",
-      "missedPenaltyStrokeDesc": "Spillere som ikke leverer en runde får en straffe-score.",
+      "missedPenaltyStrokeDesc": "Spillere som ikke leverer en runde får en straffescore.",
       "missedPenaltyPointsLabel": "Teller som 0 poeng",
       "missedPenaltyPointsDesc": "En uteblitt runde gir 0 poeng. Det er straff nok i seg selv.",
       "missedMustPlayLabel": "Må spille alle",
@@ -5676,11 +5683,11 @@
       "penaltyTypeLabel": "Straffescore-type",
       "penaltyWorstPlusOneLabel": "Dårligste + 1 slag",
       "penaltyWorstPlusOneDesc": "Dårligste resultat i runden pluss ett ekstra slag over par.",
-      "penaltyFixedLabel": "Fast straffe-score",
+      "penaltyFixedLabel": "Fast straffescore",
       "penaltyFixedDesc": "Et fast antall slag over par for uteblitte runder.",
       "penaltyFixedOverParLabel": "Slag over par",
       "frequencyHeading": "Frekvens",
-      "frequencyLegend": "Runde-frekvens",
+      "frequencyLegend": "Rundefrekvens",
       "frequencyMonthlyLabel": "Månedlig",
       "frequencyBiweeklyLabel": "Annenhver uke",
       "frequencyWeeklyLabel": "Ukentlig",
@@ -5690,7 +5697,7 @@
       "frequencyPreviewMonthly": ": {months}",
       "frequencyPreviewWindowed": " ({days}-dagers vinduer)",
       "frequencyPreviewDot": ".",
-      "frequencyNoPreview": "Sett sesong-datoene over, så viser vi hvor mange runder det blir.",
+      "frequencyNoPreview": "Sett sesongdatoene over, så viser vi hvor mange runder det blir.",
       "participantsHeading": "Deltakere",
       "participantsHint": "Inviter vennene dine til ligaen. Du kan legge til flere etterpå.",
       "participantsClubHint": "Velg medlemmene som skal være med i ligaen.",
@@ -5729,12 +5736,12 @@
       "brassRibbonClub": "Klubb-liga · {status}",
       "brassRibbonStandalone": "Liga · {status}",
       "infoFormat": "Spillform",
-      "infoStandingsModel": "Sesong-modell",
+      "infoStandingsModel": "Sesongmodell",
       "infoStandingsModelSuffix": " (sum {unit})",
       "infoStandingsUnitPar": "mot par",
       "infoStandingsUnitPoints": "poeng",
       "infoMissed": "Manglende runde",
-      "infoCourseScope": "Bane-omfang",
+      "infoCourseScope": "Baneomfang",
       "infoSimulator": "Simulator",
       "simulatorYes": "Ja",
       "infoScoring": "Tabell",
@@ -5759,7 +5766,7 @@
       },
       "infoRounds": "Runder",
       "infoParticipants": "Deltakere",
-      "standingsLink": "Se sesong-tabellen",
+      "standingsLink": "Se sesongtabellen",
       "roundsHeading": "Runder",
       "noRoundsYet": "Ingen runder generert. Ligaen ble opprettet med egendefinert frekvens, eller frekvensen ga ingen vinduer i sesong-spennet.",
       "participantsHeading": "Deltakere",
@@ -5882,7 +5889,7 @@
       },
       "warnings": {
         "active": "Ligaen pågår nå. Sletting fjerner ligaen for alltid, men selve flight-spillene forblir som frittstående spill.",
-        "finished": "Ligaen er avsluttet. Sesong-tabellen forsvinner, men selve flight-spillene forblir som frittstående spill."
+        "finished": "Ligaen er avsluttet. Sesongtabellen forsvinner, men selve flight-spillene forblir som frittstående spill."
       }
     },
     "player": {
@@ -5894,7 +5901,7 @@
         "review": "Se over"
       },
       "kicker": "Liga",
-      "seasonTableHeading": "Sesong-tabell",
+      "seasonTableHeading": "Sesongtabell",
       "seasonFinishedBanner": "Sesongen er ferdig. Slik endte tabellen.",
       "formatLine": {
         "scoring": {
@@ -5938,7 +5945,7 @@
         "closed": "Lukket"
       },
       "joinErrors": {
-        "not_draft": "Ligaen har allerede startet. Be klubb-admin om å legge deg til.",
+        "not_draft": "Ligaen har allerede startet. Be klubbadmin om å legge deg til.",
         "not_member": "Du er ikke medlem av klubben.",
         "not_club_league": "Denne ligaen kan du ikke bli med i selv.",
         "already_member": "Du er allerede med i ligaen.",
@@ -5946,12 +5953,12 @@
       },
       "meldAv": {
         "heading": "Meld deg av «{name}»?",
-        "subtitle": "Du tas ut av sesong-tabellen, men kan bli med igjen så lenge ligaen ikke har startet.",
+        "subtitle": "Du tas ut av sesongtabellen, men kan bli med igjen så lenge ligaen ikke har startet.",
         "confirmButton": "Meld meg av",
         "confirmPending": "Melder deg av …",
         "cancelButton": "Avbryt",
         "errors": {
-          "already_played": "Du har allerede spilt en runde. Be klubb-admin om å fjerne deg.",
+          "already_played": "Du har allerede spilt en runde. Be klubbadmin om å fjerne deg.",
           "finished": "Ligaen er avsluttet.",
           "not_member": "Du er ikke med i denne ligaen.",
           "not_club_league": "Denne ligaen kan du ikke melde deg av selv.",
@@ -5961,9 +5968,9 @@
       "runde": {
         "kicker": "Start runde",
         "windowUpcoming": "Runden er ikke åpen ennå. Kom tilbake når vinduet starter.",
-        "windowClosed": "Runden er stengt for innlevering. Ta kontakt med admin hvis du mener dette er feil.",
+        "windowClosed": "Runden er stengt for innlevering. Ta kontakt med arrangøren hvis du mener dette er feil.",
         "backToLeague": "Tilbake til liga",
-        "missingSetup": "Runden mangler bane eller tee — admin fullfører oppsettet snart.",
+        "missingSetup": "Runden mangler bane eller tee — arrangøren fullfører oppsettet snart.",
         "markerRule": "Velg hvem du spiller med. Du trenger minst én medspiller (markørregelen).",
         "simulatorRule": "Velg de som står i simulatoren sammen med deg. Markør velger du når du leverer runden.",
         "noCoPlayers": "Ingen andre deltakere i ligaen. Du trenger minst én medspiller (markørregelen).",
@@ -5984,7 +5991,7 @@
           "need_marker": "Du må velge minst én medspiller.",
           "outside_window": "Runden er ikke åpen for spill nå.",
           "already_played": "Du har allerede spilt denne runden.",
-          "round_not_ready": "Runden mangler bane eller tee — si fra til admin.",
+          "round_not_ready": "Runden mangler bane eller tee — si fra til arrangøren.",
           "not_member": "En eller flere av de valgte er ikke deltakere i ligaen.",
           "members_failed": "Klarte ikke å hente deltakerliste. Prøv igjen om litt.",
           "league_not_active": "Ligaen er ikke aktiv.",
@@ -6059,7 +6066,7 @@
         "profile_incomplete": "Fyll ut handicap på profilen først.",
         "read_failed": "Fikk ikke sjekket påmeldingen. Prøv igjen.",
         "save_failed": "Klarte ikke å lagre. Prøv igjen.",
-        "unexpected": "Uventet feil: {code}"
+        "unexpected": "Noe gikk galt. Prøv igjen, eller ta kontakt hvis det fortsetter."
       }
     },
     "intro": {
@@ -6110,7 +6117,7 @@
       "withdrawButtonSelf": "Trekk meg",
       "withdrawPending": "Registrerer …",
       "cancelButton": "Avbryt",
-      "selfNote": "Arrangøren ser trekket på cup-siden med en gang.",
+      "selfNote": "Arrangøren ser trekket på cupsiden med en gang.",
       "undoHeading": "Angre trekket for {name}?",
       "undoBody": "Kampene som ennå ikke har startet spilles som normalt igjen. Har tee-tiden passert, starter de i løpet av et minutt.",
       "undoButton": "Angre trekket",
@@ -6158,7 +6165,7 @@
         "not_joined": "Du står ikke på lista i denne cupen.",
         "read_failed": "Fikk ikke sjekket påmeldingen. Prøv igjen.",
         "save_failed": "Klarte ikke å lagre. Prøv igjen.",
-        "unexpected": "Uventet feil: {code}"
+        "unexpected": "Noe gikk galt. Prøv igjen, eller ta kontakt hvis det fortsetter."
       }
     },
     "plan": {
@@ -6204,7 +6211,7 @@
         "plan_course": "Velg en bane.",
         "plan_tee": "Velg en tee som hører til banen.",
         "plan_preset": "Velg et format.",
-        "plan_strategy": "Velg en paring-strategi.",
+        "plan_strategy": "Velg en paringsstrategi.",
         "plan_sessions": "Legg til minst én økt i det tilpassede formatet.",
         "plan_best_ball": "Handicap-andelen må være et helt tall mellom 0 og 100.",
         "plan_tee_off_invalid": "Tee-off-tidspunktet er ugyldig.",
@@ -6213,7 +6220,7 @@
         "not_draft": "Cupen er allerede startet, så oppsettet er låst.",
         "plan_save_failed": "Klarte ikke å lagre oppsettet. Prøv igjen.",
         "plan_matches_not_updated": "Oppsettet er lagret, men matchene fikk det ikke med seg. Prøv igjen.",
-        "unexpected": "Uventet feil: {code}"
+        "unexpected": "Noe gikk galt. Prøv igjen, eller ta kontakt hvis det fortsetter."
       }
     },
     "participants": {
@@ -6282,7 +6289,7 @@
         "invalid_team": "Ugyldig lag.",
         "not_allowed": "Bare arrangøren kan sette lag og kapteiner.",
         "plan_save_failed": "Klarte ikke å lagre endringen. Prøv igjen.",
-        "unexpected": "Uventet feil: {code}"
+        "unexpected": "Noe gikk galt. Prøv igjen, eller ta kontakt hvis det fortsetter."
       }
     },
     "lineup": {
@@ -6350,9 +6357,9 @@
         "insert_failed": "Klarte ikke å sette opp kampene. Prøv igjen.",
         "profile_read_failed": "Klarte ikke å hente spillerne. Prøv igjen.",
         "invalid_source_match": "Uttaket ser rart ut. Last siden på nytt og prøv igjen.",
-        "unexpected": "Noe gikk galt ({code}).",
-        "rollback_failed": "Noen av kampene ble satt opp før det gikk galt, og de ble ikke fjernet igjen. Ta kontakt med administrator for å få ryddet økten.",
-        "reveal_undo_failed": "Kampene ble ikke satt opp, men økten står likevel som avdekket. Ta kontakt med administrator for å få ryddet den."
+        "unexpected": "Noe gikk galt. Prøv igjen, eller ta kontakt hvis det fortsetter.",
+        "rollback_failed": "Noen av kampene ble satt opp før det gikk galt, og de ble ikke fjernet igjen. Skriv til klubb@tornygolf.no, så rydder vi opp i økten.",
+        "reveal_undo_failed": "Kampene ble ikke satt opp, men økten står likevel som avdekket. Skriv til klubb@tornygolf.no, så rydder vi opp."
       }
     },
     "presets": {
@@ -6396,7 +6403,7 @@
       "matchesHeading": "Matcher",
       "emptyRoster": "Ingen spillere. Spillerlisten fylles fra matchene.",
       "emptyMatches": "Ingen matcher ennå. Åpne «Fordel & generer» over for å sette opp kampene.",
-      "openCupPage": "Åpne cup-siden",
+      "openCupPage": "Åpne cupsiden",
       "openResults": "Se resultatsiden",
       "matchesSummary": "Først til {points} poeng · {finished} av {total} {total, plural, one {match} other {matcher}} spilt",
       "mot": "mot",
@@ -6416,7 +6423,7 @@
         "start_failed": "Klarte ikke å starte cupen.",
         "finish_failed": "Klarte ikke å avslutte cupen.",
         "too_few_matches": "Du må opprette minst 2 matcher før du kan starte cupen.",
-        "wrong_status": "Cupen er ikke i utkast-status og kan ikke startes.",
+        "wrong_status": "Cupen er ikke i utkaststatus og kan ikke startes.",
         "already_finished": "Cupen er allerede avsluttet.",
         "no_pending_matches": "Spilleren har ingen kamper igjen å trekke seg fra.",
         "not_participant": "Spilleren er ikke med i denne cupen.",
@@ -6474,7 +6481,7 @@
         "not_member": "Spilleren er ikke medlem av klubben lenger.",
         "too_many_players": "Cupen er full — en personlig cup tar maks {cap} spillere. Fjern en deltaker først, eller bytt inn en som allerede er påmeldt.",
         "swap_failed": "Klarte ikke å bytte spilleren. Prøv igjen.",
-        "unexpected": "Uventet feil: {code}",
+        "unexpected": "Noe gikk galt. Prøv igjen, eller ta kontakt hvis det fortsetter.",
         "wrong_team": "Spilleren er på det andre laget og kan ikke byttes inn her."
       }
     },
@@ -6512,7 +6519,7 @@
         "too_many_matches": "En personlig cup tar maks {max} matcher. Vil du ha flere, lag en klubb-cup.",
         "too_many_players": "En personlig cup tar maks {max} spillere. Vil du ha flere, lag en klubb-cup.",
         "tee_off_in_past": "Tee-off kan ikke være i fortiden. Velg et tidspunkt fra nå av.",
-        "rollback_failed": "Noen av matchene ble laget før det gikk galt, og de ble ikke fjernet igjen. Ta kontakt med administrator for å få ryddet cupen."
+        "rollback_failed": "Noen av matchene ble laget før det gikk galt, og de ble ikke fjernet igjen. Skriv til klubb@tornygolf.no, så rydder vi opp i cupen."
       },
       "formatGreensome": "Greensome",
       "formatChapman": "Chapman",
@@ -6549,7 +6556,7 @@
       "heading": "Slett «{name}»?",
       "permanentHeading": "Slettes permanent",
       "cupEntry": "Cupen «{name}»",
-      "rosterEntry": "Spillerliste og master-leaderboard",
+      "rosterEntry": "Spillerliste og hovedtavle",
       "neverPlayedNote": "{count} {count, plural, one {genererte match som ikke er spilt} other {genererte matcher som ikke er spilt}} slettes for alltid.",
       "matchesNote": "{count} spilte {count, plural, one {match} other {matcher}} forblir som frittstående spill (cup-koblingen fjernes).",
       "irreversibleNote": "Handlingen kan ikke angres.",
@@ -6570,7 +6577,7 @@
       "pageTitle": "Opprett cup",
       "pageSubtitle": "Sett opp en lag-mot-lag-cup for {clubName}. Kampene legger du til etterpå.",
       "errors": {
-        "cup_name": "Cup-navnet må være mellom 1 og 80 tegn.",
+        "cup_name": "Cupnavnet må være mellom 1 og 80 tegn.",
         "cup_team_1": "Navn på lag 1 må være mellom 1 og 40 tegn.",
         "cup_team_2": "Navn på lag 2 må være mellom 1 og 40 tegn.",
         "cup_team_dup": "Lagene må ha forskjellige navn.",
@@ -6579,7 +6586,7 @@
         "cup_win_points": "Poeng for seier må være et tall over 0, med høyst én desimal.",
         "cup_tie_points": "Poeng ved delt må være 0 eller mer, med høyst én desimal.",
         "cup_insert_failed": "Klarte ikke å opprette cupen. Prøv igjen.",
-        "unexpected": "Uventet feil: {code}"
+        "unexpected": "Noe gikk galt. Prøv igjen, eller ta kontakt hvis det fortsetter."
       }
     },
     "public": {
@@ -6599,7 +6606,7 @@
       "matchSoloPlayOn": "{partner} spiller alene",
       "matchPlayOnPending": "Valg venter — {name} trakk seg",
       "withdrawSelfLink": "Trekk meg fra cupen",
-      "withdrawnBanner": "Du er trukket fra cupen. Arrangøren ser det her på cup-siden.",
+      "withdrawnBanner": "Du er trukket fra cupen. Arrangøren ser det her på cupsiden.",
       "resultsPending": "Resultatene kommer når cupen avsluttes",
       "lineupRevealedTitle": "Kampene er klare",
       "lineupRevealedBody": "Kapteinene har levert. {format}: {count, plural, one {# kamp} other {# kamper}} er satt opp.",
@@ -6713,7 +6720,7 @@
     "finishedEmpty": "Du har ingen ferdige runder ennå."
   },
   "discover": {
-    "pageTitle": "Terminlista",
+    "pageTitle": "Finn turneringer",
     "metaTitle": "Finn turneringer",
     "metaDescription": "Åpne golfturneringer du kan bli med på. Se hva som er på gang, eller logg inn og lag din egen.",
     "kicker": "Finn turneringer",
@@ -6865,7 +6872,7 @@
     "goToInboxButton": "Gå til innboks",
     "inviteTeamOnlyBanner": "Dette spillet tar imot lag via invitasjon. Be arrangøren invitere laget ditt direkte.",
     "inviteNotInvitedIntro": "Du er ikke invitert ennå, men du kan be arrangøren om plass.",
-    "teamUnsupportedModeBanner": "Spillmodusen «{mode}» spilles ikke i lag. Be arrangøren bytte påmeldingen til «Individuelt».",
+    "teamUnsupportedModeBanner": "Spillformen «{mode}» spilles ikke i lag. Be arrangøren bytte påmeldingen til «Individuelt».",
     "badTeamSizeBanner": "Lagstørrelsen er ikke riktig satt opp. Be arrangøren sjekke innstillingene.",
     "teamInvitePointerBanner": "Du er invitert til et lag i dette spillet. Gå til laget ditt for å bli med, eller meld på et eget lag under.",
     "goToTeamButton": "Gå til laget",
@@ -6903,7 +6910,7 @@
     "teamSuccessFailedFix": "Du kan fikse dem fra lagoversikten.",
     "slotFailReason": {
       "alreadyRegistered": "Allerede påmeldt",
-      "dbError": "DB-feil",
+      "dbError": "Noe gikk galt. Prøv igjen.",
       "unexpected": "Uventet feil"
     },
     "goToTeamDashboard": "Gå til lagoversikten",
@@ -6914,7 +6921,7 @@
     "notFoundButton": "Til forsiden",
     "teamDashMetaTitle": "Mitt lag",
     "teamDashKicker": "Lag",
-    "teamDashNoTeamBanner": "Du har ikke et lag på dette spillet. Be kapteinen om å legge deg til, eller meld på et eget lag fra påmeldings-siden.",
+    "teamDashNoTeamBanner": "Du har ikke et lag på dette spillet. Be kapteinen om å legge deg til, eller meld på et eget lag fra påmeldingssiden.",
     "teamDashInvitedHeading": "Du er invitert til et lag i «{gameName}»",
     "teamDashSoloPlayerBanner": "Du er påmeldt som solo-spiller. Det er ikke noe lag å vise her.",
     "teamDashSignupsClosedBanner": "Påmeldingen er stengt. Arrangøren gjør de siste justeringene før start.",
@@ -6961,7 +6968,7 @@
       "side_full": "Siden ble nettopp full. Velg den andre siden.",
       "game_full": "Spillet er fullt — alle plassene er tatt.",
       "wrong_type": "Dette spillet tar ikke imot lagpåmelding.",
-      "mode_does_not_support_teams": "Spillmodusen støtter ikke lag. Be arrangøren bytte påmeldingen til «Individuelt».",
+      "mode_does_not_support_teams": "Spillformen støtter ikke lag. Be arrangøren bytte påmeldingen til «Individuelt».",
       "team_name_invalid": "Lagnavnet må være 3–40 tegn.",
       "slots_count_wrong": "Feil antall medspillere. Fyll inn alle plassene.",
       "self_in_slots": "Du kan ikke legge til deg selv som medspiller.",
@@ -7186,10 +7193,10 @@
       "subject": "Du er invitert til Tørny",
       "subjectGame": "Du er invitert til {gameName} på Tørny",
       "heading": "Du er invitert",
-      "introOpen": "<strong>{name}</strong> har invitert deg til en golf-turnering i Tørny.",
+      "introOpen": "<strong>{name}</strong> har invitert deg til en golfturnering i Tørny.",
       "introGame": "<strong>{name}</strong> har invitert deg til spillet <em>{game}</em> på Tørny.",
-      "formatHint": "Spillformat: {label}",
-      "formatReadMore": "Les mer om spillformatene",
+      "formatHint": "Spillform: {label}",
+      "formatReadMore": "Les mer om spillformene",
       "footerDisclaimer": "Har du ikke en golfvenn ved navn {name}? Ignorer denne meldingen.",
       "getStartedHtml": "For å komme i gang: gå til <link>tornygolf.no</link>, skriv inn denne e-posten, og logg inn med koden du får tilsendt.",
       "getStartedText": "Gå til <link>tornygolf.no</link>, skriv inn denne e-posten, og logg inn med koden du får tilsendt.",
@@ -7215,8 +7222,8 @@
       "footer": "Logg inn på <link>tornygolf.no</link> for å se flight, lag og tee-off."
     },
     "registrationRejected": {
-      "subject": "Søknad til {gameName}",
-      "heading": "Søknad ikke godkjent",
+      "subject": "Forespørsel om å bli med i {gameName}",
+      "heading": "Forespørselen er ikke godkjent",
       "body": "Forespørselen din om å bli med i <strong>{gameName}</strong> ble dessverre ikke godkjent.",
       "bodyText": "Forespørselen din om å bli med i {gameName} ble dessverre ikke godkjent.",
       "reasonPrefix": "Begrunnelse: «{reason}»",
@@ -7326,11 +7333,11 @@
       "footer": "Du får denne meldingen fordi du var med i spillet."
     },
     "cupStarted": {
-      "subject": "Cup-en har startet — {tournamentName}",
+      "subject": "Cupen har startet — {tournamentName}",
       "salutationNamed": "Hei {name}!",
       "salutationGeneric": "Hei!",
-      "bodyStarted": "Cup-en <strong>{tournamentName}</strong> har startet.",
-      "bodyStartedText": "Cup-en «{tournamentName}» har startet.",
+      "bodyStarted": "Cupen <strong>{tournamentName}</strong> har startet.",
+      "bodyStartedText": "Cupen «{tournamentName}» har startet.",
       "bodyMatchup": "<strong>{team1}</strong> møter <strong>{team2}</strong>. Først til <strong>{points}</strong> poeng vinner.",
       "bodyMatchupText": "{team1} møter {team2}. Først til {points} poeng vinner.",
       "bodyMatchupWeighted": "<strong>{team1}</strong> møter <strong>{team2}</strong>. Vinneren kåres når cupen avsluttes.",
@@ -7343,8 +7350,8 @@
       "subject": "Resultatet er klart — {tournamentName}",
       "salutationNamed": "Hei {name}!",
       "salutationGeneric": "Hei!",
-      "bodySettled": "Cup-en <strong>{tournamentName}</strong> er avgjort.",
-      "bodySettledText": "Cup-en «{tournamentName}» er avgjort.",
+      "bodySettled": "Cupen <strong>{tournamentName}</strong> er avgjort.",
+      "bodySettledText": "Cupen «{tournamentName}» er avgjort.",
       "teaser": "Hvordan endte det? Svaret venter på resultatsiden.",
       "viewResult": "Se resultatet",
       "viewResultText": "Se resultatet: {url}"
@@ -7358,8 +7365,8 @@
       "joinButtonText": "Bli med: {url}",
       "footer": "Kjenner du ikke {captainName}? Ignorer denne meldingen — ingenting skjer hvis du ikke logger inn.",
       "footerText": "Kjenner du ikke {captainName}? Ignorer denne meldingen.",
-      "instructionsHtml": "For å bli med: gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen din.",
-      "instructionsText": "Gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen."
+      "instructionsHtml": "For å bli med: gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lagsiden hvor du kan bekrefte plassen din.",
+      "instructionsText": "Gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lagsiden hvor du kan bekrefte plassen."
     },
     "productUpdate": {
       "subject": "Nytt i Tørny — {periodLabel}",
@@ -7367,8 +7374,8 @@
       "salutationNamed": "Hei {name}!",
       "salutationGeneric": "Hei!",
       "intro": "Dette var nytt i Tørny i {periodLabel}:",
-      "footerHtml": "Du får denne mailen fordi du er på Tørny. <link>Meld deg av månedsbrevet</link>, eller styr det fra <profile>profilen din</profile>.",
-      "footerText1": "Du får denne mailen fordi du er på Tørny.",
+      "footerHtml": "Du får denne e-posten fordi du er på Tørny. <link>Meld deg av månedsbrevet</link>, eller styr det fra <profile>profilen din</profile>.",
+      "footerText1": "Du får denne e-posten fordi du er på Tørny.",
       "footerText2": "Meld deg av månedsbrevet: {url}",
       "footerText3": "Eller styr det fra profilen din: {profileUrl}"
     },
@@ -7420,9 +7427,9 @@
       "salutationGeneric": "Hei!",
       "body": "<strong>{inviterName}</strong> la deg inn som gjest i <strong>{gameName}</strong>. Runden er ferdig, og scorekortet ditt ligger klart på en egen Tørny-konto.",
       "bodyText": "{inviterName} la deg inn som gjest i {gameName}. Runden er ferdig, og scorekortet ditt ligger klart på en egen Tørny-konto.",
-      "claimLine": "Logg inn med denne e-postadressen, så er kontoen din. Du får en engangskode på mail i stedet for passord.",
+      "claimLine": "Logg inn med denne e-postadressen, så er kontoen din. Du får en engangskode på e-post i stedet for passord.",
       "loginButtonText": "Logg inn: {url}",
-      "footer": "Du får denne mailen fordi {inviterName} la deg til som gjest i en runde på Tørny. Er ikke dette deg, kan du se bort fra den."
+      "footer": "Du får denne e-posten fordi {inviterName} la deg til som gjest i en runde på Tørny. Er ikke dette deg, kan du se bort fra den."
     }
   },
   "SyncBanner": {
@@ -7482,7 +7489,7 @@
     "loginNoCredential": "Fant ingen Face ID på denne enheten. Bruk koden i stedet.",
     "loginError": "Face ID-innloggingen gikk ikke. Bruk koden i stedet.",
     "nudgeTitle": "Slå på Face ID",
-    "nudgeBody": "Da logger du rett inn neste gang, uten å hente kode i mailen.",
+    "nudgeBody": "Da logger du rett inn neste gang, uten å hente kode i e-posten.",
     "nudgeEnable": "Slå på Face ID",
     "nudgeLater": "Ikke nå",
     "nudgeDoneTitle": "Face ID er på",
@@ -7837,7 +7844,7 @@
   },
   "whyTorny": {
     "metaTitle": "Dette får du i Tørny — turneringsapp uten abonnement",
-    "metaDescription": "Tørny mot andre golf-apper: over 20 spillformater, ingen abonnement, ingen reklame, og alle blir med rett fra nettleseren. Se hva du får.",
+    "metaDescription": "Tørny mot andre golf-apper: over 20 spillformer, ingen abonnement, ingen reklame, og alle blir med rett fra nettleseren. Se hva du får.",
     "loginCta": "Logg inn",
     "hero": {
       "h1": "Dette får du i Tørny",
@@ -7869,7 +7876,7 @@
       "yesLabel": "Ja",
       "rows": [
         {
-          "feature": "Turnering med alle spillformater",
+          "feature": "Turnering med alle spillformer",
           "other": "Krever abonnement"
         },
         { "feature": "Bli med rett fra nettleseren", "other": "Alle må ha appen" },
@@ -7947,7 +7954,7 @@
       "secondaryCtaLaunched": "Eller kom i gang her på nettet"
     },
     "footer": {
-      "formats": "Spillformater",
+      "formats": "Spillformer",
       "courses": "Baner",
       "demo": "Demo",
       "demoLaunched": "Hent appen",

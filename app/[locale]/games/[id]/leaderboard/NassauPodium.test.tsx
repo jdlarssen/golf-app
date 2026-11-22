@@ -150,7 +150,7 @@ describe('NassauPodium', () => {
     const sweep = screen.getByTestId('nassau-sweep');
     expect(sweep.textContent).toContain('Hele tavla');
     expect(sweep.textContent).toContain('Alice Andersen');
-    expect(sweep.textContent).toMatch(/Tok alle tre seksjoner/i);
+    expect(sweep.textContent).toMatch(/Tok alle tre oppgjør/i);
 
     // Podium-trinnene.
     const podium = screen.getByTestId('nassau-podium');

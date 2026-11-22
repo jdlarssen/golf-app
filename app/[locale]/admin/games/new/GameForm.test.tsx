@@ -252,7 +252,7 @@ describe('GameForm — mode/lagstørrelse-velgere (fase 4)', () => {
     const helperText = document.getElementById('publish-missing');
     if (helperText) {
       expect(helperText.textContent).not.toMatch(/spiller/i);
-      expect(helperText.textContent).not.toMatch(/lag-fordeling/i);
+      expect(helperText.textContent).not.toMatch(/lagfordeling/i);
     }
   });
 
@@ -318,7 +318,7 @@ describe('GameForm — mode/lagstørrelse-velgere (fase 4)', () => {
     // Kortet viser format-navnet + låst-notisen.
     expect(screen.getByText('Best ball')).toBeInTheDocument();
     expect(
-      screen.getByText(/kan ikke endres etter spill-start/i),
+      screen.getByText(/kan ikke endres etter spillstart/i),
     ).toBeInTheDocument();
 
     // Form-data uendret: game_mode/team_size sendes fortsatt via hidden inputs.
@@ -574,7 +574,7 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
     expect(publishBtn).toBeDisabled();
     // Mangel-listen skal nevne lag-fordeling.
     const helperText = document.getElementById('publish-missing');
-    expect(helperText?.textContent).toMatch(/lag-fordeling/i);
+    expect(helperText?.textContent).toMatch(/lagfordeling/i);
   });
 
   it('par-stableford: flight-seksjonen (lag-1+2 = flight-1) vises ikke', () => {

@@ -135,7 +135,7 @@ export function HeadToHeadResult({
   // aldri står på kortet.
   const sep =
     summary.hasNegativeScore || sideA.scoreLabel != null || sideB.scoreLabel != null
-      ? ' mot '
+      ? t('versus')
       : '–';
   const v = summary.verdict;
   const verdict =

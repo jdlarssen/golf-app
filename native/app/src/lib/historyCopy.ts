@@ -41,9 +41,9 @@ export const HISTORY_TEXT = {
   // Statistikken (webbens `profile.myStats.*` og `profile.historikk.*`).
   myStatsHeading: 'Mine tall',
   myStatsRounds: 'Runder spilt',
-  myStatsAverage: 'Brutto-snitt',
+  myStatsAverage: 'Bruttosnitt',
   myStatsBest: 'Beste runde',
-  diffHeading: 'Handicap-form',
+  diffHeading: 'Handicapform',
   seasonHeading: 'Sesongen din',
   seasonSubtitle: 'Tallene dine år for år',
   seasonColRounds: 'Runder',
@@ -56,7 +56,7 @@ export const HISTORY_TEXT = {
   streakSubtitle: 'Spill jevnlig, så vokser den uke for uke.',
   streakWeeksLabel: 'uker på rad',
   streakDormant: 'Serien starter neste gang du spiller.',
-  achievementsHeading: 'Bragd-veggen',
+  achievementsHeading: 'Bragdveggen',
   achievementsSubtitle: 'Bragdene dine gjennom årene, på ett brett.',
   brag: {
     holeInOne: 'Hole-in-one',
@@ -64,7 +64,7 @@ export const HISTORY_TEXT = {
     birdie: 'Birdie',
     turkey: 'Turkey',
   },
-  puttsHeading: 'Putte-snitt',
+  puttsHeading: 'Puttsnitt',
   puttsSubtitle:
     'Putter per hull teller fra første hull du fører. Snittet krever en hel runde.',
   puttsColPph: 'PPH',
@@ -118,8 +118,8 @@ export function formCurveLabel(count: number, first: number, last: number): stri
 /** Webbens `profile.historikk.diffAriaLabel` (flertall). */
 export function diffCurveLabel(count: number): string {
   return count === 1
-    ? 'Handicap-form over 1 fullført runde, fra eldst til nyest.'
-    : `Handicap-form over ${count} fullførte runder, fra eldst til nyest.`;
+    ? 'Handicapform over 1 fullført runde, fra eldst til nyest.'
+    : `Handicapform over ${count} fullførte runder, fra eldst til nyest.`;
 }
 
 /** Poengene i dagboka: «38 p». */
