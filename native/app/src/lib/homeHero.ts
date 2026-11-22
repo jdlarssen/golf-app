@@ -53,7 +53,11 @@ import {
   myTeamCaptainId,
 } from './teamPlay';
 
-/** Tidspunktet «nyest» måles på: tee-off når den er satt, ellers opprettet. */
+/**
+ * Tidspunktet «nyest» måles på: tee-off når den er satt, ellers opprettet.
+ * Sammenlignes som tidspunkt, ikke som tekst: «…00.123+00:00» og «…00+00:00»
+ * (eller to ulike tidssoner) kan sortere feil som strenger.
+ */
 function heroTime(card: HomeCard): string {
   return card.scheduledTeeOffAt ?? card.createdAt;
 }
@@ -68,7 +72,7 @@ export function pickHeroCard(active: readonly HomeCard[]): {
 } {
   let hero: HomeCard | null = null;
   for (const card of active) {
-    if (hero === null || heroTime(card) > heroTime(hero)) hero = card;
+    if (hero === null || Date.parse(heroTime(card)) > Date.parse(heroTime(hero))) hero = card;
   }
   return { hero, rest: active.filter((card) => card !== hero) };
 }

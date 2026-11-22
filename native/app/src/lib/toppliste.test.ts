@@ -103,6 +103,15 @@ describe('buildTopplisteModel: a season', () => {
     expect(tiny.rows[1].barPercent).toBe(4);
   });
 
+  it('gives a finite bar when the first row has count 0', () => {
+    const model = buildTopplisteModel(
+      view({ wins: { rows: [row(1, 'A', 0), row(2, 'B', 0)], me: null, leader: null } }),
+      'wins',
+    );
+    if (model.kind !== 'board') throw new Error('expected a board');
+    expect(model.rows.map((r) => r.barPercent)).toEqual([4, 4]);
+  });
+
   it('has a leader card only when one player holds place 1, on every tab', () => {
     const wins = buildTopplisteModel(view(), 'wins');
     if (wins.kind !== 'board') throw new Error('expected a board');

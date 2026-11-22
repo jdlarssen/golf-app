@@ -30,7 +30,7 @@ export const NASSAU_TEXT = {
   front9Heading: 'Front 9',
   back9Heading: 'Back 9',
   totalLabel: 'Totalt',
-  sectionTied: 'Delt 1.-plass',
+  sectionTied: 'Delt 1. plass',
   sectionsPending: 'Venter på spilte hull',
   sectionsPendingNote: 'Kampen er avgjort når alle har spilt hullene.',
 } as const;

@@ -1,6 +1,6 @@
 // #2752: ordlyden er nettets der de to sier det samme, og tallene skrives likt.
 import { formatPoints } from '../../../../lib/cup/formatPoints';
-import { CUP_TEXT, contributionLine, cupPoints, homeCupLine, matchOutcomeLine, matchScore, matchStatusLabel, pointsHeader } from './cupCopy';
+import { CUP_TEXT, contributionLine, cupPoints, homeCupLine, matchOutcomeLine, matchScore, matchStatusLabel, matchesSummary, pointsHeader } from './cupCopy';
 import source from '../../../../messages/no.json';
 
 const web = source.cup;
@@ -105,5 +105,12 @@ describe('linjene', () => {
       contributionLine({ type: 'match', gameId: 'g', matchLabel: null, opponentLabel: 'Kari', outcome: 'tied', points: 0.5 }),
     ).toBe('Delte med Kari · +0,5');
     expect(contributionLine({ type: 'ctp', holeNumber: 7, points: 1 })).toBe('Nærmest pinnen, hull 7 · +1');
+  });
+});
+
+describe('matchesSummary: flertall på antall matcher', () => {
+  it('«1 av 1 match spilt» for én match, «1 av 4 matcher spilt» ellers', () => {
+    expect(matchesSummary({ played: 1, total: 1 })).toBe('1 av 1 match spilt');
+    expect(matchesSummary({ played: 1, total: 4 })).toBe('1 av 4 matcher spilt');
   });
 });

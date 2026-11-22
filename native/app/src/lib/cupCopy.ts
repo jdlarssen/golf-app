@@ -12,7 +12,7 @@ export const CUP_TEXT = {
   firstTo: 'Først til {points} poeng vinner',
   pointsPendingDraft: 'Poengmålet er klart når cupen starter',
   pointsPendingActive: 'Poeng er vektet — vinneren avgjøres når cupen avsluttes',
-  matchesSummary: '{finished} av {total} matcher spilt',
+  matchesSummary: '{finished} av {total} {total, plural, one {match} other {matcher}} spilt',
   noMatches: 'Ingen matcher er opprettet ennå.',
   resultsPending: 'Resultatene kommer når cupen avsluttes',
   sideAwardPoints: 'Sidepoeng: {points}',

@@ -21,6 +21,9 @@ export type FormatDecimal = (value: number, decimals: number) => string;
 export function formatNetToPar(n: number, formatDecimal: FormatDecimal, decimals = 0): string {
   if (n === 0) return 'E';
   const abs = Math.abs(n);
+  // A value that rounds to zero at this precision (an average of +0.038) is
+  // «E», never «+0,0».
+  if (decimals > 0 && Math.round(abs * 10 ** decimals) === 0) return 'E';
   const str = decimals > 0 ? formatDecimal(abs, decimals) : String(abs);
   return n > 0 ? `+${str}` : `−${str}`;
 }

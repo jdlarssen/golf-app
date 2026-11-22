@@ -51,13 +51,17 @@ function ago(count: number, one: string, many: string): string {
  * «forrige uke» og «forrige måned» der Intl gir dem.
  */
 export function formatRelativeAgoNb(iso: string, nowMs: number = Date.now()): string {
-  const diff = Math.max(0, nowMs - new Date(iso).getTime());
-  if (diff < MINUTE_MS) {
-    const seconds = Math.round(diff / SECOND_MS);
-    return seconds === 0 ? 'nå' : ago(seconds, 'sekund', 'sekunder');
-  }
-  if (diff < HOUR_MS) return ago(Math.round(diff / MINUTE_MS), 'minutt', 'minutter');
-  if (diff < DAY_MS) return ago(Math.round(diff / HOUR_MS), 'time', 'timer');
+  const thenMs = new Date(iso).getTime();
+  if (!Number.isFinite(thenMs)) return '';
+  const diff = Math.max(0, nowMs - thenMs);
+  // Enheten velges ETTER avrunding, så 59,5 min blir «for 1 time siden» og
+  // aldri «for 60 minutter siden».
+  const seconds = Math.round(diff / SECOND_MS);
+  if (seconds < 60) return seconds === 0 ? 'nå' : ago(seconds, 'sekund', 'sekunder');
+  const minutes = Math.round(diff / MINUTE_MS);
+  if (minutes < 60) return ago(minutes, 'minutt', 'minutter');
+  const hours = Math.round(diff / HOUR_MS);
+  if (hours < 24) return ago(hours, 'time', 'timer');
   if (diff < WEEK_MS) {
     const days = Math.round(diff / DAY_MS);
     if (days === 1) return 'i går';

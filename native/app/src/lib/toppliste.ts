@@ -148,7 +148,7 @@ export function buildTopplisteModel(
     };
   }
 
-  const top = board.rows[0]?.count ?? 1;
+  const top = Math.max(1, board.rows[0]?.count ?? 1);
   const rows = board.rows.map((row) => rowModel(tab, row, top));
   const first = board.rows.filter((row) => row.place === 1);
   const leader =
