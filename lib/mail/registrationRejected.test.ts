@@ -59,9 +59,9 @@ const baseParams = {
 describe('sendRegistrationRejectedMail', () => {
   it('reject-mail uten begrunnelse: ingen blockquote i body', async () => {
     const payload = await send(baseParams);
-    expect(payload.subject).toMatchInlineSnapshot(`"Søknad til Sommercup 2026"`);
+    expect(payload.subject).toMatchInlineSnapshot(`"Forespørsel om å bli med i Sommercup 2026"`);
     expect(payload.text).toMatchInlineSnapshot(`
-      "Søknad til Sommercup 2026
+      "Forespørsel om å bli med i Sommercup 2026
 
       Forespørselen din om å bli med i Sommercup 2026 ble dessverre ikke godkjent.
 
@@ -86,9 +86,9 @@ describe('sendRegistrationRejectedMail', () => {
       ...baseParams,
       reason: 'Fullt opp denne gangen',
     });
-    expect(payload.subject).toMatchInlineSnapshot(`"Søknad til Sommercup 2026"`);
+    expect(payload.subject).toMatchInlineSnapshot(`"Forespørsel om å bli med i Sommercup 2026"`);
     expect(payload.text).toMatchInlineSnapshot(`
-      "Søknad til Sommercup 2026
+      "Forespørsel om å bli med i Sommercup 2026
 
       Forespørselen din om å bli med i Sommercup 2026 ble dessverre ikke godkjent.
 
@@ -116,7 +116,7 @@ describe('sendRegistrationRejectedMail', () => {
       gameName: '<b>X</b>',
       reason: 'Nei & takk',
     });
-    expect(payload.subject).toMatchInlineSnapshot(`"Søknad til <b>X</b>"`);
+    expect(payload.subject).toMatchInlineSnapshot(`"Forespørsel om å bli med i <b>X</b>"`);
     expect(mainBodyHtml(payload.html)).toMatchInlineSnapshot(`
       "<p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
                     Forespørselen din om å bli med i <strong>&lt;b&gt;X&lt;/b&gt;</strong> ble dessverre ikke godkjent.
@@ -139,7 +139,7 @@ describe('sendRegistrationRejectedMail', () => {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Søknad til Sommercup 2026</title>
+        <title>Forespørsel om å bli med i Sommercup 2026</title>
       </head>
       <body style="margin:0;padding:0;background:#F8F6F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1A2E1F;">
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#F8F6F0;">
@@ -154,7 +154,7 @@ describe('sendRegistrationRejectedMail', () => {
                     Fyr opp golfturneringen på et par minutter.
                   </p>
                   <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A2E1F;font-weight:500;">
-                    Søknad ikke godkjent
+                    Forespørselen er ikke godkjent
                   </h2>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
                     Forespørselen din om å bli med i <strong>Sommercup 2026</strong> ble dessverre ikke godkjent.

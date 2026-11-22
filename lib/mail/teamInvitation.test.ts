@@ -67,7 +67,7 @@ describe('sendTeamInvitationMail', () => {
 
       Jørgen vil ha deg med på laget Bjørketrærne i Sommercup 2026.
 
-      Gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen.
+      Gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lagsiden hvor du kan bekrefte plassen.
 
       Bli med: https://tornygolf.no/login?email=venn%40example.com&next=%2Fsignup%2Fabc12345%2Fteam
 
@@ -81,7 +81,7 @@ describe('sendTeamInvitationMail', () => {
                     <strong>Jørgen</strong> vil ha deg med på laget <span style="font-weight:600;">Bjørketrærne</span> i <strong>Sommercup 2026</strong>.
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    For å bli med: gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen din.
+                    For å bli med: gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lagsiden hvor du kan bekrefte plassen din.
                   </p>"
     `);
   });
@@ -99,7 +99,7 @@ describe('sendTeamInvitationMail', () => {
                     <strong>&lt;b&gt;X&lt;/b&gt;</strong> vil ha deg med på laget <span style="font-weight:600;">&lt;u&gt;Z&lt;/u&gt;</span> i <strong>&lt;i&gt;Y&lt;/i&gt;</strong>.
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    For å bli med: gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen din.
+                    For å bli med: gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lagsiden hvor du kan bekrefte plassen din.
                   </p>"
     `);
   });
@@ -171,7 +171,7 @@ describe('sendTeamInvitationMail', () => {
                     <strong>Jørgen</strong> vil ha deg med på laget <span style="font-weight:600;">Bjørketrærne</span> i <strong>Sommercup 2026</strong>.
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    For å bli med: gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen din.
+                    For å bli med: gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lagsiden hvor du kan bekrefte plassen din.
                   </p>
                   <div style="margin:32px 0;">
                     <a href="https://tornygolf.no/login?email=venn%40example.com&next=%2Fsignup%2Fabc12345%2Fteam" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:9999px;font-weight:600;font-size:15px;">

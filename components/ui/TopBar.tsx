@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import { BackLink } from './BackLink';
 import { HistoryBackLink } from './HistoryBackLink';
 
@@ -46,7 +47,7 @@ import { HistoryBackLink } from './HistoryBackLink';
  */
 export function TopBar({
   backHref,
-  backLabel = 'Tilbake',
+  backLabel,
   kicker,
   kickerIsPageTitle = false,
   kickerOneLine = false,
@@ -61,15 +62,17 @@ export function TopBar({
   back?: 'link' | 'history';
   action?: ReactNode;
 }) {
+  const t = useTranslations('common');
+  const backAria = backLabel ?? t('back');
   const Kicker = kickerIsPageTitle ? 'h1' : 'p';
   return (
     <div className="sticky top-0 z-30 -mx-5 px-5 bg-bg -mt-8 pt-5 pb-2 mb-4 relative flex items-center">
       {backHref === undefined ? (
         <span aria-hidden className="-ml-2 h-8 w-8" />
       ) : back === 'history' ? (
-        <HistoryBackLink fallbackHref={backHref} ariaLabel={backLabel} />
+        <HistoryBackLink fallbackHref={backHref} ariaLabel={backAria} />
       ) : (
-        <BackLink href={backHref}>{backLabel}</BackLink>
+        <BackLink href={backHref}>{backAria}</BackLink>
       )}
       {kicker && (
         <Kicker

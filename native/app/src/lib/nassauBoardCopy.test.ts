@@ -47,8 +47,8 @@ describe('ICU-malene fylt ut for hånd', () => {
   });
 
   it('viewerRank og viewerSr, med og uten delt plass', () => {
-    expect(nassauBoardCopy.viewerRank(false, 2)).toBe('Du: 2.');
-    expect(nassauBoardCopy.viewerRank(true, 2)).toBe('Du: delt 2.');
+    expect(nassauBoardCopy.viewerRank(false, 2)).toBe('Du: plass 2');
+    expect(nassauBoardCopy.viewerRank(true, 2)).toBe('Du: delt plass 2');
     expect(nassauBoardCopy.viewerSr(false, 2)).toBe('Du er nummer 2');
     expect(nassauBoardCopy.viewerSr(true, 2)).toBe('Du er delt nummer 2');
   });

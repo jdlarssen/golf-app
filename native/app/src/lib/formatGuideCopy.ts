@@ -37,7 +37,7 @@ export const FORMAT_GUIDE: Readonly<Record<string, FormatGuide>> = {
   },
   modified_stableford: {
     summary:
-      'Stableford med proff-skala: du blir belønnet hardt for å satse, men straffet for de virkelig dårlige hullene. Her kan poengene gå i minus.',
+      'Stableford med proffskala: du blir belønnet hardt for å satse, men straffet for de virkelig dårlige hullene. Her kan poengene gå i minus.',
     points: [
       'Birdie gir 2 poeng, eagle 5, albatross 8. Par gir 0.',
       'Bogey trekker 1 poeng, dobbeltbogey eller verre trekker 3. Du kan altså havne under null.',
@@ -46,7 +46,7 @@ export const FORMAT_GUIDE: Readonly<Record<string, FormatGuide>> = {
   },
   solo_strokeplay: {
     summary:
-      'Vanlig slagspill: du teller alle slagene dine, og færrest netto-slag vinner.',
+      'Vanlig slagspill: du teller alle slagene dine, og færrest nettoslag vinner.',
     points: [
       'Netto er totalen din minus slagene du får på handikap.',
       'Du spiller for deg selv, ingen lag.',
@@ -55,7 +55,7 @@ export const FORMAT_GUIDE: Readonly<Record<string, FormatGuide>> = {
   },
   best_ball: {
     summary:
-      'Dere er to på lag, og på hvert hull teller bare den beste netto-scoren av dere to.',
+      'Dere er to på lag, og på hvert hull teller bare den beste nettoscoren av dere to.',
     points: [
       'Begge spiller hele runden, men laget tar med den laveste av de to på hvert hull.',
       'Netto er antall slag minus slagene du får på hullet.',
@@ -102,7 +102,7 @@ export const FORMAT_GUIDE: Readonly<Record<string, FormatGuide>> = {
     summary:
       'To mot to, hull for hull. Hver spiller spiller sin egen ball, og lagets beste score teller på hvert hull.',
     points: [
-      'Laget med best netto-score vinner hullet.',
+      'Laget med best nettoscore vinner hullet.',
       'Det er antall vunne hull som avgjør, ikke total score.',
       'Laget som leder med flere hull enn det er igjen, har vunnet.',
     ],

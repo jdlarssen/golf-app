@@ -188,7 +188,7 @@ describe('Cup — dørene', () => {
     answer({ ok: true, view: liveCup({ selfWithdrawn: true }) });
     await renderCup();
     expect(await screen.findByTestId('cup-self-withdrawn')).toHaveTextContent(
-      'Du er trukket fra cupen. Arrangøren ser det her på cup-siden.',
+      'Du er trukket fra cupen. Arrangøren ser det her på cupsiden.',
     );
   });
 

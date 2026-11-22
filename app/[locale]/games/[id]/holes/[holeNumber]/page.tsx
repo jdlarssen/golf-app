@@ -299,6 +299,7 @@ export default async function HolePage({ params }: { params: Params }) {
     strokeIndex: hole.stroke_index,
     scoresByUser,
     unknownPlayer,
+    teamName: (number, names) => tEntry('teamWithNames', { number, names }),
   });
 
   // #2283: the side contests on this hole. A failed read is a `failed` marker

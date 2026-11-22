@@ -83,6 +83,8 @@ export function buildPlayersForClient(args: {
   strokeIndex: number;
   scoresByUser: Record<string, ScoreRow>;
   unknownPlayer: string;
+  /** «Lag 2 · Ola, Kari» in the viewer's language; defaults to Norwegian. */
+  teamName?: (number: number, names: string) => string;
 }): ClientPlayer[] {
   const {
     game,
@@ -92,6 +94,7 @@ export function buildPlayersForClient(args: {
     strokeIndex,
     scoresByUser,
     unknownPlayer,
+    teamName = (number, names) => `Lag ${number} · ${names}`,
   } = args;
   const isFoursomes = game.game_mode === 'foursomes_matchplay';
   const isGreensome = game.game_mode === 'greensome_matchplay';
@@ -245,7 +248,7 @@ export function buildPlayersForClient(args: {
     );
     return {
       userId: captainId,
-      name: `Lag ${teamNum} · ${memberNames}`,
+      name: teamName(teamNum, memberNames),
       initial: String(teamNum),
       extraStrokes: strokesForHole(teamHCP, strokeIndex),
       initialStrokes: captainScoreRow?.strokes ?? null,

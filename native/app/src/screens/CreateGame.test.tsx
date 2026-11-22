@@ -1235,7 +1235,7 @@ describe('summaryLines — kontingent og premiebord', () => {
   // #2880: tallfeltet under kortene er 50 høyt og etiketten har ingen egen toppluft (`Nyttspill-5-avansert-a`).
   it.each([
     { slug: 'stableford', input: 'create-allowance', label: 'Handicap-andel (%)', descriptionText: ALLOWANCE_TEXT.description },
-    { slug: 'texas_scramble', input: 'create-team-hcp', label: 'Prosent av lagets snitt-handicap', descriptionText: TEAM_HANDICAP_TEXT.description },
+    { slug: 'texas_scramble', input: 'create-team-hcp', label: 'Prosent av lagets snitthandicap', descriptionText: TEAM_HANDICAP_TEXT.description },
   ])('#2880: $slug har tallfeltet 50 høyt og etiketten uten toppluft', async ({ slug, input, label, descriptionText }) => {
     (fetchFormatCatalog as jest.Mock).mockResolvedValueOnce([
       { slug, label: slug, iconKey: slug, isPrimary: false, sortOrder: 10 },

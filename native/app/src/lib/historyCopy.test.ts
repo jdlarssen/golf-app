@@ -98,10 +98,10 @@ describe('parity with /profile/historikk', () => {
     expect(streakSeason(12, 2026)).toBe('12 runder i 2026');
 
     expect(web.diffAriaLabel).toBe(
-      '{count, plural, one {Handicap-form over 1 fullført runde, fra eldst til nyest.} other {Handicap-form over # fullførte runder, fra eldst til nyest.}}',
+      '{count, plural, one {Handicapform over 1 fullført runde, fra eldst til nyest.} other {Handicapform over # fullførte runder, fra eldst til nyest.}}',
     );
-    expect(diffCurveLabel(1)).toBe('Handicap-form over 1 fullført runde, fra eldst til nyest.');
-    expect(diffCurveLabel(7)).toBe('Handicap-form over 7 fullførte runder, fra eldst til nyest.');
+    expect(diffCurveLabel(1)).toBe('Handicapform over 1 fullført runde, fra eldst til nyest.');
+    expect(diffCurveLabel(7)).toBe('Handicapform over 7 fullførte runder, fra eldst til nyest.');
 
     expect(web.puttsNearMiss).toBe(
       'Du mangler putt på {missingHoles} hull i {partialRounds, plural, one {# runde} other {# runder}}.',

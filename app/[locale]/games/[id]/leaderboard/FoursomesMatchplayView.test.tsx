@@ -343,7 +343,7 @@ describe('FoursomesMatchplayView', () => {
       );
       expect(screen.getByText(/Matchen kan ikke vises/i)).toBeInTheDocument();
       expect(
-        screen.getByText(/ikke korrekt fordelt på to lag/i),
+        screen.getByText(/ikke fordelt riktig på to lag/i),
       ).toBeInTheDocument();
     });
   });

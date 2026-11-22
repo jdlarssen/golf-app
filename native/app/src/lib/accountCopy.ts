@@ -168,7 +168,7 @@ export function describeDeleteFailure(reason: AccountDeleteFailure): string {
       return 'Fikk ikke sjekket om kontoen kan slettes. Prøv igjen.';
     // = profile.deleteAccount.errors.delete_failed
     case 'delete_failed':
-      return 'Noe gikk galt ved sletting. Prøv igjen, eller ta kontakt med administrator.';
+      return 'Noe gikk galt ved sletting. Prøv igjen, eller skriv til personvern@tornygolf.no.';
   }
 }
 

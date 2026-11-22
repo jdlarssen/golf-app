@@ -53,7 +53,7 @@ export const TEAM_SIGNUP_TEXT = {
   selfInSlots: 'Du kan ikke legge til deg selv som medspiller.',
   alreadyRegistered: 'Du er allerede påmeldt dette spillet.',
   wrongType: 'Dette spillet tar ikke imot lagpåmelding.',
-  modeNoTeams: 'Spillmodusen støtter ikke lag. Be arrangøren bytte påmeldingen til «Individuelt».',
+  modeNoTeams: 'Spillformen støtter ikke lag. Be arrangøren bytte påmeldingen til «Individuelt».',
 
   // --- Appens egne ----------------------------------------------------------------
   nameEmpty: 'Skriv inn et lagnavn.',

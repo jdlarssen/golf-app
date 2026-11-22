@@ -123,7 +123,7 @@ export function ShambleView({
   const variantLabel =
     result.variant === 'champagne' ? 'Champagne Scramble' : 'Shamble';
   const scoringLabel = result.scoring === 'net' ? t('common.netto') : t('common.brutto');
-  const countLabel = `best ${result.count}`;
+  const countLabel = t('shamble.bestCount', { count: result.count });
   const statusLabel = gameStatus === 'finished' ? t('common.afterNHoles', { holes: holesPlayed }) : t('common.live');
   const subtitleParts = [statusLabel, variantLabel, countLabel, scoringLabel];
   // #1892: while the round runs the hole count is «thru»-information and always

@@ -173,7 +173,7 @@ describe('sendDeliverReminderNotification', () => {
     const payload = await send({ ...baseParams, forKeptCards: true, locale: 'en' });
     expect(payload.subject).toBe('Submit the cards you kept in Sommercup 2026');
     expect(bodyLineHtml(payload.html)).toBe(
-      "You kept cards in <strong>Sommercup 2026</strong> that haven't been submitted yet. Submit them in one tap so the organizer can finish the round.",
+      "You kept cards in <strong>Sommercup 2026</strong> that haven't been submitted yet. Submit them in one tap so the organiser can finish the round.",
     );
   });
 
@@ -189,13 +189,13 @@ describe('sendDeliverReminderNotification', () => {
 
       Hi Per!
 
-      You've finished playing Sommercup 2026 but haven't submitted your scorecard yet. Submit it so the organizer can finish the round. It only takes a few seconds.
+      You've finished playing Sommercup 2026 but haven't submitted your scorecard yet. Submit it so the organiser can finish the round. It only takes a few seconds.
 
       Submit scorecard: https://tornygolf.no/en/runde/11111111-1111-1111-1111-111111111111/submit
 
       Tørny — fire up your golf tournament in a couple of minutes.
       "
     `);
-    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"You've finished playing <strong>Sommercup 2026</strong> but haven't submitted your scorecard yet. Submit it so the organizer can finish the round. It only takes a few seconds."`);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"You've finished playing <strong>Sommercup 2026</strong> but haven't submitted your scorecard yet. Submit it so the organiser can finish the round. It only takes a few seconds."`);
   });
 });

@@ -711,7 +711,7 @@ export function describeProfileSaveFailure(reason: ProfileSaveFailure): string {
     // fordi feltet tar en magnitude uten fortegn — uten den siste setningen
     // ville en spiller med +1,5 prøvd å taste minus.
     case 'hcp_invalid':
-      return 'Handicap-index må være et tall mellom 0 og 54. Bruk +-knappen for plusshandicap.';
+      return 'Handicapindeks må være et tall mellom 0 og 54. Bruk +-knappen for plusshandicap.';
     // = profile.errors.gender_required
     case 'gender_required':
       return 'Velg kjønn.';

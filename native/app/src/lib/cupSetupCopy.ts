@@ -46,14 +46,14 @@ const JOIN_ERRORS: Record<string, string> = {
 
 /** `wizard.cupSetup`. */
 export const DETAILS_TEXT = {
-  name: 'Cup-navn',
+  name: 'Cupnavn',
   namePlaceholder: 'Tørny Cup 2026 — Sommer-runde',
-  teamsHeading: 'Lag-navn',
+  teamsHeading: 'Lagnavn',
   team1: 'Lag 1',
   team1Placeholder: 'Team Skog',
   team2: 'Lag 2',
   team2Placeholder: 'Team Sjø',
-  pointsHeading: 'Poeng-vekting',
+  pointsHeading: 'Poengvekting',
   pointsHint:
     'Valgfritt. Endrer du fra standard 1 poeng for seier / 0,5 for delt, skjules «først til X»-varslet. Vinneren avgjøres i stedet når cupen avsluttes.',
   win: 'Poeng for seier',
@@ -61,7 +61,7 @@ export const DETAILS_TEXT = {
 } as const;
 
 const DETAILS_ERRORS: Record<string, string> = {
-  cup_name: 'Cup-navnet må være mellom 1 og 80 tegn.',
+  cup_name: 'Cupnavnet må være mellom 1 og 80 tegn.',
   cup_team_1: 'Navn på lag 1 må være mellom 1 og 40 tegn.',
   cup_team_2: 'Navn på lag 2 må være mellom 1 og 40 tegn.',
   cup_team_dup: 'Lagene må ha forskjellige navn.',
@@ -91,7 +91,7 @@ const PLAN_ERRORS: Record<string, string> = {
   plan_course: 'Velg en bane.',
   plan_tee: 'Velg en tee som hører til banen.',
   plan_preset: 'Velg et format.',
-  plan_strategy: 'Velg en paring-strategi.',
+  plan_strategy: 'Velg en paringsstrategi.',
   plan_sessions: 'Legg til minst én økt i det tilpassede formatet.',
   plan_best_ball: 'Handicap-andelen må være et helt tall mellom 0 og 100.',
   plan_tee_off_invalid: 'Tee-off-tidspunktet er ugyldig.',

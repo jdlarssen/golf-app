@@ -589,7 +589,7 @@ describe('MatchplayMatchView', () => {
       );
       expect(screen.getByText(/Matchen kan ikke vises/i)).toBeInTheDocument();
       expect(
-        screen.getByText(/ikke korrekt fordelt på to sider/i),
+        screen.getByText(/ikke fordelt riktig på to sider/i),
       ).toBeInTheDocument();
     });
   });
