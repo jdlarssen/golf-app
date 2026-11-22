@@ -84,6 +84,8 @@ const CONFLICT_CODES = new Set([
   'match_has_withdrawal',
   'player_not_in_match',
   'already_in_match',
+  'wrong_team',
+  'not_started',
   'not_candidate',
   'not_member',
   'profile_incomplete',

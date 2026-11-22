@@ -39,6 +39,8 @@ export type CupLineupAccess = {
    * uansett lukket. Appens ruter leser dette, så de sier «prøv igjen» og ikke «ingen tilgang».
    */
   readFailed?: boolean;
+  /** `tournaments.status`; `null` when the cup was not found or the read failed. */
+  cupStatus?: string | null;
 };
 
 /**
@@ -84,7 +86,7 @@ export async function loadCupLineupAccessForUser(
   ] = await Promise.all([
     admin
       .from('tournaments')
-      .select('group_id, created_by')
+      .select('group_id, created_by, status')
       .eq('id', tournamentId)
       .maybeSingle(),
     admin
@@ -143,6 +145,7 @@ export async function loadCupLineupAccessForUser(
     role: resolveCupLineupRole({ isOrganizer, participants, userId }),
     participants,
     readFailed,
+    cupStatus: (cup?.status as string | null | undefined) ?? null,
   };
 }
 

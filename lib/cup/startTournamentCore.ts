@@ -5,7 +5,6 @@ import { expireTournamentCache } from '@/lib/games/expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { sendCupStartedNotification } from '@/lib/mail/cupStartedNotification';
 import { notifyParticipantsCupStarted } from '@/lib/notifications/events';
-import { expectAffected } from '@/lib/supabase/affectedRows';
 import { getAdminClient } from '@/lib/supabase/admin';
 import {
   DEFAULT_TIE_POINTS,
@@ -72,23 +71,26 @@ export async function startTournamentCore(
     (current.tie_points as number | null) ?? DEFAULT_TIE_POINTS,
   );
 
-  // #727: assert the status flip touched a row (bug-prevention #2).
-  try {
-    expectAffected(
-      await caller
-        .from('tournaments')
-        .update({
-          status: 'active',
-          started_at: new Date().toISOString(),
-          points_to_win: pointsToWin,
-        })
-        .eq('id', id)
-        .select('id'),
-      'startTournament',
-    );
-  } catch (err) {
-    console.error('[cup] startTournament failed', { id, err });
+  // #727: assert the status flip touched a row (bug-prevention #2). Audit
+  // 2026-11-20: the flip is bound to `status = 'draft'`, so two taps at once
+  // give one start; the tap that loses gets 0 rows and sends no notice.
+  const { data: flipped, error: flipError } = await caller
+    .from('tournaments')
+    .update({
+      status: 'active',
+      started_at: new Date().toISOString(),
+      points_to_win: pointsToWin,
+    })
+    .eq('id', id)
+    .eq('status', 'draft')
+    .select('id');
+  if (flipError) {
+    console.error('[cup] startTournament failed', { id, err: flipError });
     return { ok: false, error: 'start_failed' };
+  }
+  if ((flipped ?? []).length === 0) {
+    // Someone else started (or finished) the cup between the read and the write.
+    return { ok: false, error: 'wrong_status' };
   }
 
   // Best-effort start-varsel: in-app til ALLE deltakere først, mail kun til

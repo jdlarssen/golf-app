@@ -204,6 +204,7 @@ export async function CupManagement({
     finish_failed: t('manage.errors.finish_failed'),
     too_few_matches: t('manage.errors.too_few_matches'),
     wrong_status: t('manage.errors.wrong_status'),
+    not_started: t('manage.errors.not_started'),
     already_finished: t('manage.errors.already_finished'),
   };
   const statusMessageMap: Record<string, string> = {

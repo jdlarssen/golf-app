@@ -3,6 +3,7 @@ import {
   buildSupabaseMock,
   makeRedirectMock,
   RedirectError,
+  type QueryResult,
 } from '@/tests/serverActionMocks';
 import { MAX_PERSONAL_CUP_PLAYERS } from './limits';
 
@@ -280,6 +281,8 @@ function readsUpToRoster(overrides: { games?: unknown[]; profile?: unknown } = {
       error: null,
     },
     { data: SPLIT_PLAYERS, error: null },
+    // tournament_participants: the in-player's fixed team (none: a reserve).
+    { data: null, error: null },
   ];
 }
 
@@ -412,11 +415,17 @@ describe('swapCupMatchPlayer — happy path (#1473)', () => {
       (c) => c.table === 'game_players' && c.method === 'delete',
     );
     expect(firstWrite, 'byttet skrev faktisk').toBeGreaterThan(-1);
-    expect(
-      adminMock.__fromCalls
-        .slice(0, firstWrite)
-        .some((c) => c.table === 'tournament_participants'),
-    ).toBe(false);
+    // Audit 2026-11-20: the one participant read before the write is the
+    // in-player's fixed team (the side check), never the candidate list.
+    const participantReads = adminMock.__fromCalls
+      .slice(0, firstWrite)
+      .filter((c) => c.table === 'tournament_participants');
+    expect(participantReads.map((c) => [c.method, ...c.args])).toEqual([
+      ['select', 'team_number'],
+      ['eq', 'tournament_id', 'cup-1'],
+      ['eq', 'user_id', 'reserve'],
+      ['maybeSingle'],
+    ]);
   });
 });
 
@@ -445,6 +454,7 @@ describe('swapCupMatchPlayer — klubb-tilhørigheten leses med admin-klienten (
       }, // group_members: reserven er medlem
       { data: { gender: 'ladies', profile_completed_at: '2026-07-01T09:00:00.000Z' }, error: null },
       { data: SPLIT_PLAYERS, error: null },
+      { data: null, error: null }, // tournament_participants: the in-player has no fixed team
       ...successfulBundleWrites(),
       { data: ROSTER_AFTER_SWAP, error: null },
       { data: null, error: null }, // participants upsert
@@ -641,6 +651,24 @@ describe('swapCupMatchPlayer — guards som bor i action-en (#1473)', () => {
     expect(redirectMock).not.toHaveBeenCalled();
     // Klubb-cupens kandidatliste slås opp mot klubben, ikke mot vennelista.
     expect(candidateMock.mock.calls[0][1]).toMatchObject({ groupId: 'club-1' });
+  });
+
+  it('reserven er fast på motstanderlaget → wrong_team, ingen skriving (audit 2026-11-20)', async () => {
+    const reads = readsUpToRoster();
+    // 'out' plays for team 1 in both matches; the reserve is fixed on team 2.
+    reads[4] = {
+      data: SPLIT_PLAYERS.map((p) => ({ ...p, team_number: p.user_id.startsWith('opp') ? 2 : 1 })),
+      error: null,
+    };
+    reads[5] = { data: { team_number: 2 }, error: null };
+    adminMock = buildSupabaseMock(reads);
+    supabaseMock = buildSupabaseMock([cupAdminUser]);
+    setUser('admin-1');
+
+    const { swapCupMatchPlayer } = await import('./actions');
+    expect(await swapCupMatchPlayer(swapForm())).toEqual({ error: 'wrong_team' });
+    expect(gamePlayerCalls('delete')).toHaveLength(0);
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 
   it('reserven har ikke fullført profilen → profile_incomplete, ingen skriving', async () => {
@@ -967,6 +995,57 @@ describe('startTournament — poengmålet regnes av planlagt antall (#1902)', ()
     await expect(startTournament(fd)).rejects.toBeInstanceOf(RedirectError);
 
     expect(writtenPointsToWin()).toBeNull();
+  });
+});
+
+/**
+ * Audit 2026-11-20: the start flip carries `status = 'draft'`, so two taps at
+ * once give one start and one round of start notices. The tap that loses finds
+ * the cup started and sends nothing.
+ */
+describe('startTournament — only a draft cup starts, notices go once', () => {
+  const draftRow = {
+    data: {
+      id: 'cup-1',
+      name: 'Ryder Cup',
+      status: 'draft',
+      team_1_name: 'Europa',
+      team_2_name: 'USA',
+      win_points: 1,
+      tie_points: 0.5,
+      planned_match_count: null,
+    },
+    error: null,
+  };
+
+  async function startWith(updateResult: QueryResult) {
+    adminMock = buildSupabaseMock([{ data: { group_id: null }, error: null }, { count: 4 }]);
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Arrangør' }, error: null },
+      draftRow,
+      updateResult,
+    ]);
+    setUser('organizer');
+    const { startTournament } = await import('./actions');
+    const fd = new FormData();
+    fd.set('id', 'cup-1');
+    return (await startTournament(fd).catch((e: unknown) => e)) as RedirectError;
+  }
+
+  it('the flip is bound to status draft', async () => {
+    await startWith({ data: [{ id: 'cup-1' }], error: null });
+    const statusEq = supabaseMock.__fromCalls.filter(
+      (c) => c.table === 'tournaments' && c.method === 'eq' && c.args[0] === 'status',
+    );
+    expect(statusEq.map((c) => c.args[1])).toEqual(['draft']);
+    expect(notifyCupStartedMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('the losing tap (0 rows) answers wrong_status and sends no notice', async () => {
+    const err = await startWith({ data: [], error: null });
+    expect(err.url).toBe('/admin/cup/cup-1?error=wrong_status');
+    expect(notifyCupStartedMock).not.toHaveBeenCalled();
+    expect(participantEmailsMock).not.toHaveBeenCalled();
   });
 });
 

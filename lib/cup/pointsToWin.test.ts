@@ -318,3 +318,36 @@ describe('parseTiePoints', () => {
     expect(parseTiePoints(raw)).toBeNull();
   });
 });
+
+/**
+ * Audit 2026-11-20: the cup table shows points with one decimal, so a weight
+ * with two (0.25) would make the shown sums wrong. Parser and DB CHECK (0257)
+ * agree on one decimal (trap #4).
+ */
+describe('cup weights have at most one decimal', () => {
+  it.each(['0.25', '1.05', '0.125'])('win %s → null', (raw) => {
+    expect(parseWinPoints(raw)).toBeNull();
+  });
+
+  it.each(['0.25', '0.05', '2.75'])('tie %s → null', (raw) => {
+    expect(parseTiePoints(raw)).toBeNull();
+  });
+
+  it.each([
+    ['1.5', 1.5],
+    ['0.1', 0.1],
+    ['3.0', 3],
+  ])('one decimal %s → %f', (raw, expected) => {
+    expect(parseWinPoints(raw)).toBe(expected);
+    expect(parseTiePoints(raw)).toBe(expected);
+  });
+
+  it('the DB CHECK in 0257 rounds both weights to one decimal', () => {
+    const sql = readFileSync(
+      resolve(__dirname, '../../supabase/migrations/0257_cup_weights_one_decimal.sql'),
+      'utf-8',
+    );
+    expect(sql).toMatch(/check\s*\(\s*win_points\s*=\s*round\(\s*win_points\s*,\s*1\s*\)\s*\)/i);
+    expect(sql).toMatch(/check\s*\(\s*tie_points\s*=\s*round\(\s*tie_points\s*,\s*1\s*\)\s*\)/i);
+  });
+});

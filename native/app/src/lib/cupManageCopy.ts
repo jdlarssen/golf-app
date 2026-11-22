@@ -75,6 +75,7 @@ const SWAP_ERRORS: Record<string, string> = {
   match_has_withdrawal: 'Kampen har et registrert trekk, så du kan ikke bytte spillere.',
   player_not_in_match: 'Spilleren står ikke i denne kampen lenger.',
   already_in_match: 'Den spilleren er allerede med i kampen.',
+  wrong_team: 'Spilleren er på det andre laget og kan ikke byttes inn her.',
   not_candidate: 'Den spilleren kan du ikke bytte inn i denne cupen.',
   profile_incomplete: 'Spilleren må fylle ut profilen sin før hen kan settes inn.',
   not_member: 'Spilleren er ikke medlem av klubben lenger.',
@@ -251,6 +252,7 @@ export function matchFinishFailureText(reason: string): string {
 /** Hvorfor cupen ikke ble avsluttet. `matches` er kampene som fortsatt pågår. */
 export function cupFinishFailureText(reason: string, matches: string): string {
   if (reason === 'match_finish_failed') return formatMessage(FINISH_TEXT.failed, { matches });
+  if (reason === 'not_started') return 'Cupen er ikke startet ennå, så du kan ikke avslutte den.';
   return APP_FAILURES[reason] ?? FINISH_TEXT.failedPlain;
 }
 

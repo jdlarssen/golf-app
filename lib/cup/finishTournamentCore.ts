@@ -22,6 +22,7 @@ import { loadTournamentParticipantEmails } from './tournamentParticipants';
 
 export type FinishTournamentError =
   | 'not_found'
+  | 'not_started'
   | 'side_awards_missing'
   | 'matches_not_submitted'
   | 'match_finish_failed'
@@ -48,6 +49,9 @@ export async function finishTournamentCore(
   const snapshot = await getCupSnapshot(id, unknownLabel);
   if (!snapshot) return { ok: false, error: 'not_found' };
   if (snapshot.tournament.status === 'finished') return { ok: true, alreadyFinished: true };
+  // Audit 2026-11-20: a draft cup was never played. Finishing it would crown
+  // nobody and send «cup finished» to everyone.
+  if (snapshot.tournament.status !== 'active') return { ok: false, error: 'not_started' };
 
   // 1. Sidepoeng-gate (#1501): cupen kan ikke avsluttes før alle konfigurerte
   // sidepoeng har en registrering (ctp/ld → vinner; gir → begge tellere, 0
@@ -116,7 +120,8 @@ export async function finishTournamentCore(
   // #727: assert the finish update touched a row (bug-prevention #2). `writer`,
   // for the update policy on `tournaments` is the backstop here. #2752: only a
   // cup that is not finished yet flips, so two calls at once give one result and
-  // one notification. The one that loses finds the cup finished.
+  // one notification. The one that loses finds the cup finished. Audit
+  // 2026-11-20: bound to 'active', so only a cup in progress flips.
   try {
     expectAffected(
       await writer
@@ -127,7 +132,7 @@ export async function finishTournamentCore(
           winner_team: winnerTeam,
         })
         .eq('id', id)
-        .neq('status', 'finished')
+        .eq('status', 'active')
         .select('id'),
       'finishTournament',
     );

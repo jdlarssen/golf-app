@@ -142,6 +142,16 @@ export function parsePlannedMatchCount(
 }
 
 /**
+ * Cup-tabellen viser poeng med én desimal, så en vekt med to (0,25) ville gitt
+ * summer som ser feil ut. DB-CHECK-en i 0257 (`x = round(x, 1)`) er den samme
+ * regelen (trap #4). Sammenligner mot avrundet tidel med en liten toleranse,
+ * fordi 0.1 ikke er eksakt i flyttall.
+ */
+function hasAtMostOneDecimal(n: number): boolean {
+  return Math.abs(n * 10 - Math.round(n * 10)) < 1e-9;
+}
+
+/**
  * Parser `tournaments.win_points` fra et form-felt (#1441, D8 — F3b sitt
  * ansvar, se `derivePointsToWinWeighted`s JSDoc). Tom streng → `undefined`
  * (kalleren utelater feltet fra inserten; DB-default 1 fra migrasjon 0153
@@ -156,7 +166,7 @@ export function parseWinPoints(raw: string): number | null | undefined {
   const cleaned = raw.trim();
   if (cleaned === '') return undefined;
   const n = Number(cleaned);
-  if (!Number.isFinite(n) || n <= 0) return null;
+  if (!Number.isFinite(n) || n <= 0 || !hasAtMostOneDecimal(n)) return null;
   return n;
 }
 
@@ -170,6 +180,6 @@ export function parseTiePoints(raw: string): number | null | undefined {
   const cleaned = raw.trim();
   if (cleaned === '') return undefined;
   const n = Number(cleaned);
-  if (!Number.isFinite(n) || n < 0) return null;
+  if (!Number.isFinite(n) || n < 0 || !hasAtMostOneDecimal(n)) return null;
   return n;
 }

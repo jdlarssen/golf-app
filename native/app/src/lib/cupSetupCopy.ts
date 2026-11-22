@@ -65,8 +65,8 @@ const DETAILS_ERRORS: Record<string, string> = {
   cup_team_1: 'Navn på lag 1 må være mellom 1 og 40 tegn.',
   cup_team_2: 'Navn på lag 2 må være mellom 1 og 40 tegn.',
   cup_team_dup: 'Lagene må ha forskjellige navn.',
-  cup_win_points: 'Poeng for seier må være et tall over 0.',
-  cup_tie_points: 'Poeng ved delt kan ikke være negativt.',
+  cup_win_points: 'Poeng for seier må være et tall over 0, med høyst én desimal.',
+  cup_tie_points: 'Poeng ved delt må være 0 eller mer, med høyst én desimal.',
   cup_insert_failed: 'Klarte ikke å opprette cupen. Prøv igjen.',
 };
 
