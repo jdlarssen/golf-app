@@ -43,6 +43,12 @@ jest.mock('../data/profile', () => ({
   }),
 }));
 jest.mock('../data/syncTriggers', () => require('../test/syncTriggersMock'));
+// #2975: hva «ny versjon er klar» sier. `none` som standard; testen for prikken
+// setter `reminder`.
+const mockNewVersion = { mode: 'none' };
+jest.mock('../lib/useNewVersion', () => ({
+  useNewVersion: () => ({ mode: mockNewVersion.mode, release: null, update: jest.fn(), later: jest.fn() }),
+}));
 // #2758: reglene for kortet har egne tester. Her gjelder det hva Hjem sier om runden.
 jest.mock('../components/PushPromptCard', () => {
   const { createElement } = require('react');
@@ -314,6 +320,35 @@ it('uten handicap viser pillen bare fornavnet, og den åpner fortsatt profilen',
     expect(navigate).toHaveBeenCalledWith('Profile');
   } finally {
     mockState.profile = withHcp;
+  }
+});
+
+it('viser en prikk på pillen etter «Senere», til appen er oppdatert (#2975)', async () => {
+  mockNewVersion.mode = 'reminder';
+  try {
+    const { view } = renderHome();
+    await view;
+
+    const pill = await screen.findByTestId('open-profile');
+    await waitFor(() => expect(pill).toHaveTextContent(/Sigrid/));
+    expect(screen.getByTestId('profile-update-dot')).toBeTruthy();
+    expect(pill.props.accessibilityLabel).toBe('Profil, handicap 12,4. Ny versjon av appen er klar');
+  } finally {
+    mockNewVersion.mode = 'none';
+  }
+});
+
+it('viser ingen prikk mens arket står (#2975)', async () => {
+  mockNewVersion.mode = 'sheet';
+  try {
+    const { view } = renderHome();
+    await view;
+    const pill = await screen.findByTestId('open-profile');
+    await waitFor(() => expect(pill).toHaveTextContent(/Sigrid/));
+    expect(screen.queryByTestId('profile-update-dot')).toBeNull();
+    expect(pill.props.accessibilityLabel).toBe('Profil, handicap 12,4');
+  } finally {
+    mockNewVersion.mode = 'none';
   }
 });
 

@@ -289,12 +289,6 @@ jest.mock('@react-navigation/native', () => ({
   // Står hullsiden øverst? Tavla og scorekortet legges oppå den (#2252).
   useIsFocused: () => mockFocus.value,
 }));
-// #2975: står stripa «Ny versjon er klar.» øverst, skal hullsiden ikke be om
-// mørk statuslinje over den.
-const mockStripShown = { value: false };
-jest.mock('../components/NewVersionStrip', () => ({
-  useNewVersionStripShown: () => mockStripShown.value,
-}));
 // Statuslinja er appens, ikke skjermens: en merket stand-in viser om hullsiden
 // ber om mørk tekst.
 jest.mock('expo-status-bar', () => ({
@@ -975,13 +969,6 @@ describe('Hole', () => {
     await rerender(holeElement(1, navigation));
     expect(screen.queryByTestId('status-bar-dark')).toBeNull();
     mockFocus.value = true;
-    await rerender(holeElement(1, navigation));
-    expect(screen.getByTestId('status-bar-dark')).toBeTruthy();
-    // Stripa «Ny versjon er klar.» er mørk og ligger under klokka: ingen mørk tekst.
-    mockStripShown.value = true;
-    await rerender(holeElement(1, navigation));
-    expect(screen.queryByTestId('status-bar-dark')).toBeNull();
-    mockStripShown.value = false;
     await rerender(holeElement(1, navigation));
     expect(screen.getByTestId('status-bar-dark')).toBeTruthy();
     // Toppen er den delte raden, og den er hvit i sollys også.

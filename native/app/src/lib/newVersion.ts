@@ -1,15 +1,31 @@
 // native/app/src/lib/newVersion.ts
-// Native #2975: ren logikk for stripa «Ny versjon er klar.». Hooken bor i
-// `useNewVersion.ts`, stripa i `components/NewVersionStrip.tsx`.
+// Native #2975: ren logikk for «ny versjon er klar». Hooken og leverandøren bor i
+// `useNewVersion.tsx`, visningene i `components/newVersion/`.
 //
-// Tallet for det nyeste bygget kommer fra `GET /api/app/min-version`, satt i
-// `lib/app/latestBuild.ts`. Stripa er et hint, ikke en vakt: alt som er ukjent
-// (dev uten byggnummer, nettfeil, en server fra før #2975) gir ingen stripe.
+// Bygget, versjonen og nyhetene kommer fra `GET /api/app/min-version`, satt i
+// `lib/app/latestBuild.ts`. Dette er et hint, ikke en vakt: alt som er ukjent
+// (dev uten byggnummer, nettfeil, en server fra før #2975) gir ingenting.
 import { parseBuild } from './appBuild';
 import type { StorePlatform } from './updateGuard';
 
-/** Nøkkelen i AsyncStorage: bygget stripa sist ble lukket for. */
-export const NEW_VERSION_DISMISSED_KEY = 'torny-new-version-dismissed';
+/** Nøkkelen i AsyncStorage: bygget arket sist ble vist og lukket for. */
+export const NEW_VERSION_SEEN_KEY = 'torny-new-version-seen';
+
+export type LatestRelease = {
+  build: number;
+  /** Semver, f.eks. `1.2.0`, eller `null` når serveren ikke sier det. */
+  version: string | null;
+  /** Det som er nytt, én linje per punkt. Tom liste = arket uten liste. */
+  notes: string[];
+};
+
+/**
+ * - `sheet`: et nyere bygg er ute, og arket er ikke vist for det.
+ * - `reminder`: arket er lukket for det nyeste bygget, men appen er ikke
+ *   oppdatert. Prikken på profil-pillen og raden på Profil står.
+ * - `none`: appen er oppdatert, eller noe er ukjent.
+ */
+export type NewVersionMode = 'none' | 'sheet' | 'reminder';
 
 function isBuildNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0;
@@ -17,33 +33,52 @@ function isBuildNumber(value: unknown): value is number {
 
 /**
  * Det nyeste bygget for plattformen ut av svaret fra ruta, eller `null` når
- * feltet mangler eller har feil form. Feltnavnene følger `lib/app/latestBuild.ts`.
+ * byggnummeret mangler eller har feil form. Versjon og nyheter er valgfrie.
+ * Feltnavnene følger `lib/app/latestBuild.ts`.
  */
-export function readLatestBuild(body: Record<string, unknown>, platform: StorePlatform): number | null {
+export function readLatestRelease(
+  body: Record<string, unknown>,
+  platform: StorePlatform,
+): LatestRelease | null {
   const entry = body[platform];
   if (entry === null || typeof entry !== 'object') return null;
-  const value = (entry as Record<string, unknown>)[
-    platform === 'ios' ? 'latestBuild' : 'latestVersionCode'
-  ];
-  return isBuildNumber(value) ? value : null;
+  const fields = entry as Record<string, unknown>;
+  const build = fields[platform === 'ios' ? 'latestBuild' : 'latestVersionCode'];
+  if (!isBuildNumber(build)) return null;
+  const version =
+    typeof fields.latestVersion === 'string' && fields.latestVersion.trim() !== ''
+      ? fields.latestVersion.trim()
+      : null;
+  const notes = Array.isArray(fields.notes)
+    ? fields.notes
+        .filter((line): line is string => typeof line === 'string')
+        .map((line) => line.trim())
+        .filter((line) => line !== '')
+    : [];
+  return { build, version, notes };
+}
+
+/** «1.2.0 (15)» som i TestFlight, eller bare «15» uten versjon. */
+export function releaseName(release: LatestRelease): string {
+  return release.version !== null ? `${release.version} (${release.build})` : String(release.build);
 }
 
 /**
- * Sant når et nyere bygg er ute og stripa ikke er lukket for det. Lukket for
- * bygg 15 betyr skjult for 15 og alt under, men synlig igjen når 16 kommer.
+ * Hva appen skal vise. Sett for bygg 15 betyr at arket ikke kommer igjen for 15
+ * eller noe under, men påminnelsen står til appen kjører 15. Kommer 16, vises
+ * arket igjen.
  */
-export function shouldShowNewVersion(input: {
+export function newVersionMode(input: {
   build: number | null;
   latest: number | null;
-  dismissed: number | null;
-}): boolean {
-  const { build, latest, dismissed } = input;
-  if (build === null || latest === null) return false;
-  if (latest <= build) return false;
-  return dismissed === null || latest > dismissed;
+  seen: number | null;
+}): NewVersionMode {
+  const { build, latest, seen } = input;
+  if (build === null || latest === null || latest <= build) return 'none';
+  return seen !== null && seen >= latest ? 'reminder' : 'sheet';
 }
 
 /** Det lagrede tallet → bygget, eller `null` når det mangler eller er uleselig. */
-export function parseDismissedBuild(raw: string | null | undefined): number | null {
+export function parseSeenBuild(raw: string | null | undefined): number | null {
   return parseBuild(raw);
 }

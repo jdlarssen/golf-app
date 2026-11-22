@@ -108,6 +108,8 @@ import { MARKER_TEXT, markerCardSubtitle } from '../lib/markerCopy';
 import { formatWeekdayDayMonth } from '../lib/homeDates';
 import { useKavalkadeStatus } from '../lib/useKavalkadeStatus';
 import { useOnResume } from '../lib/useOnResume';
+import { useNewVersion } from '../lib/useNewVersion';
+import { NEW_VERSION_TEXT } from '../lib/newVersionCopy';
 import { buildHeroModel, pickHeroCard } from '../lib/homeHero';
 import { countsPoints, lastRoundPoints } from '../lib/lastRound';
 import type { ScoringExtras } from '../lib/scoringContext';
@@ -654,6 +656,10 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
  * handicapet er gammelt (`isHandicapStale`). Uten handicap viser pillen bare
  * navnet. Pillen åpner profil-rommet, der handicapet oppdateres. Er profilen
  * ikke hentet, står lenka «Profil» på samme sted.
+ *
+ * #2975: etter «Senere» i arket «Versjon … er klar» står en gull prikk på
+ * pillen (eller lenka) til appen er oppdatert. Raden «Oppdater appen» står
+ * øverst på Profil så lenge.
  */
 function Top({
   profile,
@@ -673,6 +679,14 @@ function Top({
       ? formatHcpNb(profile.hcpIndex)
       : null;
   const stale = hcp !== null && isHandicapStale(profile?.handicapUpdatedAt ?? null);
+  const updateDot = useNewVersion().mode === 'reminder';
+  const withDot = (label: string) => (updateDot ? `${label}. ${NEW_VERSION_TEXT.dotA11y}` : label);
+  const dot = updateDot ? (
+    <View
+      style={[styles.updateDot, { backgroundColor: colors.accent, borderColor: colors.bg }]}
+      testID="profile-update-dot"
+    />
+  ) : null;
   const now = new Date();
   return (
     <View style={styles.top}>
@@ -689,7 +703,7 @@ function Top({
             onPress={onProfile}
             hitSlop={HCP_SLOP}
             accessibilityRole="link"
-            accessibilityLabel={hcp !== null ? hcpA11yLabel(hcp) : profileA11yLabel(name)}
+            accessibilityLabel={withDot(hcp !== null ? hcpA11yLabel(hcp) : profileA11yLabel(name))}
             style={[
               styles.hcpPill,
               { backgroundColor: colors.surface, borderColor: stale ? colors.accent : colors.border },
@@ -706,6 +720,7 @@ function Top({
                 <Text style={[styles.hcpValue, { color: colors.text }]}>{hcp}</Text>
               </>
             ) : null}
+            {dot}
           </Pressable>
         ) : (
           <Pressable
@@ -713,11 +728,13 @@ function Top({
             accessibilityRole="link"
             // Lenka er én liten tekstlinje; slakken gir den 44 pt å treffe på.
             hitSlop={PROFILE_SLOP}
+            accessibilityLabel={updateDot ? withDot(PROFILE_TEXT.heading) : undefined}
             testID="open-profile"
           >
             <Text style={[styles.profileLink, { color: colors.primary }]}>
               {PROFILE_TEXT.heading}
             </Text>
+            {dot}
           </Pressable>
         )}
         <Pressable
@@ -868,6 +885,16 @@ const styles = StyleSheet.create({
   hcpLabel: {
     fontSize: 12,
     fontFamily: FONTS.sansSemiBold,
+  },
+  // #2975: prikken i hjørnet, med en ring i sidens farge så den skiller seg fra kanten.
+  updateDot: {
+    position: 'absolute',
+    top: -3,
+    right: -3,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
   },
   // Nettleserens linjeboks for Fraunces 18 er 23 pt; da blir pillen 41 høy.
   hcpValue: { ...fraunces(600, 18, 23) },

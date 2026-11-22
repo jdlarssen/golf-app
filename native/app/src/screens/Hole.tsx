@@ -186,7 +186,6 @@ import { useRoundSyncState } from '../lib/useRoundSyncState';
 import { syncChipText } from '../lib/syncChipCopy';
 import { GameLoadFailed } from '../components/GameLoadFailed';
 import { HOLE_TEXT_CAP } from '../components/hole/holeTextCap';
-import { useNewVersionStripShown } from '../components/NewVersionStrip';
 
 /**
  * Hint-linja under et utastet kort. Ordrett webbens streng
@@ -215,7 +214,6 @@ const POLL_MS = 1500;
 export function Hole(props: ScreenProps<'Hole'>) {
   const sunlight = useSunlight();
   const focused = useIsFocused();
-  const stripShown = useNewVersionStripShown();
 
   // Toppen er den delte raden (`kickerHeader`), som selv bytter til sollys.
   return (
@@ -223,10 +221,8 @@ export function Hole(props: ScreenProps<'Hole'>) {
       {/* Mørk tekst i statuslinja over den hvite siden, men bare mens
           hullsiden står øverst. Tavla og scorekortet legger seg OPPÅ
           hullsiden, som blir liggende montert under; uten fokus-sjekken
-          arvet de den mørke statuslinja over sin mørke side. Står stripa
-          «Ny versjon er klar.» øverst (#2975), er det den som ligger under
-          klokka, og den er mørk. */}
-      {sunlight && focused && !stripShown ? <StatusBar style="dark" /> : null}
+          arvet de den mørke statuslinja over sin mørke side. */}
+      {sunlight && focused ? <StatusBar style="dark" /> : null}
       <HoleScreen {...props} />
     </ThemeScope>
   );

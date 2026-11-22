@@ -48,6 +48,17 @@ jest.mock('../session', () => ({
 jest.mock('../data/profile', () => ({ fetchOwnProfile: jest.fn() }));
 jest.mock('../data/bagTag', () => ({ fetchBagTagExtras: jest.fn() }));
 jest.mock('../data/friends', () => ({ fetchFriendCode: jest.fn() }));
+// #2975: hva «ny versjon er klar» sier. `none` som standard; testen for raden
+// setter `reminder`.
+const mockNewVersion = { mode: 'none', update: jest.fn() };
+jest.mock('../lib/useNewVersion', () => ({
+  useNewVersion: () => ({
+    mode: mockNewVersion.mode,
+    release: { build: 15, version: '1.2.0', notes: [] },
+    update: mockNewVersion.update,
+    later: jest.fn(),
+  }),
+}));
 jest.mock('react-native-safe-area-context', () => require('../test/safeAreaMock').safeAreaMock());
 
 const fetchOwnProfileMock = fetchOwnProfile as jest.Mock;
@@ -332,6 +343,29 @@ describe('Profile', () => {
   });
 
   // #2758: varsler finnes på begge telefoner.
+  it('viser «Oppdater appen» øverst etter «Senere», og raden åpner butikken (#2975)', async () => {
+    mockNewVersion.mode = 'reminder';
+    try {
+      await renderScreen();
+      const row = screen.getByTestId('profile-update-app-row');
+      expect(row).toHaveTextContent('Oppdater appenVersjon 1.2.0 (15) er klar');
+      // Raden står over bag-taggen.
+      const order = screen
+        .getAllByTestId(/^(profile-update-app-row|profile-hcp)$/)
+        .map((el) => el.props.testID);
+      expect(order).toEqual(['profile-update-app-row', 'profile-hcp']);
+      await fireEvent.press(row);
+      expect(mockNewVersion.update).toHaveBeenCalledTimes(1);
+    } finally {
+      mockNewVersion.mode = 'none';
+    }
+  });
+
+  it('viser ikke raden når appen er oppdatert (#2975)', async () => {
+    await renderScreen();
+    expect(screen.queryByTestId('profile-update-app')).toBeNull();
+  });
+
   it('kaller raden «Varsler og tema» på Android', async () => {
     platform = jest.replaceProperty(Platform, 'OS', 'android');
     await renderScreen();

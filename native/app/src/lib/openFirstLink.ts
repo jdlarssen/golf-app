@@ -1,6 +1,6 @@
 // native/app/src/lib/openFirstLink.ts
 // Native #2975: åpne den første lenka i lista som lar seg åpne. Delt av
-// oppdateringsvakta (#2619) og stripa «Ny versjon er klar.» (#2975).
+// oppdateringsvakta (#2619) og «Oppdater» i arket og på Profil (#2975).
 import { Linking } from 'react-native';
 
 /**

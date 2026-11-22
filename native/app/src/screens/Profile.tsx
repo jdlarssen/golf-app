@@ -38,6 +38,9 @@ import { BagTag, type FriendQr } from '../components/profile/BagTag';
 import { SeasonTiles } from '../components/profile/SeasonTiles';
 import { ShareBagTagButton } from '../components/profile/ShareBagTagButton';
 import { SettingList, SettingRow } from '../components/SettingRow';
+import { releaseName } from '../lib/newVersion';
+import { NEW_VERSION_TEXT, newVersionTitle } from '../lib/newVersionCopy';
+import { useNewVersion } from '../lib/useNewVersion';
 import { fetchBagTagExtras, type BagTagExtras } from '../data/bagTag';
 import { fetchFriendCode } from '../data/friends';
 import { fetchOwnProfile, type OwnProfile } from '../data/profile';
@@ -161,6 +164,8 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
   );
   const failedName = email?.trim() || PROFILE_TEXT.displayNameFallback;
   const openEditProfile = useCallback(() => navigation.navigate('EditProfile'), [navigation]);
+  // #2975: etter «Senere» i arket står raden øverst til appen er oppdatert.
+  const newVersion = useNewVersion();
 
   return (
     <ScrollView
@@ -195,6 +200,17 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
             {PROFILE_TEXT.updatedBanner}
           </Text>
         </View>
+      ) : null}
+
+      {newVersion.mode === 'reminder' && newVersion.release ? (
+        <SettingList style={styles.updateApp} testID="profile-update-app">
+          <SettingRow
+            label={NEW_VERSION_TEXT.profileRow}
+            sublabel={newVersionTitle(releaseName(newVersion.release))}
+            onPress={newVersion.update}
+            testID="profile-update-app-row"
+          />
+        </SettingList>
       ) : null}
 
       <BagTag
@@ -293,6 +309,8 @@ const styles = StyleSheet.create({
   },
   editPillText: { ...interLine(14, EDIT_LINE), fontFamily: FONTS.sansSemiBold },
   pressed: { opacity: 0.6 },
+  // #2975: raden «Oppdater appen» står under tittelen, med luft til bag-taggen.
+  updateApp: { marginTop: 12, marginBottom: 4 },
   // 20 pt fra flisene; lista har selv 8 på toppen.
   menu: { marginTop: 12 },
   // Siden har ingen `gap`; linja trenger luft under det skrå kortet.
