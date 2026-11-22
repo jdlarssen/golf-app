@@ -261,7 +261,7 @@ async function EditCourseFormBody({
       .eq('course_id', courseId)
       .is('archived_at', null)
       .order('name', { ascending: true }),
-    // #2484: every round on the course, finished ones too. Above 0 the form
+    // #2484: every game on the course, scheduled and finished alike. Above 0 the form
     // locks the hole count (update_course_with_layout refuses the switch) and
     // asks before a change to par, index, slope or CR (#237, audit 2026-11-20).
     supabase
