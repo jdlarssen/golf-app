@@ -471,6 +471,12 @@ describe('sendLeagueRoundNotification', () => {
     `);
   });
 
+  it('a story in two paragraphs keeps them', async () => {
+    const mail = await send({ ...baseParams, summary: { summary: roundOne, story: 'Første avsnitt.\n\nAndre avsnitt.' } });
+    expect(summaryHtml(mail.html).match(/<p style="font-size:16px/g)).toHaveLength(2);
+    expect(mail.text).toContain('Første avsnitt.\n\nAndre avsnitt.');
+  });
+
   it('a story with markup is escaped', async () => {
     const mail = await send({ ...baseParams, summary: { summary: roundOne, story: 'Ole H. <b>vant</b> & lo.' } });
     expect(summaryHtml(mail.html)).toContain('Ole H. &lt;b&gt;vant&lt;/b&gt; &amp; lo.');

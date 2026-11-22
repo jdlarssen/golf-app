@@ -54,7 +54,10 @@ describe('buildRoundNewsFacts', () => {
       roundsPlayed: 1,
       roundsTotal: 10,
       countingRounds: 8,
-      metric: 'stablefordpoeng, flest er best',
+      roundMetric: 'stablefordpoeng, flest er best',
+      tableMetric: 'sum av de 8 beste rundene (stablefordpoeng, flest er best)',
+      roundBestShown: true,
+      tableLeaderShown: true,
       courseName: 'Byneset North',
       simulator: true,
       playersInLeague: 5,
@@ -62,10 +65,29 @@ describe('buildRoundNewsFacts', () => {
     });
   });
 
-  it('a stroke league says lowest is best', () => {
-    expect(buildRoundNewsFacts({ ...summary, pointsBased: false }, 'Runde 2', yes)!.metric).toBe(
-      'slag mot par, lavest er best',
+  it('a stroke league says lowest is best, and the table total follows the standings model', () => {
+    const stroke = { ...summary, pointsBased: false, countingRounds: null };
+    expect(buildRoundNewsFacts({ ...stroke, model: 'total' }, 'Runde 2', yes)).toMatchObject({
+      roundMetric: 'slag mot par, lavest er best',
+      tableMetric: 'sum av rundene (slag mot par, lavest er best)',
+    });
+    expect(buildRoundNewsFacts({ ...stroke, model: 'average' }, 'Runde 2', yes)!.tableMetric).toBe(
+      'snitt per runde (slag mot par, lavest er best)',
     );
+    // Placement points: the total is league points, where most is best, also
+    // when a round value is strokes to par.
+    expect(buildRoundNewsFacts({ ...stroke, model: 'points' }, 'Runde 2', yes)).toMatchObject({
+      roundMetric: 'slag mot par, lavest er best',
+      tableMetric: 'ligapoeng etter plassering i hver runde, flest er best',
+    });
+  });
+
+  it('the round best said no: the facts say that nobody shown won the round or leads the table', () => {
+    // Ole (place 1) is hidden. The best of the shown players is second.
+    const hidden = buildRoundNewsFacts(summary, 'Runde 2', new Set(['lysb', 'phil']))!;
+    expect(hidden.round.map((r) => r.place)).toEqual([2, 4]);
+    expect(hidden).toMatchObject({ roundBestShown: false, tableLeaderShown: false });
+    expect(JSON.stringify(hidden)).not.toMatch(/Ole/);
   });
 
   it('a player without a name is left out, and nobody to write about gives no facts', () => {
@@ -88,6 +110,10 @@ describe('buildRoundNewsPrompt', () => {
     expect(system).toContain('Regn ALDRI ut noe selv');
     expect(system).toContain('møtte opp');
     expect(system).toContain('NØYAKTIG slik det står i «name»');
+    // The evaluator's finding (23.11): without the round best in the facts,
+    // «B vant runden» passed every check.
+    expect(system).toContain('Er roundBestShown false');
+    expect(system).toContain('tableLeaderShown false');
   });
 });
 

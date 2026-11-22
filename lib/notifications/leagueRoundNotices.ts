@@ -212,7 +212,13 @@ async function previousRoundSummary(
     if (!snapshot) return null;
     const summary = buildRoundSummary(snapshot, round.id, now);
     if (!summary) return null;
-    return { summary, story: await generateRoundNews(admin, summary, round.label) };
+    // The story is the part that can fail in new ways. It never throws by
+    // design; if it does, the numbers still go.
+    const story = await generateRoundNews(admin, summary, round.label).catch((err: unknown) => {
+      console.error(`[${LOG_PREFIX}] round news failed, the numbers go alone`, { roundId: round.id, err });
+      return null;
+    });
+    return { summary, story };
   } catch (err) {
     console.error(`[${LOG_PREFIX}] round summary failed, the mail goes without it`, { roundId: round.id, err });
     return null;

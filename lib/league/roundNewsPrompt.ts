@@ -27,7 +27,18 @@ export type RoundNewsFacts = {
   roundsPlayed: number;
   roundsTotal: number;
   countingRounds: number | null;
-  metric: string;
+  /** What a round value is, and which way is best. */
+  roundMetric: string;
+  /** What a table total is: it follows the league's standings model, not always the round value. */
+  tableMetric: string;
+  /**
+   * False when the round's best is not in `round` (a player who said no to
+   * such texts). Then nobody in the facts won the round, and the story must
+   * not say who did.
+   */
+  roundBestShown: boolean;
+  /** The same for the table: false when the leader is not in `table`. */
+  tableLeaderShown: boolean;
   courseName: string | null;
   simulator: boolean;
   playersInLeague: number;
@@ -62,6 +73,14 @@ export function buildRoundNewsFacts(
   }));
   if (round.length === 0) return null;
 
+  const table = shown(summary.table).map((r) => ({
+    place: r.place,
+    name: r.name,
+    total: r.value,
+    behindLeader: r.behind,
+  }));
+  const roundMetric = summary.pointsBased ? 'stablefordpoeng, flest er best' : 'slag mot par, lavest er best';
+
   return {
     leagueName: summary.leagueName,
     roundLabel: summary.roundLabel,
@@ -69,19 +88,31 @@ export function buildRoundNewsFacts(
     roundsPlayed: summary.roundsPlayed,
     roundsTotal: summary.roundsTotal,
     countingRounds: summary.countingRounds,
-    metric: summary.pointsBased ? 'stablefordpoeng, flest er best' : 'slag mot par, lavest er best',
+    roundMetric,
+    tableMetric: tableMetric(summary, roundMetric),
+    roundBestShown: round.some((r) => r.place === 1),
+    tableLeaderShown: table.some((r) => r.place === 1),
     courseName: summary.courseName,
     simulator: summary.simulator,
     playersInLeague: summary.playersInLeague,
     playedThisRound: summary.playedThisRound,
     round,
-    table: shown(summary.table).map((r) => ({
-      place: r.place,
-      name: r.name,
-      total: r.value,
-      behindLeader: r.behind,
-    })),
+    table,
   };
+}
+
+/**
+ * What the season total is under the league's standings model. Under the
+ * placement-points model the total is league points, also in a stroke league
+ * where a round value is strokes to par.
+ */
+function tableMetric(summary: RoundSummary, roundMetric: string): string {
+  if (summary.model === 'points') return 'ligapoeng etter plassering i hver runde, flest er best';
+  if (summary.model === 'average') return `snitt per runde (${roundMetric})`;
+  if (summary.model === 'best_n' && summary.countingRounds !== null) {
+    return `sum av de ${summary.countingRounds} beste rundene (${roundMetric})`;
+  }
+  return `sum av rundene (${roundMetric})`;
 }
 
 export function buildRoundNewsPrompt(facts: RoundNewsFacts): RoundNewsPrompt {
@@ -96,6 +127,8 @@ export function buildRoundNewsPrompt(facts: RoundNewsFacts): RoundNewsPrompt {
     'Er simulator true, spiller hver spiller runden alene på simulator når det passer. Skriv da aldri at spillerne møttes, møtte opp, samlet seg eller sto på banen sammen. Banen er den de spilte på skjermen.',
     'Ligaen går over flere runder. «round» er resultatet i runden som nettopp stengte, «table» er tabellen etter den. Er roundsPlayed 1, er de to like: skriv da om runden og om at tabellen er satt for første gang. Ellers skriver du både om rundens beste og om hvem som leder tabellen.',
     'Lik plass betyr delt plass. Si aldri at noen «vant» en delt plass.',
+    'Er roundBestShown false, står ikke rundens beste i fakta-objektet. Skriv da ALDRI at noen vant runden, var best eller tok førsteplassen, og kall ingen «rundens beste». Skriv om plassene som står der. Er tableLeaderShown false, gjelder det samme for tabellen: skriv aldri hvem som leder den.',
+    'Verdien i «round» er roundMetric. Totalen i «table» er tableMetric, som kan være noe annet enn rundeverdien.',
     'Navn: bruk navnet NØYAKTIG slik det står i «name», hver eneste gang. Aldri fullt navn, aldri bare fornavn når navnet har en bokstav bak, aldri kallenavn, aldri anførselstegn rundt navn. Du trenger ikke nevne alle.',
     'Noen spillere mangler i fakta-objektet fordi de selv har sagt nei til tekster fra språkmodellen, og noen har ikke spilt runden. Nevn bare spillerne som står der. Du kan si hvor mange som spilte (playedThisRound av playersInLeague), men gjett aldri hvem som mangler eller hvorfor.',
     'Skrivestil: varier setningslengden, noen korte. Sammensatte ord skrives i ett («tredjeplass», ikke «tredje plass»). Høyst én tankestrek i hele saken.',

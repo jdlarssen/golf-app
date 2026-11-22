@@ -516,7 +516,6 @@ describe('runLeagueRoundNotices: the summary of the round before', () => {
   it.each([
     ['the table cannot be read', () => snapshotMock.mockRejectedValueOnce(new Error('connection reset'))],
     ['the league is gone', () => snapshotMock.mockResolvedValueOnce(null)],
-    ['the story throws', () => newsMock.mockRejectedValueOnce(new Error('boom'))],
   ])('%s: the mail goes without a summary, and the stamp is kept', async (_name, arrange) => {
     arrange();
     const err = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -526,6 +525,19 @@ describe('runLeagueRoundNotices: the summary of the round before', () => {
     err.mockRestore();
     expect(mailedTo()).toEqual(['lise@example.test']);
     expect(claims()).toHaveLength(1);
+  });
+
+  it('a story that throws does not take the numbers with it: everyone still gets the summary', async () => {
+    newsMock.mockRejectedValueOnce(new Error('boom'));
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await expect(run(round())).resolves.toEqual(
+      result({ league_round_open: 2, league_round_closing: 0 }, { league_round_open: 2 }),
+    );
+    err.mockRestore();
+    expect(mailMock.mock.calls.map((c) => c[0].summary)).toEqual([
+      { summary: SUMMARY, story: null },
+      { summary: SUMMARY, story: null },
+    ]);
   });
 
   it('the reminder never carries a summary, and the table is not read for it', async () => {
