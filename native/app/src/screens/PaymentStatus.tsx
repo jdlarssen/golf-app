@@ -6,7 +6,7 @@
 // Reglene (hvem som teller, hvem purringen når) er serverens
 // (`lib/games/payments.ts`); skjermen viser svaret og henter på nytt etter hver
 // lagring, så tallet på purre-knappen alltid er serverens.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
 import { BetaltHakeIcon } from '../components/icons/Icons';
@@ -28,6 +28,11 @@ export function PaymentStatus({ route }: ScreenProps<'PaymentStatus'>) {
   const [saveFailed, setSaveFailed] = useState(false);
   const [reminding, setReminding] = useState(false);
   const [remindNote, setRemindNote] = useState<string | null>(null);
+  // `reminding` is drawn one render late; the ref stops a second tap before that.
+  const remindSending = useRef(false);
+  // Rows with a save on its way. A second tap on the same row waits for the
+  // first answer, so two saves cannot land out of order.
+  const saving = useRef(new Set<string>());
 
   /** Henter på nytt. Sant når den nye lista kom; ellers står den forrige. */
   const reload = useCallback(async (): Promise<boolean> => {
@@ -52,6 +57,16 @@ export function PaymentStatus({ route }: ScreenProps<'PaymentStatus'>) {
   }, [gameId]);
 
   const toggle = async (player: PaymentsPlayer) => {
+    if (saving.current.has(player.userId)) return;
+    saving.current.add(player.userId);
+    try {
+      await savePaid(player);
+    } finally {
+      saving.current.delete(player.userId);
+    }
+  };
+
+  const savePaid = async (player: PaymentsPlayer) => {
     const next = !(optimistic[player.userId] ?? player.paid);
     setSaveFailed(false);
     setOptimistic((was) => ({ ...was, [player.userId]: next }));
@@ -76,10 +91,15 @@ export function PaymentStatus({ route }: ScreenProps<'PaymentStatus'>) {
   };
 
   const remind = async () => {
+    if (remindSending.current) return;
+    remindSending.current = true;
     setReminding(true);
     setRemindNote(null);
     const result = await remindUnpaid(gameId);
     setRemindNote(result.ok ? BETALING_TEXT.remindDone(result.reminded) : BETALING_TEXT.remindFailed);
+    // The list says again who can still be reminded, as it does after a tick.
+    if (result.ok) await reload();
+    remindSending.current = false;
     setReminding(false);
   };
 

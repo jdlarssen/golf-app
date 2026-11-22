@@ -535,17 +535,20 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
 
   // Settes rett før `replace` til spillet, så sperra under slipper den gjennom.
   const leavingRef = useRef(false);
+  // `busy` is drawn one render late; the ref stops a second tap before that.
+  const publishing = useRef(false);
 
   const publish = useCallback(async () => {
     // Dobbelttrykk-låsen står FØRST: to gjennomkjøringer samtidig ville kjempet
     // om den samme raden.
-    if (busy || !draft) return;
+    if (busy || publishing.current || !draft) return;
     // #1954 D2 (kontrollrunden på #2622): én nett-setning for opprettelsen,
     // den samme som et tidsavbrudd gir, og den samme som resten av appen.
     if (!isDeviceOnline()) {
       setFailure({ text: describeCreateGameFailure('offline'), action: null });
       return;
     }
+    publishing.current = true;
     setBusy(true);
     setFailure(null);
     try {
@@ -564,6 +567,8 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
     } catch {
       // `publishGame` svarer nettfeil med en kode; et kast her er noe annet.
       setFailure({ text: describeCreateGameFailure('db_game'), action: null });
+    } finally {
+      publishing.current = false;
     }
     // Bevisst utenfor `finally`: på suksess er skjermen borte, og knappen skal
     // ikke låses opp igjen på vei ut.
@@ -765,7 +770,11 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
         <Pressable
           testID="create-back"
           accessibilityRole="button"
-          style={[ui.buttonSecondary, styles.navButton]}
+          // While the game is being created, back does nothing, as the swipe
+          // and the header arrow: the answer lands on the step it came from.
+          disabled={busy}
+          accessibilityState={{ disabled: busy }}
+          style={[ui.buttonSecondary, styles.navButton, busy && styles.dimmed]}
           onPress={() =>
             stepIndex === 0
               ? navigation.goBack()

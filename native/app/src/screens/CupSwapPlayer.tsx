@@ -3,7 +3,7 @@
 // dag byttes hele bunten (#1441 D3). Lista er hjelp, vakta er `validateMatchSwap`
 // på serveren, så en feil her er serverens ord.
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { AppCupSwapCandidates } from '../../../../lib/cup/appCupManageView';
 import { PICKER_VISIBLE_ROWS, pickerRows } from '../../../../lib/league/pickerRows';
@@ -12,6 +12,7 @@ import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../componen
 import { PickerMore, PickerNoMatch, PickerSearchField } from '../components/PickerSearch';
 import { fetchCupSwapCandidates, swapCupPlayer } from '../data/cupManage';
 import { backTo } from '../lib/backTo';
+import { useLeaveWhenFocused } from '../lib/useLeaveWhenFocused';
 import { CUP_TEXT } from '../lib/cupCopy';
 import {
   MANAGE_APP_TEXT,
@@ -33,6 +34,9 @@ export function CupSwapPlayer({ route, navigation }: ScreenProps<'CupSwapPlayer'
   const [outId, setOutId] = useState<string | null>(null);
   const [inId, setInId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // `busy` is drawn one render late; the ref stops a second tap before that.
+  const sending = useRef(false);
+  const leaveWhenFocused = useLeaveWhenFocused(navigation);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [showAll, setShowAll] = useState(false);
@@ -101,12 +105,14 @@ export function CupSwapPlayer({ route, navigation }: ScreenProps<'CupSwapPlayer'
   });
 
   const submit = async () => {
-    if (!outId || !inId) return;
+    if (!outId || !inId || sending.current) return;
+    sending.current = true;
     setBusy(true);
     setError(null);
     const result = await swapCupPlayer(cupId, gameId, outId, inId);
+    sending.current = false;
     if (result.ok) {
-      backTo(navigation, 'CupManage', { cupId, notice: 'player_swapped' });
+      leaveWhenFocused(() => backTo(navigation, 'CupManage', { cupId, notice: 'player_swapped' }));
       return;
     }
     setError(swapFailureText(result.reason));

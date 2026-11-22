@@ -6,7 +6,7 @@
 // Trekk, angring og bytte har egne skjermer med konsekvensene før du trykker. Alt
 // krever nett: uten nett står det skjermen alt har hentet, uten lenkene.
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type {
@@ -45,6 +45,8 @@ function CupManageRoom({ route, navigation }: ScreenProps<'CupManage'>) {
   const [failure, setFailure] = useState<string | null>(null);
   const [pulling, setPulling] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
+  // `saving` is drawn one render late; the ref stops a second tap before that.
+  const sending = useRef(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -79,6 +81,16 @@ function CupManageRoom({ route, navigation }: ScreenProps<'CupManage'>) {
   );
 
   const choose = async (gameId: string, playOn: boolean) => {
+    if (sending.current) return;
+    sending.current = true;
+    try {
+      await saveChoice(gameId, playOn);
+    } finally {
+      sending.current = false;
+    }
+  };
+
+  const saveChoice = async (gameId: string, playOn: boolean) => {
     setSaving(gameId);
     setSaveError(null);
     setSaved(false);

@@ -22,7 +22,7 @@
 // «Send tilbake» åpner et ark med valgfri grunn, likt på iOS og Android. Når
 // ingenting venter, sier skjermen om alt er godkjent eller om en makker ikke
 // har levert ennå. Hvilken tavle som står, avgjør `approveScreenState`.
-import { useLayoutEffect, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { parForPlayer } from '../../../../lib/games/parDisplay';
@@ -86,6 +86,8 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
   // kort, slik webbens godkjenningsside viser dem.
   const scores = useTeamScores(localScores, bundle);
   const [busy, setBusy] = useState<Busy | null>(null);
+  // `busy` is drawn one render late; the ref stops a second tap before that.
+  const sending = useRef(false);
   // Feilen hører til kortet den kom fra. Åpner et annet kort seg (et trykk, eller
   // fordi kortet forsvant fra lista ved en ny henting), står den ikke der.
   const [error, setError] = useState<{ userId: string; text: string | null } | null>(null);
@@ -110,6 +112,19 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
   }, [navigation, gameName]);
 
   const run = async (
+    next: Busy,
+    action: () => Promise<Awaited<ReturnType<typeof approveScorecard>>>,
+  ) => {
+    if (sending.current) return;
+    sending.current = true;
+    try {
+      await answerCard(next, action);
+    } finally {
+      sending.current = false;
+    }
+  };
+
+  const answerCard = async (
     next: Busy,
     action: () => Promise<Awaited<ReturnType<typeof approveScorecard>>>,
   ) => {

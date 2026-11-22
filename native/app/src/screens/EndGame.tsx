@@ -131,6 +131,7 @@ import {
 } from '../lib/rosterCopy';
 import { teeShotMinimum } from '../lib/teeShotTeams';
 import { useGameBundle } from '../lib/useGameData';
+import { useLeaveWhenFocused } from '../lib/useLeaveWhenFocused';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
@@ -204,6 +205,8 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
   // tilbake ingenting, så svaret (og en feilmelding) lander på bekreft-siden.
   // Er runden ikke i gang lenger, står ingen sperre.
   const leavingRef = useRef(false);
+  const finishing = useRef(false);
+  const leaveWhenFocused = useLeaveWhenFocused(navigation);
   usePreventRemove(confirming && gameActive, ({ data }) => {
     if (leavingRef.current) navigation.dispatch(data.action);
     else if (!busy) setConfirming(false);
@@ -251,6 +254,9 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
    */
   const finish = useCallback(
     async (plan: FinishPlan, players: readonly BundlePlayer[]) => {
+      // `busy` is drawn one render late; the ref stops a second tap before that.
+      if (finishing.current) return;
+      finishing.current = true;
       setBusy(true);
       setNotice(null);
       try {
@@ -270,8 +276,12 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
                 ),
               });
         if (result.ok) {
-          leavingRef.current = true;
-          navigation.replace('Leaderboard', { gameId });
+          // A screen opened on top (a push notification) stays in front; the
+          // board opens when this screen is in front again.
+          leaveWhenFocused(() => {
+            leavingRef.current = true;
+            navigation.replace('Leaderboard', { gameId });
+          });
           return;
         }
         const text = describeEndRoundFailure(
@@ -288,10 +298,11 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
       } catch {
         setNotice({ text: describeEndRoundFailure('db'), at: 'confirm' });
       } finally {
+        finishing.current = false;
         setBusy(false);
       }
     },
-    [acknowledged, bundle, choices, gameId, navigation, refresh],
+    [acknowledged, bundle, choices, gameId, navigation, refresh, leaveWhenFocused],
   );
 
   /**
@@ -1200,6 +1211,7 @@ function ReminderPanel({ gameId }: { gameId: string }) {
     lastRemindedAt: string | null;
   } | null>(null);
   const [busy, setBusy] = useState(false);
+  const reminding = useRef(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -1250,6 +1262,9 @@ function ReminderPanel({ gameId }: { gameId: string }) {
    * oppdaterte seg etter trykket ville vært verre enn ingen linje.
    */
   const remind = useCallback(async () => {
+    // A double tap sends one reminder, not two mails to each player.
+    if (reminding.current) return;
+    reminding.current = true;
     setBusy(true);
     setNotice(null);
     setProblem(null);
@@ -1261,7 +1276,10 @@ function ReminderPanel({ gameId }: { gameId: string }) {
         return;
       }
       setProblem(describeReminderFailure(result.reason));
+    } catch {
+      setProblem(describeReminderFailure('network'));
     } finally {
+      reminding.current = false;
       setBusy(false);
     }
   }, [applyPreview, gameId]);

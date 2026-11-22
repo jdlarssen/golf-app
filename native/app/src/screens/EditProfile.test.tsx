@@ -35,6 +35,9 @@ import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
 const mockMe = 'user-me';
 const mockEmail = 'spiller@example.com';
 
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
+}));
 jest.mock('../session', () => ({
   useSession: () => ({ userId: mockMe, email: mockEmail }),
 }));

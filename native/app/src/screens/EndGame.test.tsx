@@ -218,7 +218,7 @@ async function renderScreen() {
     <EndGame
       {...({
         route: { params: { gameId: GAME_ID } },
-        navigation: { replace, dispatch, setOptions, goBack: jest.fn() },
+        navigation: { replace, dispatch, setOptions, goBack: jest.fn(), isFocused: () => true },
       } as unknown as ScreenProps<'EndGame'>)}
     />,
   );
@@ -581,7 +581,7 @@ describe('EndGame', () => {
       <EndGame
         {...({
           route: { params: { gameId: GAME_ID } },
-          navigation: { replace, dispatch, setOptions, goBack: jest.fn() },
+          navigation: { replace, dispatch, setOptions, goBack: jest.fn(), isFocused: () => true },
         } as unknown as ScreenProps<'EndGame'>)}
       />,
     );

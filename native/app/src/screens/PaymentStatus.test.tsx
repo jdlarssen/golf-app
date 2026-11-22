@@ -121,6 +121,37 @@ describe('PaymentStatus', () => {
     expect(mockRemind).toHaveBeenCalledWith('game-1');
   });
 
+  it('to raske trykk på «Purr» sender én gang, og lista hentes på nytt etterpå', async () => {
+    mockFetch.mockResolvedValue({ ok: true, overview: overview() });
+    mockRemind.mockResolvedValue({ ok: true, reminded: 2 });
+    await renderScreen();
+    await waitFor(() => expect(screen.getByTestId('payment-status-remind')).toBeTruthy());
+    const fetchesBefore = mockFetch.mock.calls.length;
+
+    const button = screen.getByTestId('payment-status-remind');
+    await act(async () => {
+      fireEvent.press(button);
+      fireEvent.press(button);
+    });
+
+    await waitFor(() => expect(screen.getByTestId('payment-status-remind-note')).toBeTruthy());
+    expect(mockRemind).toHaveBeenCalledTimes(1);
+    expect(mockFetch.mock.calls.length).toBe(fetchesBefore + 1);
+  });
+
+  it('to raske trykk på samme rad sender én lagring til svaret er kommet', async () => {
+    mockFetch.mockResolvedValue({ ok: true, overview: overview() });
+    let finish: (value: { ok: true }) => void = () => {};
+    mockSetPaid.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    await renderScreen();
+    await waitFor(() => expect(screen.getByTestId('payment-row-jonas')).toBeTruthy());
+
+    await fireEvent.press(screen.getByTestId('payment-row-jonas'));
+    await fireEvent.press(screen.getByTestId('payment-row-jonas'));
+    expect(mockSetPaid).toHaveBeenCalledTimes(1);
+    await act(async () => finish({ ok: true }));
+  });
+
   it('ingen å purre: ingen knapp; en trukket spiller og en gjest har sine merker', async () => {
     mockFetch.mockResolvedValue({
       ok: true,

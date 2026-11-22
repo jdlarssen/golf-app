@@ -1,7 +1,7 @@
 // #2752: bekreftelsen før en spiller fjernes fra lista, med nettets ord. Destruktive
 // flyter har egen skjerm. Serveren rører aldri kamper som alt er laget, og en spiller
 // som alt er borte, er suksess. Har cupen startet imens, sier skjermen det.
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { removeCupParticipant } from '../data/cupSetup';
@@ -16,6 +16,8 @@ export function CupRemovePlayer({ route, navigation }: ScreenProps<'CupRemovePla
   const insets = useSafeAreaInsets();
   const { cupId, userId, name, cupName, captain, returnTo } = route.params;
   const [busy, setBusy] = useState(false);
+  // `busy` is drawn one render late; the ref stops a second tap before that.
+  const sending = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [locked, setLocked] = useState(false);
   const firstName = firstNameOf(name);
@@ -23,9 +25,12 @@ export function CupRemovePlayer({ route, navigation }: ScreenProps<'CupRemovePla
   const leave = (notice?: 'participant_removed') => backTo(navigation, returnTo, { cupId, notice });
 
   const submit = async () => {
+    if (sending.current) return;
+    sending.current = true;
     setBusy(true);
     setError(null);
     const result = await removeCupParticipant(cupId, userId);
+    sending.current = false;
     if (result.ok) {
       // Har du gått tilbake mens svaret var på vei, er veiviseren der du står. Den skal stå i ro.
       if (navigation.isFocused()) leave('participant_removed');

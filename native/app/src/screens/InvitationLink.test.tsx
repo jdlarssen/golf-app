@@ -2,7 +2,7 @@
 // (`lib/auth/openInvitation.test.ts`). Her låses det skjermen svarer for: at et spill
 // åpnes etter tilbake-regelen, og at ingen tilstand blir en tom skjerm.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { InvitationLinkResult } from '../data/invitationLink';
 import { INVITATION_LINK_TEXT } from '../lib/invitationLinkCopy';
 import type { ScreenProps } from '../navigation';
@@ -10,6 +10,9 @@ import { stackNavigation } from '../test/stackNavigation';
 import { InvitationLink } from './InvitationLink';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
+}));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 jest.mock('../data/invitationLink', () => ({
   openInvitationLink: jest.fn(async () => mockResult),
@@ -46,6 +49,21 @@ describe('invitasjonen gir et spill', () => {
     const navigation = await renderLink([{ name: 'Home' }, { name: 'GameHome', params: { gameId: 'g1' } }, LINK_ROUTE]);
     expect(navigation.popTo).toHaveBeenCalledWith('GameHome', { gameId: 'g1' });
     expect(navigation.replace).not.toHaveBeenCalled();
+  });
+});
+
+describe('en annen skjerm i front', () => {
+  // Et push-varsel åpnet noe annet mens invitasjonen ble åpnet: den skjermen
+  // blir stående, og spillet åpnes ikke over den.
+  it('åpner invitasjonen, men flytter deg ikke', async () => {
+    let answer: (value: InvitationLinkResult) => void = () => {};
+    mockResult = new Promise((resolve) => (answer = resolve));
+    const navigation = await renderLink();
+    navigation.isFocused.mockReturnValue(false);
+    await act(async () => answer({ ok: true, gameId: 'g1' }));
+    expect(openInvitationLink).toHaveBeenCalledWith(TOKEN);
+    expect(navigation.replace).not.toHaveBeenCalled();
+    expect(navigation.popTo).not.toHaveBeenCalled();
   });
 });
 
