@@ -7270,7 +7270,11 @@
       "buttonLeague": "Open the league",
       "buttonLeagueText": "Open the league: {url}",
       "footer": "You're receiving this email because you're in the league and haven't turned on notifications. Turn them on in <link>your profile</link>, and you'll get the message as a notification instead.",
-      "footerText": "You're receiving this email because you're in the league and haven't turned on notifications. Turn them on in your profile ({url}), and you'll get the message as a notification instead."
+      "footerText": "You're receiving this email because you're in the league and haven't turned on notifications. Turn them on in your profile ({url}), and you'll get the message as a notification instead.",
+      "footerSummary": "You're receiving this email because you're in the league.",
+      "summaryHeading": "How {roundLabel} went",
+      "summaryBest": "Best in the round: {names} ({value}). {played} of {total} played the round.",
+      "summaryTable": "The table after {rounds, plural, one {# round} other {# rounds}}"
     },
     "missingScoreReminder": {
       "subject": "You have no score on {holeCount, plural, one {hole} other {holes}} {holes} in {gameName}",
