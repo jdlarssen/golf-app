@@ -286,7 +286,7 @@ export async function withdrawSelf(
   }
 
   if (myReq?.is_team_captain) {
-    return withdrawCaptainPreStart(admin, game, userId, myReq);
+    return withdrawCaptainPreStart(admin, game, userId, myReq, me.team_number);
   }
 
   // Sjekk om brukeren var en team-medlem (ikke kaptein selv) — vi vil ha
@@ -418,6 +418,7 @@ async function withdrawCaptainPreStart(
   game: GameSnapshot,
   userId: string,
   myReq: OwnRequest,
+  captainTeam: number | null,
 ): Promise<SelfWithdrawResult> {
   const team = await readCaptainTeam(admin, game.id, myReq.id);
   if (!team.ok) return { ok: false, error: 'db_error' };
@@ -460,18 +461,25 @@ async function withdrawCaptainPreStart(
     }
   }
 
-  // 2. Ubesvarte invitasjoner går med kapteinen.
+  // 2. Ubesvarte invitasjoner går med kapteinen. Bare plassene på kapteinens
+  // eget lag fjernes: en lagkamerat arrangøren har satt på et annet lag,
+  // beholder den plassen. Uten lagnummer har laget ingen plasser ennå (manuell
+  // godkjenning), og da er det ingen plass å fjerne.
   const unanswered: TeamChild[] = team.unanswered;
   if (unanswered.length > 0) {
-    const { error: rosterError } = await admin
-      .from('game_players')
-      .delete()
-      .eq('game_id', game.id)
-      .in(
-        'user_id',
-        unanswered.map((c) => c.user_id),
-      )
-      .is('accepted_at', null);
+    const { error: rosterError } =
+      captainTeam === null
+        ? { error: null }
+        : await admin
+            .from('game_players')
+            .delete()
+            .eq('game_id', game.id)
+            .eq('team_number', captainTeam)
+            .in(
+              'user_id',
+              unanswered.map((c) => c.user_id),
+            )
+            .is('accepted_at', null);
     if (rosterError) {
       console.error('[withdrawSelf] unconfirmed teammates delete failed', {
         gameId: game.id,

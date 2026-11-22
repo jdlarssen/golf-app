@@ -872,6 +872,13 @@ describe('withdrawSelf — kapteinen og laget før start (#2358)', () => {
       method: 'in',
       args: ['user_id', [TEAMMATE_ID, SECOND_MATE_ID]],
     });
+    // Audit 2026-11-20: only the seats on the captain's own team. A teammate the
+    // organiser placed on another team keeps that seat.
+    expect(adminMock.__fromCalls).toContainEqual({
+      table: 'game_players',
+      method: 'eq',
+      args: ['team_number', 1],
+    });
 
     // Begge får beskjed med det eksisterende varselet (eierens valg A).
     for (const recipient of [TEAMMATE_ID, SECOND_MATE_ID]) {
@@ -887,6 +894,37 @@ describe('withdrawSelf — kapteinen og laget før start (#2358)', () => {
       );
     }
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+  });
+
+  it('kaptein uten lagnummer → ingen lagkamerat-plasser slettes, bare egen plass', async () => {
+    // Audit 2026-11-20: with no team number the team has no seats of its own
+    // (manual approval). A teammate's seat then came from the organiser and is
+    // not the captain's to take.
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: {
+        games: [scheduledGame],
+        game_players: [
+          { data: { user_id: USER_ID, team_number: null }, error: null },
+          { data: [{ user_id: TEAMMATE_ID, accepted_at: null }], error: null },
+          ok, // DELETE egen rad
+        ],
+        game_registration_requests: [
+          captainReq,
+          {
+            data: [{ id: CHILD_REQ_ID, user_id: TEAMMATE_ID, status: 'pending', decided_by_user_id: null }],
+            error: null,
+          },
+          { data: [{ id: MY_REQ_ID }], error: null }, // egen rad → withdrawn
+          { data: [{ id: CHILD_REQ_ID }], error: null }, // invitasjonen → withdrawn
+        ],
+      },
+    });
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: true, kept: false });
+    // One roster delete only: the captain's own seat.
+    expect(writes('game_players')).toHaveLength(1);
+    expect(writes('game_registration_requests').map((c) => c.method)).toEqual(['update', 'update']);
   });
 
   it('kaptein alene → egen påmelding merkes trukket FØR spillerraden slettes, ingen DELETE av påmeldingen', async () => {

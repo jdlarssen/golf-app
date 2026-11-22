@@ -71,6 +71,7 @@ import {
 } from './teamDashboardCore';
 
 const CAPTAIN_ID = '11111111-1111-4111-8111-111111111111';
+const SECOND_FRIEND_SEAT_ID = '99999999-9999-4999-8999-999999999999';
 const GAME_ID = '22222222-2222-4222-8222-222222222222';
 const CAPTAIN_REQUEST_ID = '33333333-3333-4333-8333-333333333333';
 const ORGANISER_ID = '44444444-4444-4444-8444-444444444444';
@@ -563,6 +564,8 @@ describe('#2840: addTeamMemberCore — fill a free seat with a friend', () => {
   const notInRound: QueryResult[] = [
     { data: null, error: null }, // request for the friend in this game
   ];
+  /** Seats of the captain and the teammates: none, so every live row holds one. */
+  const noSeats: QueryResult = { data: [], error: null };
   /** `addTeammateRow`'s own check: no roster row for the friend (p17). */
   const notOnRoster: QueryResult = { data: null, error: null };
 
@@ -574,6 +577,7 @@ describe('#2840: addTeamMemberCore — fill a free seat with a friend', () => {
     adminMock = buildSupabaseMock([
       activeCaptain(),
       team({ id: CHILD_REQUEST_ID, user_id: MATE_ID, status: 'approved' }),
+      noSeats,
       liveFriend,
       ...notInRound,
       { data: { team_number: 4, flight_number: 4, withdrawn_at: null }, error: null }, // captain's roster row
@@ -669,10 +673,49 @@ describe('#2840: addTeamMemberCore — fill a free seat with a friend', () => {
         { id: CHILD_REQUEST_ID, user_id: MATE_ID, status: 'approved' },
         { id: OLD_REQUEST_ID, user_id: 'x', status: 'pending' },
       ),
+      noSeats,
     ]);
     expect(await add()).toEqual({ ok: false, error: 'team_full' });
     expect(anyWrites()).toEqual([]);
     expect(readFriendIdsMock).not.toHaveBeenCalled();
+  });
+
+  it('audit 2026-11-20: an old invitation for someone seated on another team holds no seat', async () => {
+    adminMock = buildSupabaseMock([
+      activeCaptain(),
+      team(
+        { id: CHILD_REQUEST_ID, user_id: MATE_ID, status: 'approved' },
+        { id: OLD_REQUEST_ID, user_id: SECOND_FRIEND_SEAT_ID, status: 'approved' },
+      ),
+      // The captain on team 4, the old invitee placed on team 7 by the organiser.
+      {
+        data: [
+          { user_id: CAPTAIN_ID, team_number: 4 },
+          { user_id: MATE_ID, team_number: 4 },
+          { user_id: SECOND_FRIEND_SEAT_ID, team_number: 7 },
+        ],
+        error: null,
+      },
+      liveFriend,
+      ...notInRound,
+      { data: { team_number: 4, flight_number: 4, withdrawn_at: null }, error: null }, // captain's roster row
+      CAPTAIN_DISPLAY,
+      notOnRoster,
+      { data: null, error: null }, // child insert
+      { data: [{ user_id: FRIEND_ID }], error: null }, // game_players upsert
+    ]);
+    expect(await add()).toEqual({ ok: true });
+  });
+
+  it('audit 2026-11-20: the seat read fails → db_error, nothing written', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([
+      activeCaptain(),
+      team({ id: CHILD_REQUEST_ID, user_id: MATE_ID, status: 'approved' }),
+      { data: null, error: DB_ERR },
+    ]);
+    expect(await add()).toEqual({ ok: false, error: 'db_error' });
+    expect(anyWrites()).toEqual([]);
   });
 
   it('a friend already in the round → already_registered, nothing written', async () => {
@@ -719,6 +762,7 @@ describe('#2840: addTeamMemberCore — fill a free seat with a friend', () => {
         { id: CHILD_REQUEST_ID, user_id: MATE_ID, status: 'approved' },
         { id: OLD_REQUEST_ID, user_id: 'gone', status: 'rejected' },
       ),
+      noSeats,
       liveFriend,
       ...notInRound,
       { data: { team_number: 4, flight_number: 4, withdrawn_at: null }, error: null },
@@ -748,6 +792,7 @@ describe('#2840: addTeamMemberCore — fill a free seat with a friend', () => {
     adminMock = buildSupabaseMock([
       activeCaptain('pending'),
       team({ id: OLD_REQUEST_ID, user_id: 'gone', status: 'withdrawn' }),
+      noSeats,
       liveFriend,
       ...notInRound,
       CAPTAIN_DISPLAY,
@@ -808,6 +853,14 @@ describe('loadTeamDashboard', () => {
         ],
         error: null,
       },
+      // Seats: the captain and the friend on team 1, the pending mate has none.
+      {
+        data: [
+          { user_id: CAPTAIN_ID, team_number: 1 },
+          { user_id: FRIEND_ID, team_number: 1 },
+        ],
+        error: null,
+      },
       {
         data: [
           { id: CAPTAIN_ID, name: 'Kari Kaptein', email: 'kari@example.com', nickname: null, is_guest: false },
@@ -845,6 +898,44 @@ describe('loadTeamDashboard', () => {
     expect(view.members[0]?.displayName).toBeTruthy();
   });
 
+  it.each([
+    ['the organiser put the friend on another team', [{ user_id: CAPTAIN_ID, team_number: 1 }, { user_id: FRIEND_ID, team_number: 2 }]],
+    ['the friend has a seat of their own and the team has none yet', [{ user_id: FRIEND_ID, team_number: null }]],
+  ])('audit 2026-11-20: an old invitation does not show a member placed elsewhere (%s)', async (_label, seats) => {
+    adminMock = buildSupabaseMock([
+      myRow({}),
+      {
+        data: [
+          { id: CAPTAIN_REQUEST_ID, user_id: CAPTAIN_ID, status: 'approved', is_team_captain: true, team_name: 'Lag A', team_request_id: null },
+          { id: CHILD_REQUEST_ID, user_id: MATE_ID, status: 'pending', is_team_captain: false, team_name: 'Lag A', team_request_id: CAPTAIN_REQUEST_ID },
+          { id: OLD_REQUEST_ID, user_id: FRIEND_ID, status: 'approved', is_team_captain: false, team_name: 'Lag A', team_request_id: CAPTAIN_REQUEST_ID },
+        ],
+        error: null,
+      },
+      { data: seats, error: null },
+      { data: [], error: null },
+    ]);
+
+    const view = await loadTeamDashboard(SHORT_ID, CAPTAIN_ID);
+    if (view.kind !== 'captain') throw new Error(`expected captain, got ${view.kind}`);
+    expect(view.members.map((m) => m.userId)).toEqual([MATE_ID]);
+  });
+
+  it('audit 2026-11-20: a failed seat read throws instead of showing everyone', async () => {
+    adminMock = buildSupabaseMock([
+      myRow({}),
+      {
+        data: [
+          { id: CAPTAIN_REQUEST_ID, user_id: CAPTAIN_ID, status: 'approved', is_team_captain: true, team_name: 'Lag A', team_request_id: null },
+          { id: CHILD_REQUEST_ID, user_id: MATE_ID, status: 'pending', is_team_captain: false, team_name: 'Lag A', team_request_id: CAPTAIN_REQUEST_ID },
+        ],
+        error: null,
+      },
+      { data: null, error: { message: 'boom' } },
+    ]);
+    await expect(loadTeamDashboard(SHORT_ID, CAPTAIN_ID)).rejects.toThrow();
+  });
+
   it('a teammate gets the member view of the captain\'s team', async () => {
     getGameByShortIdMock.mockResolvedValue(
       makeGame({
@@ -857,6 +948,7 @@ describe('loadTeamDashboard', () => {
     adminMock = buildSupabaseMock([
       myRow({ id: CHILD_REQUEST_ID, user_id: MATE_ID, is_team_captain: false, team_request_id: CAPTAIN_REQUEST_ID, status: 'pending' }),
       { data: [], error: null },
+      { data: [], error: null }, // seats
       { data: [], error: null },
     ]);
     expect(await loadTeamDashboard(SHORT_ID, MATE_ID)).toMatchObject({
