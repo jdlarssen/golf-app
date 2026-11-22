@@ -97,7 +97,8 @@ describe('fetchRoundHistory', () => {
         year: 2026,
         holeCount: 1,
         brutto: 5,
-        netto: -7,
+        // One hole: no netto, it needs all 18 (computeRoundScore, audit 2026-11-20).
+        netto: null,
         holes: [{ holeNumber: 1, strokes: 5, par: 4 }],
         putts: [2],
       }),
