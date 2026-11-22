@@ -20,5 +20,5 @@ export function nextUnfilledHole(
   holes: readonly number[] = ALL_HOLES,
 ): number {
   const filled = new Set(filledHoles);
-  return holes.find((hole) => !filled.has(hole)) ?? holes[0];
+  return holes.find((hole) => !filled.has(hole)) ?? holes[0] ?? 1;
 }

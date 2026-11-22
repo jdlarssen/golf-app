@@ -26,6 +26,14 @@ describe('standingsFormat — the league table numbers (#2638)', () => {
     expect([formatNetToPar(2.25, comma, 1), formatNetToPar(-0.5, comma, 1)]).toEqual(['+2,3', '−0,5']);
   });
 
+  it('a one-decimal average that rounds to zero is «E», not «+0,0»', () => {
+    expect([formatNetToPar(0.038, comma, 1), formatNetToPar(-0.04, comma, 1), formatNetToPar(0.05, comma, 1)]).toEqual([
+      'E',
+      'E',
+      '+0,1',
+    ]);
+  });
+
   it('points are plain, with one decimal only after a tie split', () => {
     expect([formatPoints(114, comma), formatPoints(36.5, comma)]).toEqual(['114', '36,5']);
   });

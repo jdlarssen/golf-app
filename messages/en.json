@@ -4361,7 +4361,7 @@
       "playerClubMembers": "{n, plural, one {# member} other {# members}}",
       "playerClubNextRound": "next round {date}",
       "playerClubNoRounds": "no rounds set up",
-      "playerCupProgress": "{played} of {total} matches played",
+      "playerCupProgress": "{played} of {total} {total, plural, one {match} other {matches}} played",
       "playerCupNoMatches": "no matches yet",
       "playerCupPlaying": "You're in",
       "playerCupOrganising": "You're organising",
@@ -6398,7 +6398,7 @@
       "emptyMatches": "No matches yet. Open «Assign & generate» above to set up the fixtures.",
       "openCupPage": "Open cup page",
       "openResults": "View results page",
-      "matchesSummary": "First to {points} points · {finished} of {total} matches played",
+      "matchesSummary": "First to {points} points · {finished} of {total} {total, plural, one {match} other {matches}} played",
       "mot": "vs",
       "unknownPlayer": "Unknown player",
       "startButton": "Start cup",
@@ -6439,9 +6439,9 @@
       },
       "deletedMessage": "The cup «{name}» has been deleted.",
       "headerSubtitlePending": "{team1} vs {team2} · points target set at start",
-      "matchesSummaryPending": "Points target set at start · {finished} of {total} matches played",
+      "matchesSummaryPending": "Points target set at start · {finished} of {total} {total, plural, one {match} other {matches}} played",
       "headerSubtitlePendingActive": "{team1} vs {team2} · the winner is decided when the cup finishes",
-      "matchesSummaryPendingActive": "Winner decided at finish · {finished} of {total} matches played",
+      "matchesSummaryPendingActive": "Winner decided at finish · {finished} of {total} {total, plural, one {match} other {matches}} played",
       "doors": {
         "heading": "Set up the cup",
         "oppsettTitle": "Setup",
@@ -6583,7 +6583,7 @@
       }
     },
     "public": {
-      "matchesSummary": "{finished} of {total} matches played",
+      "matchesSummary": "{finished} of {total} {total, plural, one {match} other {matches}} played",
       "noMatches": "No matches have been created yet.",
       "firstTo": "First to {points} points wins",
       "pointsPendingDraft": "Points target is set once the cup starts",

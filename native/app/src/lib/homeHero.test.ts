@@ -31,6 +31,13 @@ describe('pickHeroCard', () => {
     expect(rest.map((c) => c.gameId)).toEqual(['early', 'created']);
   });
 
+  it('sammenligner tidspunkt, ikke tekst (ulik brøk og tidssone)', () => {
+    // 09:00:00+02:00 = 07:00Z, altså eldre enn 07:30Z selv om teksten sorterer høyere.
+    const older = homeCard({ gameId: 'older', scheduledTeeOffAt: '2026-09-29T09:00:00+02:00' });
+    const newer = homeCard({ gameId: 'newer', scheduledTeeOffAt: '2026-09-29T07:30:00.000000+00:00' });
+    expect(pickHeroCard([older, newer]).hero?.gameId).toBe('newer');
+  });
+
   it('lar den første i lista vinne ved likt tidspunkt', () => {
     const a = homeCard({ gameId: 'a', scheduledTeeOffAt: '2026-09-29T08:00:00.000Z' });
     const b = homeCard({ gameId: 'b', scheduledTeeOffAt: '2026-09-29T08:00:00.000Z' });

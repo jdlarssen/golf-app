@@ -3,6 +3,10 @@
 import { nextUnfilledHole } from './primaryCtaState';
 
 describe('nextUnfilledHole', () => {
+  it('en tom hullliste gir hull 1, aldri undefined', () => {
+    expect(nextUnfilledHole([], [])).toBe(1);
+  });
+
   it.each<[string, number[], number]>([
     ['tom runde starter på hull 1', [], 1],
     ['hopper over hullene som er ført', [1, 2, 3], 4],

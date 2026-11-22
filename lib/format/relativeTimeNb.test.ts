@@ -72,4 +72,26 @@ describe('formatRelativeNb', () => {
   it('grense-tilfelle: 60 sekunder → «for 1 minutt siden» (minutt-grenen)', () => {
     expect(formatRelativeNb(ago(60 * SECOND), NOW)).toBe('for 1 minutt siden');
   });
+
+  it('59,5 minutter → «for 1 time siden», ikke «60 minutter»', () => {
+    expect(formatRelativeNb(ago(59.5 * MINUTE), NOW)).toBe('for 1 time siden');
+  });
+
+  it('59,5 sekunder → «for 1 minutt siden», ikke «60 sekunder»', () => {
+    expect(formatRelativeNb(ago(59.5 * SECOND), NOW)).toBe('for 1 minutt siden');
+  });
+
+  it('23,5 timer ut i neste kalenderdag → «i går», ikke «24 timer»', () => {
+    expect(formatRelativeNb(ago(23.5 * HOUR), NOW)).toBe('i går');
+  });
+
+  it('25 timer over to kalenderdager (man 23:30 → ons 00:30 Oslo) → «i forgårs»', () => {
+    const now = new Date('2026-05-26T22:30:00.000Z').getTime(); // ons 27. mai 00:30 Oslo
+    const then = new Date('2026-05-25T21:30:00.000Z').toISOString(); // man 25. mai 23:30 Oslo
+    expect(formatRelativeNb(then, now)).toBe('i forgårs');
+  });
+
+  it('en uparsbar tidsstempel kaster ikke', () => {
+    expect(formatRelativeNb('not-a-date', NOW)).toBe('');
+  });
 });

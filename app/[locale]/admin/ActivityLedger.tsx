@@ -1,5 +1,7 @@
-import { useTranslations } from 'next-intl';
-import { formatHHMMOslo } from '@/lib/i18n/format';
+import { useLocale, useTranslations } from 'next-intl';
+import { formatHHMMOslo, intlLocaleTag } from '@/lib/i18n/format';
+import { osloDayNumber } from '@/lib/format/osloCalendar';
+import type { AppLocale } from '@/i18n/routing';
 import type { ActivityEntry, ActivityKind } from '@/lib/admin/activityLedger';
 import { SmartLink } from '@/components/ui/SmartLink';
 
@@ -21,8 +23,24 @@ const ACTION_KEY = {
 /** Starts, ends and courses without a creator are the Sekretariat's own. */
 const SECRETARY_KINDS: ReadonlySet<ActivityKind> = new Set(['started', 'signed', 'newCourse']);
 
+/**
+ * The day of an entry that is not from today: «i går» for the day before, else
+ * «12. nov.». `null` on the same Oslo day, so today's rows keep just the clock.
+ * Oslo-pinned, so the server and the browser agree on the day (#648).
+ */
+export function ledgerDayLabel(iso: string, locale: AppLocale, nowMs: number = Date.now()): string | null {
+  const thenMs = new Date(iso).getTime();
+  if (!Number.isFinite(thenMs)) return null;
+  const days = osloDayNumber(nowMs) - osloDayNumber(thenMs);
+  if (days <= 0) return null;
+  const tag = intlLocaleTag(locale);
+  if (days === 1) return new Intl.RelativeTimeFormat(tag, { numeric: 'auto' }).format(-1, 'day');
+  return new Intl.DateTimeFormat(tag, { day: 'numeric', month: 'short', timeZone: 'Europe/Oslo' }).format(thenMs);
+}
+
 export function ActivityLedgerList({ rows }: { rows: ActivityEntry[] }) {
   const t = useTranslations('admin.dashboard');
+  const locale = useLocale() as AppLocale;
 
   const who = (row: ActivityEntry) =>
     row.who ?? (SECRETARY_KINDS.has(row.kind) ? t('actionsSecretary') : t('ledgerUnknown'));
@@ -46,11 +64,16 @@ export function ActivityLedgerList({ rows }: { rows: ActivityEntry[] }) {
             borderTop: i === 0 ? 'none' : '1px solid var(--row-divider-warm)',
           };
           const baseClass =
-            'grid grid-cols-[42px_1fr] items-baseline gap-2.5 px-3.5 py-2.5';
+            'grid grid-cols-[52px_1fr] items-baseline gap-2.5 px-3.5 py-2.5';
           const inner = (
             <>
               <span className="font-serif text-xs font-medium tabular-nums text-muted">
                 {formatHHMMOslo(row.ts)}
+                {ledgerDayLabel(row.ts, locale) && (
+                  <span className="block text-[10px] font-normal leading-tight">
+                    {ledgerDayLabel(row.ts, locale)}
+                  </span>
+                )}
               </span>
               <div>
                 <p className="text-[13px] text-text">

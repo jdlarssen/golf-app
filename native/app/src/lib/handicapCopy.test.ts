@@ -69,9 +69,23 @@ describe('formatRelativeAgoNb', () => {
     400 * DAY,
     // Et stempel i framtida (klokkeskjevhet) er «nå», som på nettet.
     -5 * MINUTE,
+    // Siste halve enhet før hver grense avrundes opp til neste enhet.
+    59.5 * SECOND,
+    59.5 * MINUTE,
+    23.5 * HOUR,
   ])('%s ms siden gir samme tekst som nettet', (ago) => {
     const iso = new Date(NOW - ago).toISOString();
     expect(formatRelativeAgoNb(iso, NOW)).toBe(formatRelativeNb(iso, NOW));
+  });
+});
+
+describe('formatRelativeAgoNb, kantene', () => {
+  const MIN = 60 * 1000;
+  it('59,5 minutter er «for 1 time siden», ikke «60 minutter»', () => {
+    expect(formatRelativeAgoNb(new Date(NOW - 59.5 * MIN).toISOString(), NOW)).toBe('for 1 time siden');
+  });
+  it('en uparsbar tid kaster ikke og gir tom tekst', () => {
+    expect(formatRelativeAgoNb('not-a-date', NOW)).toBe('');
   });
 });
 
