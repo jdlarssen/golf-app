@@ -48,8 +48,8 @@ async function getRequesterName(userId: string): Promise<string | null> {
  * do), closed less than 7 days ago (the owner's «Etter 7 dager»: nothing is
  * stored, nobody is notified, the page shows when the person may ask again),
  * or closed longer ago and now reopened as a fresh pending request.
- * `decided_at` marks the close: the rejection, or the leave/removal stamp
- * (`stampMembershipClosed`).
+ * When the close was is the rule's to say (`joinRequestWaitUntil`): the
+ * rejection or leave/removal stamp, or for a self-withdrawal the last request.
  *
  * Runs on the service role: RLS lets the requester only withdraw their own
  * pending row, and the guard trigger (0107) keeps the decision columns for
@@ -65,20 +65,21 @@ async function reopenOldRequest(
   const admin = getAdminClient();
   const { data: old, error: readError } = await admin
     .from('group_join_requests')
-    .select('id, status, decided_at')
+    .select('id, status, decided_at, created_at')
     .eq('group_id', groupId)
     .eq('user_id', userId)
     .maybeSingle<{
       id: string;
       status: Enums<'registration_request_status'>;
       decided_at: string | null;
+      created_at: string;
     }>();
   if (readError || !old) {
     console.error('[requestToJoin] old request read failed', readError ?? 'no row');
     return 'failed';
   }
   if (old.status === 'pending') return 'already_pending';
-  if (joinRequestWaitUntil(old.decided_at)) return 'wait';
+  if (joinRequestWaitUntil(old)) return 'wait';
   try {
     expectAffected(
       await admin

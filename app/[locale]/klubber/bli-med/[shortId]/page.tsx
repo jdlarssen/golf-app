@@ -104,10 +104,10 @@ export default async function BliMedPage({
   // Check for existing pending request (to show correct state without ?sent=1).
   const { data: existingRequest } = await admin
     .from('group_join_requests')
-    .select('id, status, decided_at')
+    .select('id, status, decided_at, created_at')
     .eq('group_id', group.id)
     .eq('user_id', user.id)
-    .maybeSingle<{ id: string; status: string; decided_at: string | null }>();
+    .maybeSingle<{ id: string; status: string; decided_at: string | null; created_at: string }>();
 
   const hasPendingRequest = existingRequest?.status === 'pending';
   const showSentState = sent || hasPendingRequest;
@@ -116,7 +116,7 @@ export default async function BliMedPage({
   // offering the form (the action refuses the same request).
   const waitUntil =
     !showSentState && existingRequest
-      ? joinRequestWaitUntil(existingRequest.decided_at)
+      ? joinRequestWaitUntil(existingRequest)
       : null;
 
   return (

@@ -32,7 +32,8 @@ import { requestToJoin } from './actions';
 const SHORT = 'abc123';
 const GROUP = { id: 'g-1', name: 'Solnedgang GK' };
 const DAY = 24 * 60 * 60 * 1000;
-const EIGHT_DAYS_AGO = new Date(Date.now() - 8 * DAY).toISOString();
+const daysAgo = (n: number) => new Date(Date.now() - n * DAY).toISOString();
+const EIGHT_DAYS_AGO = daysAgo(8);
 const DUPLICATE = { data: null, error: { code: '23505', message: 'duplicate key value' } };
 
 function form(): FormData {
@@ -66,6 +67,22 @@ const ADMINS = { data: [{ user_id: 'owner-1' }], error: null };
 const REQUESTER = { data: { name: 'Kari Nordmann', nickname: null, email: 'kari@example.test' }, error: null };
 
 describe('requestToJoin', () => {
+  it('self-withdrawn, last request 8 days ago → reopened, the admins are told', async () => {
+    setup(
+      [
+        { data: GROUP, error: null },
+        { data: null, error: null },
+        { data: { id: 'req-1', status: 'withdrawn', decided_at: null, created_at: EIGHT_DAYS_AGO }, error: null },
+        { data: [{ id: 'req-1' }], error: null },
+        ADMINS,
+        REQUESTER,
+      ],
+      DUPLICATE,
+    );
+    expect(await run()).toBe(`/klubber/bli-med/${SHORT}?sent=1`);
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+  });
+
   it.each(['rejected', 'approved', 'withdrawn'])(
     'old %s row → reopened as pending, the admins are told',
     async (status) => {
@@ -73,7 +90,7 @@ describe('requestToJoin', () => {
         [
           { data: GROUP, error: null }, // groups
           { data: null, error: null }, // not a member
-          { data: { id: 'req-1', status, decided_at: EIGHT_DAYS_AGO }, error: null }, // closed 8 days ago
+          { data: { id: 'req-1', status, decided_at: EIGHT_DAYS_AGO, created_at: daysAgo(30) }, error: null }, // closed 8 days ago
           { data: [{ id: 'req-1' }], error: null }, // reopen hit the row
           ADMINS,
           REQUESTER,
@@ -95,14 +112,17 @@ describe('requestToJoin', () => {
   );
 
   it.each([
-    ['rejected', 1],
-    ['withdrawn', 6.9],
-  ])('old %s row closed %s day(s) ago → wait: nothing stored, nobody told', async (status, days) => {
+    ['rejected 1 day ago', { status: 'rejected', decided_at: daysAgo(1), created_at: daysAgo(30) }],
+    ['left 6.9 days ago', { status: 'withdrawn', decided_at: daysAgo(6.9), created_at: daysAgo(30) }],
+    // A self-withdrawal cannot set decided_at (0107): the wait runs from the
+    // last request, so withdraw-and-ask-again cannot loop the owners' inbox.
+    ['self-withdrawn, last request 2 days ago', { status: 'withdrawn', decided_at: null, created_at: daysAgo(2) }],
+  ])('old row %s → wait: nothing stored, nobody told', async (_label, old) => {
     setup(
       [
         { data: GROUP, error: null },
         { data: null, error: null },
-        { data: { id: 'req-1', status, decided_at: new Date(Date.now() - days * DAY).toISOString() }, error: null },
+        { data: { id: 'req-1', ...old }, error: null },
       ],
       DUPLICATE,
     );
@@ -133,7 +153,7 @@ describe('requestToJoin', () => {
       [
         { data: GROUP, error: null },
         { data: null, error: null },
-        { data: { id: 'req-1', status: 'rejected', decided_at: EIGHT_DAYS_AGO }, error: null },
+        { data: { id: 'req-1', status: 'rejected', decided_at: EIGHT_DAYS_AGO, created_at: daysAgo(30) }, error: null },
         reopen,
       ],
       DUPLICATE,
