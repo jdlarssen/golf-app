@@ -13,6 +13,7 @@ import { SettlementTable } from '../SettlementTable';
 import { settlementForResult } from '@/lib/scoring/settlement';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
+import { nobodyWon } from '@/lib/leaderboard/podium';
 
 /**
  * Skins-grenen (issue #275) — bygger ScoringContext fra rå-rad-ene, kjører
@@ -147,6 +148,7 @@ export async function renderSkins(opts: {
       // SkinsView under ville gjenta samme resultat (#600). Vis kun kortet.
       mainContent = (chromeless, footerSlot) => (
         <HeadToHeadResult
+          nobodyWon={nobodyWon(result)}
           gameId={gameId}
           gameName={game.name}
           formatLabel={`Skins · ${result.scoring === 'net' ? tc('netto') : tc('brutto')}`}

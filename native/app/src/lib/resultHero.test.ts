@@ -128,6 +128,14 @@ describe('setningen', () => {
     expect(model.celebrates).toBe(false);
   });
 
+  it('modifisert stableford, alle på 0: uavgjort, ikke «Ingen vinner» (0 er par)', () => {
+    const zeros = stableford([['a', 0, 1], ['b', 0, 1]]);
+    const model = hero(zeros, bundle(['a', 'b'], { gameMode: 'modified_stableford' }));
+    expect(text(model.lines)).not.toEqual(['Ingen vinner']);
+    // The standard table: 0 points is nothing won.
+    expect(text(hero(zeros, bundle(['a', 'b'])).lines)).toEqual(['Ingen vinner']);
+  });
+
   it('alle på null poeng i wolf: «Ingen vinner», ingen feiring (revisjonen 20.11)', () => {
     const wolf = {
       kind: 'wolf',

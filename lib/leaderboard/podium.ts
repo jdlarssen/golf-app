@@ -158,23 +158,36 @@ function teamLines(result: Parameters<typeof teamResultBoard>[0]): Line[] {
   }));
 }
 
+/** The game's points table, when it changes what 0 means. */
+export type NobodyWonOptions = {
+  /** Modified stableford: 0 points is a par, a real score (audit 2026-11-20). */
+  modifiedStableford?: boolean;
+};
+
 /**
  * Everyone on zero of something you win (no skin taken, no bingo, every Nassau
- * section halved): nobody won. Par on a to-par board is a real score.
+ * section halved): nobody won. Par on a to-par board is a real score, and so
+ * is 0 in modified stableford (a par), where everyone on 0 is a tie.
  */
-function nobodyWonLines(lines: readonly Line[]): boolean {
+function nobodyWonLines(
+  result: ModeResult,
+  lines: readonly Line[],
+  opts: NobodyWonOptions,
+): boolean {
+  if (opts.modifiedStableford && result.kind === 'stableford') return false;
   return lines.length > 0 && lines.every((line) => line.total === 0 && line.unit !== 'toPar');
 }
 
 /**
- * The game ended with nobody winning anything (audit 2026-11-20). The podiums
- * on the web and the app's result say «Ingen vinner» and fire no confetti. The
+ * The game ended with nobody winning anything (audit 2026-11-20). The one
+ * home of the rule: the web podiums and duel card, the prize-giving and the
+ * app's result say «Ingen vinner» (or stay quiet) and fire no confetti. The
  * match play family and an empty field answer `false`: they have their own
- * wording. The one rule `podiumFor` uses too.
+ * wording. `podiumFor` uses it too.
  */
-export function nobodyWon(result: ModeResult): boolean {
+export function nobodyWon(result: ModeResult, opts: NobodyWonOptions = {}): boolean {
   const lines = linesOf(result);
-  return lines !== null && nobodyWonLines(lines);
+  return lines !== null && nobodyWonLines(result, lines, opts);
 }
 
 /**
@@ -184,11 +197,11 @@ export function nobodyWon(result: ModeResult): boolean {
  */
 export function podiumFor(
   result: ModeResult,
-  opts: { leagueFlight?: boolean } = {},
+  opts: { leagueFlight?: boolean } & NobodyWonOptions = {},
 ): Podium | null {
   const lines = linesOf(result);
   if (lines === null || lines.length === 0) return null;
-  if (nobodyWonLines(lines)) return null;
+  if (nobodyWonLines(result, lines, opts)) return null;
   if (leagueFlightHasNoPlace(opts.leagueFlight ?? false)) return null;
   const counts = new Map<number, number>();
   for (const line of lines) counts.set(line.rank, (counts.get(line.rank) ?? 0) + 1);

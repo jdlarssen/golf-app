@@ -304,8 +304,10 @@ export function resultHeroFor(opts: {
     leagueFlight,
   });
   const spec = headlineSpec(model, { leagueFlight });
-  const podium = podiumFor(result, { leagueFlight });
-  const sentence = sentenceFor(spec, podium, nobodyWon(result));
+  // Modified stableford: 0 points is a par, so everyone on 0 is a tie.
+  const modifiedStableford = game.gameMode === 'modified_stableford';
+  const podium = podiumFor(result, { leagueFlight, modifiedStableford });
+  const sentence = sentenceFor(spec, podium, nobodyWon(result, { modifiedStableford }));
   const soleTeam =
     podium?.winners.length === 1 && podium.winners[0].teamNumber !== null ? podium.winners[0] : null;
   return {

@@ -116,7 +116,7 @@ export function CeremonyStage({
                   score={(line) => ceremonyScore(line, units)}
                   srTitle={placeTitle(place)}
                   animate={animate}
-                  confettiKey={slot === 1 && isCurrent && animate ? step : null}
+                  confettiKey={slot === 1 && isCurrent && animate && !data.nobodyWon ? step : null}
                 />
               ) : (
                 <HiddenCard

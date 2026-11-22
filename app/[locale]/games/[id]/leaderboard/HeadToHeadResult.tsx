@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/LeaderboardBackLink';
 import { Kicker } from '@/components/ui/Kicker';
 import { formatRevealName } from '@/lib/names/formatRevealName';
-import { duelNobodyWon, headToHeadSummary } from '@/lib/leaderboard/headToHead';
+import { headToHeadSummary } from '@/lib/leaderboard/headToHead';
 import { LeaderboardShell } from './LeaderboardChrome';
 import { ConfettiBurst } from './ConfettiBurst';
 
@@ -35,6 +35,11 @@ export interface HeadToHeadSide {
 }
 
 export interface HeadToHeadResultProps {
+  /**
+   * Nobody won anything (audit 2026-11-20): the caller passes `nobodyWon(result)`
+   * from `lib/leaderboard/podium.ts`, the rule's one home. No confetti then.
+   */
+  nobodyWon?: boolean;
   /** Spill-id — sessionStorage-nøkkel + back-lenke. */
   gameId: string;
   /** Turneringsnavn — vises som kicker i header. */
@@ -97,11 +102,10 @@ export function HeadToHeadResult({
   backHref = '/',
   chromeless = false,
   footerSlot,
+  nobodyWon = false,
 }: HeadToHeadResultProps): JSX.Element {
   const t = useTranslations('leaderboard.h2h');
   const [replayKey, setReplayKey] = useState(0);
-  // Audit 2026-11-20: a 0–0 duel nobody won fires no confetti.
-  const nobodyWon = duelNobodyWon({ sideA, sideB, winnerUserId, lowerWins });
 
   useEffect(() => {
     if (nobodyWon) return;

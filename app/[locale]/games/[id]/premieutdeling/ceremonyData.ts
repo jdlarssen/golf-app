@@ -11,6 +11,7 @@ import {
   type CeremonyStep,
 } from '@/lib/games/ceremony';
 import { fetchSideWinners } from '../leaderboard/leaderboardContext';
+import { nobodyWon } from '@/lib/leaderboard/podium';
 
 export interface CeremonySidePrize {
   category: 'longest_drive' | 'closest_to_pin';
@@ -26,6 +27,11 @@ export interface CeremonyData {
   sidePrizes: CeremonySidePrize[];
   /** userId → the name as the podium shows it. A missing id is an unknown player. */
   names: Record<string, string>;
+  /**
+   * Everyone ended on zero (`nobodyWon`, audit 2026-11-20): the stage turns
+   * the top card without confetti, as the podiums do.
+   */
+  nobodyWon?: boolean;
 }
 
 /**
@@ -70,5 +76,13 @@ export async function loadCeremonyData({ game, players }: GameWithPlayers): Prom
     if (name) names[p.user_id] = name;
   }
 
-  return { places, steps: ceremonySteps(places, sidePrizes.length > 0), sidePrizes, names };
+  return {
+    places,
+    steps: ceremonySteps(places, sidePrizes.length > 0),
+    sidePrizes,
+    names,
+    nobodyWon:
+      result !== null &&
+      nobodyWon(result, { modifiedStableford: game.game_mode === 'modified_stableford' }),
+  };
 }

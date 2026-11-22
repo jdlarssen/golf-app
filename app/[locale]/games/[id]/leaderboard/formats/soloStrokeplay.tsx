@@ -25,6 +25,7 @@ import { formatRevealName } from '@/lib/names/formatRevealName';
 import { renderLiveBoard, type LiveBoardFollowOpts } from './liveBoard';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
+import { nobodyWon } from '@/lib/leaderboard/podium';
 
 /**
  * Solo strokeplay-grenen — bygger ScoringContext fra rå-rad-ene, kjører
@@ -284,6 +285,7 @@ export async function renderSoloStrokeplay(opts: {
         a.rank === b.rank ? null : a.rank < b.rank ? a.userId : b.userId;
       mainContent = (chromeless, footerSlot) => (
         <HeadToHeadResult
+          nobodyWon={nobodyWon(result)}
           gameId={gameId}
           gameName={game.name}
           formatLabel={`${tModes('solo_strokeplay')} · ${tc('netto')}`}

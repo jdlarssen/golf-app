@@ -307,6 +307,15 @@ describe('nobodyWon (audit 2026-11-20): the podiums say «ingen vinner»', () =>
     expect(nobodyWon(solo([['a', 34, 1], ['b', 30, 2]]))).toBe(false);
   });
 
+  it('modified stableford: 0 is a real score (par), so everyone on 0 is a tie, not «Ingen vinner»', () => {
+    const zeros = solo([['a', 0, 1], ['b', 0, 1]]);
+    expect(nobodyWon(zeros, { modifiedStableford: true })).toBe(false);
+    expect(podiumFor(zeros, { modifiedStableford: true })).not.toBeNull();
+    // The standard table: 0 points is nothing won.
+    expect(nobodyWon(zeros)).toBe(true);
+    expect(podiumFor(zeros)).toBeNull();
+  });
+
   it('is false for the match play family and an empty field', () => {
     const empty = solo([]);
     expect(nobodyWon(empty)).toBe(false);
