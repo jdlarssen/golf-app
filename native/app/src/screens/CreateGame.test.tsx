@@ -490,6 +490,35 @@ describe('CreateGame: scramble og shamble (#2753 D3b)', () => {
     publishGameMock.mockClear();
   });
 
+  it('Texas: ny lagstørrelse nullstiller lagene, spillerne står', async () => {
+    (fetchFormatCatalog as jest.Mock).mockResolvedValueOnce([
+      { slug: 'texas_scramble', label: 'Texas scramble', iconKey: 't', isPrimary: false, sortOrder: 10 },
+    ]);
+    await renderWizard();
+    await fireEvent.press(await screen.findByTestId('create-format-texas_scramble'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(screen.getByTestId('create-team-size-2'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(await screen.findByTestId('create-course-course-1'));
+    await fireEvent.press(screen.getByTestId('create-tee-tee-1'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(await screen.findByTestId('create-player-p2'));
+    await fireEvent.press(screen.getByTestId('create-team-me-1'));
+    await fireEvent.press(screen.getByTestId('create-team-p2-1'));
+    expect(screen.getByTestId('create-team-p2-1').props.accessibilityState).toMatchObject({ selected: true });
+
+    // Tilbake til oppsettet: firemannslag i stedet for par.
+    await fireEvent.press(screen.getByTestId('create-back'));
+    await fireEvent.press(screen.getByTestId('create-back'));
+    await fireEvent.press(screen.getByTestId('create-team-size-4'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+
+    expect(await screen.findByTestId('create-team-p2-1')).toBeTruthy();
+    expect(screen.getByTestId('create-team-p2-1').props.accessibilityState).toMatchObject({ selected: false });
+    expect(screen.getByTestId('create-team-me-1').props.accessibilityState).toMatchObject({ selected: false });
+  });
+
   it('Shamble: champagne viser antallet, brutto skjuler andelen', async () => {
     (fetchFormatCatalog as jest.Mock).mockResolvedValueOnce([
       { slug: 'shamble', label: 'Shamble / Champagne Scramble', iconKey: 's', isPrimary: false, sortOrder: 20 },
