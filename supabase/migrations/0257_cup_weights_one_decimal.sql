@@ -11,6 +11,12 @@
 --   select count(*) from public.tournaments
 --   where win_points <> round(win_points, 1) or tie_points <> round(tie_points, 1);
 
+-- Idempotent: safe to run again, and safe in either order against deploy
+-- (the parser already refuses these values).
+alter table public.tournaments
+  drop constraint if exists tournaments_win_points_one_decimal,
+  drop constraint if exists tournaments_tie_points_one_decimal;
+
 alter table public.tournaments
   add constraint tournaments_win_points_one_decimal
     check (win_points = round(win_points, 1)),
