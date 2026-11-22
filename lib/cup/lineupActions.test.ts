@@ -1032,6 +1032,24 @@ describe('revealCupLineupSession — målet følger med når kampene kommer (#19
     expect(pointsWritten()).toEqual([14.5]);
   });
 
+  it('only the reveal fails (no plan): the lineup is saved, the call answers OK and logs (audit 2026-11-20)', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const [cup, , tee, session] = revealContextReads();
+    const upToReveal = revealQueue().slice(0, accessReads().length + 5); // access, session, stamp, delete, insert, re-read
+    adminMock = buildSupabaseMock([...upToReveal, cup, { data: null, error: null }, tee, session]);
+    supabaseMock = buildSupabaseMock([]);
+    setUser('cap2');
+
+    const { submitCupLineup } = await import('./lineupActions');
+    expect(await submitCupLineup(submitForm())).toEqual({ error: '' });
+    expect(insertMatchesMock).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[cup] submitCupLineup reveal failed after a saved lineup',
+      expect.objectContaining({ error: 'missing_plan' }),
+    );
+    errorSpy.mockRestore();
+  });
+
   it('synken feiler → kampene står, avdekkingen svarer OK, feilen logges', async () => {
     // Den ene bevisste best-effort-lomma: kampene er viktigere enn tallet, og
     // neste avdekking (eller en ny lagring av planlagt antall) synker på nytt.
