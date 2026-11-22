@@ -268,6 +268,8 @@ export const PROFILE_TEXT = {
   // samme slags problem.
   loadFailedNote:
     'Fikk ikke tak i profilen din. Sjekk nettet — vi henter den på nytt neste gang du åpner Profil.',
+  // Knappen under feilen på «Rediger profil»: henter profilen på nytt.
+  retry: 'Prøv igjen',
   // Utloggingen kastet. En rad som blir trykkbar igjen uten et ord ville lest
   // som at appen hang.
   logoutFailedNote: 'Fikk ikke logget deg ut. Prøv igjen.',

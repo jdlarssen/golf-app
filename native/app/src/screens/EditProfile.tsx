@@ -163,6 +163,8 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
   const saving = useRef(false);
   const leaveWhenFocused = useLeaveWhenFocused(navigation);
   const [error, setError] = useState<string | null>(null);
+  // `attempt` teller «Prøv igjen»: hvert trykk henter profilen på nytt.
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -180,7 +182,7 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, attempt]);
 
   /** Ett felt om gangen, uten å miste de andre. */
   const setField = useCallback(<K extends keyof FormValues>(key: K, value: FormValues[K]) => {
@@ -256,6 +258,17 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
         <Text style={ui.error} testID="edit-profile-load-error">
           {PROFILE_TEXT.loadFailedNote}
         </Text>
+        <Pressable
+          style={ui.buttonSecondary}
+          onPress={() => {
+            setLoadFailed(false);
+            setAttempt((n) => n + 1);
+          }}
+          accessibilityRole="button"
+          testID="edit-profile-retry"
+        >
+          <Text style={ui.buttonSecondaryText}>{PROFILE_TEXT.retry}</Text>
+        </Pressable>
       </ScrollView>
     );
   }

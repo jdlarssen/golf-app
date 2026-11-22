@@ -153,6 +153,19 @@ describe('DeleteAccount', () => {
     expect(screen.queryByTestId('delete-account-banner')).toBeNull();
   });
 
+  it('«Prøv igjen» spør på nytt, og knappen kommer når svaret er der', async () => {
+    (fetchDeleteStatus as jest.Mock)
+      .mockResolvedValueOnce({ ok: false, reason: 'offline' })
+      .mockResolvedValueOnce({ ok: true, blocked: null });
+    await renderScreen();
+
+    await fireEvent.press(screen.getByTestId('delete-account-retry'));
+
+    expect(await screen.findByTestId('delete-account-submit')).toBeTruthy();
+    expect(screen.queryByTestId('delete-account-unreachable')).toBeNull();
+    expect(fetchDeleteStatus).toHaveBeenCalledTimes(2);
+  });
+
   it('viser hva som slettes, hva som beholdes og navnet ditt', async () => {
     await renderScreen();
 
