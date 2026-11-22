@@ -59,8 +59,17 @@ export function ceremonySupported(mode: GameMode): boolean {
  * action that turns the cards keeps the format check only; without an entry,
  * a remote or a stage it has nothing to drive.
  */
-export function ceremonyAvailable(mode: GameMode, leagueFlight: boolean): boolean {
-  return ceremonySupported(mode) && !leagueFlightHasNoPlace(leagueFlight);
+export function ceremonyAvailable(
+  mode: GameMode,
+  leagueFlight: boolean,
+  /**
+   * Owner 22.11 («Skjul den»): a game nobody won (`nobodyWon`, everyone on
+   * zero) has no prize-giving either. Entries read it through
+   * `ceremonyOpenFor`, which builds the result.
+   */
+  nobodyWon = false,
+): boolean {
+  return ceremonySupported(mode) && !leagueFlightHasNoPlace(leagueFlight) && !nobodyWon;
 }
 
 /**

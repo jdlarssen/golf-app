@@ -21,9 +21,9 @@ import { TvClock } from './TvClock';
 import { TvFeed } from './TvFeed';
 import { CeremonyStage } from './CeremonyStage';
 import { CeremonyPoller } from './CeremonyPoller';
-import { CEREMONY_MAX_STEP, ceremonyAvailable } from '@/lib/games/ceremony';
+import { CEREMONY_MAX_STEP } from '@/lib/games/ceremony';
 import { leagueFlightHasNoPlace } from '@/lib/games/finishedResultBadge';
-import { loadCeremonyData } from '@/app/[locale]/games/[id]/premieutdeling/ceremonyData';
+import { ceremonyOpenFor, loadCeremonyData } from '@/app/[locale]/games/[id]/premieutdeling/ceremonyData';
 import { readBoardRows, readCourseName } from '../boardRows';
 
 type Params = Promise<{ token: string }>;
@@ -146,7 +146,8 @@ export default async function SpectateTvPage({
     // #2298: a podium format can hold a prize-giving the organiser drives
     // from the phone. The step is read fresh, and the poller asks for it on
     // «Ferdig spilt» too, so «Start premieutdelingen» reaches the TV.
-    if (ceremonyAvailable(game.game_mode, game.league_round_id != null)) {
+    // Owner 22.11 («Skjul den»): not for a game nobody won either.
+    if (await ceremonyOpenFor(game)) {
       const { data: state, error } = await admin
         .from('games')
         .select('ceremony_step')

@@ -403,10 +403,17 @@ describe('ceremonyAvailable (#2712, #2850)', () => {
   it('a format without a podium never has one', () => {
     expect(ceremonyAvailable('singles_matchplay', false)).toBe(false);
   });
+  // Owner 22.11 («Skjul den»): a game nobody won has no prize-giving.
+  it('a game nobody won has none', () => {
+    expect(ceremonyAvailable('stableford', false, true)).toBe(false);
+    expect(ceremonyAvailable('stableford', false, false)).toBe(true);
+  });
 
   // Every way into the prize-giving asks the same rule: the entries on the
   // game page, the organiser view and the admin page, the remote and the TV.
-  it('every entry reads ceremonyAvailable, none ceremonySupported alone', () => {
+  // `ceremonyOpenFor` (premieutdeling/ceremonyData.ts) is ceremonyAvailable
+  // with the game's «nobody won» answer, so every entry hides it then.
+  it('every entry reads ceremonyOpenFor, none ceremonySupported alone', () => {
     const root = path.resolve(__dirname, '../..');
     const sites = [
       'app/[locale]/games/[id]/(home)/page.tsx',
@@ -416,7 +423,8 @@ describe('ceremonyAvailable (#2712, #2850)', () => {
     ];
     for (const site of sites) {
       const src = fs.readFileSync(path.join(root, site), 'utf8');
-      expect(src, site).toContain('ceremonyAvailable(');
+      expect(src, site).toContain('ceremonyOpenFor(');
+      expect(src, site).not.toContain('ceremonyAvailable(');
       expect(src, site).not.toContain('ceremonySupported(');
     }
     // The organiser view gets the answer from the game page as a prop.
