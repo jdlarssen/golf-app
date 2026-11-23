@@ -147,23 +147,30 @@ describe('Kjent avvik', () => {
   // best counts. Patsome is not in vedlegg C; its four-ball part is the
   // «Four-Ball Stableford 85 %» row, and its greensome and foursomes parts
   // already follow their rows. Banehandicap 20 at 85 % is 17: one stroke on
-  // index 2, so a 5 on a par 4 is net 4. The engine gives the full 20 (two
-  // strokes on index 2, net 3).
+  // index 1-17 and none on 18, so a 5 on a par 4 is net 4 on index 17 and net
+  // 5 on index 18. 80 % (16) would give no stroke on 17 and 90 % (18) one on
+  // 18, so the pair pins 85 %. The engine gives the full 20: net 4 on both.
   it.fails('F24: patsomes four-ball-del gir 85 % av banehandicapet', () => {
-    const holes = PAR4_18.map((h) => (h.number === 1 ? { ...h, strokeIndex: 2 } : h.number === 2 ? { ...h, strokeIndex: 1 } : h));
+    const holes = PAR4_18.map((h) =>
+      h.number === 1 ? { ...h, strokeIndex: 17 } : h.number === 2 ? { ...h, strokeIndex: 18 } : h.number === 17 ? { ...h, strokeIndex: 1 } : h.number === 18 ? { ...h, strokeIndex: 2 } : h,
+    );
     const result = computePatsome(
       ctx(
         'patsome',
         { kind: 'patsome', team_size: 2, teams_count: 1, patsome_scoring: 'net' },
         team(20, 20),
         holes,
-        [
-          { userId: 'a', holeNumber: 1, gross: 5 },
-          { userId: 'b', holeNumber: 1, gross: 5 },
-        ],
+        [1, 2].flatMap((holeNumber) => [
+          { userId: 'a', holeNumber, gross: 5 },
+          { userId: 'b', holeNumber, gross: 5 },
+        ]),
       ),
     );
-    const hole1 = result.teams[0].holes.find((h) => h.holeNumber === 1)!;
-    expect(hole1.players.map((p) => p.netStrokes)).toEqual([4, 4]);
+    const net = (holeNumber: number) =>
+      result.teams[0].holes.find((h) => h.holeNumber === holeNumber)!.players.map((p) => p.netStrokes);
+    expect([net(1), net(2)]).toEqual([
+      [4, 4],
+      [5, 5],
+    ]);
   });
 });
