@@ -1554,4 +1554,133 @@ describe('Hole', () => {
     await fireEvent.press(screen.getByText('Fortsett runden'));
     expect(screen.queryByTestId('sync-sheet')).toBeNull();
   });
+
+  // #2928: et ført slag eller en ført putt gir et lett dunk (`landingTap` →
+  // `impactAsync`, mocket i `__mocks__/expo-haptics.ts`). Nullstill, utslag og
+  // et låst sete er stille, så dunket alltid betyr «ført».
+  describe('vibrasjon når et slag føres (#2928)', () => {
+    const { impactAsync } = require('expo-haptics') as { impactAsync: jest.Mock };
+    const bbb = () => ({ ...mockSoloBundle, game: { ...GAME_BASE, gameMode: 'bingo_bango_bongo' } });
+
+    it('et tall i skinna gir ett dunk', async () => {
+      await renderHole();
+      await waitFor(() => expect(screen.getByTestId('rail-option-4')).toBeTruthy());
+      await fireEvent.press(screen.getByTestId('rail-option-4'));
+      expect(writeScore).toHaveBeenCalledTimes(1);
+      expect(impactAsync).toHaveBeenCalledTimes(1);
+    });
+
+    it('−, + og et valg i «Annet»-arket gir ett dunk hver', async () => {
+      mockState.scores = [localScore('me', 6, null)];
+      await renderHole();
+      await waitFor(() => expect(screen.getByTestId('flight-row-me')).toBeTruthy());
+      await fireEvent.press(screen.getByTestId('flight-row-me'));
+      expect(impactAsync).not.toHaveBeenCalled();
+
+      await fireEvent.press(screen.getByTestId('rail-step-down'));
+      expect(impactAsync).toHaveBeenCalledTimes(1);
+      await fireEvent.press(screen.getByTestId('rail-step-up'));
+      expect(impactAsync).toHaveBeenCalledTimes(2);
+      await fireEvent.press(screen.getByTestId('rail-other'));
+      expect(impactAsync).toHaveBeenCalledTimes(2);
+      await fireEvent.press(screen.getByTestId('specific-value-9'));
+      expect(impactAsync).toHaveBeenCalledTimes(3);
+      expect(writeScore).toHaveBeenCalledTimes(3);
+    });
+
+    it('et valg av putter gir ett dunk, både chip og stepper', async () => {
+      await renderHole();
+      await waitFor(() => expect(screen.getByTestId('rail-putts-toggle')).toBeTruthy());
+      await fireEvent.press(screen.getByTestId('rail-putts-toggle'));
+      await waitFor(() => expect(screen.getByTestId('rail-putts')).toBeTruthy());
+      expect(impactAsync).not.toHaveBeenCalled();
+
+      await fireEvent.press(screen.getByTestId('rail-putts-2'));
+      expect(impactAsync).toHaveBeenCalledTimes(1);
+      await fireEvent.press(screen.getByTestId('rail-putts-plus'));
+      expect(impactAsync).toHaveBeenCalledTimes(2);
+      await waitFor(() => expect(screen.getByTestId('rail-putts-more')).toBeTruthy());
+      await fireEvent.press(screen.getByTestId('rail-putts-more'));
+      expect(impactAsync).toHaveBeenCalledTimes(3);
+      expect(writeScore).toHaveBeenCalledTimes(3);
+    });
+
+    it('uten skinne: −, + og første føring på kortet gir ett dunk hver', async () => {
+      mockState.bundle = bbb();
+      await renderHole();
+      await waitFor(() => expect(screen.getByTestId('player-card-me')).toBeTruthy());
+
+      await fireEvent.press(screen.getByTestId('player-card-me'));
+      expect(impactAsync).toHaveBeenCalledTimes(1);
+      await fireEvent.press(screen.getByTestId('player-me-plus'));
+      expect(impactAsync).toHaveBeenCalledTimes(2);
+      await fireEvent.press(screen.getByTestId('player-me-minus'));
+      expect(impactAsync).toHaveBeenCalledTimes(3);
+      expect(writeScore).toHaveBeenCalledTimes(3);
+    });
+
+    it('nullstill på kortet er stille', async () => {
+      mockState.bundle = bbb();
+      mockState.scores = [localScore('me', 5, null)];
+      await renderHole();
+      await waitFor(() => expect(screen.getByTestId('player-me-undo')).toBeTruthy());
+      await fireEvent.press(screen.getByTestId('player-me-undo'));
+      expect(writeScore).toHaveBeenCalledWith(expect.objectContaining({ userId: 'me', strokes: null }));
+      expect(impactAsync).not.toHaveBeenCalled();
+    });
+
+    it('«Angre» og X i arket er stille', async () => {
+      mockState.scores = [localScore('me', 6, null)];
+      await renderHole();
+      await waitFor(() => expect(screen.getByTestId('flight-row-me')).toBeTruthy());
+      await fireEvent.press(screen.getByTestId('flight-row-me'));
+
+      await fireEvent.press(screen.getByTestId('rail-undo'));
+      expect(writeScore).toHaveBeenCalledTimes(1);
+      await fireEvent.press(screen.getByTestId('rail-other'));
+      await fireEvent.press(screen.getByTestId('specific-value-clear'));
+      expect(writeScore).toHaveBeenCalledTimes(2);
+      expect((writeScore as jest.Mock).mock.calls.map((c) => c[0].strokes)).toEqual([null, null]);
+      expect(impactAsync).not.toHaveBeenCalled();
+    });
+
+    it('et valg av utslag er stille', async () => {
+      mockState.bundle = mockTeeShotBundle;
+      await renderHole(7);
+      await waitFor(() => expect(screen.getByTestId('tee-shot-a-per')).toBeTruthy());
+      await fireEvent.press(screen.getByTestId('tee-shot-a-per'));
+      await waitFor(() => expect(writeTeeShot).toHaveBeenCalledTimes(1));
+      expect(impactAsync).not.toHaveBeenCalled();
+    });
+
+    it('et låst sete er stille', async () => {
+      mockState.bundle = {
+        ...mockSoloBundle,
+        players: [
+          ...mockSoloBundle.players,
+          { ...PLAYER_BASE, userId: 'done', name: 'Levert Larsen', courseHandicap: 5, submittedAt: '2026-08-30T09:30:00.000Z' },
+        ],
+      };
+      await renderHole();
+      await waitFor(() => expect(screen.getByTestId('flight-row-done')).toBeTruthy());
+      await fireEvent.press(screen.getByTestId('flight-row-done'));
+      expect(screen.getByTestId('score-rail-heading').props.children).toBe('Meg Selv');
+      expect(writeScore).not.toHaveBeenCalled();
+      expect(impactAsync).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['kaster', () => { throw new Error('ingen native modul'); }],
+      ['avviser', () => Promise.reject(new Error('ingen vibrator'))],
+    ])('slaget føres likevel når impactAsync %s, og ingen feil vises', async (_kind, fail) => {
+      impactAsync.mockImplementationOnce(fail);
+      await renderHole();
+      await waitFor(() => expect(screen.getByTestId('rail-option-4')).toBeTruthy());
+      await fireEvent.press(screen.getByTestId('rail-option-4'));
+      expect(impactAsync).toHaveBeenCalledTimes(1);
+      expect(writeScore).toHaveBeenCalledWith(expect.objectContaining({ userId: 'me', strokes: 4 }));
+      await waitFor(() => expect(screen.getByTestId('score-rail-heading').props.children).toBe('Makker Makkersen'));
+      expect(screen.queryByTestId('hole-save-error')).toBeNull();
+    });
+  });
 });
