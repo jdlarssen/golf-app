@@ -1115,6 +1115,9 @@ export function GameForm({
             field under «Tellemåte» instead (ShambleSetup below). */}
         {showsGeneralAllowanceField(gameMode) && (
           <AllowanceField
+            // #2942: a new default remounts the field, so Brutto → Netto after
+            // a format switch lands on the new format's default.
+            key={defaultHcpAllowancePct(gameMode, teamSize)}
             fieldName="hcp_allowance_pct"
             defaultPct={defaultHcpAllowancePct(gameMode, teamSize)}
             legend={t('scoring.legend')}
