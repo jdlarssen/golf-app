@@ -29,7 +29,9 @@ function barStyle(disabled: boolean): CSSProperties {
     border: 'none',
     borderRadius: 16,
     background: disabled ? 'var(--disabled-bg)' : 'var(--primary)',
-    color: disabled ? 'var(--disabled-fg)' : 'var(--bg-tint)',
+    // Enabled text colour comes from the className (`text-bg-tint dark:text-bg`):
+    // linen on forest by day, forest-black on sage at night (2.10:1 -> 6.35:1).
+    ...(disabled ? { color: 'var(--disabled-fg)' } : {}),
     fontFamily: 'var(--font-sans)',
     fontWeight: 600,
     fontSize: 15,
@@ -40,20 +42,28 @@ function barStyle(disabled: boolean): CSSProperties {
   };
 }
 
+const ENABLED_TEXT = 'text-bg-tint dark:text-bg';
+
 export function BottomActionBar(props: BottomActionBarProps): JSX.Element {
   const { label, href, disabled = false } = props;
   const style = barStyle(disabled);
 
   if (disabled || !href) {
     return (
-      <button type="button" disabled={disabled} aria-label={label} style={style}>
+      <button
+        type="button"
+        disabled={disabled}
+        aria-label={label}
+        style={style}
+        className={disabled ? undefined : ENABLED_TEXT}
+      >
         {label}
       </button>
     );
   }
 
   return (
-    <SmartLink href={href} aria-label={label} style={style}>
+    <SmartLink href={href} aria-label={label} style={style} className={ENABLED_TEXT}>
       {label}
     </SmartLink>
   );

@@ -44,4 +44,14 @@ describe('LedgerHeader', () => {
     const headerDiv = container.querySelector('div');
     expect(headerDiv?.style.background).toContain('var(--surface-strong)');
   });
+
+  it('bruker det gylne tekstsvaret for mørke flater, ikke --accent-text (1,92:1 i lys modus)', () => {
+    render(
+      <LedgerHeader leftLabel="Spill" rightLabel="Status" gridTemplateColumns="1fr 84px 14px" />,
+    );
+    for (const label of ['Spill', 'Status']) {
+      expect(screen.getByText(label).className).toContain('text-accent-on-strong');
+      expect(screen.getByText(label).className).not.toContain('text-accent-text');
+    }
+  });
 });

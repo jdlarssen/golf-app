@@ -29,10 +29,10 @@ export function LedgerHeader({
         color: 'var(--bg-tint)',
       }}
     >
-      <span className="font-sans text-xs font-semibold text-accent-text">
+      <span className="font-sans text-xs font-semibold text-accent-on-strong">
         {leftLabel}
       </span>
-      <span className="text-right font-sans text-xs font-semibold text-accent-text">
+      <span className="text-right font-sans text-xs font-semibold text-accent-on-strong">
         {rightLabel}
       </span>
       <span />

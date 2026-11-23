@@ -27,4 +27,12 @@ describe('BottomActionBar', () => {
     expect(btn.tagName).toBe('BUTTON');
     expect((btn as HTMLButtonElement).disabled).toBe(false);
   });
+
+  it('enabled text flips to the dark ink at night (linen on sage was 2.10:1)', () => {
+    render(<BottomActionBar label="Neste hull · 8" href="/games/g1/holes/8" />);
+    const link = screen.getByRole('link', { name: 'Neste hull · 8' });
+    expect(link.className).toContain('text-bg-tint');
+    expect(link.className).toContain('dark:text-bg');
+    expect(link.style.color).toBe('');
+  });
 });
