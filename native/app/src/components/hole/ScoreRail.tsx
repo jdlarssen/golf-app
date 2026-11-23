@@ -26,7 +26,8 @@
 //   svart strek på 3, og bare navnet på resultatet. Par foreslås som svart
 //   flate. Ingen overskrift og ingen nederste rad.
 import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { strokesOnHole, type StrokeTerm } from '../../../../../lib/scorecard/scoreRail';
 import { MAX_PUTTS, MIN_PUTTS } from '../../../../../lib/scorecard/puttEntry';
@@ -198,14 +199,14 @@ export function ScoreRail({
         <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.allScored, { color: colors.muted }]} testID="score-rail-all-scored">
           {ALL_SCORED}
         </Text>
-        <Pressable
+        <Tap
           style={[styles.nextHole, { backgroundColor: colors.primary }]}
           onPress={onNext}
           accessibilityRole="button"
           testID="score-rail-next-hole"
         >
           <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.nextHoleText, { color: colors.onPrimary }]}>{nextLabel}</Text>
-        </Pressable>
+        </Tap>
       </View>
     );
   }
@@ -273,7 +274,7 @@ export function ScoreRail({
               ? { borderWidth: 2, borderColor: colors.primary }
               : { borderWidth: 0 };
           return (
-            <Pressable
+            <Tap
               key={option.strokes}
               onPress={() => onPick(option.strokes)}
               style={[styles.option, { minHeight: hole.railButton, backgroundColor: fill }, frame]}
@@ -306,10 +307,10 @@ export function ScoreRail({
               >
                 {shortTermText(option, par)}
               </Text>
-            </Pressable>
+            </Tap>
           );
         })}
-        <Pressable
+        <Tap
           onPress={onOther}
           style={[
             styles.option,
@@ -337,12 +338,12 @@ export function ScoreRail({
               </Text>
             </>
           )}
-        </Pressable>
+        </Tap>
       </View>
 
       {active.score != null ? (
         <View style={styles.correctRow}>
-          <Pressable
+          <Tap
             onPress={() => onStep(-1)}
             style={stepFrame}
             testID="rail-step-down"
@@ -350,8 +351,8 @@ export function ScoreRail({
             accessibilityLabel={`-1 for ${active.name}`}
           >
             <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.stepText, { color: colors.text }]}>−</Text>
-          </Pressable>
-          <Pressable
+          </Tap>
+          <Tap
             onPress={() => onStep(1)}
             style={stepFrame}
             testID="rail-step-up"
@@ -359,8 +360,8 @@ export function ScoreRail({
             accessibilityLabel={`+1 for ${active.name}`}
           >
             <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.stepText, { color: colors.text }]}>+</Text>
-          </Pressable>
-          <Pressable
+          </Tap>
+          <Tap
             onPress={onUndo}
             style={[styles.linkButton, styles.undo]}
             testID="rail-undo"
@@ -368,7 +369,7 @@ export function ScoreRail({
             accessibilityLabel={`Nullstill scoren for ${active.name}`}
           >
             <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.undoText, { color: colors.muted }]}>Angre</Text>
-          </Pressable>
+          </Tap>
         </View>
       ) : null}
 
@@ -379,7 +380,7 @@ export function ScoreRail({
             <View style={styles.puttsRow} testID="rail-putts">
               {/* «Putter» slår føringen av igjen. Chipene har navnet i
                   etiketten sin. */}
-              <Pressable
+              <Tap
                 onPress={onPuttsToggle}
                 style={styles.puttsToggle}
                 testID="rail-putts-toggle"
@@ -388,7 +389,7 @@ export function ScoreRail({
                 accessibilityLabel="Registrer putter"
               >
                 <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.puttsLabel, { color: colors.muted }]}>{PUTTS_LABEL}</Text>
-              </Pressable>
+              </Tap>
               {/* key: «5+»-stepperen skal ikke følge skinna til neste spiller. */}
               <PuttsChips
                 key={active.seatId}
@@ -398,7 +399,7 @@ export function ScoreRail({
               />
             </View>
           ) : puttsAvailable ? (
-            <Pressable
+            <Tap
               onPress={onPuttsToggle}
               style={styles.linkButton}
               testID="rail-putts-toggle"
@@ -407,10 +408,10 @@ export function ScoreRail({
               accessibilityLabel="Registrer putter"
             >
               <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.linkText, { color: colors.primary }]}>Registrer putter</Text>
-            </Pressable>
+            </Tap>
           ) : null}
           {skipTo != null ? (
-            <Pressable
+            <Tap
               onPress={onSkip}
               style={[styles.linkButton, styles.skip]}
               testID="score-rail-skip"
@@ -418,7 +419,7 @@ export function ScoreRail({
               accessibilityLabel={`Hopp over, gå til ${skipTo}`}
             >
               <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.linkText, { color: colors.primary }]}>{`Neste: ${skipTo}`}</Text>
-            </Pressable>
+            </Tap>
           ) : null}
         </View>
       ) : null}
@@ -461,7 +462,7 @@ function PuttsChips({
   return (
     <View style={styles.chips}>
       {CHIP_VALUES.map((n) => (
-        <Pressable
+        <Tap
           key={n}
           onPress={() => {
             setPlusOpen(false);
@@ -474,10 +475,10 @@ function PuttsChips({
           accessibilityLabel={`${n} ${n === 1 ? 'putt' : 'putter'} på ${name}`}
         >
           <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={chipText(value === n)}>{n}</Text>
-        </Pressable>
+        </Tap>
       ))}
       {!showStepper ? (
-        <Pressable
+        <Tap
           onPress={() => {
             setPlusOpen(true);
             onSelect(PLUS_START);
@@ -488,7 +489,7 @@ function PuttsChips({
           accessibilityLabel={`Tre eller flere putter på ${name}`}
         >
           <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={chipText(false)}>{`${PLUS_START}+`}</Text>
-        </Pressable>
+        </Tap>
       ) : (
         <View
           style={[
@@ -497,7 +498,7 @@ function PuttsChips({
           ]}
           testID="rail-putts-stepper"
         >
-          <Pressable
+          <Tap
             onPress={() => onSelect(Math.max(MIN_PUTTS, stepperValue - 1))}
             disabled={stepperValue <= MIN_PUTTS}
             style={[styles.chipStep, stepperValue <= MIN_PUTTS && styles.dimmed]}
@@ -506,11 +507,11 @@ function PuttsChips({
             accessibilityLabel={`Færre putter på ${name}`}
           >
             <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={chipText(false)}>−</Text>
-          </Pressable>
+          </Tap>
           <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={chipText(false)} accessibilityLabel={`${stepperValue} putter`}>
             {stepperValue}
           </Text>
-          <Pressable
+          <Tap
             onPress={() => onSelect(Math.min(MAX_PUTTS, stepperValue + 1))}
             disabled={stepperValue >= MAX_PUTTS}
             style={[styles.chipStep, stepperValue >= MAX_PUTTS && styles.dimmed]}
@@ -519,7 +520,7 @@ function PuttsChips({
             accessibilityLabel={`Flere putter på ${name}`}
           >
             <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={chipText(false)}>+</Text>
-          </Pressable>
+          </Tap>
         </View>
       )}
     </View>

@@ -174,6 +174,12 @@ export type ThemeColors = {
   placeDiscHighlight: string;
   placeDiscEdge: string;
   placeDiscRing: string;
+  /**
+   * #2928: trykk-tilstanden på en knapp (`components/Tap.tsx`). Et lag i
+   * `text`-fargen med lav dekning: Android-ripplen, og laget iOS legger over
+   * flaten mens knappen holdes inne.
+   */
+  pressRipple: string;
 };
 
 /**
@@ -246,6 +252,7 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     placeDiscHighlight: '#FFFFFF',
     placeDiscEdge: '#E5E0D3',
     placeDiscRing: '#9A9180',
+    pressRipple: 'rgba(26, 46, 31, 0.12)',
   },
   dark: {
     bg: '#14201A',
@@ -297,6 +304,7 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     placeDiscHighlight: '#1F4A37',
     placeDiscEdge: '#0F2C1F',
     placeDiscRing: '#9A9180',
+    pressRipple: 'rgba(236, 229, 210, 0.12)',
   },
 };
 
@@ -619,6 +627,8 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   placeDiscHighlight: '#FFFFFF',
   placeDiscEdge: '#E5E0D3',
   placeDiscRing: '#9A9180',
+  // #2928: ren svart, som `text` i sollys.
+  pressRipple: 'rgba(0, 0, 0, 0.12)',
 };
 
 /**

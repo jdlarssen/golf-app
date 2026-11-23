@@ -23,7 +23,8 @@
 // #2735 (eierens svar, snur #2385): mens slagene føres, viser raden bare
 // brutto. Formen regnes av slagene mot par, ikke netto: Martes 4 med ett slag
 // på par 4 er par, uten form. Ingen poeng på raden, heller ikke i sollys.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import {
   scoreShape,
   type ScoreShape,
@@ -208,7 +209,7 @@ export function FlightRow({
   if (sunlight) {
     const ink = active ? colors.bg : colors.text;
     return (
-      <Pressable
+      <Tap
         {...common}
         style={[
           styles.rowSun,
@@ -235,12 +236,12 @@ export function FlightRow({
         >
           {score ?? (active ? '?' : NO_SCORE)}
         </Text>
-      </Pressable>
+      </Tap>
     );
   }
 
   return (
-    <Pressable
+    <Tap
       {...common}
       style={[
         styles.row,
@@ -312,7 +313,7 @@ export function FlightRow({
           <Text maxFontSizeMultiplier={HOLE_BOX_TEXT_CAP} style={[styles.unset, { color: colors.scoreUnsetFg }]}>{NO_SCORE}</Text>
         </View>
       )}
-    </Pressable>
+    </Tap>
   );
 }
 
