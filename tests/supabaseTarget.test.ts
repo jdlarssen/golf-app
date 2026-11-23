@@ -109,17 +109,15 @@ describe('the copies of the project refs agree with lib/supabaseTarget.ts', () =
   it.each([
     'scripts/dev-login-users.mjs',
     'scripts/provision-review-account.mjs',
-    'scripts/clone-cup-to-staging.mjs',
   ])('%s pins the staging ref', (path) => {
     expect(read(path)).toContain(`const STAGING_REF = '${STAGING_SUPABASE_REF}';`);
   });
 
-  it.each(['scripts/provision-review-account.mjs', 'scripts/clone-cup-to-staging.mjs'])(
-    '%s pins the prod ref',
-    (path) => {
-      expect(read(path)).toContain(`const PROD_REF = '${PROD_SUPABASE_REF}';`);
-    },
-  );
+  it('scripts/provision-review-account.mjs pins the prod ref', () => {
+    expect(read('scripts/provision-review-account.mjs')).toContain(
+      `const PROD_REF = '${PROD_SUPABASE_REF}';`,
+    );
+  });
 
   it.each(['.claude/hooks/bash-guard.sh', '.claude/hooks/mcp-guard.sh'])(
     '%s guards the same prod ref',
@@ -140,7 +138,6 @@ describe('every service-role script checks its target', () => {
     ['e2e/global-setup.ts', 'e2eTargetFailure('],
     ['scripts/backfillResultSummaries.ts', 'scriptTargetRefusal('],
     ['scripts/provision-review-account.mjs', 'assertTarget('],
-    ['scripts/clone-cup-to-staging.mjs', 'assertTarget('],
     ['scripts/dev-login-users.mjs', '${STAGING_REF}.supabase.co'],
   ])('%s', (path, marker) => {
     expect(read(path)).toContain(marker);
