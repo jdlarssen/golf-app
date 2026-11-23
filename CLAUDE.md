@@ -14,8 +14,9 @@ Mobil-først PWA for å arrangere golf-turneringer. Skalerer fra 4 kompiser til 
 
 ## Brukere
 
-- **Admin (Jørgen):** Lager baner, oppretter spill, sender invitasjoner, avslutter spill. `users.is_admin = true`.
-- **Spillere:** Inviterte brukere som registrerer seg, taster slag, leverer scorekort. `is_admin = false`.
+- **Admin (Jørgen):** Driver sekretariatet: klubber, turneringer og cuper i klubbskala, brukere og innsyn. `users.is_admin = true`.
+- **Spillere:** Alle innloggede brukere. De kan selv lage baner og spill, invitere, ta slag og levere scorekort, og avslutte egne spill (`/opprett-spill`). `is_admin = false`.
+- **Hvem kan registrere seg:** `NEXT_PUBLIC_ALLOW_SELF_REGISTRATION` (`lib/auth/sendLoginCode.ts`). `true`: alle kan få konto med kode på e-post. Ellers bare inviterte adresser. Bryteren er en nødbrems; sjekk Vercel-env for dagens verdi i prod.
 
 Sluttbrukeren har **null programmeringserfaring**. Tilbakemeldinger må være på norsk, instruksjoner må være kopier-lim-klare eller GUI-baserte. Aldri be brukeren lese kode.
 
@@ -77,7 +78,7 @@ Hva eieren gjør i nettleser-UI-er, hva du gjør, og malen for instrukser i en t
 📋 **Backlog:** [GitHub Issues](https://github.com/jdlarssen/golf-app/issues). `TODO.md` er en stub som peker dit — alle nye oppgaver opprettes som issues, ikke i markdown.
 
 - **Milestone på alle nye issues** og **brukerflyt-forankring:** flytene (`docs/flows/*-fremtid.svg`, `docs/user-flows.md`) er sannhetskilden for hva som er core; sjekk `docs/hva-er-nok.md` før feature-issues. → `docs/issue-workflow.md`
-- **Branch + PR-flyt:** alt via PR, aldri direkte push til `main`. Grønne PR-er uten produktvalg merges automatisk; produktvalg, prod-migrasjoner, auth, destruktive flyter, noe som koster penger, merge-porten og native-appen venter på eieren. → `docs/pr-workflow.md`
+- **Branch + PR-flyt:** alt via PR, aldri direkte push til `main`. Grønne PR-er uten produktvalg merges automatisk; produktvalg, prod-migrasjoner, auth, destruktive flyter, noe som koster penger, merge-porten og appens innloggings-, konto- og butikkflater (fillista `NEVER_AUTO_MERGE_RULES` i `lib/loops/autoMerge.ts`) venter på eieren. Resten av `native/app/**` auto-merges som annen kode. → `docs/pr-workflow.md`
 - **Forge:** aldri start `/forge:auto`-løkken uten en kontrakt-kommentar på et åpent issue. → `docs/forge-workflow.md`
 - **Closing-kommentar og null-vekst:** én per issue, `## Teknisk` + `## Funksjonell`, linja `Nye issues: 0`; funn fikses i PR-en eller står under «Observert, ikke rørt». → `docs/issue-workflow.md`
 - **Versjonering / CHANGELOG:** `feat`/`fix`/`perf` legger én notatfil under `.changes/`; aldri bump `package.json` eller rediger `CHANGELOG.md`. Intern `fix` får `[no-changelog]` i commit-body-en. → `.changes/README.md`

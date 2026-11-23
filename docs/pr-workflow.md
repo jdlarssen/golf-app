@@ -89,11 +89,10 @@ Alt arbeid via PR — **aldri direkte push til `main`**. Hooks håndhever dette:
      doccene tillot kommentar-plassering mens porten kun leste body-en — samme
      utfall, annen vei inn.)
 
-#### Codex-gjennomgang (rådgivende, prøveperiode til 2026-11-15, #2772)
+#### Codex-gjennomgang (rådgivende, #2772)
 
 Codex (OpenAI) er koblet til repoet fra eierens ChatGPT-konto og går gjennom PR-er,
-automatisk eller når en PR-kommentar sier `@codex review`. I prøveperioden er
-gjennomgangen **rådgivende**: den stopper ikke auto-mergen i steg 5, og ingen venter på
+automatisk eller når en PR-kommentar sier `@codex review`. Codex **fortsetter som rådgiver** (eierbeslutning ved gjennomgangen 2026-11-20). Gjennomgangen er **rådgivende**: den stopper ikke auto-mergen i steg 5, og ingen venter på
 at den kommer. Skal Codex kunne blokkere, er det en endring i merge-porten og dermed
 eier-merge (#1655).
 
@@ -104,6 +103,6 @@ eier-merge (#1655).
 - Kommer et reelt P0/P1-funn etter merge: økta som eide PR-en fikser det i en ny PR med
   samme `Refs #N`. Ikke lag nytt issue (null-vekst, `docs/issue-workflow.md`).
 - Start hvert svar med `Codex-funn: reelt` eller `Codex-funn: avvist`. Da kan eieren
-  telle treffene når prøveperioden er over og avgjøre om Codex skal blokkere.
+  telle treffene og avgjøre om Codex en gang skal blokkere.
 - En `@codex`-kommentar fra en økt postes i eierens navn. Skriv den bare når automatisk
   gjennomgang er av og eieren har bedt om gjennomgang av akkurat den PR-en.
