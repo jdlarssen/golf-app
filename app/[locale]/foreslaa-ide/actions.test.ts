@@ -40,6 +40,16 @@ vi.mock('@/lib/mail/ideaSubmittedNotification', () => ({
   sendIdeaSubmittedNotification: (...args: unknown[]) => mailMock(...args),
 }));
 
+const issueMock = vi.fn(async (..._args: unknown[]): Promise<unknown> => ({
+  ok: false,
+  reason: 'no-token',
+}));
+vi.mock('@/lib/ideas/githubIdeaIssue', () => ({
+  createIdeaIssue: (...args: unknown[]) => issueMock(...args),
+}));
+
+const COUNT_OK = { data: null, count: 0, error: null }; // daily-cap count
+
 const userId = '252e1a6f-660c-41a7-a289-5a16aaa4e4a1';
 
 function setAuth(user: { id: string } | null) {
@@ -112,6 +122,7 @@ describe('submitIdea', () => {
 
   it('sends the prefill once the golfer has written after it', async () => {
     supabaseMock = buildSupabaseMock([
+      COUNT_OK,
       { data: [{ id: 'idea-1' }], error: null },
       { data: { name: 'Per' }, error: null },
       { data: [{ id: 'admin-1', name: 'Jørgen', locale: 'no' }], error: null },
@@ -144,6 +155,7 @@ describe('submitIdea', () => {
 
   it('inserts the idea with the caller user_id and redirects to the sent state', async () => {
     supabaseMock = buildSupabaseMock([
+      COUNT_OK,
       { data: [{ id: 'idea-1' }], error: null }, // insert .select('id')
       { data: { name: 'Per Spiller' }, error: null }, // submitter name
       {
@@ -166,6 +178,7 @@ describe('submitIdea', () => {
 
   it('never selects users.email on the submitter\'s client; addresses only for the rows it returned (#2207)', async () => {
     supabaseMock = buildSupabaseMock([
+      COUNT_OK,
       { data: [{ id: 'idea-1' }], error: null },
       { data: { name: 'Per' }, error: null },
       { data: [{ id: 'admin-1', name: 'Jørgen', locale: 'no' }], error: null },
@@ -188,6 +201,7 @@ describe('submitIdea', () => {
 
   it('still reaches the sent state when the admin mail fails (best-effort)', async () => {
     supabaseMock = buildSupabaseMock([
+      COUNT_OK,
       { data: [{ id: 'idea-1' }], error: null },
       { data: { name: 'Per' }, error: null },
       { data: [{ id: 'admin-1', name: 'Jørgen', locale: 'no' }], error: null },
@@ -198,5 +212,93 @@ describe('submitIdea', () => {
     await run(form('En idé'));
 
     expect(lastRedirect()).toBe('/foreslaa-ide?sent=1');
+  });
+
+  describe('GitHub issue', () => {
+    const issueOk = { ok: true, number: 4000, url: 'https://github.com/x/y/issues/4000' };
+
+    it('publishes the idea text only and sends no admin mail when the issue is created', async () => {
+      supabaseMock = buildSupabaseMock([COUNT_OK, { data: [{ id: 'idea-1' }], error: null }]);
+      setAuth({ id: userId });
+      issueMock.mockResolvedValueOnce(issueOk);
+
+      await run(form('Putt-statistikk per hull'));
+
+      expect(issueMock).toHaveBeenCalledTimes(1);
+      const [text, adminUrl] = issueMock.mock.calls[0]!;
+      expect(text).toBe('Putt-statistikk per hull');
+      expect(String(adminUrl)).toMatch(/\/admin\/ideer$/);
+      expect(issueMock.mock.calls[0]).toHaveLength(2); // nothing about the player
+      expect(mailMock).not.toHaveBeenCalled();
+      expect(supabaseMock.__fromCalls.some((c) => c.table === 'users')).toBe(false);
+      expect(lastRedirect()).toBe('/foreslaa-ide?sent=1');
+    });
+
+    it('falls back to the admin mail when the issue fails, and the idea is still stored', async () => {
+      supabaseMock = buildSupabaseMock([
+        COUNT_OK,
+        { data: [{ id: 'idea-1' }], error: null },
+        { data: { name: 'Per' }, error: null },
+        { data: [{ id: 'admin-1', name: 'Jørgen', locale: 'no' }], error: null },
+      ]);
+      setAuth({ id: userId });
+      issueMock.mockResolvedValueOnce({ ok: false, reason: 'github-error' });
+
+      await run(form('En idé'));
+
+      expect(
+        supabaseMock.__fromCalls.some((c) => c.table === 'idea_submissions' && c.method === 'insert'),
+      ).toBe(true);
+      expect(mailMock).toHaveBeenCalledTimes(1);
+      expect(lastRedirect()).toBe('/foreslaa-ide?sent=1');
+    });
+
+    it('never publishes a course report; it goes by mail', async () => {
+      supabaseMock = buildSupabaseMock([
+        COUNT_OK,
+        { data: [{ id: 'idea-1' }], error: null },
+        { data: { name: 'Per' }, error: null },
+        { data: [{ id: 'admin-1', name: 'Jørgen', locale: 'no' }], error: null },
+      ]);
+      setAuth({ id: userId });
+      const fd = form('Om banen X: hull 7 er par 4');
+      fd.set('prefill', 'Om banen X: ');
+      fd.set('bane', 'x');
+
+      await run(fd);
+
+      expect(issueMock).not.toHaveBeenCalled();
+      expect(mailMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops at the daily cap before storing or publishing anything', async () => {
+      supabaseMock = buildSupabaseMock([{ data: null, count: 5, error: null }]);
+      setAuth({ id: userId });
+
+      await run(form('Enda en idé'));
+
+      expect(lastRedirect()).toBe('/foreslaa-ide?error=rate');
+      expect(
+        supabaseMock.__fromCalls.some((c) => c.method === 'insert'),
+      ).toBe(false);
+      expect(issueMock).not.toHaveBeenCalled();
+      expect(mailMock).not.toHaveBeenCalled();
+    });
+
+    it('keeps the idea but does not publish when the cap count fails', async () => {
+      supabaseMock = buildSupabaseMock([
+        { data: null, count: null, error: { message: 'boom' } },
+        { data: [{ id: 'idea-1' }], error: null },
+        { data: { name: 'Per' }, error: null },
+        { data: [{ id: 'admin-1', name: 'Jørgen', locale: 'no' }], error: null },
+      ]);
+      setAuth({ id: userId });
+
+      await run(form('En idé'));
+
+      expect(issueMock).not.toHaveBeenCalled();
+      expect(mailMock).toHaveBeenCalledTimes(1);
+      expect(lastRedirect()).toBe('/foreslaa-ide?sent=1');
+    });
   });
 });
