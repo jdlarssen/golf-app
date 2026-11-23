@@ -137,3 +137,40 @@ Svarene er eierens, ordrett fra chatten med orkestratoren 23.11.2026. Orkestrato
 | F16 | ingen egen test: motoren får bare det frosne heltallet, så rettingen hører til trinn 2 i #2924 |
 | F18 | ingen test (standardverdien ligger i veiviseren) |
 | F22 | ingen test (formatet står ikke i regelboka) |
+
+## Runde 3: scramble og patsome
+
+Formater: Texas scramble, Ambrose, Florida scramble og patsome. Testene står i `lib/scoring/rulebook/team.rulebook.test.ts`. Scramble-formatene deler én motor (`computeScramble` i `lib/scoring/modes/texasScramble.ts`), og forskjellen mellom dem er startverdien for lag-handicapet.
+
+### Avvik
+
+| Nr | Format | Motoren gjør | Regelen sier | Regneeksempel | Hvor ofte og hvor mye | Forslag | Eierens svar |
+|---|---|---|---|---|---|---|---|
+| F23 | Texas, Ambrose og Florida (hypotese 11). | Laget får én prosent av summen av banehandicapene (`lib/scoring/teamHandicap.ts:38`). Startverdiene er 25, 15 og 10 % for Texas-lag på 2, 3 og 4 (`lib/games/formatSetupDefaults.ts:72`), 15 og 10 % for Florida-lag på 3 og 4 (`lib/scoring/modes/floridaScramble.ts:37`), og 25 og 12,5 % for Ambrose-lag på 2 og 4 (`lib/scoring/modes/ambrose.ts:30`). Et lag med én spiller for lite får prosenten skalert til samme snitt (`lib/scoring/teamHandicap.ts:40-42`). Motoren bruker tallet i `lib/scoring/modes/texasScramble.ts:123-131`. | NGF vedlegg C, s. 75: «Scramble (4 spillere) 25 % / 20 % / 15 % / 10 % fra lavest til høyest spillehandicap», «Scramble (3 spillere) 30 % / 20 % / 10 % fra lavest til høyest spillehandicap» og «Scramble (2 spillere) 35 % laveste / 15 % høyeste spillehandicap». | Firerlaget fra C/2 (10, 18, 27 og 39): regelen gir 2,5 + 3,6 + 4,05 + 3,9 = 14,05, altså 14. Texas gir 10 % av 94, altså 9. Tomannslaget 10 og 18: regelen gir 3,5 + 2,7 = 6,2, altså 6, og Texas og Ambrose gir 25 % av 28 = 7. Trelaget 10, 18 og 27: regelen gir 9, og Texas og Florida gir 15 % av 55, altså 8. Et firerlag der alle har 20: regelen gir 14 og Texas 8. | Alle kombinasjoner av banehandicap 0–54 med startverdiene: 84,7 % av tomannslagene får et annet tall, og appen gir alltid flere slag (opptil 6, i snitt 1,9). 77,0 % av trelagene får et annet tall, oftest færre slag (fra 8 færre til 3 flere, i snitt 1,4 færre). 99,5 % av firerlagene i Texas og Florida får færre slag (opptil 16, i snitt 5,4). Ambrose med fire ved 12,5 %: 89,8 %, i snitt 2,7 slag færre. Valget av én prosent av summen ble tatt i #2009, #2566 og #2569. | produktvalg | |
+| F24 | Patsome, hull 1–6 (four-ball stableford). | Hver spiller får hele banehandicapet sitt på four-ball-hullene (`lib/scoring/modes/patsome.ts:228`). | NGF vedlegg C, s. 75: «Four-Ball Stableford 85 %». Patsome står ikke i tabellen, men hull 1–6 spilles som four-ball stableford, og greensome- og foursomes-delen følger allerede sine rader (F26). | Banehandicap 20 ved 85 % er 17: ett slag på hullindeks 2, så en 5-er på par 4 er netto 4 og gir 2 poeng. Appen gir 20 og to slag der: netto 3 og 3 poeng. | Gjelder alle patsome-spill på netto. Spilleren får 15 % flere slag over 18 hull, og de som faller på hull 1–6, teller. Ved banehandicap 20 er det 20 slag i stedet for 17. Hvor ofte et hull får et annet resultat, er ikke målt. Det er samme type funn som F7, der du svarte «Rett». | produktvalg | |
+| F25 | Scramble-familien og patsome (hypotese 1 og 12, trinn 2 i #2924). | Lag-handicapet regnes av de frosne, avrundede banehandicapene: summen i scramble (`lib/scoring/modes/texasScramble.ts:123-131`), og 60/40 og 50 % i patsome (`lib/scoring/modes/patsome.ts:132-143`). | NGF 6.2a avklaring 6.2a/1, s. 55: «For å unngå dobbel avrunding, legges handicapgodtgjørelsen (i prosent) til uavrundet spillehandicap.» | Patsome-foursomes for indeks 8,6 og 10,3 på tee 125/71,0/71: regelen gir 50 % av 9,513 + 11,394 = 20,907, altså 10 slag. Appen gir 50 % av 10 + 11 = 21, altså 11 slag. | Indeks 0,0–54,0 på de tre teene: 12,4–13,8 % av tomannslagene i Texas ved 25 % får et annet tall, og 5,9–7,2 % av 200 000 tilfeldige firerlag ved 10 %. Patsome-greensome: 16,6 %. Patsome-foursomes: 24,6–27,4 %. Forskjellen er ett slag. | ikke nytt: samme avvik som F16, som du svarte «Rett» på (#2997). Trinn 2 i #2924 nevnte scramble-familien og patsome. | |
+
+### Sjekket, ingen avvik
+
+| Nr | Format | Motoren gjør | Regelen sier | Regneeksempel | Hvor ofte og hvor mye | Forslag |
+|---|---|---|---|---|---|---|
+| F26 | Patsome, hull 7–12 (greensome) og 13–18 (foursomes) (hypotese 12). | Greensome-delen gir laget 60 % av laveste og 40 % av høyeste banehandicap, rundet. Foursomes-delen gir 50 % av summen, rundet (`lib/scoring/modes/patsome.ts:138-143`). Slagene fordeles etter hullindeks, og de som faller på delens seks hull, teller (`lib/scoring/modes/patsome.ts:305`). | NGF vedlegg C, s. 75: greensome «60 % av laveste spillehandicap + 40 % av høyeste spillehandicap», og foursome «50 % av sammenlagt spillehandicap». | Paret 10 og 18: greensome 13,2 blir 13, og foursomes 14, i appen også. | Ingen avvik i formlene. Avrundingen av frosne heltall står i F25. | la stå |
+| F27 | Texas, Ambrose og Florida: slagfordelingen. | Lag-handicapet fordeles etter hullindeks som for én spiller (`lib/scoring/modes/texasScramble.ts:143`). | NGF vedlegg E, s. 81: slagene gis etter hullindeks, og hullindeks 1 får det første. | Tomannslaget 20 og 20 får 10 slag etter regelen (35 % × 20 + 15 % × 20) og i Texas (25 % av 40), og ett slag på hullindeks 1–10. | Ingen avvik. | la stå |
+
+### Hypotesene fra kontrakten, runde 3
+
+| Hypotese | Svar |
+|---|---|
+| 1. Dobbeltavrunding, trinn 2 | F25: reelt i scramble-familien og patsome, samme avvik som F16. |
+| 11. Scramble med én prosent av summen | F23: reelt. Valget ble tatt i #2009, #2566 og #2569, og raden viser hvor mye det utgjør. |
+| 12. Patsome 60/40 og 50 % av heltall | F26: formlene stemmer med vedlegg C. Avrundingen står i F25. |
+| Nytt i runde 3 | F24 (four-ball-delen i patsome gir fullt banehandicap). |
+
+### Testene og funnene, runde 3
+
+| Funn | Test |
+|---|---|
+| F23 | `team.rulebook.test.ts`, tre `it.fails` (Texas med fire, Ambrose med to og Florida med tre spillere) |
+| F24 | `team.rulebook.test.ts`, `it.fails` |
+| F26, F27 | vanlige `it` i samme fil |
+| F25 | ingen egen test, av samme grunn som F16: motoren får bare de frosne heltallene |
