@@ -174,6 +174,17 @@ describe('knappene i appen (#2928)', () => {
     expect(backdrops.filter((b) => !b.none)).toEqual([]);
   });
 
+  // En tekst med `onPress` er en knapp uten trykk-tilstand og med en flate på
+  // én tekstlinje. Den skal være en `Tap` rundt teksten.
+  it('har ingen tekst med onPress', () => {
+    const textPress = sources.flatMap(({ file, src }) =>
+      [...src.matchAll(/<Text\b((?:=>|[^>])*)>/g)]
+        .filter((m) => /\bonPress\b/.test(m[1]))
+        .map(() => file),
+    );
+    expect(textPress).toEqual([]);
+  });
+
   // En flate uten `onPress` (bare langt trykk) er skjult med vilje: den skal ikke
   // blinke og vise seg fram (innloggingens ordmerke).
   it('gir hver skjult flate uten onPress feedback="none"', () => {
