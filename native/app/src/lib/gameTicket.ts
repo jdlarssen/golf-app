@@ -302,7 +302,6 @@ export function calendarEvent(
   };
 }
 
-/** Hvilken stubb billetten skal ha. */
 /**
  * #2451: spillerens egen starttid, til linja «Du går ut 09:10 i flight 2.» i
  * venterommet. `flight` der flighten er startgruppen (fri inndeling, best
@@ -349,6 +348,7 @@ export function ownTeeOff(bundle: Pick<GameBundle, 'game' | 'players'>, userId: 
   return { clock, flight: byFlight ? own.group : null, team: byFlight ? null : me.teamNumber };
 }
 
+/** Hvilken stubb billetten skal ha. */
 export type TicketStub =
   | { kind: 'gated'; reason: GateReason }
   | { kind: 'notPlayer' }
