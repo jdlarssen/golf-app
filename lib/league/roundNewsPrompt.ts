@@ -15,6 +15,11 @@
  * are in the facts and arithmetic is forbidden, the simulator rule is spelled
  * out, and each player has exactly one name.
  *
+ * The first story the model wrote in prod (23.11.2026) still said «de som
+ * møtte opp», with the rule in the prompt. A rule that lives only in the
+ * prompt is a request, not a guard: the words are now in `GATHERING_WORDS`,
+ * and `checkRoundNews` drops a story that holds one.
+ *
  * Pure. No I/O.
  */
 import { sanitizeNarrative } from '@/lib/ai/narrative';
@@ -49,8 +54,31 @@ export type RoundNewsFacts = {
 
 export type RoundNewsPrompt = { system: string; user: string };
 
+/**
+ * What `checkRoundNews` found: the story as it may go out, or why the draft
+ * is dropped. The fault is a sentence for the model, so that a second attempt
+ * knows what to leave out.
+ */
+export type RoundNewsCheck = { story: string; fault: null } | { story: null; fault: string };
+
 /** Longer than this and the model has misread the task: the story is dropped. */
 const MAX_NEWS_LENGTH = 900;
+
+/**
+ * Words that say the players turned up somewhere or met. In a simulator
+ * league each player plays alone, when it suits them, so every one of them is
+ * wrong there. One home for the rule (trap 4): the prompt names `word`, and
+ * the check drops a story that matches `pattern` (the word in its inflections,
+ * also with «ikke» or «aldri» in between).
+ */
+export const GATHERING_WORDS: ReadonlyArray<{ word: string; pattern: RegExp }> = [
+  { word: 'møtte opp', pattern: /\bmøt(?:te|t|er|e)(?: ikke| aldri)? opp\b/i },
+  { word: 'oppmøte', pattern: /\boppmøt/i },
+  { word: 'møttes', pattern: /\bmøtt?es\b/i },
+  { word: 'dukket opp', pattern: /\bdukk(?:et|er|e)(?: ikke| aldri)? opp\b/i },
+  { word: 'troppet opp', pattern: /\btropp(?:et|er|e)(?: ikke| aldri)? opp\b/i },
+  { word: 'samlet seg', pattern: /\bsaml(?:et|er|e) seg\b/i },
+];
 
 /**
  * The facts for the model, with only the players in `allowedUserIds` (those
@@ -117,7 +145,13 @@ function tableMetric(summary: RoundSummary, roundMetric: string): string {
   return `sum av rundene (${roundMetric})`;
 }
 
-export function buildRoundNewsPrompt(facts: RoundNewsFacts): RoundNewsPrompt {
+/**
+ * The prompt for one attempt. `previousFault` is what `checkRoundNews` said
+ * about the draft before this one: the second attempt is the same task, with
+ * one more line that says why the first draft was dropped.
+ */
+export function buildRoundNewsPrompt(facts: RoundNewsFacts, previousFault: string | null = null): RoundNewsPrompt {
+  const gatheringWords = GATHERING_WORDS.map((g) => `«${g.word}»`).join(', ');
   const system = [
     'Du er Tørnys utsendte reporter og skriver en kort nyhetssak om en ferdigspilt runde i en golfliga blant kompiser som kjenner hverandre godt. Alle i ligaen får samme tekst, sammen med beskjeden om at neste runde er åpen. Målet: en sak gjengen har lyst til å lese høyt i gruppechatten.',
     'Skriv 4–6 komplette setninger, høyst 700 tegn.',
@@ -126,7 +160,7 @@ export function buildRoundNewsPrompt(facts: RoundNewsFacts): RoundNewsPrompt {
     'Bruk KUN fakta og tall fra fakta-objektet under — finn ALDRI på tall, hull, slag, vær eller hendelser som ikke står der. Du vet ingenting om hvordan rundene ble spilt, bare verdiene og plassene.',
     'Regn ALDRI ut noe selv. Avstanden til rundens beste står i behindBest, og avstanden til lederen av tabellen i behindLeader. Trenger du en annen avstand, lar du den være.',
     'Nevn aldri ukedag eller dato.',
-    'Er simulator true, spiller hver spiller runden alene på simulator når det passer. Skriv da aldri at spillerne møttes, møtte opp, samlet seg eller sto på banen sammen. Banen er den de spilte på skjermen.',
+    `Er simulator true, spiller hver spiller runden alene på simulator når det passer. Ingen drar noe sted, og ingen treffer hverandre. Da er disse ordene forbudt, i alle bøyninger og i alle betydninger: ${gatheringWords}. Om dem som deltok, skriver du at de spilte runden eller leverte. Skriv heller aldri at spillerne sto på banen sammen. Banen er den de spilte på skjermen.`,
     'Ligaen går over flere runder. «round» er resultatet i runden som nettopp stengte, «table» er tabellen etter den. Er roundsPlayed 1, er de to like: skriv da om runden og om at tabellen er satt for første gang. Ellers skriver du både om rundens beste og om hvem som leder tabellen.',
     'Lik plass betyr delt plass. Si aldri at noen «vant» en delt plass.',
     'Er roundBestShown false, står ikke rundens beste i fakta-objektet. Skriv da ALDRI at noen vant runden, var best eller tok førsteplassen, og kall ingen «rundens beste». Skriv om plassene som står der. Er tableLeaderShown false, gjelder det samme for tabellen: skriv aldri hvem som leder den.',
@@ -140,13 +174,19 @@ export function buildRoundNewsPrompt(facts: RoundNewsFacts): RoundNewsPrompt {
     'Unngå ordene «viste at», «understreker», «markerer», «imponerende», og unngå passiv form og engelske ord.',
   ].join(' ');
 
-  const user = `Skriv en nyhetssak om denne ligarunden, basert utelukkende på fakta-objektet under:\n\n${JSON.stringify(facts, null, 2)}`;
+  const retry =
+    previousFault === null
+      ? ''
+      : `\n\nEt tidligere utkast ble forkastet. ${previousFault} Skriv saken på nytt og følg alle reglene.`;
+  const user = `Skriv en nyhetssak om denne ligarunden, basert utelukkende på fakta-objektet under:\n\n${JSON.stringify(facts, null, 2)}${retry}`;
   return { system, user };
 }
 
 /**
- * The model's answer, cleaned and checked. Null when the story must not go
- * out: empty, too long, or holding a number that is not in the facts.
+ * The model's answer, cleaned and checked. The story must not go out when it
+ * is empty, too long, holds a number that is not in the facts, or (in a
+ * simulator league) holds one of `GATHERING_WORDS`. The fault then says which,
+ * in words the model can act on.
  *
  * The number check reads digits only: every run of digits in the story must
  * also be a run of digits in the facts as the model saw them. It catches an
@@ -154,12 +194,23 @@ export function buildRoundNewsPrompt(facts: RoundNewsFacts): RoundNewsPrompt {
  * a number from the facts used about the wrong thing; the prompt is the only
  * guard there.
  */
-export function checkRoundNews(raw: string, facts: RoundNewsFacts): string | null {
+export function checkRoundNews(raw: string, facts: RoundNewsFacts): RoundNewsCheck {
   const text = sanitizeNarrative(raw, MAX_NEWS_LENGTH);
-  if (text === null) return null;
+  if (text === null) return { story: null, fault: 'Utkastet var tomt eller for langt.' };
 
+  const faults: string[] = [];
   const known = new Set(digitRuns(JSON.stringify(facts)));
-  return digitRuns(text).every((n) => known.has(n)) ? text : null;
+  const unknown = [...new Set(digitRuns(text).filter((n) => !known.has(n)))];
+  if (unknown.length > 0) {
+    faults.push(`Utkastet inneholdt tall som ikke står i fakta-objektet: ${unknown.join(', ')}.`);
+  }
+  if (facts.simulator) {
+    const used = GATHERING_WORDS.filter((g) => g.pattern.test(text)).map((g) => `«${g.word}»`);
+    if (used.length > 0) {
+      faults.push(`Utkastet inneholdt ${used.join(' og ')}, som er forbudt når simulator er true.`);
+    }
+  }
+  return faults.length > 0 ? { story: null, fault: faults.join(' ') } : { story: text, fault: null };
 }
 
 /** Every run of digits, with a decimal comma read as a point («41,5» → «41.5»). */
