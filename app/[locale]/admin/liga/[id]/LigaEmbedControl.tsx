@@ -6,6 +6,7 @@ import { setLeagueEmbed } from '@/lib/league/spectate';
 import { buildEmbedSnippet } from '@/lib/embed/snippet';
 import { routing } from '@/i18n/routing';
 import { Card } from '@/components/ui/Card';
+import { OFF_TRACK } from '@/components/ui/Switch';
 
 /**
  * Arrangør-kontroll for liga-embedden (#1024). Speiler LiveFollowControl
@@ -89,7 +90,7 @@ export function LigaEmbedControl({
             'relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer',
             'rounded-full border-2 border-transparent transition-colors duration-200',
             'disabled:opacity-60',
-            enabled ? 'bg-primary' : 'bg-border',
+            enabled ? 'bg-primary' : OFF_TRACK,
           ].join(' ')}
         >
           <span

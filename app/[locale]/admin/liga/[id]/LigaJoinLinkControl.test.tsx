@@ -36,4 +36,11 @@ describe('LigaJoinLinkControl', () => {
     expect(screen.getByTestId('liga-join-link-switch')).toHaveAttribute('aria-checked', 'false');
     vi.unstubAllEnvs();
   });
+
+  it('draws the off track with the shared 3:1 class, not bg-border', async () => {
+    render(<LigaJoinLinkControl leagueId="l1" joinCode={null} />);
+    const sw = screen.getByTestId('liga-join-link-switch');
+    expect(sw.className).toContain('bg-muted/60');
+    expect(sw.className).not.toContain('bg-border');
+  });
 });

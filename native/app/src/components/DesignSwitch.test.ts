@@ -31,5 +31,6 @@ describe('listSwitchOffColor', () => {
     const track = listSwitchOffColor(colors, scheme);
     expect(ratio(over(track, colors.surface), channels(colors.surface))).toBeGreaterThanOrEqual(3);
     expect(ratio(over(track, colors.bg), channels(colors.bg))).toBeGreaterThanOrEqual(3);
+    expect(ratio(over(track, colors.surface2), channels(colors.surface2))).toBeGreaterThanOrEqual(3);
   });
 });

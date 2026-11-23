@@ -17,11 +17,13 @@ import { useId, type ChangeEvent, type ReactNode } from 'react';
  * 10px strip above and below it (#2240), so rows keep their height.
  */
 /**
- * Off track: --text-muted at 60 % by day (3.33:1 on a white card, 3.08:1 on
- * --bg) and 70 % at night (3.09:1 on --surface, 3.33:1 on --bg), so the track
- * meets the 3:1 non-text contrast (WCAG 1.4.11). It was 1.3-1.5:1.
+ * Off track: --text-muted at 60 % by day (3.33:1 on a white card, 3.24:1 on
+ * --bg, 3.13:1 on --surface-2) and 80 % at night (3.59:1 on --surface, 3.92:1
+ * on --bg, 3.23:1 on --surface-2), so the track meets the 3:1 non-text contrast
+ * (WCAG 1.4.11). It was 1.3-1.8:1. Exported for the hand-made switches in the
+ * admin league controls.
  */
-const OFF_TRACK = 'bg-muted/60 dark:bg-muted/70';
+export const OFF_TRACK = 'bg-muted/60 dark:bg-muted/80';
 
 const SWITCH_TAP_STYLE = { ['--tap-extend' as string]: '-10px 0' };
 

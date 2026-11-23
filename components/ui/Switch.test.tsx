@@ -7,7 +7,7 @@ describe('Switch off track', () => {
     render(<Switch checked={false} onToggle={() => {}} label="Varsler" />);
     const track = screen.getByRole('switch', { name: 'Varsler' });
     expect(track.className).toContain('bg-muted/60');
-    expect(track.className).toContain('dark:bg-muted/70');
+    expect(track.className).toContain('dark:bg-muted/80');
     expect(track.className).not.toContain('bg-text/20');
   });
 
@@ -20,7 +20,7 @@ describe('Switch off track', () => {
     const { container } = render(<SwitchRow title="Tittel" checked={false} onChange={() => {}} />);
     const track = container.querySelector('span[aria-hidden="true"]');
     expect(track?.className).toContain('bg-muted/60');
-    expect(track?.className).toContain('dark:bg-muted/70');
+    expect(track?.className).toContain('dark:bg-muted/80');
     expect(track?.className).not.toContain('bg-border');
   });
 });
