@@ -37,6 +37,30 @@ Inntil fem issues i gang per uke: **tre mot månedsmålet, to til drift, bugs og
 
 **Endret 2026-11-12 (eierens bestilling):** køen sto tom og Må-lista var nesten levert, så eieren hentet Bør-lista fra #1816 fram fra «rett etter lanseringen». Påmelding til åpen runde (#2837) og turneringslista (#2838) startes i november, fordi de lar folk utenfor gjengen finne og bli med på runder, og det er det livstegnet måler. Klubbliga (#2839), lagpåmelding (#2840) og Face ID-lås (#2841) står i desember. Oppgjøret (#2452) er ikke med og står fortsatt fryst. Det som er merget før bumpen til bygg 14 (27.11), blir med i innsendingsbygget; resten kommer som oppdateringer, og bygg 14 venter ikke på noe av det.
 
+## Utfall (utkast 2026-11-23, eieren ser over)
+
+> **Utkast, eieren ser over.** Alt under er hentet fra GitHub (milepæler, lukkede issues, utgivelser) 2026-11-23. Ingenting er vurdert mot «ferdig når»-setningene. Punkter merket «ikke sjekket» har jeg ikke kunnet bekrefte der, og eieren avgjør ja eller nei.
+
+**September (orkestratoren styrer arbeidet):**
+
+- Visjon, månedsmål og kapasitetsregel kom inn 15.9 (`docs(planlegging)`-commiten) og orkestratoren ble pekt på tavle nr. 2 samme dag.
+- Ukesutgivelsen gikk hver mandag fra 14.9 (v1.237.0) til 16.11 (v1.246.0): 10 mandager på rad uten hull.
+- Ukeplan-issuet (#2113) er åpent og levende, som tenkt.
+- «0.3.0 er inne» er ikke sjekket: utgivelsene teller 1.23x–1.24x, så tallet gjelder trolig orkestrator-plugin, ikke appen.
+- Ja eller nei: ______
+
+**Oktober (løkkene går av seg selv, null kjente spillerbugs):**
+
+- Milepælen «Selvkjørende loops» ble lukket 31.10 med 134 lukkede og 0 åpne issues.
+- Kavalkade-delissuene K2–K5 (#2128–#2131) er lukket; epicen #1040 er fortsatt åpen fordi Kavalkaden slippes 24.12.
+- iPad-feilen (#2352) og AI-historien i appen (#2632) ble lukket 25.10; paritetssjekken (#1954) ble lukket samme dag.
+- Livstegnet ligger i Sekretariatets nøkkeltall (migrasjon 0180, utvidet i 0235). Tallet fra 16.9 i `visjon.md` er ikke oppdatert her: eieren henter dagens tall fra Sekretariatet.
+- Åpne issues merket `bug` i dag: 2 (ikke vurdert om en spiller kan treffe dem).
+- «Arkivkjøringen 1. oktober er verifisert» og «bugene i backloggen er borte» er ikke sjekket.
+- Ja eller nei: ______
+
+**Q3 (Selvkjørende loops, frist 31.10):** milepælen er lukket i GitHub. Setningen «fire mandager på rad uten at Jørgen trykket på noe» er ikke dokumentert noe sted jeg har lest. Ja eller nei: ______
+
 ## Slik brukes dette
 
 1. **Månedsstart:** orkestratoren tar månedens mål, lager issuene som trengs (utredning og kontrakt), og setter «Måned» på dem på tavla. Backloggen triageres mot målene: hører et issue til en måned, får det måneden; ellers blir det «Forslag».

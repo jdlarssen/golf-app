@@ -35,6 +35,8 @@ Alt vi gjør skal kunne spores nedenfra og opp: et issue hører til en måned, m
 | Q1 2027 (31.03) | Native app (iOS + Android) | Tørny ligger i App Store og Google Play som ekte native app, og minst fire navngitte venner har installert den fra butikken og spilt én runde i appen |
 | Q2 2027 (30.06) | Liv laga — sesongstart 2027 | ti fullførte spill helt uten Jørgen (han verken arrangerte eller spilte), fra minst tre ulike arrangører |
 
+**Utfall Q3 (utkast 2026-11-23, eieren ser over):** milepælen «Selvkjørende loops» ble lukket 31.10 med 134 lukkede og 0 åpne issues. Om «fire mandager på rad uten at Jørgen trykket på noe» er oppfylt, er ikke dokumentert. Detaljer og september/oktober står i [`roadmap.md`](roadmap.md) under «Utfall».
+
 Selvkjørende loops går én måned inn i Q4; datoen i tabellen er milepælens. Spriker tabellen og GitHub, er milepælene fasit.
 
 **Endret 2026-11-20 (eierens beslutning):** «penger i potten» er tatt ut av målet for Q4. Pengeoppgjøret mellom spillere står fryst til etter lanseringen ([`hva-er-nok.md`](hva-er-nok.md)), og desemberplanen har det ikke med.
