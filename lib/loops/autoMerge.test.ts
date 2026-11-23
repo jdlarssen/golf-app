@@ -48,8 +48,6 @@ describe('touchesNeverList', () => {
     ['native/app/src/supabase.ts', 'native/app/src/supabase.ts'],
     ['native/app/app.json', 'native/app/app.json'],
     ['native/app/scripts/store-build-ios.sh', 'native/app/scripts/**'],
-    ['native/ios/ios/App/App/App.entitlements', 'native/ios/**'],
-    ['native/android/app/src/main/AndroidManifest.xml', 'native/android/**'],
     // p09 (eierkort 9): kontosletting, app-innlogging og AI-samtykke manglet.
     ['lib/users/deleteAccount.ts', 'lib/users/deleteAccount.ts'],
     ['components/auth/DeleteAccountForm.tsx', 'components/auth/**'],
@@ -177,18 +175,13 @@ describe('touchesNeverList', () => {
     expect(touchesNeverList(['native/application/foo.ts'])).toBe(false);
   });
 
-  it('skallmappene native/ios og native/android står på aldri-lista (#1956)', () => {
-    // Signerings-, rettighets- og dyplenke-flatene i Capacitor-/TWA-skallet — nød-utgangen
-    // etter slipp til N8 er lukket og én app-oppdatering er ute.
-    expect(NEVER_AUTO_MERGE_GLOBS).toContain('native/ios/**');
-    expect(NEVER_AUTO_MERGE_GLOBS).toContain('native/android/**');
+  it('skallmappene native/ios og native/android er slettet og står ikke lenger på aldri-lista', () => {
+    expect(NEVER_AUTO_MERGE_GLOBS).not.toContain('native/ios/**');
+    expect(NEVER_AUTO_MERGE_GLOBS).not.toContain('native/android/**');
   });
 
-  it('skall-radene treffer ikke naboer med samme prefiks eller native/assets (#1956)', () => {
-    expect(touchesNeverList(['native/iosx/foo'])).toBe(false);
-    expect(touchesNeverList(['native/android-notes.md'])).toBe(false);
-    // Ikoner og generatorskript er ingen signerings-/rettighetsflate; kopiene i skallene
-    // fanges av skall-radene.
+  it('native/assets står utenfor aldri-lista', () => {
+    // Ikoner og generatorskript er ingen signerings-/rettighetsflate.
     expect(touchesNeverList(['native/assets/appstore-1024.png'])).toBe(false);
   });
 });
@@ -640,7 +633,7 @@ describe('ownerWaitReasons', () => {
       { ...base, changedFiles: ['app/api/x/route.ts'] },
       { ...base, changedFiles: ['app/[locale]/admin/games/[id]/slett/page.tsx'] },
       { ...base, changedFiles: ['native/app/src/screens/Login.tsx'] },
-      { ...base, changedFiles: ['native/ios/App/Info.plist'] },
+      { ...base, changedFiles: ['native/app/app.json'] },
       { ...base, changedFiles: ['lib/payment/vipps.ts'] },
       { ...base, changedFiles: ['native/app/src/components/Button.tsx'] },
       { ...base, body: '## Alternativ A\nA.' },

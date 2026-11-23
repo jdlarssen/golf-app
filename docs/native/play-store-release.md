@@ -1,7 +1,7 @@
 # Runbook: Play-slipp av native-appen (#2560)
 
 Native-appen i `native/app/` skal inn i Google Play under pakken `no.tornygolf.app`, den samme
-pakken TWA-en (`native/android/`) bruker i dag. Denne runboken dekker veien fra kode til en
+pakken som den gamle TWA-en (Bubblewrap-skallet, nå slettet) brukte. Denne runboken dekker veien fra kode til en
 signert AAB: forutsetningene, byggeskriptet, bevis-steget og tilbake til dev. Den slutter med
 spike-funnene fra første Android-bygg. Opplasting, lukket test og Play-oppføringen hører til
 #2561. Teksten, Data safety og erklæringene eieren limer inn i Play Console, står i
@@ -37,8 +37,8 @@ tabellen «To varianter, én `app.json`» gjelder også Android.
   skriptet versjonen den får.
 - **Node 22.** Skriptet bytter selv når nvm finnes.
 - **Opplastingsnøkkelen** `~/.torny-native/android-upload.keystore` (alias `torny-upload`) og
-  passordet i nøkkelringen. Se `android-twa.md` §«Nøkler og hemmeligheter»: samme nøkkel som
-  TWA-en, og keystore-passordet er også nøkkelpassordet (PKCS12).
+  passordet i nøkkelringen. Se «Nøkler og hemmeligheter» nederst i denne runboken: samme nøkkel som
+  den gamle TWA-en, og keystore-passordet er også nøkkelpassordet (PKCS12).
 - **Repo-rotas `.env.local`** med `NEXT_PUBLIC_SUPABASE_URL` (prod) og
   `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Kjør fra hovedutsjekken, eller pek på fila med
   `TORNY_ENV_FILE=/sti/til/.env.local`.
@@ -182,7 +182,7 @@ står i ruta fra 30.10 (#2561): opplastingsnøkkelen under `// Upload key` (bevi
 etter den og krever nøyaktig ett avtrykk, så bytt den ikke ut) og Play-nøkkelen under
 `// Play app signing key`. Avtrykket står i Play Console under **Test and release → App
 integrity → App signing key certificate → SHA-256**. Etter deploy kontrolleres lenka live
-(`android-twa.md` §assetlinks.json); til den er verifisert, åpner Android 12 og nyere lenkene
+(se «Nøkler og hemmeligheter»); til den er verifisert, åpner Android 12 og nyere lenkene
 i nettleseren, som før.
 Android 7–11 spør i stedet om lenka skal åpnes i appen eller i nettleseren.
 
@@ -320,3 +320,19 @@ Andre funn under spiken:
 - **Mørk modus** følger telefonen på Android, selv om prebuild advarer om at
   `userInterfaceStyle` trenger `expo-system-ui`. Alle fire skjermene skifter tema med
   `adb shell cmd uimode night yes`.
+
+## Nøkler og hemmeligheter (repoet er PUBLIC)
+
+Flyttet hit fra den slettede `android-twa.md` (TWA-skallet i `native/android/` er borte).
+
+- **Upload-keystore:** `~/.torny-native/android-upload.keystore`, alias `torny-upload`. Aldri inn i repoet.
+- **Passord:** macOS-nøkkelringen: `security find-generic-password -a torny -s torny-android-upload-keystore -w`.
+  Keystore- og nøkkelpassord er identiske (PKCS12).
+- **Backup:** eieren har kopi av keystore-fila og passordet i passordhåndtereren. Mistes upload-nøkkelen,
+  kan den resettes i Play Console (Play App Signing eier release-nøkkelen).
+- Googles **app-signing-nøkkel** (den butikk-installasjoner er signert med) ligger hos Google:
+  Play Console → Test and release → App integrity.
+- **assetlinks.json:** `app/.well-known/assetlinks.json/route.ts` må ha SHA-256 fra både upload-nøkkelen
+  (`keytool -list -keystore ~/.torny-native/android-upload.keystore -alias torny-upload -v`) og Google-nøkkelen.
+  Verifiser live etter deploy:
+  `https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://tornygolf.no&relation=delegate_permission/common.handle_all_urls`

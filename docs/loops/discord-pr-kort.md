@@ -197,7 +197,7 @@ vinner:
      `lib/supabase/**`, `app/api/**`, `app/[locale]/(auth)/**`, `**/betaling/**`,
      `lib/payment/**`, `.github/**`, `.githooks/**`, `.claude/**`, `lib/loops/**`,
      `scripts/loops/**`, appens innloggings-, konto- og butikkflater under `native/app/`
-     (fillista i `NEVER_AUTO_MERGE_RULES`, #2134), `native/ios/**` eller `native/android/**`.
+     (fillista i `NEVER_AUTO_MERGE_RULES`, #2134), (skallmappene er slettet).
      Fra gjennomgangen 20.11 står også kontoslettingens delte hjelper
      (`lib/users/deleteAccount.ts`), `components/auth/**`, `components/passkey/**`,
      tilgangssjekkene `lib/cron/auth.ts`, `lib/api/appAuth.ts` og `lib/admin/auth.ts`,
@@ -213,9 +213,8 @@ vinner:
      og butikkbygg igjen i fillista: appen er ikke sluppet, main er ikke produksjon
      for den, og hele appen testes før slipp. Ny auth-flate i appen legges til i
      fillista. `docs/native/**` står utenfor: prosa om appen trenger ingen
-     menneske-port. Skall-radene (#1956) dekker Capacitor- og TWA-skallets signerings-,
-     rettighets- og dyplenke-filer (`App.entitlements`, `AndroidManifest.xml` m.fl.),
-     fordi `native/ios/` er nød-utgangen etter slipp; `native/assets/**` står utenfor. Merk om porten-selv-radene
+     menneske-port. Skall-radene (#1956) er fjernet sammen med skallmappene;
+     `native/assets/**` står utenfor. Merk om porten-selv-radene
      (#1655): workflowen henter alltid main sin versjon av `lib/loops` +
      `scripts/loops` (#1181), så en PR dømmer aldri seg selv med egne regler —
      lista hindrer at en gate-endring auto-merges av den gamle gaten og deretter

@@ -249,7 +249,7 @@ alt-tekstene og forteller hvordan bildene ble laget:
 |---|---|---|
 | Telefonskjermbilder | `native/assets/store/android-1080x1920/01-hjem.png` … `08-lagtavla.png` | 8 bilder, 1080 × 1920 (9:16), PNG uten alfakanal |
 | Feature-grafikk | `native/assets/store/play-feature-graphic-1024x500.png` | 1024 × 500, PNG uten alfakanal |
-| App-ikon | `native/android/store_icon.png` | 512 × 512, PNG med alfakanal, 25 KB |
+| App-ikon | `native/assets/play-store-icon.png` | 512 × 512, PNG med alfakanal, 25 KB |
 
 Skjermbildene er tatt i Android-emulatoren med skjermen satt til 1080 × 1920, så de
 oppfyller kravet til anbefaling uten beskjæring. De viser de samme åtte skjermene som

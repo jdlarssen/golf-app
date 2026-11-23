@@ -93,7 +93,7 @@ fi
 # ── Felles: verktøy, bevis, eksport ──────────────────────────────────────────
 require_export_tools() {
   command -v xcodebuild >/dev/null || die "xcodebuild mangler — installer Xcode (26.4+ for SDK 57)."
-  [ -f "$EXPORT_OPTIONS" ] || die "Fant ikke $EXPORT_OPTIONS (method app-store-connect, destination upload — se docs/native/ios-shell.md §TestFlight)."
+  [ -f "$EXPORT_OPTIONS" ] || die "Fant ikke $EXPORT_OPTIONS (method app-store-connect, destination upload — se docs/native/app-store-release.md §Feilsøking)."
   [ -x "$PROOF" ] || die "Fant ikke bevis-skriptet $PROOF"
   [ -x "$TAG_SCRIPT" ] || die "Fant ikke merke-skriptet $TAG_SCRIPT"
   [ -x "$DSYMS" ] || die "Fant ikke symbol-skriptet $DSYMS"
