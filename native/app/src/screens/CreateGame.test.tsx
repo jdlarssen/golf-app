@@ -32,6 +32,8 @@ import { SessionProvider } from '../session';
 import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
 import { buildDraftPayload } from '../lib/wizardPayload';
 import { CreateGame, summaryLines } from './CreateGame';
+import { FIELD_GAP } from '../components/create/primitives';
+import { INTER_LINE, TAP } from '../theme';
 
 // Den ekte `supabase.ts` kaster uten EXPO_PUBLIC_-variablene og kobler seg på
 // AppState ved import. `formatCatalog` hentes med `requireActual` under, så
@@ -767,6 +769,27 @@ describe('CreateGame og «Ny bane» (#2757)', () => {
     await rerender(wizard({ createdCourseId: 'course-new' }));
     expect(await screen.findByTestId('create-tee-tee-new')).toBeTruthy();
     expect(screen.getByTestId('create-course-change')).toBeTruthy();
+  });
+});
+
+describe('CreateGame: «Velg en annen bane» er en knapp (#2928)', () => {
+  it('har rollen button, når 44 pt uten å gå inn i raden over, og åpner lista igjen', async () => {
+    await renderWizard();
+    await goToCourseStep();
+    await fireEvent.press(await screen.findByTestId('create-course-course-1'));
+    const link = screen.getByTestId('create-course-change');
+    expect(link).toHaveProp('accessibilityRole', 'button');
+    expect(within(link).getByText('Velg en annen bane')).toBeTruthy();
+    // Inter 15 er 18,15 pt høy. Utvidelsen går bare opp til raden over
+    // (luften i feltet) og resten nedover.
+    const { top, bottom } = link.props.hitSlop as { top: number; bottom: number };
+    expect(top).toBe(FIELD_GAP);
+    const size = StyleSheet.flatten(within(link).getByText('Velg en annen bane').props.style).fontSize as number;
+    expect(top + size * INTER_LINE + bottom).toBeGreaterThanOrEqual(TAP);
+    expect(screen.queryByTestId('create-course-search')).toBeNull();
+
+    await fireEvent.press(link);
+    expect(screen.getByTestId('create-course-search')).toBeTruthy();
   });
 });
 

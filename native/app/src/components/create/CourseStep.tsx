@@ -24,8 +24,9 @@ import { formatClock, formatTeeOff } from '../../lib/display';
 import { formatWeekdayDayMonth } from '../../lib/homeDates';
 import { openAndroidTeeOffDate, openAndroidTeeOffTime } from '../../lib/teeOffPicker';
 import { TAP, useTheme } from '../../theme';
+import { Tap } from '../Tap';
 import { WebLinkButton } from '../WebLinkButton';
-import { Field, SelectRow, ToggleRow } from './primitives';
+import { Field, FIELD_GAP, linkSlop, SelectRow, ToggleRow } from './primitives';
 
 /** «Herre · Dame» — hvilke tee-kjønn denne teen har rating for. */
 function describeTee(tee: CourseOption['tees'][number]): string {
@@ -179,13 +180,16 @@ export function CourseStep({
             selected
             onPress={() => setBrowsing(true)}
           />
-          <Text
-            style={ui.linkText}
+          {/* #2928: en ekte knapp. Raden over er en knapp, så utvidelsen går
+              bare opp til den og resten nedover. */}
+          <Tap
             onPress={() => setBrowsing(true)}
+            hitSlop={linkSlop(FIELD_GAP)}
             testID="create-course-change"
+            accessibilityRole="button"
           >
-            Velg en annen bane
-          </Text>
+            <Text style={ui.linkText}>Velg en annen bane</Text>
+          </Tap>
         </Field>
       )}
 

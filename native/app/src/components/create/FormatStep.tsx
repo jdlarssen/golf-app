@@ -14,6 +14,7 @@
 // bare det ene betyr at det er nettet som er nede (#1832-guardrailen).
 import type { ReactNode } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import {
   FORMAT_CATALOG_FETCH_NOTE,
   type FormatCatalogEntry,
@@ -26,7 +27,7 @@ import {
 import { describePlayerCounts } from '../../lib/rosterLimits';
 import { useTheme } from '../../theme';
 import { WebLinkButton } from '../WebLinkButton';
-import { SelectRow } from './primitives';
+import { linkSlop, SelectRow } from './primitives';
 
 export function FormatStep({
   entries,
@@ -58,13 +59,16 @@ export function FormatStep({
           <Text style={ui.error} testID="create-format-error">
             {FORMAT_CATALOG_FETCH_NOTE}
           </Text>
-          <Text
-            style={ui.linkText}
+          {/* #2928: en ekte knapp. Den usynlige utvidelsen gir 44 pt i høyden
+              uten å flytte noe; over står bare feilteksten. */}
+          <Tap
             onPress={onRetry}
+            hitSlop={linkSlop()}
             testID="create-format-retry"
+            accessibilityRole="button"
           >
-            Prøv igjen
-          </Text>
+            <Text style={ui.linkText}>Prøv igjen</Text>
+          </Tap>
         </View>
       ) : null}
 
