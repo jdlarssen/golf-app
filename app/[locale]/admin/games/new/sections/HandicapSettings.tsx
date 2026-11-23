@@ -11,6 +11,7 @@
 import { useTranslations } from 'next-intl';
 import type { GameFormState } from '../useGameFormState';
 import { showsGeneralAllowanceField } from '@/lib/games/hcpAllowance';
+import { defaultHcpAllowancePct } from '@/lib/games/formatSetupDefaults';
 import { AllowanceField } from '@/components/admin/AllowanceField';
 import { TeamHandicapField } from './TeamHandicapField';
 import { bruttoHelperKeyFor } from '@/lib/games/allowanceCopy';
@@ -137,7 +138,7 @@ export function HandicapSettings({ state }: { state: GameFormState }) {
       {showsGeneralAllowanceField(gameMode) && (
         <AllowanceField
           fieldName="hcp_allowance_pct"
-          defaultPct={100}
+          defaultPct={defaultHcpAllowancePct(gameMode, teamSize)}
           legend={tWizard('allowanceProps.scoring.legend')}
           description={tWizard('allowanceProps.scoring.description')}
           nettoHelperText={tWizard('allowanceProps.scoring.nettoHelper')}

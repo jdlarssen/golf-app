@@ -3,6 +3,7 @@ import { ambroseDefaultPct } from '@/lib/scoring/modes/ambrose';
 import { defaultFloridaHandicapPct } from '@/lib/scoring/modes/floridaScramble';
 import {
   DEFAULT_SHAMBLE_SETUP,
+  defaultHcpAllowancePct,
   defaultTeamHandicapPct,
   defaultTeamSizeForMode,
   defaultTexasHandicapPct,
@@ -30,6 +31,21 @@ describe('formatSetupDefaults', () => {
     expect(defaultTeamHandicapPct('ambrose', 3)).toBe(ambroseDefaultPct(3));
     expect(defaultTeamHandicapPct('florida_scramble', 3)).toBe(defaultFloridaHandicapPct(3));
     expect(defaultTeamHandicapPct('shamble', 4)).toBeNull();
+  });
+
+  // #2942: NGF vedlegg C, s. 75 — four-ball slagspill og four-ball stableford
+  // 85 %, individuelt slagspill og individuell stableford 100 %.
+  it.each([
+    ['best_ball', 2, 85],
+    ['stableford', 1, 100],
+    ['stableford', 2, 85],
+    ['modified_stableford', 1, 100],
+    ['modified_stableford', 2, 85],
+    ['solo_strokeplay', 1, 100],
+    ['singles_matchplay', 1, 100],
+    ['shamble', 4, 100],
+  ] as const)('%s med lag à %i starter på %i % handicap', (mode, size, pct) => {
+    expect(defaultHcpAllowancePct(mode, size)).toBe(pct);
   });
 
   it('shamble starter som shamble, to teller, netto', () => {

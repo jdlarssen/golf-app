@@ -7,6 +7,7 @@ import type { SideCategoryId } from '@/lib/scoring/sideTournamentConfig';
 import { isScrambleFamily, isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { MIN_TEE_SHOTS_FIELD, formatTracksTeeShots, type MinTeeShots } from '@/lib/games/teeShots';
 import { hcpAllowanceInPlay, showsGeneralAllowanceField } from '@/lib/games/hcpAllowance';
+import { defaultHcpAllowancePct } from '@/lib/games/formatSetupDefaults';
 import { PRIZE_SLOTS, prizeFieldName, type GamePrize } from '@/lib/games/prizes';
 import type { TeeBoxRatings } from '@/lib/games/teeRating';
 import type {
@@ -1115,7 +1116,7 @@ export function GameForm({
         {showsGeneralAllowanceField(gameMode) && (
           <AllowanceField
             fieldName="hcp_allowance_pct"
-            defaultPct={100}
+            defaultPct={defaultHcpAllowancePct(gameMode, teamSize)}
             legend={t('scoring.legend')}
             description={t('scoring.description')}
             nettoHelperText={t('scoring.nettoHelper')}
