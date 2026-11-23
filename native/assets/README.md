@@ -2,7 +2,7 @@
 
 Alle rasterkopier av Tørny-merket bygges fra de tre master-SVG-ene i denne mappen.
 `generate-icons.mjs` lager App Store-ikonet, Android-lagene, splash, Expo-appens
-assets, nettets PWA-ikoner (`/icon`, `/icon0`, `/apple-icon`), 
+assets, nettets PWA-ikoner (`/icon`, `/icon0`, `/apple-icon`),
 Google Play-ikonet (`play-store-icon.png`) og ordmerket i e-postheaderen.
 Play-feature-grafikken lages av `store/generate-feature-graphic.mjs` fra
 `wordmark-master.svg` (se «Butikkgrafikken» under). Ingen andre filer tegner merket.
@@ -48,7 +48,7 @@ ellers gitt et ikon i feil skrift uten at noe merket det.
 | `appstore-1024.png` | 1024×1024 | Ingen alfakanal (IHDR color type 2) — App Store Connect avviser PNG med alfa. |
 | `android-foreground-432.png` | 432×432 | Transparent bakgrunn, motiv i safe-zone. |
 | `android-background-432.png` | 432×432 | Flisen alene (gradient `#1B4332` → `#14201A`). |
-| `public/icons/maskable-192.png`, `public/icons/maskable-512.png` | 192×192 / 512×512 | Flisen + motiv i safe-zone — konsumert av `app/manifest.ts` (`purpose: maskable`) . |
+| `public/icons/maskable-192.png`, `public/icons/maskable-512.png` | 192×192 / 512×512 | Flisen + motiv i safe-zone — konsumert av `app/manifest.ts` (`purpose: maskable`). |
 | `public/icons/icon-192.png`, `icon-512.png`, `apple-icon-180.png` | 192 / 512 / 180 | Full-bleed, ingen alfakanal. Serveres på `/icon`, `/icon0` og `/apple-icon` via `rewrites()` i `next.config.ts`, så installerte PWA-er og `public/sw.js` beholder URL-ene sine. |
 | `ios-splash-logo.png` | 512×512 | Transparent motiv, mørk splash. |
 | `native/assets/play-store-icon.png` | 512×512 | Play-butikkikonet. 32-bit PNG med (heldekkende) alfakanal, som Play Console ber om. |

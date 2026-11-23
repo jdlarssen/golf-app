@@ -250,8 +250,7 @@ Derfor: ETT siste, uavhengig skeptisk gjennomsyn på en **annen modell** før le
     produktvalg-markør og bruker-synlig uten `staging-verified` demoteres til
     knapp-kort, rød CI gir ingenting. Eieren beholder nøyaktig de beslutningene
     policyen gir ham i dag, minus den manuelle flippen.
-  - Dør økta før dette steget, tar natt-draft-sweepen PR-en neste morgen (se
-    «Backstopp» nederst) — men den er nettet, ikke veien.
+  - Dør økta før dette steget, blir PR-en stående som draft (natt-draft-sweepen er fjernet 2026-11-23).
 - **Ikke konvergert:** push delarbeidet som draft-PR, post utfylt
   `docs/loops/eskalering-mal.md` som issue-kommentar (runde-tabell + ETT
   A/B-spørsmål), sett `autonomy:blocked`, fjern `autonomy:ready`. Den PR-en blir
@@ -269,28 +268,8 @@ Derfor: ETT siste, uavhengig skeptisk gjennomsyn på en **annen modell** før le
 Morgenbriefen (#1080) bruker heartbeaten som liveness-signal — mangler den,
 flagges det.
 
-## Backstopp — natt-draft-sweepen (#1769)
+## Backstopp — natt-draft-sweepen (fjernet)
 
-Dør natta ETTER bokføringen, men FØR `gh pr ready`, blir leveransen stående som
-draft — og kortet noop-er drafts (#1516). Da tar den daglige workflowen
-`.github/workflows/natt-draft-sweep.yml` (05:30 UTC) PR-en: den flipper drafts som
-beviselig er ferdige leveranser, og legger igjen en 🧹-kommentar på PR-en om at
-flippen kom derfra.
-
-Sweepen rører KUN en PR som oppfyller alt dette (logikken og begrunnelsene:
-`lib/loops/draftSweep.ts`):
-
-- åpen draft
-- branch `claude/natt-*` OG label `autonomy:review` — interaktive økters drafts er
-  utenfor rekkevidde, alltid (#1516)
-- ingen aktivitet på 90 minutter, så en økt som fortsatt jobber får være i fred
-- siste markørkommentar er 🤖. Er den 🔁, står en ombygging uferdig og Steg 0.5
-  gjenopptar den; finnes ingen markør i det hele tatt, ble Steg 5 aldri nådd, og da
-  skal et menneske se på PR-en
-
-🧹 er verken 🤖 eller 🔁, så sweepens egen kommentar teller aldri som nattkjørerens
-i Steg 0-filteret — og den matcher ikke eier-svar-mønsteret. Begge egenskapene er
-test-låst.
+Den daglige sweepen (#1769) og koden bak den ble fjernet 2026-11-23, fordi nattkjøreren har vært slått av siden 2026-09-15. En draft som blir stående, flippes nå av et menneske.
 
 Dette er et nett, ikke en vei: en natt som gjør jobben sin flipper selv i Steg 5.
-Ser du en 🧹-kommentar om morgenen, døde natta underveis.

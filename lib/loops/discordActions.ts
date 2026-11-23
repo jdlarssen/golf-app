@@ -346,7 +346,7 @@ async function handleMergePr(
 
 // GraphQL svarer 200 MED et `errors`-felt når mutasjonen avvises — statuskoden
 // alene er altså ikke bevis på at noe skjedde (I3). Samme dobbeltsjekk som
-// scripts/loops/sweep-natt-drafts.ts. Tom errors-liste er ikke en feil.
+// the removed night-draft sweep. Tom errors-liste er ikke en feil.
 function graphqlSucceeded(res: { status: number; json: unknown }): boolean {
   if (res.status !== 200) return false;
   const errors = (res.json as { errors?: unknown[] } | null)?.errors;

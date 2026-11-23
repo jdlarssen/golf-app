@@ -25,7 +25,7 @@ Alt arbeid via PR — **aldri direkte push til `main`**. Hooks håndhever dette:
    **PR-presentasjon (fast form, alle aktører — eierbestilling 2026-07-30, #1413).**
    Dette er formens ene hjem; loop-dokumentene (kontrakt-smeden, nattkjøreren)
    peker hit. Begge loopene er slått av siden 2026-09-15; dokumentene deres er historikk.
-   Den daglige `natt-draft-sweep`-workflowen er ikke fjernet ennå (venter på verktøy-PR-en som eier `.github/`).
+   Den daglige `natt-draft-sweep`-jobben er stoppet og koden fjernet (2026-11-23).
    - **Alle PR-er** har seksjonen `## Funksjonelt` (#2147): 2–3 setninger i
      produktspråk om hva endringen betyr for eier eller spillere («Du kan nå …»,
      «Når X skjer, sier appen nå …»), uten filnavn, pluss én linje «Kan merges: ja»
