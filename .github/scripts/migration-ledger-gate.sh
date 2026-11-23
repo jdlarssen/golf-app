@@ -52,8 +52,15 @@ mark_handled() { # forteller workflowen at et issue alt er filet/finnes — unng
 }
 
 open_issue_numbers() { # title → åpne issue-numre med EKSAKT denne tittelen (søket er substreng)
-  gh issue list --repo "$REPO" --state open --search "in:title \"$1\"" --json number,title \
-    --jq --arg t "$1" 'map(select(.title == $t)) | .[].number' 2>/dev/null
+  # gh --jq tar ÉN uttrykksstreng og kjenner ikke --arg; tidligere form ga alltid
+  # tom utdata, så dedupen virket aldri (nytt issue + ping hver dag). jq gjør
+  # filtreringen. gh-/jq-feil skrives som «gh-feil», så kallerne ikke tolker
+  # feilen som «ingen åpne issues».
+  local json
+  json=$(gh issue list --repo "$REPO" --state open --search "in:title \"$1\"" --json number,title 2>/dev/null) \
+    || { echo "gh-feil"; return 0; }
+  printf '%s' "$json" | jq -r --arg t "$1" '.[] | select(.title == $t) | .number' 2>/dev/null \
+    || echo "gh-feil"
 }
 
 open_or_note_issue() { # title body — dedupet på eksakt tittel; oppdaterer åpent issue med ny body som kommentar
@@ -92,6 +99,7 @@ close_open_issues_if_any() { # grønt igjen → lukk portens egne varsler (begge
   local title n
   for title in "$ISSUE_TITLE" "$READ_FAIL_TITLE"; do
     for n in $(open_issue_numbers "$title"); do
+      case "$n" in (*[!0-9]*) echo "::warning::fikk ikke lest åpne issues («$title») — lukker ingenting"; continue ;; esac
       gh issue close "$n" --repo "$REPO" --comment "Grønn igjen: hovedboka i prod er lest, og alle migrasjonsfiler på main er bokført der. Kjøring: $RUN_URL" \
         && echo "Lukket #$n (grønt igjen)."
     done

@@ -17,7 +17,9 @@ allow="$root/.githooks/email-allowlist.txt"
 
 # Adresse-formen holdes bevisst litt løs — heller ett falskt treff (som kan
 # allowlistes) enn en ekte adresse som glipper.
-found="$(grep -oiE '[[:alnum:]._%+-]+@[[:alnum:]-]+(\.[[:alnum:]-]+)+' || true)"
+# Ledende «+» fjernes: en lagt-til diff-linje starter med «+», og grep tok det med
+# i adressen («+navn@host») slik at allowlista aldri traff.
+found="$(grep -oiE '[[:alnum:]._%+-]+@[[:alnum:]-]+(\.[[:alnum:]-]+)+' | sed -E 's/^\++//' || true)"
 [ -z "$found" ] && exit 0
 
 # Bygg ett samlet ERE-alternativ av allowlista, så vi slipper en loop per treff.

@@ -56,7 +56,7 @@ jobs:
       - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
 
       # Tynn runner (ingen npm ci): global fetch + rene lib-importer, som
       # sweep-natt-drafts.ts. Inputs går via env, aldri rett inn i skallet.
