@@ -1,6 +1,6 @@
 {
   "name": "torny",
-  "version": "1.246.0",
+  "version": "1.247.0",
   "private": true,
   "engines": {
     "node": ">=22 <23"

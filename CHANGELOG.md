@@ -16,6 +16,138 @@ Ett **ukeslipp** per mandag med innhold: nyeste øverst, funksjonene som rader d
 
 ## Ukeslipp
 
+### 1.247.0 · mandag 23. november 2026
+
+<details>
+<summary><strong>Egen starttid på startbilletten i appen</strong></summary>
+
+[#2451](https://github.com/jdlarssen/golf-app/issues/2451) — Har runden flere flighter, sier startbilletten i appen når du går ut, for eksempel «Du går ut 09:10 i flight 2.».
+</details>
+
+<details>
+<summary><strong>Egen starttid for hver flight</strong></summary>
+
+[#2451](https://github.com/jdlarssen/golf-app/issues/2451) — Er dere flere enn fire, går flightene ut med 8, 10 eller 12 minutters mellomrom. Invitasjonen og spillets side sier når hver spiller går ut, og spilleren får beskjed hvis tiden endres.
+
+↳ /opprett-spill · «Sett opp en runde»
+</details>
+
+<details>
+<summary><strong>Handicap-andelen vist i slag</strong></summary>
+
+[#2455](https://github.com/jdlarssen/golf-app/issues/2455) — Velg 100, 95, 90 eller 85 % med ett trykk, eller still prosenten med − og +. Før du publiserer, ser du hvor mange slag spillerne får.
+
+↳ /opprett-spill · «Sett opp en runde»
+</details>
+
+<details>
+<summary><strong>Lagene fordeles med to trykk</strong></summary>
+
+[#2456](https://github.com/jdlarssen/golf-app/issues/2456) — Trykk på en spiller, så på laget spilleren skal til. Trykk på en spiller på et annet lag, så bytter de to plass. De som ennå ikke har lag, står under «Uten lag».
+
+↳ /opprett-spill · «Sett opp en runde»
+</details>
+
+<details>
+<summary><strong>Gjenta runden hver uke</strong></summary>
+
+[#2460](https://github.com/jdlarssen/golf-app/issues/2460) — Slå på «Gjenta hver uke» når du setter opp runden. Når den er ferdig, lager Tørny neste runde med samme gjeng, og invitasjonen går ut av seg selv.
+
+↳ /opprett-spill · «Sett opp en runde»
+</details>
+
+<details>
+<summary><strong>Hjelp til å velge format i veiviseren</strong></summary>
+
+[#2462](https://github.com/jdlarssen/golf-app/issues/2462) — Usikker på hvilket format dere skal velge? Svar på to spørsmål på steg 2, så foreslår appen ett som passer gjengen.
+
+↳ /opprett-spill · «Lag et spill»
+</details>
+
+<details>
+<summary><strong>Jevne lag med ett trykk</strong></summary>
+
+[#2478](https://github.com/jdlarssen/golf-app/issues/2478) — Trykk «Jevne lag», så setter Tørny den beste sammen med den svakeste etter handicap. Hvert lag viser summen, og du ser hvor mye som skiller sterkeste og svakeste lag.
+
+↳ /opprett-spill · «Sett opp en runde»
+</details>
+
+<details>
+<summary><strong>Plasser, frist og venteliste på åpen påmelding</strong></summary>
+
+[#2482](https://github.com/jdlarssen/golf-app/issues/2482) — Sett antall plasser og en påmeldingsfrist når folk melder seg på selv. Er det fullt, havner de på ventelista, og trekker noen seg, får den første plassen og et varsel.
+
+↳ /admin/games/new · «Lag et spill»
+</details>
+
+<details>
+<summary><strong>Status og purring kvelden før runden</strong></summary>
+
+[#2483](https://github.com/jdlarssen/golf-app/issues/2483) — Kvelden før runden får du som arrangør et varsel om hvem som har bekreftet, og du kan purre den som ikke har svart, rett fra lista.
+</details>
+
+<details>
+<summary><strong>Ligavarsler på e-post når du ikke har varsler på</strong></summary>
+
+[#2974](https://github.com/jdlarssen/golf-app/issues/2974) — Har du ikke slått på varsler, får du nå en e-post når en ligarunde åpner, og en påminnelse før den stenger hvis du ikke har spilt den.
+</details>
+
+<details>
+<summary><strong>Appen sier fra når en ny versjon er ute</strong></summary>
+
+[#2975](https://github.com/jdlarssen/golf-app/issues/2975) — Når en nyere versjon av appen er klar, kommer et ark med det som er nytt og knappen «Oppdater». Velger du «Senere», står en prikk på profilen din til du har oppdatert.
+</details>
+
+<details>
+<summary><strong>Rundeoppsummering når neste ligarunde åpner</strong></summary>
+
+[#2979](https://github.com/jdlarssen/golf-app/issues/2979) — Når en ny ligarunde åpner, får alle i ligaen en e-post med en kort nyhetssak om runden som stengte, rundens beste og tabellen.
+</details>
+
+<details>
+<summary>39 rettinger</summary>
+
+- [#2924](https://github.com/jdlarssen/golf-app/issues/2924) — Spiller du med handicap-andel under 100 %, regner appen nå prosenten av banehandicapet før det rundes av, slik handicapreglene sier. Noen får ett slag mer eller mindre enn før.
+- [#2974](https://github.com/jdlarssen/golf-app/issues/2974) — Varselet om at en ligarunde er åpen, og påminnelsen før den stenger, kommer nå om morgenen i stedet for midt på natta.
+- [#2979](https://github.com/jdlarssen/golf-app/issues/2979) — Nyhetssaken i ligaposten sier ikke lenger at dere «møtte opp» når ligaen går på simulator.
+- Admin kan nå slette en spiller som har spilt, og e-posten blir ledig når du trekker en invitasjon. Har du fått nei, gått ut eller blitt fjernet fra en klubb, kan du be om å bli med igjen etter sju dager, og siden sier fra hvilken dato. «Fjern» på spillerlista spør først og sier hvilke gjester som går også.
+- Appen tilbyr nå de samme flightene og lagene som nettsiden, og en flight du satte på nettet står valgt i appen.
+- Hullsiden i appen tåler stor skrift: radene vokser med teksten, og tall og knapper flyter ikke lenger ut av boksene sine.
+- Bytter du lagstørrelse i veiviseren i appen, nullstilles lagene du hadde fordelt, så runden ikke lagres med lag som ikke passer.
+- «Rediger profil» og «Slett konto» i appen har nå «Prøv igjen» når lastingen feiler, og «Prøv igjen» på ligakortet og markørkortet viser at appen henter.
+- «Scratch» på hullsiden i appen står nå bare under spillere som ikke får slag på runden, ikke under alle som er uten slag på akkurat det hullet.
+- Appen flytter deg ikke lenger bort fra en skjerm du har åpnet mens et svar var på vei, og knapper som sender noe, sender bare én gang selv om du trykker to ganger fort.
+- Avmeldingslenken i månedsbrevet melder deg av først når du trykker på knappen, så et e-postfilter ikke kan melde deg av i det stille.
+- Par 3-baner kan lagres, baneskjemaet og profilen beholder det du skrev når lagringen avvises, og et handicap som stemmer kan bekreftes fra profilen. Historikken viser ikke netto for ni hull eller uferdige runder.
+- Bingo Bango Bongo spilles nå i én flight, med to til fire spillere.
+- To raske trykk på pluss i Bingo Bango Bongo i appen gir nå to slag.
+- Cupen tar poengvekter med høyst én desimal, og et bytte setter aldri en spiller inn på motstanderlaget.
+- Handicapresultatet for runden regnes nå av hele banehandicapet ditt, også når runden spilles med andel eller tak på slag. Et hull med mange slag teller da slik handicapreglene sier.
+- Svikter databasen, viser siden en feilmelding med «Prøv igjen» i stedet for en tom liste, og «gjort» vises bare når noe faktisk ble endret. Spillsidene viser ikke lenger gamle banetall etter en baneendring.
+- Årskavalkaden viser medspillerne med fornavn og forbokstav i etternavnet, som «Marte H.». Verste hull regnes per bane, så hull 7 på to baner ikke blandes.
+- Bare en eier kan fjerne en annen eier fra klubben.
+- Lagsiden skjuler lagknappene når runden har startet eller fristen er ute, og velger kapteinen en venn som allerede er påmeldt, får kapteinen beskjed om det. Appen sender lagnavnet slik du skrev det, også uten at du trykker «Ferdig», og på engelsk foreslår skjemaet et engelsk lagnavn.
+- Ligaer og cuper tåler dobbelttrykk: de starter og avsluttes én gang, varselet går én gang, og en liga som ikke har startet, står som «Ikke startet» på klubbsiden.
+- Kortet bak et resultat i ligatabellen kan du nå bare åpne når du selv er med i ligaen eller arrangerer den.
+- Resultatmailen for modifisert stableford viser samme plass og poeng som resultatsiden, en påminnelse som ikke kom fram, blir sendt på nytt, og månedsbrevet kan ikke lenger gå ut to ganger.
+- «Rediger spill» lar innsats, brutto eller netto og lagstørrelse stå som de var når du bare flytter starttiden, og et tømt prosentfelt lagres ikke lenger som 0 %.
+- Mangler et navn i en invitasjon eller en forespørsel om å bli med i en klubb, står reserven nå på ditt språk.
+- Rundedagboka i appen viser alle rundene dine, også når du har spilt mange.
+- Gjester du har lagt inn selv, kan du ta med i nye runder. En gjest som en annen arrangør la inn, legger du inn på nytt. Flaggposisjonen på et hull gir du én gang per 30 dager.
+- «Fortsett runden» følger shotgun-starten på nettet og i appen: startet flighten på hull 10, sendes du til neste hull der, ikke til hull 1.
+- I en ny singel-match får den med høyest handicap nå forskjellen i slag, på de vanskeligste hullene. Matcher som alt er spilt, regnes ikke om.
+- Sletter du kontoen din, forsvinner navnet ditt nå også fra andres varsler og kampreferater. «Last ned dataene dine» tar med påmeldingene, ligaene og cupene dine, og appen lar ikke fila bli liggende på telefonen.
+- Små rettelser i tider og tekster: «for 60 minutter siden» og «i går» rundt midnatt stemmer nå, «+0,0» vises som «E», «1 av 1 kamper» leses riktig, Siste 14 dager viser dagen, og noen skrivefeil er rettet.
+- Appen: et deltakerbeløp over 100 000 kr stoppes i feltet, cup-resultatene kan ikke lenger doble eller miste en sidepoeng-linje, og cup-skjermene viser ikke lenger en gammel liste etter en ny.
+- En sponsorlogo du fjerner eller bytter i «Rediger spill», slettes først når endringen er lagret.
+- Den engelske visningen har ikke lenger norske rester («Tilbake», lagnavn på hullskjermen, «mot», «best 2»). Teksten bruker ett ord for samme ting, skrivefeil er rettet, og regneeksempelet for modifisert stableford stemmer.
+- Flere tavler regner nå riktig: modifisert lag-stableford, Wolf, shamble, «Dro ned mest» og sideturneringen (delt plass og eget par). Ferdige spill kan derfor vise nye tall på tavla, men resultatkortet beholder de gamle. En skins-runde uten skins teller ikke lenger som seier. Ender alle på null, står det «Ingen vinner». En blind runde avsløres så snart den er avsluttet.
+- Et slag som ikke kom fram, står nå som ikke lagret til det er sendt, også når du fjerner varselet.
+- Utkastet i veiviseren husker «Gjenta hver uke», og det blir liggende til runden faktisk er lagret.
+- «Legg til venn på e-post» er nå ett steg: har adressen en konto, får personen en venneforespørsel, og har den ikke, får adressen en invitasjon. Du kan legge noen til i et spill når de har godtatt forespørselen.
+- Får du ikke lagret et Wolf-valg, sier meldingen nå hva som gikk galt.
+</details>
+
 ### 1.246.0 · mandag 16. november 2026
 
 <details>
