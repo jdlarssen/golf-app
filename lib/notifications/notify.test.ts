@@ -45,10 +45,6 @@ vi.mock('@/lib/supabase/admin', () => ({
   }),
 }));
 
-const revalidateTagMock = vi.fn();
-vi.mock('next/cache', () => ({
-  revalidateTag: (...args: unknown[]) => revalidateTagMock(...args),
-}));
 
 const sendPushMock = vi.fn().mockResolvedValue(undefined);
 vi.mock('./push/sendPush', () => ({
@@ -62,7 +58,6 @@ beforeEach(() => {
   userSelectMock.mockReset();
   prefsSelectMock.mockReset();
   prefsEqMock.mockClear();
-  revalidateTagMock.mockReset();
   sendPushMock.mockClear();
   // Default: fungerende admin-insert + aktiv bruker (fresh last_seen_at).
   insertMock.mockResolvedValue({ data: { id: NOTE_ID }, error: null });
@@ -116,34 +111,7 @@ describe('notify (validation-rekkefølge)', () => {
       kind: 'invite',
       payload: expect.objectContaining({ invited_by_name: 'Jørgen' }),
     });
-    expect(revalidateTagMock).toHaveBeenCalledWith(
-      'notifications-00000000-0000-0000-0000-000000000001',
-      'max',
-    );
     expect(result.shouldAlsoSendMail).toBe(false); // aktiv bruker
-  });
-
-  it('the row landed but the cache refresh threw: still inserted, never a throw', async () => {
-    revalidateTagMock.mockImplementation(() => {
-      throw new Error('static generation store missing');
-    });
-    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const { notify } = await import('./notify');
-
-    const result = await notify({
-      userId: '00000000-0000-0000-0000-000000000001',
-      kind: 'invite',
-      payload: {
-        game_id: '00000000-0000-0000-0000-000000000002',
-        game_name: 'Vinter-cup',
-        invited_by_name: 'Jørgen',
-      },
-    });
-
-    // Callers release their once-only stamp on a throw or inserted:false; a
-    // landed row must answer true, or the reminder would go out twice.
-    expect(result.inserted).toBe(true);
-    err.mockRestore();
   });
 
   it('malformed payload (manglende felt) → kaster FØR insert kalles', async () => {
@@ -161,7 +129,6 @@ describe('notify (validation-rekkefølge)', () => {
     // Load-bearing: insert MÅ aldri kjøres på malformed input. Hvis denne
     // assertion-en feiler, har valideringen blitt flyttet bak insert.
     expect(insertMock).not.toHaveBeenCalled();
-    expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 
   it('insert-error → returnerer shouldAlsoSendMail: false (fail-closed)', async () => {
@@ -181,7 +148,6 @@ describe('notify (validation-rekkefølge)', () => {
     });
 
     expect(result.shouldAlsoSendMail).toBe(false);
-    expect(revalidateTagMock).not.toHaveBeenCalled();
     expect(consoleErr).toHaveBeenCalledWith(
       '[notifications] insert failed',
       expect.objectContaining({ message: 'permission denied' }),

@@ -11,10 +11,6 @@ vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => supabaseMock,
 }));
 
-const revalidateTagMock = vi.fn();
-vi.mock('next/cache', () => ({
-  revalidateTag: (...args: unknown[]) => revalidateTagMock(...args),
-}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -35,7 +31,6 @@ describe('archiveNotifications', () => {
     const ok = await archiveNotifications({ userId: 'u1', notificationId: 'n-1' });
 
     expect(ok).toBe(false);
-    expect(revalidateTagMock).not.toHaveBeenCalled();
     // `.select('id')` er det som gjør radantallet synlig i det hele tatt.
     expect(supabaseMock.__fromCalls).toContainEqual(
       expect.objectContaining({ method: 'select', args: ['id'] }),
@@ -43,14 +38,13 @@ describe('archiveNotifications', () => {
     consoleErr.mockRestore();
   });
 
-  it('ett varsel som treffer 1 rad → true + revalidateTag', async () => {
+  it('ett varsel som treffer 1 rad → true', async () => {
     supabaseMock = buildSupabaseMock([{ data: [{ id: 'n-1' }], error: null }]);
     const { archiveNotifications } = await import('./archive');
 
     const ok = await archiveNotifications({ userId: 'u1', notificationId: 'n-1' });
 
     expect(ok).toBe(true);
-    expect(revalidateTagMock).toHaveBeenCalledWith('notifications-u1', 'max');
   });
 
   it('«Tøm leste» som treffer 0 rader → true (ingenting lest er lov)', async () => {
@@ -60,7 +54,6 @@ describe('archiveNotifications', () => {
     const ok = await archiveNotifications({ userId: 'u1' });
 
     expect(ok).toBe(true);
-    expect(revalidateTagMock).toHaveBeenCalledWith('notifications-u1', 'max');
   });
 });
 
@@ -98,10 +91,6 @@ describe('archiveNotificationsForGame', () => {
     expect(Object.keys(update).sort()).toEqual(['archived_at', 'read_at']);
     expect(calls).toContainEqual(expect.objectContaining({ method: 'eq', args: ['payload->>game_id', 'game-1'] }));
     expect(calls).toContainEqual(expect.objectContaining({ method: 'is', args: ['archived_at', null] }));
-    expect(revalidateTagMock.mock.calls).toEqual([
-      ['notifications-u1', 'max'],
-      ['notifications-u2', 'max'],
-    ]);
   });
 
   it('no notices about the game is fine: 0, nothing to refresh', async () => {
@@ -110,7 +99,6 @@ describe('archiveNotificationsForGame', () => {
     const { archiveNotificationsForGame } = await import('./archive');
 
     expect(await archiveNotificationsForGame('game-1')).toBe(0);
-    expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 
   it('a refused write is logged and never thrown', async () => {

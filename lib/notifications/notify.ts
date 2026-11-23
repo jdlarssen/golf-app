@@ -1,5 +1,4 @@
 import 'server-only';
-import { revalidateTag } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import {
   parseNotificationPayload,
@@ -21,10 +20,8 @@ export { OFF_APP_THRESHOLD_MS };
  * Best-effort: feiler stille på DB-error (loggføres console.error).
  * Skal aldri blokkere parent-action som er en faktisk bruker-flyt.
  *
- * Cache-tag `notifications-${userId}` invalideres ved insert slik at
- * SSR-rendering av /innboks ikke serverer stale data. Bell-badgen
- * oppdateres via realtime, men direkte /innboks-navigering går gjennom
- * Next.js-cache.
+ * Ingen cache-tag: /innboks leser direkte fra basen, så det finnes ingen
+ * cache å invalidere (de gamle `notifications-${userId}`-kallene hadde ingen leser).
  */
 export async function notify<K extends NotificationKind>(opts: {
   userId: string;
@@ -86,16 +83,6 @@ export async function notify<K extends NotificationKind>(opts: {
     // på user_id-FK) mens notify er in-flight, gir insert en FK-error og
     // vi havner her — riktig oppførsel, vi vil ikke maile en slettet bruker.
     return { shouldAlsoSendMail: false, inserted: false };
-  }
-
-  // Invalider innboks-cache for brukeren. Next.js 16 krever to-arg-form;
-  // 'max' = aggressiv invalidering på tvers av alle pågående requests.
-  // The row has landed: a failed refresh must not throw, or a caller that
-  // releases its once-only stamp on a throw would send the reminder twice.
-  try {
-    revalidateTag(`notifications-${userId}`, 'max');
-  } catch (err) {
-    console.error('[notifications] cache refresh failed after insert', err);
   }
 
   // #1009: gjester (skygge-brukere) er per definisjon «off-app» for alltid
