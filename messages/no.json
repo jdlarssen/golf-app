@@ -544,7 +544,7 @@
         },
         "rareShots": {
           "title": "Sjeldne slag",
-          "body": "Slår du hole-in-one, albatross eller eagle, står det på Topplista. Hole-in-one og albatross står også på Æreslista. Alle i Tørny ser det. Det kan du skru av i appen, under Du bestemmer."
+          "body": "Slår du hole-in-one, albatross eller eagle, står det på Topplista. Hole-in-one og albatross står også på Æreslista. Alle i Tørny ser det. Skrur du av «Del sjeldne slag med alle» i appen, under «Du bestemmer», står du ikke på listene. Vennene dine får likevel beskjed, og i en ligarunde de andre i ligaen."
         },
         "social": {
           "title": "Venner og klubber",
@@ -7125,11 +7125,11 @@
       "s3Heading": "Hvem ser dataene dine?",
       "s3Para1": "Andre spillere i samme turnering ser navn, kallenavn, handicap-indeks og spillresultatene dine.",
       "s3Para2": "Administrator ser i tillegg e-postadressen din og kan slette deg fra appen.",
-      "s3Para3": "Alle som har live-lenken til et spill eller en liga, kan følge det uten å logge inn. De ser navnet og resultatene til spillerne. En åpen påmeldingsside viser bare fornavn og forbokstav i etternavnet.",
-      "s3Para4": "Venner og klubbmedlemmer ser navnet og kallenavnet ditt. Setter en venn, en medspiller eller en arrangør i klubben din opp et spill, kan vedkommende også se handicap-indeksen din.",
+      "s3Para3": "Alle som har live-lenken til et spill, kan følge det uten å logge inn. De ser navnet og resultatene til spillerne. Det samme gjelder ligatabellen når arrangøren slår på en åpen lenke til den. En åpen påmeldingsside viser bare fornavn og forbokstav i etternavnet.",
+      "s3Para4": "Venner og klubbmedlemmer ser navnet og kallenavnet ditt. Venner, folk du har spilt med og klubbmedlemmer som oppretter et spill i klubben, kan se handicap-indeksen din når de legger til spillere.",
       "s3Para5": "Reaksjonene dine på en runde ser de som er med i spillet. Ideene du sender inn, ser bare du og administrator.",
-      "s3Para6": "Beskjeden du skriver når du ber om å bli med i en klubb, ser eierne av klubben. Beskjeden i en påmelding til et spill ser arrangøren.",
-      "s3Para7": "Hole-in-one, albatross og eagle står på Topplista i appen, og hole-in-one og albatross står på Æreslista. Alle i Tørny ser det. Du kan skru det av i appen, under «Du bestemmer».",
+      "s3Para6": "Beskjeden du skriver når du ber om å bli med i en klubb, ser eierne og administratorene i klubben. Beskjeden i en påmelding til et spill ser arrangøren.",
+      "s3Para7": "Hole-in-one, albatross og eagle står på Topplista i appen, og hole-in-one og albatross står på Æreslista. Alle i Tørny ser det. Skrur du av «Del sjeldne slag med alle» i appen, under «Du bestemmer», står du ikke på listene. Vennene dine får likevel beskjed, og i en ligarunde de andre i ligaen.",
       "legalBasisHeading": "Rettslig grunnlag",
       "legalBasisIntro": "Personvernforordningen (GDPR) krever et rettslig grunnlag for det vi gjør med opplysningene dine. Slik er det for hvert formål:",
       "legalBasisAccount": "<term>Konto, spill, slag, resultater og punkter du lagrer ved greenen.</term> Vi trenger opplysningene for å gi deg tjenesten du har bedt om. Grunnlaget er avtalen med deg (personvernforordningen artikkel 6 nr. 1 bokstav b).",
