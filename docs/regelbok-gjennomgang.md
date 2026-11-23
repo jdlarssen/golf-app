@@ -183,20 +183,22 @@ Formater: Wolf, Nassau, Skins, Nines, Acey Deucey og Bingo Bango Bongo. Testene 
 
 ### Sjekket, ingen avvik
 
-| Nr | Format | Motoren gjør | Regelen sier | Regneeksempel | Hvor ofte og hvor mye | Forslag | Eierens svar |
+| Nr | Format | Motoren gjør | Regelen sier | Regneeksempel | Hvor ofte og hvor mye | Forslag | Eierens svar 24.11 |
 |---|---|---|---|---|---|---|---|
-| F28 | Wolf | Netto er brutto minus slagene etter hullindeks, og brutto-valget gir brutto (`lib/scoring/modes/wolf.ts:95-96`). | NGF vedlegg E, s. 81: slagene gis etter hullindeks, hullindeks 1 først, og «hull indeks 1 som hull indeks 19». Vedlegg C, s. 76: en spiller med plusshandicap gir slag tilbake «ved å begynne med hullet som har hull-indeks 18». | Tre spillere slår 5 på par 4 med hullindeks 1 og 18. Banehandicap 0 gir 5 og 5. Banehandicap 19 gir 3 og 4. Plusshandicap 2 gir 5 og 6. Brutto gir 5 for alle. | Ingen avvik. | la stå | |
-| F29 | Nassau | Samme regel (`lib/scoring/modes/nassau.ts:66-67`). | Som F28. | Som F28. | Ingen avvik. | la stå | |
-| F30 | Skins | Samme regel (`lib/scoring/modes/skins.ts:54-55`). | Som F28. | Som F28. | Ingen avvik. | la stå | |
-| F31 | Nines | Samme regel (`lib/scoring/modes/nines.ts:50-51`). | Som F28. | Som F28. | Ingen avvik. | la stå | |
-| F32 | Acey Deucey | Samme regel (`lib/scoring/modes/aceyDeucey.ts:40-41`). | Som F28. | Som F28, med en fjerde spiller på banehandicap 0. | Ingen avvik. | la stå | |
-| F33 | Bingo Bango Bongo | Poengene gis for tre hendelser på hullet: først på green, nærmest hullet når alle er på green, og først i hull. Motoren leser verken score eller handicap (`lib/scoring/modes/bingoBangoBongo.ts`). | Regelboka har ikke spillet. Uten score er det ingen slag å fordele. | De samme hendelsene gir samme poeng med banehandicap 0 og 36. | Ingen avvik. | la stå | |
+| F28 | Wolf | Netto er brutto minus slagene etter hullindeks, og brutto-valget gir brutto (`lib/scoring/modes/wolf.ts:95-96`). | NGF vedlegg E, s. 81: slagene gis etter hullindeks, hullindeks 1 først, og «hull indeks 1 som hull indeks 19». Vedlegg C, s. 76: en spiller med plusshandicap gir slag tilbake «ved å begynne med hullet som har hull-indeks 18». | Tre spillere slår 5 på par 4 med hullindeks 1 og 18. Banehandicap 0 gir 5 og 5. Banehandicap 19 gir 3 og 4. Plusshandicap 2 gir 5 og 6. Brutto gir 5 for alle. | Ingen avvik. | la stå |  ikke lagt fram (ingen avvik) |
+| F29 | Nassau | Samme regel (`lib/scoring/modes/nassau.ts:66-67`). | Som F28. | Som F28. | Ingen avvik. | la stå |  ikke lagt fram (ingen avvik) |
+| F30 | Skins | Samme regel (`lib/scoring/modes/skins.ts:54-55`). | Som F28. | Som F28. | Ingen avvik. | la stå |  ikke lagt fram (ingen avvik) |
+| F31 | Nines | Samme regel (`lib/scoring/modes/nines.ts:50-51`). | Som F28. | Som F28. | Ingen avvik. | la stå |  ikke lagt fram (ingen avvik) |
+| F32 | Acey Deucey | Samme regel (`lib/scoring/modes/aceyDeucey.ts:40-41`). | Som F28. | Som F28, med en fjerde spiller på banehandicap 0. | Ingen avvik. | la stå |  ikke lagt fram (ingen avvik) |
+| F33 | Bingo Bango Bongo | Poengene gis for tre hendelser på hullet: først på green, nærmest hullet når alle er på green, og først i hull. Motoren leser verken score eller handicap (`lib/scoring/modes/bingoBangoBongo.ts`). | Regelboka har ikke spillet. Uten score er det ingen slag å fordele. | De samme hendelsene gir samme poeng med banehandicap 0 og 36. | Ingen avvik. | la stå |  ikke lagt fram (ingen avvik) |
 
 ### Utenfor regelboka
 
-| Nr | Format | Motoren gjør | Regelen sier | Regneeksempel | Hvor ofte og hvor mye | Forslag | Eierens svar |
+| Nr | Format | Motoren gjør | Regelen sier | Regneeksempel | Hvor ofte og hvor mye | Forslag | Eierens svar 24.11 |
 |---|---|---|---|---|---|---|---|
-| F34 | Skins, Wolf, Nines og Acey Deucey: spillene som avgjøres hull for hull, som matchspill. | Hver spiller får sine egne slag etter hullindeks, ikke differansen til den laveste (linjene i F28 og F30–F32). | Regelboka har ingen rad for disse spillene. For matchspill sier NGF vedlegg C, s. 76, at den laveste spiller på null og at de andre får differansen. Det er regelen bak F15. | Banehandicap 10 mot 18: i dag får begge et slag på hullindeks 1–10, så 18-spilleren har et slag mer på hullindeks 11–18. Med differansen får 18-spilleren slagene på hullindeks 1–8. | Gjelder netto-spill av disse fire der spillerne har ulikt handicap, med samme betingelse som i F15. Ved 100 % blir antallet slag i forskjell det samme. Det er bare hullene som blir andre. Hvor ofte et hull får en annen vinner, er ikke målt. | la stå. Regelboka sier ikke noe om disse spillene. Vil du ha samme regel som i F15 også her, kan det tas med i #2997. | |
+| F34 | Skins, Wolf, Nines og Acey Deucey: spillene som avgjøres hull for hull, som matchspill. | Hver spiller får sine egne slag etter hullindeks, ikke differansen til den laveste (linjene i F28 og F30–F32). | Regelboka har ingen rad for disse spillene. For matchspill sier NGF vedlegg C, s. 76, at den laveste spiller på null og at de andre får differansen. Det er regelen bak F15. | Banehandicap 10 mot 18: i dag får begge et slag på hullindeks 1–10, så 18-spilleren har et slag mer på hullindeks 11–18. Med differansen får 18-spilleren slagene på hullindeks 1–8. | Gjelder netto-spill av disse fire der spillerne har ulikt handicap, med samme betingelse som i F15. Ved 100 % blir antallet slag i forskjell det samme. Det er bare hullene som blir andre. Hvor ofte et hull får en annen vinner, er ikke målt. | la stå. Regelboka sier ikke noe om disse spillene. Vil du ha samme regel som i F15 også her, kan det tas med i #2997. |  «La stå» |
+
+Svaret er eierens, ordrett fra chatten med orkestratoren 24.11.2026. Orkestratoren anbefalte «La stå», og byggeren foreslo det samme. Ingen ny sak, og #2997 utvides ikke. F28–F33 hadde ingen avvik og ble ikke lagt fram som spørsmål.
 
 ### Testene og funnene, runde 4
 
@@ -229,7 +231,7 @@ Gjennomgangen gikk i fire runder fra 20. til 24.11.2026. Tabellen viser hvert fu
 | F24 | 3 | Patsome gir fullt banehandicap på four-ball-hullene, forbundet sier 85 % | produktvalg | «Rett» | #3002 |
 | F25 | 3 | Dobbeltavrunding i scramble og patsome | ikke nytt | «Rett» | #2997 |
 | F26–F27 | 3 | Ingen avvik | la stå | | |
-| F28–F33 | 4 | Ingen avvik | la stå | | |
-| F34 | 4 | Hull-for-hull-spillene gir egne slag (utenfor regelboka) | la stå | | |
+| F28–F33 | 4 | Ingen avvik | la stå | ikke lagt fram | |
+| F34 | 4 | Hull-for-hull-spillene gir egne slag (utenfor regelboka) | la stå | «La stå» | ingen (#2997 utvides ikke) |
 
-Svarene for runde 1 kom 20.11, og svarene for runde 2 og 3 kom 23.11. Runde 4 venter på svar. Kjent avvik står som `it.fails` i `lib/scoring/rulebook/` til rettingen i saken gjør testen om til `it`.
+Svarene for runde 1 kom 20.11, svarene for runde 2 og 3 kom 23.11, og svaret for runde 4 kom 24.11. Kjent avvik står som `it.fails` i `lib/scoring/rulebook/` til rettingen i saken gjør testen om til `it`.
