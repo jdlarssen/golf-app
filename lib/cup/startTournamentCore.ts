@@ -1,7 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { allSettledInBatches } from '@/lib/async/allSettledInBatches';
 import type { Database } from '@/lib/database.types';
-import { expireTournamentCache } from '@/lib/games/expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { sendCupStartedNotification } from '@/lib/mail/cupStartedNotification';
 import { notifyParticipantsCupStarted } from '@/lib/notifications/events';
@@ -146,7 +145,6 @@ export async function startTournamentCore(
 
 /** Cup-sidene etter en start fra appen. Nettets handling revaliderer de samme. */
 export function revalidateCupStarted(id: string, groupId: string | null): void {
-  expireTournamentCache(id);
   revalidatePath(`/admin/cup/${id}`);
   revalidatePath(`/admin/cup/${id}/spillere`);
   if (groupId) {

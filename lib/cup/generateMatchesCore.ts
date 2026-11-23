@@ -1,5 +1,4 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { expireTournamentCache } from '@/lib/games/expireGameCache';
 import { isTeeOffInPast } from '@/lib/games/gamePayload';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import type { Database } from '@/lib/database.types';
@@ -247,7 +246,6 @@ export async function generateCupMatchesCore(
 
 /** Det samme begge veier etter en generering: cup-sidene skal vise de nye kampene. */
 export function revalidateCupGenerated(tournamentId: string, groupId: string | null): void {
-  expireTournamentCache(tournamentId);
   revalidatePath(`/admin/cup/${tournamentId}`);
   if (groupId) revalidatePath(`/klubber/${groupId}/cup/${tournamentId}`);
   revalidatePath(`/cup/${tournamentId}`);

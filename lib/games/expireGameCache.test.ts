@@ -5,7 +5,7 @@ import { join, relative } from 'node:path';
 vi.mock('next/cache', () => ({ revalidateTag: vi.fn() }));
 
 import { revalidateTag } from 'next/cache';
-import { expireGameCache, expireTournamentCache } from './expireGameCache';
+import { expireGameCache } from './expireGameCache';
 
 /**
  * #2068: a mutation expires the game/cup cache at once, and the rule has one
@@ -16,19 +16,12 @@ import { expireGameCache, expireTournamentCache } from './expireGameCache';
  * in `lib/formats/expireFormatMappingCache.test.ts`.
  */
 
-describe('expireGameCache / expireTournamentCache', () => {
+describe('expireGameCache', () => {
   beforeEach(() => vi.mocked(revalidateTag).mockClear());
 
   it('expires the game tag immediately', () => {
     expireGameCache('g1');
     expect(revalidateTag).toHaveBeenCalledExactlyOnceWith('game-g1', { expire: 0 });
-  });
-
-  it('expires the tournament tag immediately', () => {
-    expireTournamentCache('t1');
-    expect(revalidateTag).toHaveBeenCalledExactlyOnceWith('tournament-t1', {
-      expire: 0,
-    });
   });
 });
 

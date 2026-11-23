@@ -388,7 +388,7 @@ describe('swapCupMatchPlayer — happy path (#1473)', () => {
     const { revalidateTag } = await import('next/cache');
     const tags = (revalidateTag as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]);
     expect(tags).toEqual(
-      expect.arrayContaining(['tournament-cup-1', 'game-g-host', 'game-g-derived']),
+      expect.arrayContaining(['game-g-host', 'game-g-derived']),
     );
 
     // Ett invite-varsel til den som kom inn, på host-matchen.

@@ -1,7 +1,6 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
-import { expireTournamentCache } from '@/lib/games/expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { planTournamentGameDeletion } from './tournamentGameDeletion';
@@ -72,6 +71,5 @@ export async function deleteCupCore(caller: SupabaseClient<Database>, id: string
 }
 
 export function revalidateCupDeleted(id: string, groupId: string | null) {
-  expireTournamentCache(id);
   if (groupId) revalidatePath(`/klubber/${groupId}`);
 }

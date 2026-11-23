@@ -144,8 +144,6 @@ describe('joinCup', () => {
       },
     });
 
-    const { revalidateTag } = await import('next/cache');
-    expect(revalidateTag).toHaveBeenCalledWith('tournament-cup-1', { expire: 0 });
   });
 
   it('avvist av vakten: ingen skriving, ingen redirect, feilkoden ut', async () => {

@@ -1,7 +1,7 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
-import { expireGameCache, expireTournamentCache } from '@/lib/games/expireGameCache';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { exceedsPersonalPlayerCap } from '@/lib/cup/limits';
 import { expectAffected } from '@/lib/supabase/affectedRows';
@@ -23,7 +23,6 @@ import type { CupPlanValues } from './planValidation';
 
 /** Samme tagger og stier for nettet og appen. */
 export function revalidateCupSetup(id: string, groupId: string | null): void {
-  expireTournamentCache(id);
   revalidatePath(`/admin/cup/${id}`);
   if (groupId) revalidatePath(`/klubber/${groupId}/cup/${id}`);
 }
