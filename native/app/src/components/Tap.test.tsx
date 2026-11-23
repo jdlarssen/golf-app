@@ -173,5 +173,18 @@ describe('knappene i appen (#2928)', () => {
     expect(backdrops.length).toBeGreaterThanOrEqual(12);
     expect(backdrops.filter((b) => !b.none)).toEqual([]);
   });
+
+  // En flate uten `onPress` (bare langt trykk) er skjult med vilje: den skal ikke
+  // blinke og vise seg fram (innloggingens ordmerke).
+  it('gir hver skjult flate uten onPress feedback="none"', () => {
+    const hidden = sources.flatMap(({ file, src }) =>
+      [...src.matchAll(/<Tap\b((?:=>|[^>])*)>/g)]
+        .map((m) => m[1])
+        .filter((props) => !props.includes('onPress') && !props.includes('{...'))
+        .map((props) => ({ file, none: props.includes('feedback="none"') })),
+    );
+    expect(hidden.length).toBeGreaterThanOrEqual(1);
+    expect(hidden.filter((h) => !h.none)).toEqual([]);
+  });
 });
 

@@ -263,7 +263,10 @@ export function Login() {
             { backgroundColor: colors.surfaceStrong, paddingTop: insets.top + 22 },
           ]}
         >
+          {/* #2928: en skjult flate (langt trykk åpner passord-innloggingen for
+              butikkgjennomgangen). Den skal ikke vise at den kan trykkes på. */}
           <Tap
+            feedback="none"
             onLongPress={() => setPasswordMode(true)}
             delayLongPress={REVEAL_PASSWORD_LOGIN_MS}
             accessibilityRole="header"
