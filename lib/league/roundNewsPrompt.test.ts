@@ -28,23 +28,23 @@ const summary: RoundSummary = {
   countingRounds: 8,
   playersInLeague: 5,
   playedThisRound: 4,
-  round: [row('ole', 1, 'Ole H.', 44, 0), row('lysb', 2, 'Mathias L.', 43, 1), row('nei', 3, 'Nina N.', 42, 2), row('phil', 4, 'Philip M.', 36, 8)],
-  table: [row('ole', 1, 'Ole H.', 44, 0), row('lysb', 2, 'Mathias L.', 43, 1), row('nei', 3, 'Nina N.', 42, 2), row('phil', 4, 'Philip M.', 36, 8)],
+  round: [row('dina', 1, 'Dina D.', 44, 0), row('emil', 2, 'Emil E.', 43, 1), row('nei', 3, 'Nina N.', 42, 2), row('gard', 4, 'Gard G.', 36, 8)],
+  table: [row('dina', 1, 'Dina D.', 44, 0), row('emil', 2, 'Emil E.', 43, 1), row('nei', 3, 'Nina N.', 42, 2), row('gard', 4, 'Gard G.', 36, 8)],
 };
-const yes = new Set(['ole', 'lysb', 'phil']);
+const yes = new Set(['dina', 'emil', 'gard']);
 const facts = buildRoundNewsFacts(summary, 'Runde 2', yes)!;
 
 describe('buildRoundNewsFacts', () => {
   it('only the players who said yes are in the facts; the counts still cover everyone', () => {
     expect(facts.round).toEqual([
-      { place: 1, name: 'Ole H.', value: 44, behindBest: 0 },
-      { place: 2, name: 'Mathias L.', value: 43, behindBest: 1 },
-      { place: 4, name: 'Philip M.', value: 36, behindBest: 8 },
+      { place: 1, name: 'Dina D.', value: 44, behindBest: 0 },
+      { place: 2, name: 'Emil E.', value: 43, behindBest: 1 },
+      { place: 4, name: 'Gard G.', value: 36, behindBest: 8 },
     ]);
     expect(facts.table).toEqual([
-      { place: 1, name: 'Ole H.', total: 44, behindLeader: 0 },
-      { place: 2, name: 'Mathias L.', total: 43, behindLeader: 1 },
-      { place: 4, name: 'Philip M.', total: 36, behindLeader: 8 },
+      { place: 1, name: 'Dina D.', total: 44, behindLeader: 0 },
+      { place: 2, name: 'Emil E.', total: 43, behindLeader: 1 },
+      { place: 4, name: 'Gard G.', total: 36, behindLeader: 8 },
     ]);
     expect(JSON.stringify(facts)).not.toMatch(/Nina|nei/);
     expect(facts).toMatchObject({
@@ -83,15 +83,15 @@ describe('buildRoundNewsFacts', () => {
   });
 
   it('the round best said no: the facts say that nobody shown won the round or leads the table', () => {
-    // Ole (place 1) is hidden. The best of the shown players is second.
-    const hidden = buildRoundNewsFacts(summary, 'Runde 2', new Set(['lysb', 'phil']))!;
+    // Dina (place 1) is hidden. The best of the shown players is second.
+    const hidden = buildRoundNewsFacts(summary, 'Runde 2', new Set(['emil', 'gard']))!;
     expect(hidden.round.map((r) => r.place)).toEqual([2, 4]);
     expect(hidden).toMatchObject({ roundBestShown: false, tableLeaderShown: false });
-    expect(JSON.stringify(hidden)).not.toMatch(/Ole/);
+    expect(JSON.stringify(hidden)).not.toMatch(/Dina/);
   });
 
   it('a player without a name is left out, and nobody to write about gives no facts', () => {
-    const nameless = { ...summary, round: [row('ole', 1, null, 44, 0)], table: [row('ole', 1, null, 44, 0)] };
+    const nameless = { ...summary, round: [row('dina', 1, null, 44, 0)], table: [row('dina', 1, null, 44, 0)] };
     expect(buildRoundNewsFacts(nameless, 'Runde 2', yes)).toBeNull();
     expect(buildRoundNewsFacts(summary, 'Runde 2', new Set())).toBeNull();
     expect(buildRoundNewsFacts(summary, 'Runde 2', new Set(['nei-ikke-i-runden']))).toBeNull();
@@ -102,7 +102,7 @@ describe('buildRoundNewsPrompt', () => {
   it('the user message carries the facts as they are, and nothing else about the players', () => {
     const { system, user } = buildRoundNewsPrompt(facts);
     expect(user).toContain(JSON.stringify(facts, null, 2));
-    expect(system).not.toMatch(/Ole|Mathias|Philip|Nina/);
+    expect(system).not.toMatch(/Dina|Emil|Gard|Nina/);
   });
 
   it('the rules the drafts broke are in the system prompt', () => {
@@ -132,15 +132,15 @@ describe('buildRoundNewsPrompt', () => {
 
 describe('checkRoundNews', () => {
   it('a story whose numbers all stand in the facts goes out, trimmed', () => {
-    const story = '  Ole H. tok Runde 1 med 44 poeng, 1 foran Mathias L. Philip M. er 8 bak. Runde 2 er åpen nå.  ';
+    const story = '  Dina D. tok Runde 1 med 44 poeng, 1 foran Emil E. Gard G. er 8 bak. Runde 2 er åpen nå.  ';
     expect(checkRoundNews(story, facts)).toEqual({ story: story.trim(), fault: null });
   });
 
   it.each([
-    ['a score nobody has', 'Ole H. tok runden med 45 poeng.', '45'],
-    ['a gap the facts do not hold', 'Philip M. er 7 poeng bak Ole H.', '7'],
-    ['a decimal that is not there', 'Ole H. snittet 44,5 poeng.', '44.5'],
-    ['a year that is not in the league name', 'Ole H. åpnet 2025-sesongen med 44 poeng.', '2025'],
+    ['a score nobody has', 'Dina D. tok runden med 45 poeng.', '45'],
+    ['a gap the facts do not hold', 'Gard G. er 7 poeng bak Dina D.', '7'],
+    ['a decimal that is not there', 'Dina D. snittet 44,5 poeng.', '44.5'],
+    ['a year that is not in the league name', 'Dina D. åpnet 2025-sesongen med 44 poeng.', '2025'],
   ])('a number that is not in the facts drops the story, and the fault names it: %s', (_name, story, number) => {
     expect(checkRoundNews(story, facts)).toEqual({
       story: null,
@@ -149,10 +149,10 @@ describe('checkRoundNews', () => {
   });
 
   it('the limit of the check: a number from the facts used about the wrong thing passes', () => {
-    // 10 is the number of rounds in the league, not Philip's gap (8). The
+    // 10 is the number of rounds in the league, not Gard's gap (8). The
     // digits are known, so the check lets it through: the prompt forbids the
     // model's own arithmetic, and the gaps stand in the facts for that reason.
-    expect(checkRoundNews('Philip M. er 10 poeng bak Ole H.', facts).story).not.toBeNull();
+    expect(checkRoundNews('Gard G. er 10 poeng bak Dina D.', facts).story).not.toBeNull();
   });
 
   it('digits from the league name and the round labels are known', () => {
@@ -162,7 +162,7 @@ describe('checkRoundNews', () => {
   it('an empty or far too long answer drops the story', () => {
     const fault = 'Utkastet var tomt eller for langt.';
     expect(checkRoundNews('   ', facts)).toEqual({ story: null, fault });
-    expect(checkRoundNews('Ole H. '.repeat(200), facts)).toEqual({ story: null, fault });
+    expect(checkRoundNews('Dina D. '.repeat(200), facts)).toEqual({ story: null, fault });
   });
 
   it('a hidden player’s numbers are unknown, so a story that leaks them is dropped', () => {
@@ -204,10 +204,10 @@ describe('checkRoundNews: a simulator league has no meeting place', () => {
   });
 
   it.each([
-    'Ole H. møtte ingen motstand og tok 44 poeng.',
-    'Ole H. samlet 44 poeng og er på toppen.',
-    'Philip M. må opp fra bunnen. Runde 2 er åpen nå.',
-    'Mathias L. klatret opp og fant veien til skjermen.',
+    'Dina D. møtte ingen motstand og tok 44 poeng.',
+    'Dina D. samlet 44 poeng og er på toppen.',
+    'Gard G. må opp fra bunnen. Runde 2 er åpen nå.',
+    'Emil E. klatret opp og fant veien til skjermen.',
   ])('a word that only looks like one of them goes out: %s', (story) => {
     expect(checkRoundNews(story, facts)).toEqual({ story, fault: null });
   });
