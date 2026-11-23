@@ -141,6 +141,7 @@ export default async function PrivacyPage() {
             <li>{t.rich('processorSupabase', { term })}</li>
             <li>{t.rich('processorVercel', { term })}</li>
             <li>{t.rich('processorResend', { term })}</li>
+            <li>{t.rich('processorGithub', { term })}</li>
             <li>{t.rich('processorAnthropic', { term })}</li>
           </ul>
           <p className="text-text mb-2">{t('pushRecipients')}</p>
@@ -184,6 +185,7 @@ export default async function PrivacyPage() {
             <li>{t.rich('legalBasisAi', { term })}</li>
             <li>{t.rich('legalBasisInvitations', { term })}</li>
             <li>{t.rich('legalBasisGuests', { term })}</li>
+            <li>{t.rich('legalBasisIdeas', { term })}</li>
             <li>{t.rich('legalBasisAnalytics', { term })}</li>
             <li>{t.rich('legalBasisAfterDeletion', { term, link: deletePageLink })}</li>
           </ul>

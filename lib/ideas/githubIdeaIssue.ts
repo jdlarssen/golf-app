@@ -12,6 +12,8 @@
 // The token is its own fine-grained token (Issues read/write on this repo only),
 // not GITHUB_LOOP_PAT, which can merge pull requests.
 
+import 'server-only';
+
 import { githubClient, LOOP_REPO } from '@/lib/loops/githubClient';
 import type { GitHubClient } from '@/lib/loops/discordActions';
 
@@ -22,21 +24,23 @@ const TITLE_MAX = 70;
 const GITHUB_TIMEOUT_MS = 4000;
 
 const EMAIL_RE = /[^\s@<>()[\]]+@[^\s@<>()[\]]+\.[^\s@<>()[\]]+/g;
-// A run that starts like a number and may hold spaces, dots, dashes, brackets.
-const NUMBER_RUN_RE = /\+?\d[\d\s().-]{6,}\d/g;
-const DATE_RE = /^(\d{4}-\d{2}-\d{2}|\d{1,2}\.\d{1,2}\.\d{2,4})$/;
+// Norwegian phone numbers only, with the groupings people write them in:
+// 8 / 4+4 / 3+2+3 / 2+2+2+2 digits, with optional +47 or 0047 in front.
+// Anything else (score rows, dates, times) is left alone.
+const PHONE_RE =
+  /(?<![\d.,-])(?:(?:\+|00)47[ -]?)?(?:\d{8}|\d{4} \d{4}|\d{3} \d{2} \d{3}|\d{2} \d{2} \d{2} \d{2})(?![\d.,-])/g;
+// Longer international numbers, written with a + in front.
+const INTL_PHONE_RE = /\+\d{1,3}(?:[ -]?\d{2,4}){2,4}(?!\d)/g;
 
 export const REDACTED_EMAIL = '[e-post fjernet]';
 export const REDACTED_PHONE = '[telefonnummer fjernet]';
 
-/** Cuts e-mail addresses and phone numbers (8+ digits, not dates) out of free text. */
+/** Cuts e-mail addresses and phone numbers out of free text. */
 export function redactContactDetails(text: string): string {
-  return text.replace(EMAIL_RE, REDACTED_EMAIL).replace(NUMBER_RUN_RE, (run) => {
-    const trimmed = run.trim();
-    if (DATE_RE.test(trimmed)) return run;
-    const digits = trimmed.replace(/\D/g, '').length;
-    return digits >= 8 ? REDACTED_PHONE : run;
-  });
+  return text
+    .replace(EMAIL_RE, REDACTED_EMAIL)
+    .replace(INTL_PHONE_RE, REDACTED_PHONE)
+    .replace(PHONE_RE, REDACTED_PHONE);
 }
 
 /** `@name` would notify a GitHub user; a zero-width space after the @ stops that. */
@@ -44,8 +48,21 @@ function defuseMentions(text: string): string {
   return text.replace(/@(?=[A-Za-z0-9])/g, '@​');
 }
 
-export function buildIdeaIssueTitle(redactedText: string): string {
-  const oneLine = redactedText.replace(/\s+/g, ' ').trim();
+/** The text as it is published: contact details cut out, mentions defused. */
+function safeText(text: string): string {
+  return defuseMentions(redactContactDetails(text.trim()));
+}
+
+/**
+ * Plain title: no markdown or HTML characters and no `#123` references, so the
+ * title shows as written and links to nothing.
+ */
+export function buildIdeaIssueTitle(text: string): string {
+  const oneLine = safeText(text)
+    .replace(/\s+/g, ' ')
+    .replace(/[`*_~[\]()<>!|\\#]/g, '')
+    .replace(/\bGH-(?=\d)/gi, '')
+    .trim();
   if (oneLine.length <= TITLE_MAX) return `Idé: ${oneLine}`;
   const cut = oneLine.slice(0, TITLE_MAX);
   const lastSpace = cut.lastIndexOf(' ');
@@ -53,18 +70,25 @@ export function buildIdeaIssueTitle(redactedText: string): string {
   return `Idé: ${base.replace(/[\s,.;:-]+$/, '')} …`;
 }
 
+/** A code fence longer than any run of backticks in the text. */
+function fenceFor(text: string): string {
+  const longest = Math.max(0, ...(text.match(/`+/g) ?? []).map((r) => r.length));
+  return '`'.repeat(Math.max(3, longest + 1));
+}
+
+/**
+ * The idea goes in a code block, so nothing in it renders: no links, images,
+ * HTML, headings or `#123` cross-references. The admin link is ours.
+ */
 export function buildIdeaIssue(
   text: string,
   adminUrl: string,
 ): { title: string; body: string } {
-  const safe = defuseMentions(redactContactDetails(text.trim()));
-  const quoted = safe
-    .split('\n')
-    .map((line) => `> ${line}`)
-    .join('\n');
+  const safe = safeText(text);
+  const fence = fenceFor(safe);
   return {
-    title: buildIdeaIssueTitle(redactContactDetails(text)),
-    body: `${quoted}\n\n[Idéen i admin](${adminUrl})`,
+    title: buildIdeaIssueTitle(text),
+    body: `${fence}text\n${safe}\n${fence}\n\n[Idéen i admin](${adminUrl})`,
   };
 }
 

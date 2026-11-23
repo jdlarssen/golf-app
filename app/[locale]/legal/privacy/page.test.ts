@@ -43,4 +43,26 @@ describe('legal.privacy who-sees-it paragraphs', () => {
     expect(no.legal.privacy.s1Item13).toContain('GitHub');
     expect(en.legal.privacy.s1Item13).toContain('GitHub');
   });
+
+  it('lists GitHub as a processor outside the EEA, with a legal basis for publishing ideas', () => {
+    for (const [lang, m] of [['no', no], ['en', en]] as const) {
+      const p = m.legal.privacy as Record<string, string>;
+      expect(p.processorGithub, lang).toContain('GitHub');
+      expect(p.processorsOutsideEea, lang).toContain('GitHub');
+      expect(p.legalBasisIdeas, lang).toContain('GitHub');
+      expect(p.legalBasisIdeas, lang).toMatch(/6/);
+    }
+    for (const key of ['processorGithub', 'legalBasisIdeas']) {
+      expect(source, key).toContain(`'${key}'`);
+    }
+  });
+
+  it('says on the deletion page that the GitHub copy stays, and no longer says it in the deleted list', () => {
+    const slett = readFileSync(join(__dirname, '../slett-konto/page.tsx'), 'utf8');
+    expect(slett).toContain("'keptItem6'");
+    for (const m of [no, en]) {
+      expect(m.legal.deleteAccount.keptItem6).toContain('GitHub');
+      expect(m.legal.deleteAccount.deletedItem3).not.toContain('GitHub');
+    }
+  });
 });

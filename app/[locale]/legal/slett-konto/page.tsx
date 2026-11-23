@@ -113,6 +113,7 @@ export default async function DeleteAccountInfoPage() {
             <li>{t('keptItem3')}</li>
             <li>{t('keptItem4')}</li>
             <li>{t('keptItem5')}</li>
+            <li>{t('keptItem6')}</li>
           </ul>
         </section>
 
