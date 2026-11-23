@@ -98,6 +98,10 @@ export default async function PrivacyPage() {
             <li>{t('s1Item9')}</li>
             <li>{t('s1Item10')}</li>
             <li>{t('s1Item11')}</li>
+            <li>{t('s1Item12')}</li>
+            <li>{t('s1Item13')}</li>
+            <li>{t('s1Item14')}</li>
+            <li>{t('s1Item15')}</li>
           </ul>
         </section>
 
@@ -156,8 +160,15 @@ export default async function PrivacyPage() {
           <h2 className="font-serif text-xl font-medium text-text mb-3">
             {t('s3Heading')}
           </h2>
-          <p className="text-text mb-2">{t('s3Para1')}</p>
-          <p className="text-text">{t('s3Para2')}</p>
+          <div className="space-y-2 text-text">
+            <p>{t('s3Para1')}</p>
+            <p>{t('s3Para2')}</p>
+            <p>{t('s3Para3')}</p>
+            <p>{t('s3Para4')}</p>
+            <p>{t('s3Para5')}</p>
+            <p>{t('s3Para6')}</p>
+            <p>{t('s3Para7')}</p>
+          </div>
         </section>
 
         {/* Rettslig grunnlag (#2561), ett punkt per formål */}

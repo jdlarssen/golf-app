@@ -379,7 +379,7 @@ export const DATA_TEXT = {
     },
     rareShots: {
       title: 'Sjeldne slag',
-      body: 'Slår du hole-in-one, albatross eller eagle, står det på Topplista, og alle i Tørny ser det. Det kan du skru av i appen, under Du bestemmer.',
+      body: 'Slår du hole-in-one, albatross eller eagle, står det på Topplista. Hole-in-one og albatross står også på Æreslista. Alle i Tørny ser det. Det kan du skru av i appen, under Du bestemmer.',
     },
     social: {
       title: 'Venner og klubber',
