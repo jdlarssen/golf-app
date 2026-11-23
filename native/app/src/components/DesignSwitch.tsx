@@ -51,13 +51,13 @@ export function DesignSwitch({
 
 /**
  * Av-sporet når bryteren står i en liste. Den dempede tekstfargen med 60 %
- * dekning i lys drakt og 70 % i mørk, så sporet måler minst 3:1 mot kortet
- * (WCAG 1.4.11): 3,33:1 mot hvitt og 3,09:1 mot mørkt kort. Før var det
- * `#D9D2C2` (1,51:1) og 45 % dekning (2,06:1). Én kilde for kontoinnstillingene
- * og veiviseren (#2709).
+ * dekning i lys drakt og 80 % i mørk, så sporet måler minst 3:1 mot kortet
+ * (WCAG 1.4.11): 3,33:1 mot hvitt, 3,59:1 mot mørkt kort og 3,23:1 mot det
+ * innfelte mørke kortet. Før var det `#D9D2C2` (1,51:1) og 45 % dekning
+ * (2,06:1). Én kilde for kontoinnstillingene og veiviseren (#2709).
  */
 export function listSwitchOffColor(colors: ThemeColors, scheme: Scheme): string {
-  return scheme === 'dark' ? `${colors.muted}B3` : `${colors.muted}99`;
+  return scheme === 'dark' ? `${colors.muted}CC` : `${colors.muted}99`;
 }
 
 const SWITCH_HIT_SLOP = { top: 6, bottom: 6, left: 4, right: 4 };

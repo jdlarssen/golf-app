@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { setLeagueJoinLink, type LeagueJoinLinkMode } from '@/lib/league/joinLink';
 import { leagueJoinUrl } from '@/lib/league/joinCode';
 import { Card } from '@/components/ui/Card';
+import { OFF_TRACK } from '@/components/ui/Switch';
 import { ShareLinkField } from '@/components/ui/ShareLinkField';
 
 /**
@@ -61,7 +62,7 @@ export function LigaJoinLinkControl({
             'relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer',
             'rounded-full border-2 border-transparent transition-colors duration-200',
             'disabled:opacity-60',
-            enabled ? 'bg-primary' : 'bg-border',
+            enabled ? 'bg-primary' : OFF_TRACK,
           ].join(' ')}
         >
           <span
