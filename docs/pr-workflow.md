@@ -66,8 +66,7 @@ Alt arbeid via PR — **aldri direkte push til `main`**. Hooks håndhever dette:
      `accountCopy.ts`, `app.json`, `app.config.ts`,
      `native/app/scripts/**` — #1944 og #2134; fra 2026-09-16 auto-merges resten av
      `native/app/**` som annen kode, fordi appen ikke er sluppet og main ikke er
-     produksjon for den), pluss skallmappene `native/ios/**` og `native/android/**`
-     (#1956; signerings-, rettighets- og dyplenke-flater). Fra gjennomgangen 20.11 også
+     produksjon for den). Skallmappene `native/ios` og `native/android` er slettet. Fra gjennomgangen 20.11 også
      kontoslettingens delte hjelper (`lib/users/deleteAccount.ts`),
      `components/auth/**`, `components/passkey/**`, tilgangssjekkene
      `lib/cron/auth.ts`, `lib/api/appAuth.ts` og `lib/admin/auth.ts`, appens

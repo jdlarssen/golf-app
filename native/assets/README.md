@@ -2,8 +2,8 @@
 
 Alle rasterkopier av Tørny-merket bygges fra de tre master-SVG-ene i denne mappen.
 `generate-icons.mjs` lager App Store-ikonet, Android-lagene, splash, Expo-appens
-assets, nettets PWA-ikoner (`/icon`, `/icon0`, `/apple-icon`), ikonene i
-Google Play-skallet (`native/android/`) og ordmerket i e-postheaderen.
+assets, nettets PWA-ikoner (`/icon`, `/icon0`, `/apple-icon`), 
+Google Play-ikonet (`play-store-icon.png`) og ordmerket i e-postheaderen.
 Play-feature-grafikken lages av `store/generate-feature-graphic.mjs` fra
 `wordmark-master.svg` (se «Butikkgrafikken» under). Ingen andre filer tegner merket.
 Kjør generatoren på nytt med:
@@ -24,14 +24,12 @@ skrives bare `<mappe>/contact-sheet.png`.
 - `icon-master-full-bleed.svg` — flisen (forest-gradient) helt ut til kanten, uten
   avrunding (butikker/OS runder selv). Bakgrunnen er merket `data-layer="tile"`;
   alene er den Android-bakgrunnslaget og bakgrunnen i maskable-ikonene. Brukes til
-  `appstore-1024.png`, nettets PWA-ikoner og Play-skallets launcher-, butikk-,
-  splash- og varselikoner.
+  `appstore-1024.png`, nettets PWA-ikoner og Play-butikkikonet.
 - `icon-master-safe-zone.svg` — kun motivet (T + ball), transparent bakgrunn,
   skalert 0.7× om senter. Skalert ned for å ligge trygt innenfor BÅDE Androids
   adaptive-safe-zone (~66 % diameter) og maskable-safe-zonen (80 % diameter) — samme
   master dekker begge. Brukes til `android-foreground-432.png`,
-  `public/icons/maskable-*.png` og Play-skallets `ic_maskable` (lagt oppå flisen),
-  og `ios-splash-logo.png`.
+  `public/icons/maskable-*.png` (lagt oppå flisen) og `ios-splash-logo.png`.
 - `wordmark-master.svg` — ordmerket «Tørny» med ballen på T-en, til flater som ikke
   kan sette Fraunces selv (i dag e-postheaderen og Play-feature-grafikken). `width`/`height`
   er visningsstørrelsen i mailen; generatoren rendrer den i 2×, og feature-grafikk-skriptet
@@ -50,14 +48,10 @@ ellers gitt et ikon i feil skrift uten at noe merket det.
 | `appstore-1024.png` | 1024×1024 | Ingen alfakanal (IHDR color type 2) — App Store Connect avviser PNG med alfa. |
 | `android-foreground-432.png` | 432×432 | Transparent bakgrunn, motiv i safe-zone. |
 | `android-background-432.png` | 432×432 | Flisen alene (gradient `#1B4332` → `#14201A`). |
-| `public/icons/maskable-192.png`, `public/icons/maskable-512.png` | 192×192 / 512×512 | Flisen + motiv i safe-zone — konsumert av `app/manifest.ts` (`purpose: maskable`) og av Play-skallets `maskableIconUrl`. |
-| `public/icons/icon-192.png`, `icon-512.png`, `apple-icon-180.png` | 192 / 512 / 180 | Full-bleed, ingen alfakanal. Serveres på `/icon`, `/icon0` og `/apple-icon` via `rewrites()` i `next.config.ts`, så installerte PWA-er, `public/sw.js` og Play-skallet beholder URL-ene sine. |
+| `public/icons/maskable-192.png`, `public/icons/maskable-512.png` | 192×192 / 512×512 | Flisen + motiv i safe-zone — konsumert av `app/manifest.ts` (`purpose: maskable`) . |
+| `public/icons/icon-192.png`, `icon-512.png`, `apple-icon-180.png` | 192 / 512 / 180 | Full-bleed, ingen alfakanal. Serveres på `/icon`, `/icon0` og `/apple-icon` via `rewrites()` i `next.config.ts`, så installerte PWA-er og `public/sw.js` beholder URL-ene sine. |
 | `ios-splash-logo.png` | 512×512 | Transparent motiv, mørk splash. |
-| `native/android/store_icon.png` | 512×512 | Play-skallets butikkikon. 32-bit PNG med (heldekkende) alfakanal, som Play Console ber om. |
-| `native/android/app/src/main/res/mipmap-*/ic_launcher.png` | 48–192 | Full-bleed. |
-| `native/android/app/src/main/res/mipmap-*/ic_maskable.png` | 82–328 | Flisen + motiv, som `maskable-512.png`. |
-| `native/android/app/src/main/res/drawable-*/splash.png` | 300–1200 | Full-bleed. |
-| `native/android/app/src/main/res/drawable-*/ic_notification_icon.png` | 24–96 | Full-bleed (samme som Bubblewrap bakte inn fra `/icon0`). |
+| `native/assets/play-store-icon.png` | 512×512 | Play-butikkikonet. 32-bit PNG med (heldekkende) alfakanal, som Play Console ber om. |
 | `public/brand/wordmark-mail@2x.png` | 2× `wordmark-master.svg` | Ordmerket på mailkortets hvite bakgrunn, ingen alfakanal — forest-tekst på transparent PNG forsvinner når Gmail/Outlook mørklegger kortet. `lib/mail/wordmark.ts` peker hit. |
 | `preview-contact-sheet.png` | 1480×900 | Hele settet samlet: ikonet i 1024/180/60/40/29 px på lys og mørk hjemskjerm, sirkel-maskert maskable og adaptive-ikon (viser om motivet blir beskåret), begge splash-ene og ordmerket i sm/lg/e-post. |
 | `native/app/assets/icon.png` | 1024×1024 | Kopi av `appstore-1024.png`. Expo-appens app-ikon (`app.json` → `icon`). |
@@ -84,14 +78,6 @@ Mangler: ingen monokrom master finnes, så `monochromeImage` er fjernet fra
 `app.json` framfor å peke på Expo-malens grå vinkel. Android er uansett ute av
 N8 (#1954).
 
-## Play-skallet (#1985)
-
-Bubblewrap bakte ikonene inn fra `/icon0` og `maskable-512.png` da skallet ble
-laget. Generatoren skriver dem nå direkte, i nøyaktig de samme størrelsene. Bruk
-ikke `bubblewrap update` til ikonene: den henter `iconUrl` fra prod, som serverer
-det gamle merket fram til en deploy. `twa-manifest.json` røres ikke. Et nytt ikon
-når Google Play først med neste AAB (`docs/native/android-twa.md`).
-
 ## Mekaniske vakter
 
 Scriptet leser PNG-enes IHDR-header direkte (byte 16–23 = bredde/høyde, byte 25 =
@@ -105,5 +91,5 @@ sjekkene er visuelle — visuell godkjenning av selve designet gjøres av eier i
 Play-feature-grafikken (`store/play-feature-graphic-1024x500.png`) lages av
 `store/generate-feature-graphic.mjs`, som leser `wordmark-master.svg` og bare bytter
 tekstfargen fra skogsgrønn til lin. Merket har dermed fortsatt én kilde. Play-ikonet er
-`native/android/store_icon.png` fra generatoren over. Butikkskjermbildene og
+`native/assets/play-store-icon.png` fra generatoren over. Butikkskjermbildene og
 alt-tekstene står i `store/README.md`.

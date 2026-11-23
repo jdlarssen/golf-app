@@ -70,7 +70,7 @@ konsollen først.
 
 **Play Console:** Tørny → Grow users → Store presence → **Main store listing** → Graphics.
 
-1. App icon: `native/android/store_icon.png`.
+1. App icon: `native/assets/play-store-icon.png`.
 2. Feature graphic: `play-feature-graphic-1024x500.png`.
 3. Phone screenshots: de åtte bildene fra `android-1080x1920/`, i rekkefølge 01 til 08.
    Ber konsollen om alt-tekst, bruk tabellen over.

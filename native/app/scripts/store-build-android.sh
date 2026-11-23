@@ -235,7 +235,7 @@ fi
 
 # ── 3. Nøkkelen ──────────────────────────────────────────────────────────────
 step "Opplastingsnøkkelen"
-[ -f "$KEYSTORE" ] || die "Fant ikke keystore-fila $KEYSTORE (se docs/native/android-twa.md §«Nøkler og hemmeligheter»), eller sett TORNY_ANDROID_KEYSTORE."
+[ -f "$KEYSTORE" ] || die "Fant ikke keystore-fila $KEYSTORE (se docs/native/play-store-release.md §«Nøkler og hemmeligheter»), eller sett TORNY_ANDROID_KEYSTORE."
 # Absolutt sti: Gradle kjører fra android/ og ville lett etter en relativ sti der.
 KEYSTORE="$(cd "$(dirname "$KEYSTORE")" && pwd)/$(basename "$KEYSTORE")"
 if [ -n "${TORNY_ANDROID_KEYSTORE_PASSWORD:-}" ]; then
@@ -245,7 +245,7 @@ else
   # Command substitution: passordet går fra nøkkelringen rett inn i en
   # variabel, aldri gjennom argv eller en fil.
   KEYSTORE_PASSWORD=$(security find-generic-password -a "$KEYCHAIN_ACCOUNT" -s "$KEYCHAIN_SERVICE" -w 2>/dev/null) \
-    || die "Fant ikke passordet i nøkkelringen (tjenesten $KEYCHAIN_SERVICE, konto $KEYCHAIN_ACCOUNT). Se docs/native/android-twa.md §«Nøkler og hemmeligheter»."
+    || die "Fant ikke passordet i nøkkelringen (tjenesten $KEYCHAIN_SERVICE, konto $KEYCHAIN_ACCOUNT). Se docs/native/play-store-release.md §«Nøkler og hemmeligheter»."
   PASSWORD_SOURCE="nøkkelringen ($KEYCHAIN_SERVICE)"
 fi
 [ -n "$KEYSTORE_PASSWORD" ] || die "Passordet til opplastingsnøkkelen er tomt."

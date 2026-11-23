@@ -50,7 +50,7 @@ verdien.
 - Node 22 (`source ~/.nvm/nvm.sh && nvm use 22`) og CocoaPods. Skriptet bytter til Node 22
   selv når nvm finnes.
 - `~/.torny-native/dist/ExportOptions.plist` — `method: app-store-connect`,
-  `destination: upload`, `teamID: 8C8WCW67J9`. Finnes fra skallet (`ios-shell.md`).
+  `destination: upload`, `teamID: 8C8WCW67J9`. Lages av eieren en gang (filen ligger utenfor repoet).
 - Repo-rotas `.env.local` (gitignorert) med `NEXT_PUBLIC_SUPABASE_URL` (prod) og
   `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Kjør fra hovedutsjekken — worktrees har ikke fila. Eller
   pek på den: `TORNY_ENV_FILE=/sti/til/.env.local`.
@@ -342,12 +342,11 @@ trykker «Release This Version»:
 
 | Fase | Hva kan gå galt | Tilbake slik |
 |---|---|---|
-| Kandidat i TestFlight | Paritetsbrudd, prod-avslutning feiler | Ingen offentlig endring har skjedd. Fiks → bump → nytt bygg. Eierens telefon: installer skallet `1.0 (1)` igjen fra TestFlight, men bare til 28.11.2026, da utløper bygget. Etter det er eneste vei å rebuilde skallet (`ios-shell.md`). |
+| Kandidat i TestFlight | Paritetsbrudd, prod-avslutning feiler | Ingen offentlig endring har skjedd. Fiks → bump → nytt bygg. Skallet (`1.0 (1)`) er slettet fra repoet; bygget i TestFlight utløper 28.11.2026. |
 | Under review | Avvisning | «Developer Rejected» / fjern fra køen i App Store Connect; fiks; bump; nytt bygg. Ingenting er publisert. |
-| Etter slipp | Kritisk feil i appen | (1) App Store Connect → Pricing and Availability → **Remove from Sale** (oppføringen bort, installerte apper virker). (2) Send skallet som ny versjon (over den native versjonen som er ute, build høyere enn native) fra `native/ios/` — be om Expedited Review. (3) Alle har hele tiden nettsiden: «bruk tornygolf.no i nettleseren til vi har rettet» er den reelle nød-utgangen. |
+| Etter slipp | Kritisk feil i appen | (1) App Store Connect → Pricing and Availability → **Remove from Sale** (oppføringen bort, installerte apper virker). (2) Send en rettet native-versjon (build høyere enn den som er ute) — be om Expedited Review. (3) Alle har hele tiden nettsiden: «bruk tornygolf.no i nettleseren til vi har rettet» er den reelle nød-utgangen. |
 | Data | — | Ingen DB-migrasjon i N8, ingen skjema-endring; appen skriver gjennom de samme kontraktene som web. Uleverte slag i appens kø: åpne appen med nett før du bytter tilbake — køen tømmer seg selv. |
 
-Forutsetning for (2): `native/ios/` beholdes buildbar til N8 er lukket + én app-oppdatering.
 
 ## Feilsøking
 
@@ -410,8 +409,8 @@ Fra #2256 PR 4 kan appen få varsler på iPhone («Varsler på denne telefonen»
   annen konto, overtar og sletter den raden (`settlePushOwner`), så forrige konto ikke
   får varsler på telefonen.
 - **Senderen** er den samme som for skallet (`lib/notifications/push/apns.ts`):
-  `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID` og `APNS_PRIVATE_KEY` (se
-  `ios-shell.md`). Prod bruker `APNS_BUNDLE_ID=no.tornygolf.app`, så butikkbygget
+  `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID` og `APNS_PRIVATE_KEY` (Apple-nøkkelen
+  `.p8` ligger i `~/.torny-native/apns/`, aldri i repoet). Prod bruker `APNS_BUNDLE_ID=no.tornygolf.app`, så butikkbygget
   treffer den uten endring. Staging trenger de samme variablene med
   `APNS_BUNDLE_ID=no.tornygolf.dev`. Nøkkelen (`.p8`) gjelder hele teamet og kan være den
   samme. Den ligger bare hos eieren og i Vercel, aldri i repoet.

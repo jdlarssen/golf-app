@@ -69,11 +69,6 @@ export const NEVER_AUTO_MERGE_RULES: ReadonlyArray<{ glob: string; ownerReason: 
   { glob: 'native/app/app.json', ownerReason: APP_BUILD },
   { glob: 'native/app/app.config.ts', ownerReason: APP_BUILD },
   { glob: 'native/app/scripts/**', ownerReason: APP_BUILD },
-  // Skallenes signerings-, rettighets- og dyplenke-flater (#1956): `App.entitlements`,
-  // `Info.plist`, `capacitor.config.json`, `AndroidManifest.xml`, `twa-manifest.json`.
-  // `native/ios/` er nød-utgangen etter slipp til N8 er lukket og én app-oppdatering er ute.
-  { glob: 'native/ios/**', ownerReason: APP_BUILD },
-  { glob: 'native/android/**', ownerReason: APP_BUILD },
   // Gjennomgangen 20.11 (eierkort 9): kontosletting, innlogging og AI-samtykke hadde
   // filer som ingen rad over traff. Den delte slette-hjelperen brukes av selv-slett,
   // admin-slett og API-ruta; skjemaene for sletting/utlogging og passkey-knappene

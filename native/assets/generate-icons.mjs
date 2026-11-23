@@ -11,8 +11,8 @@
 //
 // One run writes the App Store icon, the Android layers, the splash images,
 // the Expo app's assets, the web's PWA icons (served at /icon, /icon0 and
-// /apple-icon via rewrites in next.config.ts), the Google Play TWA shell's
-// icons under native/android/, and the mail header's wordmark PNG. No copy of
+// /apple-icon via rewrites in next.config.ts), the Google Play store icon,
+// and the mail header's wordmark PNG. No copy of
 // the mark is drawn anywhere else (#1985).
 //
 // Usage:
@@ -48,18 +48,8 @@ const BRAND_PUBLIC_DIR = path.join(ROOT, 'public/brand');
 // nettopp det `native/app/scripts/store-build-proof.sh` beviser med sha256 før
 // hver opplasting.
 const EXPO_APP_ASSETS_DIR = path.join(ROOT, 'native/app/assets');
-// Google Play-skallet (#1279, Bubblewrap). Ikonene ble bakt inn fra /icon0 og
-// maskable-512.png da skallet ble generert; `bubblewrap update` ville hentet
-// dem fra prod igjen, så de skrives her i nøyaktig samme størrelser (#1985).
-const TWA_DIR = path.join(ROOT, 'native/android');
-const TWA_RES_DIR = path.join(TWA_DIR, 'app/src/main/res');
-const DENSITIES = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi'];
-const TWA_SIZES = {
-  ic_launcher: [48, 72, 96, 144, 192], // mipmap-*, from the full-bleed master
-  ic_maskable: [82, 123, 164, 246, 328], // mipmap-*, tile + safe-zone motif
-  splash: [300, 450, 600, 900, 1200], // drawable-*, full-bleed
-  ic_notification_icon: [24, 36, 48, 72, 96], // drawable-*, full-bleed
-};
+// Google Play's 512x512 store listing icon (32-bit PNG with an opaque alpha channel).
+const PLAY_STORE_ICON = path.join(ROOT, 'native/assets/play-store-icon.png');
 
 const FOREST = '#1B4332';
 const DARK = '#14201A';
@@ -264,16 +254,9 @@ async function render(browser) {
   out.icon512 = await fullBleedAt(512);
   out.appleIcon180 = await fullBleedAt(180);
 
-  // 7. Google Play TWA shell icons (#1985) — same sizes Bubblewrap baked in.
-  //    The store listing icon keeps an (opaque) alpha channel: Play Console
-  //    asks for a 32-bit PNG there, and Bubblewrap's original was one.
-  out.twa = { store_icon: await sharp(await fullBleedAt(512)).ensureAlpha().png().toBuffer() };
-  for (const [name, sizes] of Object.entries(TWA_SIZES)) {
-    out.twa[name] = [];
-    for (const size of sizes) {
-      out.twa[name].push(name === 'ic_maskable' ? await maskableAt(size) : await fullBleedAt(size));
-    }
-  }
+  // 7. Google Play store listing icon (#1985). Play Console asks for a 32-bit
+  //    PNG, so it keeps an (opaque) alpha channel.
+  out.playStoreIcon = await sharp(await fullBleedAt(512)).ensureAlpha().png().toBuffer();
 
   // 8. Mail header wordmark (#1985) — 2× its declared display size, on the mail
   //    card's white baked in (not transparent): forest text on a transparent
@@ -376,7 +359,6 @@ async function contactSheet(browser, out) {
         )}
         ${cell(box(img(out.splashLogo, 120), DARK, 160), 'Mørk splash<br/>(motivet på #14201A)', 160)}
         ${cell(box(img(out.appstore, 90), LINEN, 160, `outline:1px solid #E4DCC8;`), 'Lys splash<br/>(flisen på linen)', 160)}
-        ${cell(box(img(out.twa.ic_notification_icon[4], 96), 'transparent', 160), 'Play-skallet: varselikon 96', 160)}
       </div>
       <h2>Ordmerke</h2>
       <div class="row">
@@ -425,7 +407,7 @@ async function main() {
     assertDims('ios-splash-logo.png', out.splashLogo, 512, 512);
 
     // 6. Web PWA icons (#1985). next.config.ts rewrites /icon, /icon0 and
-    //    /apple-icon here, so installed PWAs, sw.js and the TWA keep their URLs.
+    //    /apple-icon here, so installed PWAs and sw.js keep their URLs.
     for (const [file, buf, size] of [
       ['icon-192.png', out.icon192, 192],
       ['icon-512.png', out.icon512, 512],
@@ -436,18 +418,10 @@ async function main() {
       assertNoAlphaChannel(`public/icons/${file}`, buf);
     }
 
-    // 7. Google Play TWA shell (#1985) — twa-manifest.json is left alone.
-    write(path.join(TWA_DIR, 'store_icon.png'), out.twa.store_icon);
-    assertDims('native/android/store_icon.png', out.twa.store_icon, 512, 512);
-    assertAlphaChannel('native/android/store_icon.png', out.twa.store_icon);
-    for (const [name, sizes] of Object.entries(TWA_SIZES)) {
-      const kind = name.startsWith('ic_launcher') || name === 'ic_maskable' ? 'mipmap' : 'drawable';
-      sizes.forEach((size, i) => {
-        const rel = `${kind}-${DENSITIES[i]}/${name}.png`;
-        write(path.join(TWA_RES_DIR, rel), out.twa[name][i]);
-        assertDims(`native/android/…/res/${rel}`, out.twa[name][i], size, size);
-      });
-    }
+    // 7. Google Play store listing icon (#1985).
+    write(PLAY_STORE_ICON, out.playStoreIcon);
+    assertDims('native/assets/play-store-icon.png', out.playStoreIcon, 512, 512);
+    assertAlphaChannel('native/assets/play-store-icon.png', out.playStoreIcon);
 
     // 8. Mail header wordmark (#1985) — lib/mail/wordmark.ts points at it.
     const wm = out.wordmarkSize;

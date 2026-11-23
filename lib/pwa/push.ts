@@ -19,7 +19,7 @@ export type PushState =
 // browser/PWA path below is untouched.
 //
 // The @capacitor/* packages are deliberately NOT installed in the web app (they
-// belong to native/ios), so the bridge is typed locally, to the surface we use.
+// belonged to the removed native/ios shell), so the bridge is typed locally, to the surface we use.
 
 /** Payload shapes of the three PushNotifications events we listen for. */
 type PushListenerPayload = {

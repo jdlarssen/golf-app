@@ -12,8 +12,7 @@ varianten i `app.config.ts`, byggeskriptet, bevis-steget og slippet.
 
 ## Arkitektur-beslutninger (kontrakt på [#1818](https://github.com/jdlarssen/golf-app/issues/1818))
 
-- **Ingen npm-workspaces.** Appen er et selvstendig npm-prosjekt (samme mønster
-  som `native/ios/`-skallet); repo-rota og Vercel-bygget røres ikke. Deling
+- **Ingen npm-workspaces.** Appen er et selvstendig npm-prosjekt (Capacitor-skallet i `native/ios/` er slettet); repo-rota og Vercel-bygget røres ikke. Deling
   skjer via Metro `watchFolders` mot repoets `lib/` + tsconfig-paths for
   `@/*`-aliasene inni scoring-grafen (Expo leser paths automatisk).
 - **AsyncStorage som session-lager** (offisiell Supabase RN-oppskrift);
