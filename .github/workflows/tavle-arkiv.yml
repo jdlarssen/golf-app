@@ -59,7 +59,7 @@ jobs:
           node-version: 22
 
       # Tynn runner (ingen npm ci): global fetch + rene lib-importer, som
-      # sweep-natt-drafts.ts. Inputs går via env, aldri rett inn i skallet.
+      # den fjernede natt-draft-sweepen. Inputs går via env, aldri rett inn i skallet.
       - name: Slett arkiverte kommentarer og arkiver forrige måned
         env:
           GH_TOKEN: ${{ github.token }}
