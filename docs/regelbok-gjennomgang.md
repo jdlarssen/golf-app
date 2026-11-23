@@ -163,7 +163,7 @@ Svarene er eierens, ordrett fra chatten med orkestratoren 23.11.2026. På spørs
 
 | Hypotese | Svar |
 |---|---|
-| 1. Dobbeltavrunding, trinn 2 | F25: reelt i scramble-familien og patsome, samme avvik som F16. Svaret ditt på F16 gjaldt four-ball, Round Robin og foursomes-familien. For scramble og patsome er det åpent (#2997). |
+| 1. Dobbeltavrunding, trinn 2 | F25: reelt i scramble-familien og patsome, samme avvik som F16. Svaret ditt på F16 gjaldt four-ball, Round Robin og foursomes-familien. For scramble og patsome svarte du «Rett» 23.11 (#2997). |
 | 11. Scramble med én prosent av summen | F23: reelt. Valget ble tatt i #2009, #2566 og #2569, og raden viser hvor mye det utgjør. |
 | 12. Patsome 60/40 og 50 % av heltall | F26: formlene stemmer med vedlegg C. Avrundingen står i F25. |
 | Nytt i runde 3 | F24 (four-ball-delen i patsome gir fullt banehandicap). |
