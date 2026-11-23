@@ -50,12 +50,14 @@ export function DesignSwitch({
 }
 
 /**
- * Av-sporet når bryteren står i en lys liste (Varsler-tegningens `#d9d2c2`).
- * Mørk drakt har ingen tegning: den dempede tekstfargen med 45 % dekning, så
- * sporet synes mot kortet. Én kilde for kontoinnstillingene og veiviseren (#2709).
+ * Av-sporet når bryteren står i en liste. Den dempede tekstfargen med 60 %
+ * dekning i lys drakt og 70 % i mørk, så sporet måler minst 3:1 mot kortet
+ * (WCAG 1.4.11): 3,33:1 mot hvitt og 3,09:1 mot mørkt kort. Før var det
+ * `#D9D2C2` (1,51:1) og 45 % dekning (2,06:1). Én kilde for kontoinnstillingene
+ * og veiviseren (#2709).
  */
 export function listSwitchOffColor(colors: ThemeColors, scheme: Scheme): string {
-  return scheme === 'dark' ? `${colors.muted}73` : '#D9D2C2';
+  return scheme === 'dark' ? `${colors.muted}B3` : `${colors.muted}99`;
 }
 
 const SWITCH_HIT_SLOP = { top: 6, bottom: 6, left: 4, right: 4 };

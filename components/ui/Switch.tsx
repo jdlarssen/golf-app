@@ -16,6 +16,13 @@ import { useId, type ChangeEvent, type ReactNode } from 'react';
  * The track draws 44×24 and hits 44×44: `.tap-extend` hangs an invisible
  * 10px strip above and below it (#2240), so rows keep their height.
  */
+/**
+ * Off track: --text-muted at 60 % by day (3.33:1 on a white card, 3.08:1 on
+ * --bg) and 70 % at night (3.09:1 on --surface, 3.33:1 on --bg), so the track
+ * meets the 3:1 non-text contrast (WCAG 1.4.11). It was 1.3-1.5:1.
+ */
+const OFF_TRACK = 'bg-muted/60 dark:bg-muted/70';
+
 const SWITCH_TAP_STYLE = { ['--tap-extend' as string]: '-10px 0' };
 
 export function Switch({
@@ -47,7 +54,7 @@ export function Switch({
       disabled={disabled}
       style={SWITCH_TAP_STYLE}
       className={`tap-extend flex h-6 w-11 shrink-0 items-center rounded-full px-0.5 transition-colors duration-150 disabled:opacity-50 aria-disabled:opacity-50 ${
-        checked ? 'bg-primary' : 'bg-text/20'
+        checked ? 'bg-primary' : OFF_TRACK
       }`}
     >
       <span
@@ -71,7 +78,7 @@ export function Switch({
  * draws the focus ring (app/globals.css). The row's title names the switch and
  * the description describes it.
  *
- * 44 × 26 px track: --border off, --primary on; a 20 px --surface knob 3 px
+ * 44 × 26 px track: muted off (OFF_TRACK), --primary on; a 20 px --surface knob 3 px
  * from the edge.
  *
  * `compact`: the row is at least 60 px, as «Flytt runden» draws it (#2480).
@@ -130,7 +137,7 @@ export function SwitchRow({
           React's back. */}
       <span
         aria-hidden="true"
-        className="relative h-[26px] w-11 shrink-0 rounded-full bg-border transition-colors duration-150 peer-checked:bg-primary peer-disabled:opacity-50 after:absolute after:top-[3px] after:left-[3px] after:h-5 after:w-5 after:rounded-full after:bg-surface after:transition-transform after:duration-150 motion-reduce:after:transition-none peer-checked:after:translate-x-[18px]"
+        className={`relative h-[26px] w-11 shrink-0 rounded-full ${OFF_TRACK} transition-colors duration-150 peer-checked:bg-primary peer-disabled:opacity-50 after:absolute after:top-[3px] after:left-[3px] after:h-5 after:w-5 after:rounded-full after:bg-surface after:transition-transform after:duration-150 motion-reduce:after:transition-none peer-checked:after:translate-x-[18px]`}
       />
     </label>
   );
