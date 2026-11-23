@@ -37,7 +37,7 @@ describe('LATEST_APP_BUILD mot byggnummeret i app.config.ts', () => {
     if (LATEST_APP_BUILD.ios.latestBuild === Number(STORE_IOS_BUILD_NUMBER)) {
       expect(LATEST_APP_BUILD.ios.latestVersion).toBe(STORE_VERSION);
     }
-    if (LATEST_APP_BUILD.android.latestVersionCode === STORE_ANDROID_VERSION_CODE) {
+    if (Number(LATEST_APP_BUILD.android.latestVersionCode) === Number(STORE_ANDROID_VERSION_CODE)) {
       expect(LATEST_APP_BUILD.android.latestVersion).toBe(STORE_VERSION);
     }
     expect(LATEST_APP_BUILD.ios.latestVersion).toMatch(/^\d+\.\d+\.\d+$/);
