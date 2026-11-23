@@ -2880,16 +2880,17 @@ describe('useGameFormState — handicapprosent i shamble (#2570)', () => {
     expect(result.current.hcpAllowance).toBe(0);
   });
 
-  it('en valgt prosent (85) følger med inn i shamble', () => {
+  // #2942: 85 is best ball's own default now, so the organiser's choice here is 90.
+  it('en valgt prosent (90) følger med inn i shamble', () => {
     const { result } = renderHook(() => useGameFormState({ players: PLAYERS, courses: COURSES }));
     act(() => {
       result.current.handleModeChange('best_ball');
-      result.current.setHcpAllowance(85);
+      result.current.setHcpAllowance(90);
     });
     act(() => {
       result.current.handleModeChange('shamble');
     });
-    expect(result.current.hcpAllowance).toBe(85);
+    expect(result.current.hcpAllowance).toBe(90);
   });
 
   it('prosenten overlever lagring og gjenopptak av et utkast', () => {
@@ -2901,6 +2902,126 @@ describe('useGameFormState — handicapprosent i shamble (#2570)', () => {
     const resumed = shamble({ ...draft.values });
     expect(resumed.current.hcpAllowance).toBe(80);
     expect(resumed.current.shambleScoring).toBe('net');
+  });
+});
+
+// ─── #2942 — standardandelen per format (NGF vedlegg C) ──────────────────────
+
+describe('useGameFormState — standardandel for best ball og stableford i par (#2942)', () => {
+  function fresh() {
+    return renderHook(() => useGameFormState({ players: PLAYERS, courses: COURSES })).result;
+  }
+
+  it('best ball starter på 85', () => {
+    const result = fresh();
+    act(() => {
+      result.current.handleModeChange('stableford');
+    });
+    act(() => {
+      result.current.handleModeChange('best_ball');
+    });
+    expect(result.current.hcpAllowance).toBe(85);
+  });
+
+  it('stableford alene starter på 100, i par på 85, og tilbake til alene gir 100', () => {
+    const result = fresh();
+    act(() => {
+      result.current.handleModeChange('stableford');
+    });
+    expect(result.current.hcpAllowance).toBe(100);
+    act(() => {
+      result.current.handleTeamSizeChange(2);
+    });
+    expect(result.current.hcpAllowance).toBe(85);
+    act(() => {
+      result.current.handleTeamSizeChange(1);
+    });
+    expect(result.current.hcpAllowance).toBe(100);
+  });
+
+  it('modifisert stableford i par starter på 85', () => {
+    const result = fresh();
+    act(() => {
+      result.current.handleModeChange('modified_stableford');
+    });
+    act(() => {
+      result.current.handleTeamSizeChange(2);
+    });
+    expect(result.current.hcpAllowance).toBe(85);
+  });
+
+  it('et tall arrangøren har valgt (90), står når formatet byttes til best ball', () => {
+    const result = fresh();
+    act(() => {
+      result.current.handleModeChange('stableford');
+      result.current.setHcpAllowance(90);
+    });
+    act(() => {
+      result.current.handleModeChange('best_ball');
+    });
+    expect(result.current.hcpAllowance).toBe(90);
+  });
+
+  it('brutto (0) står når formatet byttes til best ball', () => {
+    const result = fresh();
+    act(() => {
+      result.current.handleModeChange('stableford');
+      result.current.setHcpAllowance(0);
+    });
+    act(() => {
+      result.current.handleModeChange('best_ball');
+    });
+    expect(result.current.hcpAllowance).toBe(0);
+  });
+
+  it('et utkast eller «Som sist» med 100 på best ball åpnes med 100', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialValues: { game_mode: 'best_ball', team_size: 2, hcp_allowance_pct: '100' },
+      }),
+    );
+    expect(result.current.hcpAllowance).toBe(100);
+  });
+
+  // An antall that rules out the chosen format puts the wizard back on best
+  // ball unchosen (#373), past handleModeChange. The share follows that reset
+  // too, so best ball picked afterwards still starts on 85.
+  it('et antall som ikke går opp, nullstiller formatet, og best ball etterpå starter på 85', () => {
+    const KOMPIS: PlayerOption[] = Array.from({ length: 6 }, (_, i) => makePlayer(`k${i + 1}`));
+    const { result } = renderHook(() =>
+      useGameFormState({ players: KOMPIS, courses: COURSES, initialIntent: 'kompis' }),
+    );
+    act(() => {
+      result.current.setExpectedPlayerCount(2);
+    });
+    act(() => {
+      result.current.handleModeChange('singles_matchplay');
+    });
+    expect(result.current.hcpAllowance).toBe(100);
+    act(() => {
+      result.current.setExpectedPlayerCount(3);
+    });
+    expect(result.current.formatChosen).toBe(false);
+    act(() => {
+      result.current.setExpectedPlayerCount(4);
+    });
+    act(() => {
+      result.current.handleModeChange('best_ball');
+    });
+    expect(result.current.hcpAllowance).toBe(85);
+  });
+
+  it('dyplenka ?format=best_ball (uten tall) starter på 85', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialValues: { game_mode: 'best_ball' },
+      }),
+    );
+    expect(result.current.hcpAllowance).toBe(85);
   });
 });
 

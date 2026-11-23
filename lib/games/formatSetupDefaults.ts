@@ -3,7 +3,7 @@
  * wizard (`useGameFormState`) and the app's wizard (#2753). One home, so the
  * two cannot start a format on different values (trap 4).
  */
-import type { GameMode } from '@/lib/scoring/modes/types';
+import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { ambroseDefaultPct } from '@/lib/scoring/modes/ambrose';
 import { defaultFloridaHandicapPct } from '@/lib/scoring/modes/floridaScramble';
 
@@ -88,6 +88,18 @@ export function defaultTeamHandicapPct(mode: GameMode, teamSize: FormatTeamSize)
   if (mode === 'ambrose') return ambroseDefaultPct(teamSize);
   if (mode === 'florida_scramble') return defaultFloridaHandicapPct(teamSize);
   return null;
+}
+
+/**
+ * The handicap share a format with the general field (`hcp_allowance_pct`)
+ * starts on. NGF vedlegg C, s. 75: 85 % for four-ball stroke play and
+ * four-ball stableford (best ball, and stableford or modified stableford in
+ * pairs), otherwise 100 (#2942). The organiser can still pick another share.
+ */
+export function defaultHcpAllowancePct(mode: GameMode, teamSize: FormatTeamSize): number {
+  if (mode === 'best_ball') return 85;
+  if (isStablefordFamily(mode) && teamSize === 2) return 85;
+  return 100;
 }
 
 /**

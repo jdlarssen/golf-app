@@ -236,6 +236,7 @@ export function deriveAssignmentsFromInitial(initial: InitialValues | undefined)
 // wizard reads the same values (trap 4). Re-exported for the existing callers.
 import {
   DEFAULT_SHAMBLE_SETUP,
+  defaultHcpAllowancePct,
   defaultTeamSizeForMode,
   defaultTexasHandicapPct,
 } from '@/lib/games/formatSetupDefaults';
@@ -567,13 +568,14 @@ export function useGameFormState({
   );
   // HCP-allowance for non-fourball/non-texas modes (best_ball, stableford,
   // singles_matchplay, solo_strokeplay). 0 = brutto (gross-only), 1..100 = netto
-  // med den prosenten. Default 100 (fullt course handicap). #266 — eies av
+  // med den prosenten. Default per format (#2942): 85 for best ball og
+  // stableford i par, ellers 100 (fullt course handicap). #266 — eies av
   // AllowanceField i Section 3 (Format), submittes via sentral hidden input.
   const [hcpAllowance, setHcpAllowance] = useState<number>(
     initialValues?.hcp_allowance_pct !== undefined &&
       initialValues.hcp_allowance_pct !== ''
       ? Number(initialValues.hcp_allowance_pct)
-      : 100,
+      : defaultHcpAllowancePct(initialMode, initialTeamSize),
   );
   // Texas scramble: lag-handicap-prosent (prosent av summen, som lagret).
   // Initialiseres fra initialValues hvis edit-flyt, ellers default per
@@ -1125,6 +1127,9 @@ export function useGameFormState({
     if (next !== undefined && formatChosen && !fitsPlayerCountFn(gameMode, next)) {
       setGameMode('best_ball');
       setFormatChosen(false);
+      // #2942: the share follows the reset like a format switch, so the next
+      // pick reads it against best ball's default, not the old format's.
+      followAllowanceDefault(gameMode, teamSize, 'best_ball', teamSize);
     } else {
       matchTeamSizeToCount(intent, next);
     }
@@ -1160,6 +1165,7 @@ export function useGameFormState({
     // #2580: a format switch sets the size straight away, past
     // handleTeamSizeChange; Texas pair with 6 → shamble four keeps 4, not 6.
     setMinTeeShots((current) => clampMinTeeShots(current, nextSize));
+    followAllowanceDefault(gameMode, teamSize, next, nextSize);
     // Texas scramble: default lag-handicap-prosent per NGF-konvensjon
     // (25 % for 2-mannslag, 10 % for 4-mannslag). Admin kan deretter justere.
     if (next === 'texas_scramble') {
@@ -1200,6 +1206,7 @@ export function useGameFormState({
     releasePlayersOutsideGrid(gameMode, next);
     // #2580: a four-player team with 5 or 6 chosen falls back to 4.
     setMinTeeShots((current) => clampMinTeeShots(current, next));
+    followAllowanceDefault(gameMode, teamSize, gameMode, next);
     if (gameMode === 'texas_scramble') {
       setTexasHandicapPct(defaultTexasHandicapPct(next));
     }
@@ -1209,6 +1216,22 @@ export function useGameFormState({
     if (gameMode === 'florida_scramble') {
       setFloridaHandicapPct(defaultFloridaHandicapPct(next));
     }
+  }
+
+  // #2942: the general share follows the format's default (85 for best ball
+  // and stableford in pairs, otherwise 100) until the organiser picks another
+  // number. A share still on the old setup's default counts as untouched, the
+  // rule the league form got in #2660; any other number, Brutto (0) included,
+  // stands.
+  function followAllowanceDefault(
+    fromMode: GameMode,
+    fromSize: TeamSize,
+    toMode: GameMode,
+    toSize: TeamSize,
+  ) {
+    const fromDefault = defaultHcpAllowancePct(fromMode, fromSize);
+    const toDefault = defaultHcpAllowancePct(toMode, toSize);
+    setHcpAllowance((current) => (current === fromDefault ? toDefault : current));
   }
 
   // #2079: et bytte som krymper rutenettet løser spillerne som ikke lenger får
