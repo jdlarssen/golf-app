@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { render, screen } from '@testing-library/react-native';
 import { Platform, processColor, StyleSheet, Text, type ViewStyle } from 'react-native';
 import { PALETTES } from '../theme';
-import { pressedStyle, Tap } from './Tap';
+import { PRESSED, Tap } from './Tap';
 
 const colors = PALETTES.light;
 const square = StyleSheet.create({ box: { width: 40, height: 44 } }).box;
@@ -79,12 +79,13 @@ describe('Tap i ro', () => {
 describe('Tap trykket inn', () => {
   it('legger trykk-stilen sist på iOS', async () => {
     await tap({ style: list, testOnly_pressed: true });
-    expect(styleOf()).toEqual([list, pressedStyle(colors, list)]);
+    expect(styleOf()).toEqual([list, { opacity: 0.6 }]);
+    expect(PRESSED).toEqual({ opacity: 0.6 });
   });
 
   it('legger trykk-stilen sist etter funksjonens svar på iOS', async () => {
     await tap({ style: fromState, testOnly_pressed: true });
-    expect(styleOf()).toEqual([{ width: 41 }, pressedStyle(colors, { width: 41 })]);
+    expect(styleOf()).toEqual([{ width: 41 }, PRESSED]);
   });
 
   it('gir ingen ripple på iOS', async () => {
