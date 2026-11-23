@@ -29,7 +29,7 @@ describe('redactContactDetails', () => {
       'Skriv til [e-post fjernet] takk',
     );
   });
-  it.each(['912 34 567', '+47 912 34 567', '0047 91234567', '91234567', '(+47) 912-34-567'])(
+  it.each(['912 34 567', '+47 912 34 567', '0047 91234567', '91234567', '12 34 56 78', '+4791234567'])(
     'cuts the phone number %s',
     (n) => {
       const out = redactContactDetails(`Ring meg ${n} i dag`);
@@ -37,8 +37,12 @@ describe('redactContactDetails', () => {
       expect(out).not.toMatch(/\d{3}/);
     },
   );
-  it('keeps dates, scores and short numbers', () => {
-    const t = 'Den 23.11.2026 og 2026-11-23 spilte jeg 72 slag på hull 7, 18 hull.';
+  it.each([
+    'Den 23.11.2026 og 2026-11-23 spilte jeg 72 slag på hull 7, 18 hull.',
+    'Scorekort: par 4 4 3 5 4 4 3 4 5 og 5 4 4 3 5 4 4 3 4',
+    'Rundestart 23.11.2026 14.30, ferdig 2026-11-23 18:45',
+    'Totalt 1 234 567 kr og 12 345 678 poeng',
+  ])('keeps dates, times and score rows: %s', (t) => {
     expect(redactContactDetails(t)).toBe(t);
   });
 });
@@ -47,16 +51,34 @@ describe('buildIdeaIssue', () => {
   it('holds the idea text and the admin link, nothing else', () => {
     const { title, body } = buildIdeaIssue('Putt-statistikk per hull', ADMIN);
     expect(title).toBe('Idé: Putt-statistikk per hull');
-    expect(body).toBe(`> Putt-statistikk per hull\n\n[Idéen i admin](${ADMIN})`);
+    expect(body).toBe(`\`\`\`text\nPutt-statistikk per hull\n\`\`\`\n\n[Idéen i admin](${ADMIN})`);
   });
   it('redacts contact details in title and body', () => {
     const { title, body } = buildIdeaIssue(`Mail meg på ${at('a', 'b.test')} eller ring 91234567`, ADMIN);
     expect(`${title}\n${body}`).not.toMatch(/a.b\.test|91234567/);
   });
-  it('quotes every line and defuses @mentions', () => {
-    const { body } = buildIdeaIssue('linje 1\nlinje 2 @jdlarssen', ADMIN);
-    expect(body).toContain('> linje 1\n> linje 2');
+  it('defuses @mentions in body and title', () => {
+    const { title, body } = buildIdeaIssue('linje 1\nlinje 2 @jdlarssen', ADMIN);
     expect(body).not.toContain('@jdlarssen');
+    expect(title).not.toContain('@jdlarssen');
+  });
+  it('puts the idea in a code block, so links, images, HTML and headings do not render', () => {
+    const { body } = buildIdeaIssue('# Stor\n[x](https://e.test) ![](https://e.test/i.png) <img src=x> #123 GH-45', ADMIN);
+    const [fenceOpen, ...rest] = body.split('\n');
+    expect(fenceOpen).toBe('```text');
+    expect(rest[rest.length - 1]).toBe(`[Idéen i admin](${ADMIN})`);
+    // the idea sits between the fences; nothing of it is outside them
+    expect(body.split('```')).toHaveLength(3);
+  });
+  it('uses a fence longer than any backtick run in the idea', () => {
+    const { body } = buildIdeaIssue('kode ````` slutt ``` forsøk', ADMIN);
+    expect(body.startsWith('``````text\n')).toBe(true);
+    expect(body).toContain('\n``````\n');
+  });
+  it('builds a plain title: no markdown, HTML or issue references', () => {
+    const t = buildIdeaIssueTitle('# [Hei](https://e.test) <b>du</b> #123 GH-45 *fet*');
+    expect(t).not.toMatch(/[[\]()<>#*]/);
+    expect(t).not.toMatch(/GH-\d/i);
   });
   it('trims a long title at a word boundary', () => {
     const t = buildIdeaIssueTitle('ord '.repeat(60));
