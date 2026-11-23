@@ -17,7 +17,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { useTheme, type ThemeColors } from '../theme';
+import { useTheme } from '../theme';
 
 type PressableProps = ComponentProps<typeof Pressable>;
 
@@ -31,27 +31,11 @@ export type TapProps = PressableProps & {
 
 type TapStyle = PressableProps['style'];
 
-/** Variantene eieren velger mellom (#2928): A legger et lag over flaten, B demper knappen. */
-export const PRESS_VARIANT: 'A' | 'B' = 'A';
-
-/** Trykk-stilen på iOS, lagt sist i stilen mens knappen holdes inne. */
-export function pressedStyle(colors: ThemeColors, base: StyleProp<ViewStyle>): ViewStyle {
-  if (PRESS_VARIANT === 'B') return { opacity: 0.6 };
-  // A: et innvendig lag i `pressRipple` som fyller hele flaten innenfor kanten
-  // og følger hjørnene. Står det alt en skygge på knappen, beholdes den.
-  const layer = `inset 0 0 0 1000px ${colors.pressRipple}`;
-  const own = StyleSheet.flatten(base)?.boxShadow;
-  if (typeof own === 'string' && own.length > 0) return { boxShadow: `${own}, ${layer}` };
-  if (Array.isArray(own) && own.length > 0) {
-    return {
-      boxShadow: [
-        ...own,
-        { offsetX: 0, offsetY: 0, blurRadius: 0, spreadDistance: 1000, color: colors.pressRipple, inset: true },
-      ],
-    };
-  }
-  return { boxShadow: layer };
-}
+/**
+ * Trykk-stilen på iOS, lagt sist i stilen mens knappen holdes inne: hele
+ * knappen dempes (eierens valg B, #2928: «B, dempet knapp»).
+ */
+export const PRESSED: ViewStyle = { opacity: 0.6 };
 
 const RADIUS_KEY = /^border\w*Radius$/;
 
@@ -98,7 +82,7 @@ export function Tap({ feedback = 'press', style, android_ripple, ...rest }: TapP
       android_ripple={android_ripple}
       style={(state) => {
         const base = resolve(style, state);
-        return state.pressed ? [base, pressedStyle(colors, base)] : base;
+        return state.pressed ? [base, PRESSED] : base;
       }}
     />
   );

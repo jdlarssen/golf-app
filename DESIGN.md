@@ -278,6 +278,9 @@ felt ved siden av dem.
 - **Redusert bevegelse respekteres alltid.** Hver animasjon i `globals.css` har en
   `prefers-reduced-motion`-variant.
 - **Langtrykk på iOS** gir ikke systemmeny på knapper og lenker (`-webkit-touch-callout`).
+- **Trykk-tilstand i appen** (#2928): hver knapp er `Tap` (`native/app/src/components/Tap.tsx`).
+  Mens den holdes inne, dempes hele knappen til 60 % på iOS, og Android viser en ripple i
+  `pressRipple`. I ro er knappen uendret. Eierens valg 23.11: «B, dempet knapp».
 
 ## Bevegelse
 

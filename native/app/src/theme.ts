@@ -175,9 +175,8 @@ export type ThemeColors = {
   placeDiscEdge: string;
   placeDiscRing: string;
   /**
-   * #2928: trykk-tilstanden på en knapp (`components/Tap.tsx`). Et lag i
-   * `text`-fargen med lav dekning: Android-ripplen, og laget iOS legger over
-   * flaten mens knappen holdes inne.
+   * #2928: Android-ripplen på en knapp (`components/Tap.tsx`), i
+   * `text`-fargen med lav dekning. iOS demper knappen i stedet.
    */
   pressRipple: string;
 };
