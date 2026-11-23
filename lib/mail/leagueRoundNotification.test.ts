@@ -90,11 +90,11 @@ const row = (userId: string, place: number, name: string | null, value: number, 
 });
 
 const roundOneRows = [
-  row('ole', 1, 'Ole H.', 44, 0),
-  row('lysb', 2, 'Mathias L.', 43, 1),
-  row('atle', 3, 'Atle T.', 42, 2),
-  row('karl', 3, 'Karl', 42, 2),
-  row('phil', 5, 'Philip M.', 36, 8),
+  row('dina', 1, 'Dina D.', 44, 0),
+  row('emil', 2, 'Emil E.', 43, 1),
+  row('frida', 3, 'Frida F.', 42, 2),
+  row('hege', 3, 'Hege', 42, 2),
+  row('gard', 5, 'Gard G.', 36, 8),
 ];
 const roundOne: RoundSummary = {
   leagueName: 'Vinterliga 2026-2027',
@@ -123,7 +123,7 @@ const strokeRound: RoundSummary = {
   table: [row('c', 1, 'Cato C.', 0, 0), row('a', 2, 'Anne A.', 1, 1), row('b', 3, null, 7, 7)],
 };
 const STORY =
-  'Ti av elleve spillere tok seg gjennom Byneset North på skjermen, og Ole H. kom ut med 44 poeng. Runde 2 er åpen nå.';
+  'Ti av elleve spillere tok seg gjennom Byneset North på skjermen, og Dina D. kom ut med 44 poeng. Runde 2 er åpen nå.';
 
 describe('sendLeagueRoundNotification', () => {
   it('default: the round is open, with the deadline and a button to the league', async () => {
@@ -325,16 +325,16 @@ describe('sendLeagueRoundNotification', () => {
 
       Slik gikk Runde 1
 
-      Ti av elleve spillere tok seg gjennom Byneset North på skjermen, og Ole H. kom ut med 44 poeng. Runde 2 er åpen nå.
+      Ti av elleve spillere tok seg gjennom Byneset North på skjermen, og Dina D. kom ut med 44 poeng. Runde 2 er åpen nå.
 
-      Rundens beste: Ole H. (44). 5 av 6 spilte runden.
+      Rundens beste: Dina D. (44). 5 av 6 spilte runden.
 
       Tabellen etter 1 runde
-      1. Ole H. 44
-      2. Mathias L. 43
-      3. Atle T. 42
-      3. Karl 42
-      5. Philip M. 36
+      1. Dina D. 44
+      2. Emil E. 43
+      3. Frida F. 42
+      3. Hege 42
+      5. Gard G. 36
 
       Du får denne e-posten fordi du er med i ligaen.
 
@@ -346,10 +346,10 @@ describe('sendLeagueRoundNotification', () => {
       Slik gikk Runde 1
       </h3>
       <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-      Ti av elleve spillere tok seg gjennom Byneset North på skjermen, og Ole H. kom ut med 44 poeng. Runde 2 er åpen nå.
+      Ti av elleve spillere tok seg gjennom Byneset North på skjermen, og Dina D. kom ut med 44 poeng. Runde 2 er åpen nå.
       </p>
       <p style="font-size:14px;line-height:1.5;margin:0 0 16px;color:#4A3F30;">
-      Rundens beste: Ole H. (44). 5 av 6 spilte runden.
+      Rundens beste: Dina D. (44). 5 av 6 spilte runden.
       </p>
       <p style="font-size:14px;line-height:1.5;margin:0 0 4px;font-weight:600;">
       Tabellen etter 1 runde
@@ -357,27 +357,27 @@ describe('sendLeagueRoundNotification', () => {
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="font-size:15px;line-height:1.5;">
       <tr>
       <td style="width:32px;padding:2px 0;color:#4A3F30;">1.</td>
-      <td style="padding:2px 0;">Ole H.</td>
+      <td style="padding:2px 0;">Dina D.</td>
       <td align="right" style="padding:2px 0;font-weight:600;">44</td>
       </tr>
       <tr>
       <td style="width:32px;padding:2px 0;color:#4A3F30;">2.</td>
-      <td style="padding:2px 0;">Mathias L.</td>
+      <td style="padding:2px 0;">Emil E.</td>
       <td align="right" style="padding:2px 0;font-weight:600;">43</td>
       </tr>
       <tr>
       <td style="width:32px;padding:2px 0;color:#4A3F30;">3.</td>
-      <td style="padding:2px 0;">Atle T.</td>
+      <td style="padding:2px 0;">Frida F.</td>
       <td align="right" style="padding:2px 0;font-weight:600;">42</td>
       </tr>
       <tr>
       <td style="width:32px;padding:2px 0;color:#4A3F30;">3.</td>
-      <td style="padding:2px 0;">Karl</td>
+      <td style="padding:2px 0;">Hege</td>
       <td align="right" style="padding:2px 0;font-weight:600;">42</td>
       </tr>
       <tr>
       <td style="width:32px;padding:2px 0;color:#4A3F30;">5.</td>
-      <td style="padding:2px 0;">Philip M.</td>
+      <td style="padding:2px 0;">Gard G.</td>
       <td align="right" style="padding:2px 0;font-weight:600;">36</td>
       </tr>
       </table>"
@@ -397,14 +397,14 @@ describe('sendLeagueRoundNotification', () => {
 
       Slik gikk Runde 1
 
-      Rundens beste: Ole H. (44). 5 av 6 spilte runden.
+      Rundens beste: Dina D. (44). 5 av 6 spilte runden.
 
       Tabellen etter 1 runde
-      1. Ole H. 44
-      2. Mathias L. 43
-      3. Atle T. 42
-      3. Karl 42
-      5. Philip M. 36
+      1. Dina D. 44
+      2. Emil E. 43
+      3. Frida F. 42
+      3. Hege 42
+      5. Gard G. 36
 
       Du får denne e-posten fordi du er med i ligaen.
 
@@ -453,16 +453,16 @@ describe('sendLeagueRoundNotification', () => {
 
       How Runde 1 went
 
-      Ti av elleve spillere tok seg gjennom Byneset North på skjermen, og Ole H. kom ut med 44 poeng. Runde 2 er åpen nå.
+      Ti av elleve spillere tok seg gjennom Byneset North på skjermen, og Dina D. kom ut med 44 poeng. Runde 2 er åpen nå.
 
-      Best in the round: Ole H. (44). 5 of 6 played the round.
+      Best in the round: Dina D. (44). 5 of 6 played the round.
 
       The table after 1 round
-      1. Ole H. 44
-      2. Mathias L. 43
-      3. Atle T. 42
-      3. Karl 42
-      5. Philip M. 36
+      1. Dina D. 44
+      2. Emil E. 43
+      3. Frida F. 42
+      3. Hege 42
+      5. Gard G. 36
 
       You're receiving this email because you're in the league.
 
@@ -478,8 +478,8 @@ describe('sendLeagueRoundNotification', () => {
   });
 
   it('a story with markup is escaped', async () => {
-    const mail = await send({ ...baseParams, summary: { summary: roundOne, story: 'Ole H. <b>vant</b> & lo.' } });
-    expect(summaryHtml(mail.html)).toContain('Ole H. &lt;b&gt;vant&lt;/b&gt; &amp; lo.');
+    const mail = await send({ ...baseParams, summary: { summary: roundOne, story: 'Dina D. <b>vant</b> & lo.' } });
+    expect(summaryHtml(mail.html)).toContain('Dina D. &lt;b&gt;vant&lt;/b&gt; &amp; lo.');
   });
 
   it('a league name with markup is escaped in the heading', async () => {

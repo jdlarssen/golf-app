@@ -37,7 +37,7 @@ const row = (userId: string, place: number, name: string, value: number, behind:
   value,
   behind,
 });
-const rows = [row('ole', 1, 'Ole H.', 44, 0), row('nei', 2, 'Nina N.', 43, 1), row('phil', 3, 'Philip M.', 36, 8)];
+const rows = [row('dina', 1, 'Dina D.', 44, 0), row('nei', 2, 'Nina N.', 43, 1), row('gard', 3, 'Gard G.', 36, 8)];
 const summary: RoundSummary = {
   leagueName: 'Vinterliga 2026-2027',
   roundId: 'r1',
@@ -71,13 +71,13 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   fake.reset();
   consents = [
-    { user_id: 'ole', granted: true },
-    { user_id: 'phil', granted: true },
+    { user_id: 'dina', granted: true },
+    { user_id: 'gard', granted: true },
     { user_id: 'nei', granted: false },
   ];
   consentError = false;
   process.env.ANTHROPIC_API_KEY = 'test-key';
-  messagesCreateMock.mockResolvedValue(answer('Ole H. åpnet med 44 poeng. Runde 2 er åpen nå.'));
+  messagesCreateMock.mockResolvedValue(answer('Dina D. åpnet med 44 poeng. Runde 2 er åpen nå.'));
 });
 
 afterEach(() => {
@@ -93,17 +93,17 @@ const after = (ms: number, response: ReturnType<typeof answer>) => async () => {
 
 describe('generateRoundNews', () => {
   it('the story comes back, written from the facts of the players who said yes, in one attempt', async () => {
-    await expect(run()).resolves.toBe('Ole H. åpnet med 44 poeng. Runde 2 er åpen nå.');
+    await expect(run()).resolves.toBe('Dina D. åpnet med 44 poeng. Runde 2 er åpen nå.');
 
     expect(fake.ops.find((op) => op.table === 'ai_consents')!.filters).toEqual([
-      { op: 'in', column: 'user_id', value: ['ole', 'nei', 'phil'] },
+      { op: 'in', column: 'user_id', value: ['dina', 'nei', 'gard'] },
     ]);
     expect(anthropicConstructorMock).toHaveBeenCalledWith({ apiKey: 'test-key', timeout: 20_000, maxRetries: 0 });
     expect(messagesCreateMock).toHaveBeenCalledTimes(1);
     expect(messagesCreateMock.mock.calls[0]![1]).toEqual({ timeout: 20_000 });
     const call = messagesCreateMock.mock.calls[0]![0];
-    expect(call.messages[0].content).toContain('"name": "Ole H."');
-    expect(call.messages[0].content).toContain('"name": "Philip M."');
+    expect(call.messages[0].content).toContain('"name": "Dina D."');
+    expect(call.messages[0].content).toContain('"name": "Gard G."');
     expect(JSON.stringify(call)).not.toMatch(/Nina/);
   });
 
@@ -127,14 +127,14 @@ describe('generateRoundNews', () => {
   it.each([
     [
       'a number that is not in the facts',
-      answer('Ole H. åpnet med 45 poeng.'),
+      answer('Dina D. åpnet med 45 poeng.'),
       'Utkastet inneholdt tall som ikke står i fakta-objektet: 45.',
     ],
-    ['a stop before the end', answer('Ole H. åpnet med 44', 'max_tokens'), 'Utkastet ble avbrutt før det var ferdig.'],
+    ['a stop before the end', answer('Dina D. åpnet med 44', 'max_tokens'), 'Utkastet ble avbrutt før det var ferdig.'],
     ['an empty answer', answer('   '), 'Utkastet var tomt eller for langt.'],
     [
       'the players «turned up» in a simulator league',
-      answer('Ole H. møtte opp og tok 44 poeng.'),
+      answer('Dina D. møtte opp og tok 44 poeng.'),
       'Utkastet inneholdt «møtte opp», som er forbudt når simulator er true.',
     ],
   ])('two drafts with the same fault: no story. %s', async (_name, response, fault) => {
@@ -153,10 +153,10 @@ describe('generateRoundNews', () => {
 
   it('a dropped draft gets one more attempt inside the same 20 seconds, and the second draft goes out', async () => {
     messagesCreateMock
-      .mockImplementationOnce(after(7_000, answer('Nederst av de som møtte opp finner vi Philip M. med 36 poeng.')))
-      .mockImplementationOnce(after(6_000, answer('Philip M. leverte 36 poeng. Runde 2 er åpen nå.')));
+      .mockImplementationOnce(after(7_000, answer('Nederst av de som møtte opp finner vi Gard G. med 36 poeng.')))
+      .mockImplementationOnce(after(6_000, answer('Gard G. leverte 36 poeng. Runde 2 er åpen nå.')));
     const err = vi.spyOn(console, 'error').mockImplementation(() => {});
-    await expect(run()).resolves.toBe('Philip M. leverte 36 poeng. Runde 2 er åpen nå.');
+    await expect(run()).resolves.toBe('Gard G. leverte 36 poeng. Runde 2 er åpen nå.');
     expect(err).toHaveBeenCalledTimes(1);
     err.mockRestore();
 

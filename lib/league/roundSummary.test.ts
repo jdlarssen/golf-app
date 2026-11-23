@@ -75,31 +75,31 @@ describe('buildRoundSummary', () => {
   it('a points league: the round best first, shared places, and the gap to the best', () => {
     const s = buildRoundSummary(
       stableford([
-        { id: 'ole', name: 'Ole Petter Holm', rank: 1, value: 44, cells: [{ value: 44 }, { value: null }] },
-        { id: 'atle', name: 'Atle Toresen', rank: 3, value: 42, cells: [{ value: 42 }, { value: null }] },
-        { id: 'lysb', name: 'Mathias Lysberg', nickname: 'Lysb', rank: 2, value: 43, cells: [{ value: 43 }, { value: null }] },
-        { id: 'karl', name: 'Karl', nickname: 'Jussa', rank: 3, value: 42, cells: [{ value: 42 }, { value: null }] },
-        { id: 'saiv', name: 'Sivert', nickname: 'Saiv', rank: null, value: 0, cells: [{ value: null }, { value: null }] },
+        { id: 'dina', name: 'Dina Marie Dal', rank: 1, value: 44, cells: [{ value: 44 }, { value: null }] },
+        { id: 'frida', name: 'Frida Foss', rank: 3, value: 42, cells: [{ value: 42 }, { value: null }] },
+        { id: 'emil', name: 'Emil Eng', nickname: 'Emmi', rank: 2, value: 43, cells: [{ value: 43 }, { value: null }] },
+        { id: 'hege', name: 'Hege', nickname: 'Hegga', rank: 3, value: 42, cells: [{ value: 42 }, { value: null }] },
+        { id: 'ivar', name: 'Ivar', nickname: 'Ivo', rank: null, value: 0, cells: [{ value: null }, { value: null }] },
       ]),
       'r2',
       NOW,
     )!;
 
     expect(s.round.map((r) => [r.place, r.userId, r.value, r.behind])).toEqual([
-      [1, 'ole', 44, 0],
-      [2, 'lysb', 43, 1],
-      [3, 'atle', 42, 2],
-      [3, 'karl', 42, 2],
+      [1, 'dina', 44, 0],
+      [2, 'emil', 43, 1],
+      [3, 'frida', 42, 2],
+      [3, 'hege', 42, 2],
     ]);
     expect(s.table.map((r) => [r.place, r.userId, r.value, r.behind])).toEqual([
-      [1, 'ole', 44, 0],
-      [2, 'lysb', 43, 1],
-      [3, 'atle', 42, 2],
-      [3, 'karl', 42, 2],
+      [1, 'dina', 44, 0],
+      [2, 'emil', 43, 1],
+      [3, 'frida', 42, 2],
+      [3, 'hege', 42, 2],
     ]);
     // One name per player, the same every time: first name and the initial of
     // the last name (the owner 23.11), a single name as it is.
-    expect(s.round.map((r) => r.name)).toEqual(['Ole H.', 'Mathias L.', 'Atle T.', 'Karl']);
+    expect(s.round.map((r) => r.name)).toEqual(['Dina D.', 'Emil E.', 'Frida F.', 'Hege']);
     expect(s).toMatchObject({
       leagueName: 'Vinterliga 2026-2027',
       roundId: 'r1',
