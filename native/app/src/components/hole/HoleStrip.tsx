@@ -11,8 +11,13 @@
 // Trykkflatene er 44 pt høye og 34 pt brede. Ni hull på én rad gir ikke
 // plass til 44 pt i bredden på en telefon. Brikkene er avlange (22 × 30), slik
 // artboardet tegnes i nettleseren (eierens svar #2385).
+//
+// #2928: `hitSlop` lar flatene møtes, uten å endre det som tegnes. Hvert hull
+// tar halve mellomrommet (2 pt) på hver side, det første går ut til kanten av
+// skjermen, og det siste før brikka stopper der brikkas egen utvidelse begynner.
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { FONTS, fraunces, frauncesFamily, TAP, useTheme } from '../../theme';
 import { HOLE_BOX_TEXT_CAP } from './holeTextCap';
 
@@ -31,6 +36,24 @@ export const STRIP_LABELS = {
 function stripLabel(n: number, filled: boolean, current: number): string {
   const key = filled ? 'done' : n < current ? 'missing' : 'plain';
   return STRIP_LABELS[key].replace('{n}', String(n));
+}
+
+/** Mellomrommet mellom to hull, og luften fra kanten til det første. */
+export const STRIP_GAP = 4;
+export const STRIP_EDGE = 16;
+/** Brikka: ut til hull 9 (mellomrommet og egen marg) og til kanten av skjermen. */
+export const CHIP_SLOP = { left: 6, right: 16 };
+
+/**
+ * #2928: hvor langt trykkflaten til hull nummer `i` i raden går ut på hver side.
+ * Uten brikke går det siste hullet ut til kanten, som det første.
+ */
+export function stripSlop(i: number, count: number, chip: boolean): { left: number; right: number } {
+  const half = STRIP_GAP / 2;
+  const left = i === 0 ? STRIP_EDGE : half;
+  // Brikkas `hitSlop.left` (6) dekker hele luften fram til den (4 + 2).
+  const right = i < count - 1 ? half : chip ? 0 : STRIP_EDGE;
+  return { left, right };
 }
 
 export function HoleStrip({
@@ -58,13 +81,14 @@ export function HoleStrip({
 
   return (
     <View style={styles.row} testID="hole-strip">
-      {holes.map((n) => {
+      {holes.map((n, i) => {
         const isCurrent = n === holeNumber;
         const isFilled = filled.includes(n);
         return (
-          <Pressable
+          <Tap
             key={n}
             onPress={() => onGo(n)}
+            hitSlop={stripSlop(i, holes.length, otherHoles.length > 0)}
             style={styles.hit}
             testID={`hole-strip-${n}`}
             accessibilityRole="button"
@@ -93,15 +117,15 @@ export function HoleStrip({
                 {n}
               </Text>
             </View>
-          </Pressable>
+          </Tap>
         );
       })}
       {otherHoles.length > 0 ? (
-        <Pressable
+        <Tap
           onPress={() => setHalf(half === 0 ? 1 : 0)}
           // Brikka er smal i designet; trykkflaten går ut til hull 9 og til
           // kanten av skjermen.
-          hitSlop={{ left: 6, right: 16 }}
+          hitSlop={CHIP_SLOP}
           style={styles.chip}
           testID="hole-strip-other-half"
           accessibilityRole="button"
@@ -110,7 +134,7 @@ export function HoleStrip({
           {/* To linjer, «10–» over «18», som designet: det er ikke plass til
               begge på én linje etter ni hull. */}
           <Text maxFontSizeMultiplier={HOLE_BOX_TEXT_CAP} style={[styles.chipText, { color: colors.muted }]}>{`${otherHoles[0]}–\n${otherHoles[otherHoles.length - 1]}`}</Text>
-        </Pressable>
+        </Tap>
       ) : null}
     </View>
   );
@@ -119,7 +143,7 @@ export function HoleStrip({
 // Designets mål (`Main`, slik nettleseren tegner det): knapper på 34 pt med
 // 4 pt mellom fra 16 pt inn, og brikker på 22 × 30 pt med helt runde ender.
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingTop: 6, paddingHorizontal: 16 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: STRIP_GAP, paddingTop: 6, paddingHorizontal: STRIP_EDGE },
   hit: { width: 34, height: TAP, alignItems: 'center', justifyContent: 'center' },
   pill: {
     width: 22,

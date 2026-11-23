@@ -9,8 +9,22 @@
 // som bygges etter #1833, så ingenting her leser den statiske lys-paletten.
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import { FONTS, TAP, fraunces, interLine, useTheme } from '../../theme';
+import { FONTS, INTER_LINE, TAP, fraunces, interLine, useTheme } from '../../theme';
 import { DesignSwitch, listSwitchOffColor } from '../DesignSwitch';
+
+/** Luften mellom etiketten, feltet og det som står under i et {@link Field}. */
+export const FIELD_GAP = 6;
+
+/**
+ * #2928: den usynlige utvidelsen som gjør en lenke i `ui.linkText` (Inter 15,
+ * 18,15 pt høy) til en trykkflate på 44 pt, uten å flytte noe. `roomAbove` er
+ * luften opp til en knapp over lenka: utvidelsen stopper der, og resten går nedover.
+ */
+export function linkSlop(roomAbove = Infinity): { top: number; bottom: number } {
+  const need = TAP - 15 * INTER_LINE;
+  const top = Math.min(roomAbove, Math.ceil(need / 2));
+  return { top, bottom: Math.ceil(need - top) };
+}
 
 /** Etikett over et felt, med feltet under. */
 export function Field({
@@ -314,7 +328,7 @@ export function Note({ children, testID }: { children: string; testID: string })
 }
 
 const styles = StyleSheet.create({
-  field: { gap: 6, marginTop: 12 },
+  field: { gap: FIELD_GAP, marginTop: 12 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
