@@ -158,6 +158,12 @@ describe('PALETTES', () => {
     expect([PALETTES.light.boardSlabBorder, PALETTES.dark.boardSlabBorder]).toEqual(['#14201A', '#2F3F34']);
     expect([PALETTES.light.youFill, PALETTES.dark.youFill]).toEqual(['#E8EFE8', '#243429']);
     expect([PALETTES.light.dotOver, PALETTES.dark.dotOver]).toEqual(['#D89B3A', '#E5B26F']);
+    // #2928: trykk-tilstanden er `text` med 12 % dekning, i alle tre draktene.
+    expect([PALETTES.light.pressRipple, PALETTES.dark.pressRipple, theme.SUNLIGHT_COLORS.pressRipple]).toEqual([
+      theme.withAlpha(PALETTES.light.text, 0.12),
+      theme.withAlpha(PALETTES.dark.text, 0.12),
+      theme.withAlpha(theme.SUNLIGHT_COLORS.text, 0.12),
+    ]);
     // Lagtavla (`Lagtavle-ferdig-forslag-*`, `Lagtavle-bestball-forslag-*`).
     expect([PALETTES.light.youBorder, PALETTES.dark.youBorder]).toEqual(['#B9D3C0', 'rgba(126, 170, 128, 0.45)']);
     expect([PALETTES.light.boardHatch, PALETTES.dark.boardHatch]).toEqual(['#D9D1BD', '#3D4F43']);
