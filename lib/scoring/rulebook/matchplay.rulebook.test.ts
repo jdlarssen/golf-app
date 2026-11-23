@@ -21,6 +21,7 @@ import { holesForSegment } from '../holeSegment';
 import { compute as computeFourball } from '../modes/fourballMatchplay';
 import { compute as computeFoursomes } from '../modes/foursomesMatchplay';
 import { compute as computeGreensome } from '../modes/greensomeMatchplay';
+import { compute as computeRoundRobin } from '../modes/roundRobin';
 import { compute as computeSingles } from '../modes/singlesMatchplay';
 import type {
   FourballMatchplayResult,
@@ -56,14 +57,24 @@ function ctx(
 
 function player(
   userId: string,
-  teamNumber: 1 | 2,
+  teamNumber: number,
   courseHandicap: number,
   teeGender?: ScoringPlayer['teeGender'],
 ): ScoringPlayer {
   return { userId, teamNumber, flightNumber: null, courseHandicap, teeGender };
 }
 
-const SINGLES: GameModeConfig = { kind: 'singles_matchplay', team_size: 1, teams_count: 2 };
+/**
+ * A singles match as created today: the higher handicap gets the difference
+ * (`match_strokes: 'difference'`). A match created before keeps each player's
+ * own strokes and is never recalculated (`singlesStrokeHandicap`).
+ */
+const SINGLES: GameModeConfig = {
+  kind: 'singles_matchplay',
+  team_size: 1,
+  teams_count: 2,
+  match_strokes: 'difference',
+};
 const fourball = (allowance_pct: number): GameModeConfig => ({
   kind: 'fourball_matchplay',
   team_size: 2,
@@ -118,6 +129,26 @@ describe('Golfreglene 3.2c(2) og 23.2b(2): laveste netto vinner hullet', () => {
     );
     const row = result.holes[0];
     expect([row.side1BestNet, row.side2BestNet, row.result]).toEqual([4, 4, 'tied']);
+  });
+});
+
+describe('Vedlegg C: singles i matchspill (NGF s. 76)', () => {
+  // «spiller den spilleren med det laveste spillehandicapet med null
+  // handicapslag relativt til den andre spilleren/spillerne. Den andre
+  // spilleren/spillerne får differansen». C/2 eksempel 1: «Spiller A får null
+  // (0) handicapslag og spiller B får 8 handicapslag i matchen (ett
+  // handicapslag på hullene med indeks 1-8).»
+  it('C/2 eksempel 1: A (10) spiller på 0, og B (18) får ett slag på hullindeks 1-8', () => {
+    const result = computeSingles(
+      ctx(
+        'singles_matchplay',
+        SINGLES,
+        [player('A', 1, 10), player('B', 2, 18)],
+        PAR4_18,
+      ),
+    );
+    expect(result.holes.map((h) => h.side1Extra)).toEqual(zeros(18));
+    expect(result.holes.map((h) => h.side2Extra)).toEqual([...ones(8), ...zeros(10)]);
   });
 });
 
@@ -192,20 +223,6 @@ describe('Regel 6.1b: ni hull med 18-hullsindeksen (NGF s. 55)', () => {
 });
 
 describe('Kjent avvik', () => {
-  // NGF vedlegg C s. 76: «spiller den spilleren med det laveste
-  // spillehandicapet med null handicapslag relativt til den andre
-  // spilleren/spillerne. Den andre spilleren/spillerne får differansen».
-  // C/2 eksempel 1: «Spiller A får null (0) handicapslag og spiller B får 8
-  // handicapslag i matchen (ett handicapslag på hullene med indeks 1-8).»
-  // The engine gives A 10 and B 18 strokes of their own (singlesMatchplay.ts).
-  it.fails('F15: singles gir differansen til den laveste, ikke egne slag (C/2 eksempel 1)', () => {
-    const result = computeSingles(
-      ctx('singles_matchplay', SINGLES, [player('A', 1, 10), player('B', 2, 18)], PAR4_18),
-    );
-    expect(result.holes.map((h) => h.side1Extra)).toEqual(zeros(18));
-    expect(result.holes.map((h) => h.side2Extra)).toEqual([...ones(8), ...zeros(10)]);
-  });
-
   // C/2 eksempel 2, four-ball at 90 %: «Spiller A får null (0) slag, spiller B
   // får 7 slag (90 % av differansen i Spillehandicap fra spiller A), spiller C
   // får 15 slag (90 % av 17) og spiller D får 26 slag (90 % av 29).» The engine
@@ -245,6 +262,34 @@ describe('Kjent avvik', () => {
       B: ones(18),
       C: [...ones(10), ...zeros(8)],
       D: [...Array(9).fill(2), ...ones(9)],
+    });
+  });
+
+  // Round Robin is four-ball match play in three six-hole segments with
+  // rotating partners. Appendix C has no row for it; the four-ball rule above
+  // is the closest («den laveste ... med null handicapslag», the others the
+  // share of the difference). C/2 eksempel 2's four at 90 %: 0, 7, 15 and 26.
+  // The engine gives each player 90 % of their own (roundRobin.ts).
+  it.fails('F15: Round Robin gir andelen av differansen til den laveste, ikke egne slag', () => {
+    const result = computeRoundRobin(
+      ctx(
+        'round_robin',
+        { kind: 'round_robin', team_size: 1, teams_count: 4, allowance_pct: 90 },
+        [player('A', 1, 10), player('B', 2, 18), player('C', 3, 27), player('D', 4, 39)],
+        PAR4_18,
+      ),
+    );
+    const bySi: Record<string, number[]> = {};
+    for (const row of [...result.holes].sort((a, b) => a.strokeIndex - b.strokeIndex)) {
+      for (const cell of [...row.side1Players, ...row.side2Players]) {
+        (bySi[cell.userId] ??= []).push(cell.extraStrokes);
+      }
+    }
+    expect(bySi).toEqual({
+      A: zeros(18),
+      B: [...ones(7), ...zeros(11)],
+      C: [...ones(15), ...zeros(3)],
+      D: [...Array(8).fill(2), ...ones(10)],
     });
   });
 
