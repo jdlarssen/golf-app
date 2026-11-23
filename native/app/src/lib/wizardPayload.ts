@@ -23,6 +23,7 @@ import {
 } from '../../../../lib/games/registration';
 import {
   DEFAULT_SHAMBLE_SETUP,
+  defaultHcpAllowancePct,
   defaultTeamHandicapPct,
   defaultTeamSizeForMode,
 } from '../../../../lib/games/formatSetupDefaults';
@@ -394,7 +395,12 @@ export function draftToFormData(draft: GameDraft): WizardFormData {
   form.set('game_mode', draft.gameMode);
   form.set('course_id', draft.courseId ?? '');
   form.set('tee_box_id', draft.teeBoxId ?? '');
-  form.set('hcp_allowance_pct', draft.hcpAllowancePct ?? 100);
+  // #2942: an empty field is the format's default (85 for best ball and
+  // stableford in pairs, otherwise 100), the shared home the web reads.
+  form.set(
+    'hcp_allowance_pct',
+    draft.hcpAllowancePct ?? defaultHcpAllowancePct(draft.gameMode, setup.stablefordTeamSize ?? 1),
+  );
   // Checkbox-semantikk: webben tester mot strengen 'on', ikke mot 'true'.
   if (draft.requirePeerApproval) form.set('require_peer_approval', 'on');
   form.set('score_visibility', draft.scoreVisibility ?? 'live');

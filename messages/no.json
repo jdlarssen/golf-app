@@ -1442,7 +1442,7 @@
       "scoring": {
         "legend": "Scoring",
         "description": "Styrer hvor stor andel av handicap som regnes med. Brutto = ingen handicap, bare bruttoscoren teller.",
-        "nettoHelper": "Andel av spillerens handicap som teller. 100 = fullt banehandicap (standard)."
+        "nettoHelper": "Andel av spillerens handicap som teller. NGF anbefaler 100 % når alle spiller for seg selv, og 85 % i best ball og stableford i par."
       },
       "roundRobin": {
         "legend": "Scoring for Round Robin",
@@ -1613,7 +1613,7 @@
       "scoring": {
         "legend": "Scoring",
         "description": "Styrer hvor stor andel av handicap som regnes med. Brutto = ingen handicap, bare bruttoscoren teller.",
-        "nettoHelper": "Andel av spillerens handicap som teller. 100 = fullt banehandicap (standard)."
+        "nettoHelper": "Andel av spillerens handicap som teller. NGF anbefaler 100 % når alle spiller for seg selv, og 85 % i best ball og stableford i par."
       },
       "sumEquivalent": "Valget ditt tilsvarer {sumPct} % av summen av banehandicapene.",
       "texas": {

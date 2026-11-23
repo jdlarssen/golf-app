@@ -450,7 +450,8 @@ describe('payload-paritet for alle modiene appen lager', () => {
       course_id: COURSE,
       tee_box_id: TEE,
       game_mode: mode,
-      hcp_allowance_pct: 100,
+      // #2942: an empty share is the format's default, 85 for best ball (NGF).
+      hcp_allowance_pct: mode === 'best_ball' ? 85 : 100,
       require_peer_approval: false,
       score_visibility: 'live',
       // Utenfor v1 — skal falle til webbens defaults, ikke til noe appen fant på.
@@ -719,6 +720,37 @@ describe('teeOffInstant — regresjonsvakt for tee-off-en som ble lagret en time
         importsOsloParser: false,
       });
     }
+  });
+});
+
+describe('standardandelen når feltet står tomt (#2942)', () => {
+  // NGF vedlegg C, s. 75: four-ball slagspill og four-ball stableford 85 %,
+  // individuelt spill 100 %. Tomt felt er formatets standard, som på nettet.
+  const PAIRS = teamed(['a', 1], ['b', 1], ['c', 2], ['d', 2]);
+
+  it('best ball uten tall sender 85', () => {
+    expect(buildDraftPayload(draft({ gameMode: 'best_ball', players: PAIRS })).payload.hcp_allowance_pct).toBe(85);
+  });
+
+  it.each(['stableford', 'modified_stableford'] as const)('%s i par uten tall sender 85', (mode) => {
+    const input = draft({ gameMode: mode, players: PAIRS, setup: { stablefordTeamSize: 2 } });
+    expect(buildDraftPayload(input).payload.hcp_allowance_pct).toBe(85);
+  });
+
+  it('stableford alene uten tall sender 100', () => {
+    expect(buildDraftPayload(draft({ gameMode: 'stableford', players: solo('a', 'b') })).payload.hcp_allowance_pct).toBe(
+      100,
+    );
+  });
+
+  it('et skrevet tall (90) sendes som det er', () => {
+    const input = draft({ gameMode: 'best_ball', players: PAIRS, hcpAllowancePct: 90 });
+    expect(buildDraftPayload(input).payload.hcp_allowance_pct).toBe(90);
+  });
+
+  it('en lekket «Par» gjør ikke wolf til et 85-format', () => {
+    const input = draft({ gameMode: 'wolf', players: solo('a', 'b', 'c'), setup: { stablefordTeamSize: 2 } });
+    expect(buildDraftPayload(input).payload.hcp_allowance_pct).toBe(100);
   });
 });
 
