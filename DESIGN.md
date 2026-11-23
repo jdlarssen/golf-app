@@ -156,7 +156,7 @@ det:
    bety noe.
 
 Admin-flatene («Sekretariatet») er et eget rom: litt varmere lin (`admin-bg`),
-messinglinjer (`BrassRibbon`) og klubbstempel (`ClubStamp`).
+messinglinjer (`BrassRibbon`).
 
 ## Farger
 

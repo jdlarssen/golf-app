@@ -115,19 +115,6 @@ const senders = [
     },
   },
   {
-    name: 'sendTeamInvitationMail',
-    invoke: async () => {
-      const { sendTeamInvitationMail } = await import('../teamInvitation');
-      return sendTeamInvitationMail({
-        to: 'venn@example.com',
-        captainName: 'Jørgen',
-        gameName: 'Sommercup 2026',
-        teamName: 'Bjørketrærne',
-        gameShortId: 'abc12345',
-      });
-    },
-  },
-  {
     name: 'sendProductUpdateDigest',
     invoke: async () => {
       const { sendProductUpdateDigest } = await import('../productUpdateDigest');
