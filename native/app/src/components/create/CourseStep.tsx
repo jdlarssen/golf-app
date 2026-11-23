@@ -26,7 +26,7 @@ import { openAndroidTeeOffDate, openAndroidTeeOffTime } from '../../lib/teeOffPi
 import { TAP, useTheme } from '../../theme';
 import { Tap } from '../Tap';
 import { WebLinkButton } from '../WebLinkButton';
-import { Field, FIELD_GAP, linkSlop, SelectRow, ToggleRow } from './primitives';
+import { Field, FIELD_GAP, FIELD_SPACE, linkTarget, SelectRow, ToggleRow } from './primitives';
 
 /** «Herre · Dame» — hvilke tee-kjønn denne teen har rating for. */
 function describeTee(tee: CourseOption['tees'][number]): string {
@@ -180,11 +180,12 @@ export function CourseStep({
             selected
             onPress={() => setBrowsing(true)}
           />
-          {/* #2928: en ekte knapp. Raden over er en knapp, så utvidelsen går
-              bare opp til den og resten nedover. */}
+          {/* #2928: en ekte knapp. Raden over er en knapp og «Tee» står under,
+              så utvidelsen går bare ut til dem. Resten er luft under teksten. */}
           <Tap
             onPress={() => setBrowsing(true)}
-            hitSlop={linkSlop(FIELD_GAP)}
+            hitSlop={COURSE_CHANGE.hitSlop}
+            style={styles.courseChange}
             testID="create-course-change"
             accessibilityRole="button"
           >
@@ -299,6 +300,10 @@ export function CourseStep({
   );
 }
 
+/** #2928: «Velg en annen bane», mellom raden med banen og «Tee». */
+const COURSE_CHANGE = linkTarget(FIELD_GAP, FIELD_SPACE);
+
 const styles = StyleSheet.create({
+  courseChange: { paddingBottom: COURSE_CHANGE.paddingBottom },
   newCourse: { minHeight: TAP, justifyContent: 'center', marginTop: 4 },
 });

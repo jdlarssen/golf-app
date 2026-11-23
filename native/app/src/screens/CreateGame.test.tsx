@@ -32,7 +32,7 @@ import { SessionProvider } from '../session';
 import { setBottomInset, bottomPadding } from '../test/safeAreaMock';
 import { buildDraftPayload } from '../lib/wizardPayload';
 import { CreateGame, summaryLines } from './CreateGame';
-import { FIELD_GAP } from '../components/create/primitives';
+import { FIELD_GAP, FIELD_SPACE } from '../components/create/primitives';
 import { INTER_LINE, TAP } from '../theme';
 
 // Den ekte `supabase.ts` kaster uten EXPO_PUBLIC_-variablene og kobler seg på
@@ -780,12 +780,15 @@ describe('CreateGame: «Velg en annen bane» er en knapp (#2928)', () => {
     const link = screen.getByTestId('create-course-change');
     expect(link).toHaveProp('accessibilityRole', 'button');
     expect(within(link).getByText('Velg en annen bane')).toBeTruthy();
-    // Inter 15 er 18,15 pt høy. Utvidelsen går bare opp til raden over
-    // (luften i feltet) og resten nedover.
+    // Inter 15 er 18,15 pt høy. Utvidelsen går bare opp til raden over og ned
+    // til «Tee» (en senere søsken vinner trykket); resten er luft under teksten.
     const { top, bottom } = link.props.hitSlop as { top: number; bottom: number };
-    expect(top).toBe(FIELD_GAP);
+    expect(top).toBeLessThanOrEqual(FIELD_GAP);
+    expect(bottom).toBeLessThanOrEqual(FIELD_SPACE);
+    expect(screen.getByText('Tee')).toBeTruthy();
+    const pad = (StyleSheet.flatten(link.props.style)?.paddingBottom as number | undefined) ?? 0;
     const size = StyleSheet.flatten(within(link).getByText('Velg en annen bane').props.style).fontSize as number;
-    expect(top + size * INTER_LINE + bottom).toBeGreaterThanOrEqual(TAP);
+    expect(top + size * INTER_LINE + pad + bottom).toBeGreaterThanOrEqual(TAP);
     expect(screen.queryByTestId('create-course-search')).toBeNull();
 
     await fireEvent.press(link);
