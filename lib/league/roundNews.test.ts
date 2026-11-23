@@ -65,6 +65,10 @@ const run = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  messagesCreateMock.mockReset();
+  // Only the clock: the two attempts share one deadline, and a test moves the
+  // time a model call «took» by hand.
+  vi.useFakeTimers({ toFake: ['Date'] });
   fake.reset();
   consents = [
     { user_id: 'ole', granted: true },
@@ -77,8 +81,15 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   delete process.env.ANTHROPIC_API_KEY;
 });
+
+/** A model call that «takes» `ms` and then answers. */
+const after = (ms: number, response: ReturnType<typeof answer>) => async () => {
+  vi.setSystemTime(Date.now() + ms);
+  return response;
+};
 
 describe('generateRoundNews', () => {
   it('the story comes back, written from the facts of the players who said yes, in one attempt', async () => {
@@ -88,6 +99,8 @@ describe('generateRoundNews', () => {
       { op: 'in', column: 'user_id', value: ['ole', 'nei', 'phil'] },
     ]);
     expect(anthropicConstructorMock).toHaveBeenCalledWith({ apiKey: 'test-key', timeout: 20_000, maxRetries: 0 });
+    expect(messagesCreateMock).toHaveBeenCalledTimes(1);
+    expect(messagesCreateMock.mock.calls[0]![1]).toEqual({ timeout: 20_000 });
     const call = messagesCreateMock.mock.calls[0]![0];
     expect(call.messages[0].content).toContain('"name": "Ole H."');
     expect(call.messages[0].content).toContain('"name": "Philip M."');
@@ -112,21 +125,70 @@ describe('generateRoundNews', () => {
   });
 
   it.each([
-    ['a number that is not in the facts', answer('Ole H. åpnet med 45 poeng.')],
-    ['a stop before the end', answer('Ole H. åpnet med 44', 'max_tokens')],
-    ['an empty answer', answer('   ')],
-  ])('the story is dropped: %s', async (_name, response) => {
+    [
+      'a number that is not in the facts',
+      answer('Ole H. åpnet med 45 poeng.'),
+      'Utkastet inneholdt tall som ikke står i fakta-objektet: 45.',
+    ],
+    ['a stop before the end', answer('Ole H. åpnet med 44', 'max_tokens'), 'Utkastet ble avbrutt før det var ferdig.'],
+    ['an empty answer', answer('   '), 'Utkastet var tomt eller for langt.'],
+    [
+      'the players «turned up» in a simulator league',
+      answer('Ole H. møtte opp og tok 44 poeng.'),
+      'Utkastet inneholdt «møtte opp», som er forbudt når simulator er true.',
+    ],
+  ])('two drafts with the same fault: no story. %s', async (_name, response, fault) => {
     messagesCreateMock.mockResolvedValue(response);
     const err = vi.spyOn(console, 'error').mockImplementation(() => {});
     await expect(run()).resolves.toBeNull();
-    expect(err).toHaveBeenCalled();
+    expect(err).toHaveBeenCalledTimes(2);
     err.mockRestore();
+
+    // One more attempt, told what was wrong with the first, and then it ends.
+    expect(messagesCreateMock).toHaveBeenCalledTimes(2);
+    expect(messagesCreateMock.mock.calls[1]![0].messages[0].content).toContain(
+      `Et tidligere utkast ble forkastet. ${fault}`,
+    );
   });
 
-  it('a model call that throws gives no story and does not throw', async () => {
+  it('a dropped draft gets one more attempt inside the same 20 seconds, and the second draft goes out', async () => {
+    messagesCreateMock
+      .mockImplementationOnce(after(7_000, answer('Nederst av de som møtte opp finner vi Philip M. med 36 poeng.')))
+      .mockImplementationOnce(after(6_000, answer('Philip M. leverte 36 poeng. Runde 2 er åpen nå.')));
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await expect(run()).resolves.toBe('Philip M. leverte 36 poeng. Runde 2 er åpen nå.');
+    expect(err).toHaveBeenCalledTimes(1);
+    err.mockRestore();
+
+    expect(messagesCreateMock).toHaveBeenCalledTimes(2);
+    const [first, second] = messagesCreateMock.mock.calls;
+    expect(first![1]).toEqual({ timeout: 20_000 });
+    expect(second![1]).toEqual({ timeout: 13_000 });
+    // The same task in the same shape: one user message, the same system prompt.
+    expect(second![0].system).toBe(first![0].system);
+    expect(second![0].messages).toHaveLength(1);
+    expect(second![0].messages[0].content).toContain(first![0].messages[0].content);
+    expect(second![0].messages[0].content).toContain(
+      'Et tidligere utkast ble forkastet. Utkastet inneholdt «møtte opp», som er forbudt når simulator er true.',
+    );
+  });
+
+  it.each([
+    [12_000, 2],
+    [12_001, 1],
+  ])('a first draft that took %i ms leaves time for %i attempt(s) in all', async (took, attempts) => {
+    messagesCreateMock.mockImplementation(after(took, answer('Ti av elleve møtte opp.')));
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await expect(run()).resolves.toBeNull();
+    err.mockRestore();
+    expect(messagesCreateMock).toHaveBeenCalledTimes(attempts);
+  });
+
+  it('a model call that throws gives no story, no second attempt, and does not throw', async () => {
     messagesCreateMock.mockRejectedValue(new Error('timeout'));
     const err = vi.spyOn(console, 'error').mockImplementation(() => {});
     await expect(run()).resolves.toBeNull();
     err.mockRestore();
+    expect(messagesCreateMock).toHaveBeenCalledTimes(1);
   });
 });
