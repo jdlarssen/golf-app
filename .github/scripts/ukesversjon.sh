@@ -37,7 +37,10 @@ trap 'rm -rf "$TMP"' EXIT
 
 open_or_note_issue() { # title body — dedupet mot åpent issue med samme tittel
   local title="$1" body="$2" existing
-  existing=$(gh issue list --repo "$REPO" --state open --search "in:title \"$title\"" --json number --jq 'length' 2>/dev/null || echo 0)
+  # Eksakt tittel (søket er substreng). gh --jq kjenner ikke --arg, så jq filtrerer.
+  # gh-feil → 0: heller ett ekstra varsel enn et tapt varsel.
+  existing=$(gh issue list --repo "$REPO" --state open --search "in:title \"$title\"" --json number,title 2>/dev/null \
+    | jq --arg t "$title" '[.[] | select(.title == $t)] | length' 2>/dev/null || echo 0)
   if [ "${existing:-0}" -gt 0 ]; then
     echo "Åpent issue «$title» finnes allerede — hopper over."
     return 0

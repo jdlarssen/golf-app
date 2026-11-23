@@ -204,6 +204,7 @@ jobs:
             echo "::warning::$BINDING mangler etter npm ci — reinstallerer (#1095)"
             npm install --no-save --force "$BINDING@$(node -p "require('next/package.json').version")"
           fi
+          # Browser version follows the locked @playwright/test (package-lock.json); no separate pin.
           npx playwright install --with-deps chromium
           # Boot dev-serveren mot staging i bakgrunnen, vent på :3000.
           npm run dev > /tmp/dev.log 2>&1 &

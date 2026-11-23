@@ -223,6 +223,7 @@ jobs:
         # #1709: this exact step hung >1h in #1708 — a step timeout names the
         # culprit in the log. Seconds on cache hit, ~2-3 min cold.
         timeout-minutes: 10
+        # Browser version follows the locked @playwright/test (package-lock.json); no separate pin.
         run: npx playwright install --with-deps chromium
 
       - name: Authenticated e2e (golden-path + cup/liga smoke)
