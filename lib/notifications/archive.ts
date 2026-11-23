@@ -1,5 +1,4 @@
 import 'server-only';
-import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import type { Database } from '@/lib/database.types';
@@ -92,8 +91,6 @@ export async function archiveNotifications(
     }
   }
 
-  // Next.js 16 krever to-arg-form for revalidateTag.
-  revalidateTag(`notifications-${opts.userId}`, 'max');
   return true;
 }
 
@@ -143,7 +140,6 @@ export async function archiveStaleNotifications(
     }
   }
 
-  revalidateTag(`notifications-${opts.userId}`, 'max');
   return true;
 }
 
@@ -182,9 +178,6 @@ export async function archiveNotificationsForGame(gameId: string): Promise<numbe
       return null;
     }
     const rows = (data ?? []) as { user_id: string }[];
-    for (const userId of new Set(rows.map((r) => r.user_id))) {
-      revalidateTag(`notifications-${userId}`, 'max');
-    }
     console.info('[notifications] archived notices for deleted game', { gameId, count: rows.length });
     return rows.length;
   } catch (err) {

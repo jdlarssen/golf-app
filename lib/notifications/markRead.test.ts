@@ -19,10 +19,6 @@ vi.mock('./loadInboxBoard', () => ({
   readSettledInputs: (...args: unknown[]) => settledInputsMock(...args),
 }));
 
-const revalidateTagMock = vi.fn();
-vi.mock('next/cache', () => ({
-  revalidateTag: (...args: unknown[]) => revalidateTagMock(...args),
-}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -98,7 +94,6 @@ describe('markNotificationsRead', () => {
     expect(consoleErr).toHaveBeenCalledWith('[notifications] markRead single-id matched 0 rows', {
       notificationId: 'n-uuid',
     });
-    expect(revalidateTagMock).not.toHaveBeenCalled();
     // `.select('id')` er det som gjør radantallet synlig i det hele tatt.
     expect(supabaseMock.__fromCalls).toContainEqual(
       expect.objectContaining({ method: 'select', args: ['id'] }),
@@ -121,7 +116,6 @@ describe('markNotificationsRead', () => {
 
     expect(ok).toBe(true);
     expect(consoleErr).not.toHaveBeenCalled();
-    expect(revalidateTagMock).not.toHaveBeenCalled();
     expect(supabaseMock.__fromCalls).toContainEqual(
       expect.objectContaining({ method: 'eq', args: ['id', 'n-uuid'] }),
     );
@@ -135,19 +129,9 @@ describe('markNotificationsRead', () => {
     const ok = await markNotificationsRead({ userId: 'u1' });
 
     expect(ok).toBe(true);
-    expect(revalidateTagMock).toHaveBeenCalledWith('notifications-u1', 'max');
   });
 
-  it('happy path → revalidateTag(`notifications-${userId}`, "max")', async () => {
-    supabaseMock = buildSupabaseMock([{ data: null, error: null }]);
-    const { markNotificationsRead } = await import('./markRead');
-
-    await markNotificationsRead({ userId: 'u1' });
-
-    expect(revalidateTagMock).toHaveBeenCalledWith('notifications-u1', 'max');
-  });
-
-  it('error-path → revalidateTag IKKE kalt + console.error logget', async () => {
+  it('error-path → console.error logget', async () => {
     const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
     supabaseMock = buildSupabaseMock([
       { data: null, error: { message: 'permission denied' } },
@@ -156,7 +140,6 @@ describe('markNotificationsRead', () => {
 
     await markNotificationsRead({ userId: 'u1' });
 
-    expect(revalidateTagMock).not.toHaveBeenCalled();
     expect(consoleErr).toHaveBeenCalledWith(
       '[notifications] markRead failed',
       expect.objectContaining({ message: 'permission denied' }),
@@ -198,7 +181,6 @@ describe('markReadOnVisit', () => {
       ['notifications', 'select', ['id']],
     ];
     expect(supabaseMock.__fromCalls.slice(0, chain.length).map((c) => [c.table, c.method, c.args])).toEqual(chain);
-    expect(revalidateTagMock).toHaveBeenCalledWith('notifications-u1', 'max');
   });
 
   describe('#2759: the rows that wait', () => {
@@ -319,7 +301,6 @@ describe('markReadOnVisit', () => {
 
     expect(supabaseMock.__fromCalls).toHaveLength(0);
     expect(consoleErr).toHaveBeenCalled();
-    expect(revalidateTagMock).not.toHaveBeenCalled();
     consoleErr.mockRestore();
   });
 
@@ -329,7 +310,6 @@ describe('markReadOnVisit', () => {
 
     await markReadOnVisit({ userId: 'u1', surface: 'gameHole', entityId: ENTITY });
 
-    expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 
   it('a DB error is logged, never thrown, and revalidates nothing', async () => {
@@ -341,7 +321,6 @@ describe('markReadOnVisit', () => {
       markReadOnVisit({ userId: 'u1', surface: 'gameHome', entityId: ENTITY }),
     ).resolves.toBeUndefined();
     expect(consoleErr).toHaveBeenCalled();
-    expect(revalidateTagMock).not.toHaveBeenCalled();
     consoleErr.mockRestore();
   });
 });
@@ -389,7 +368,6 @@ describe('markNotificationIdsRead', () => {
     expect(calls).toContainEqual(expect.objectContaining({ method: 'is', args: ['read_at', null] }));
     // No kind/game filter: that would also mark the pending request in the game.
     expect(calls.filter((c) => c.method === 'eq')).toHaveLength(1);
-    expect(revalidateTagMock).toHaveBeenCalledWith('notifications-u1', 'max');
   });
 
   it('0 rows touched → false (the caller saw them unread), no revalidate', async () => {
@@ -398,7 +376,6 @@ describe('markNotificationIdsRead', () => {
     const { markNotificationIdsRead } = await import('./markRead');
 
     expect(await markNotificationIdsRead({ userId: 'u1', ids: HEADS_UP })).toBe(false);
-    expect(revalidateTagMock).not.toHaveBeenCalled();
     consoleErr.mockRestore();
   });
 
@@ -441,7 +418,6 @@ describe('markNotificationIdsRead in slices', () => {
     const ins = calls.filter((c) => c.method === 'in');
     expect(ins.map((c) => (c.args[1] as string[]).length)).toEqual([100, 100, 50]);
     expect(calls.filter((c) => c.method === 'eq' && c.args[0] === 'user_id')).toHaveLength(3);
-    expect(revalidateTagMock).toHaveBeenCalledTimes(1);
   });
 
   it('some slices already read elsewhere still count as success', async () => {

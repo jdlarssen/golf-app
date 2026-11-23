@@ -4,7 +4,7 @@ Frittstående Expo-app i `native/app/` som beviser fundamentet for epic #1816:
 delt `lib/scoring`-kilde med webappen, Supabase-OTP-innlogging mot staging
 (N1), et lokal-først datalag med sync-kø og realtime (N2) og spillerflatene
 hjem → game-home → hull-føring → scorekort → lever/godkjenn (N3). Dette er
-opprinnelig spike-runbook. Appen er nå i butikkene; denne fila er bakgrunn for dev-appen og arkitekturen. Butikkslipp: `app-store-release.md` og `play-store-release.md`.
+den opprinnelige spike-runbooken. Appen er nå i butikkene; denne fila er bakgrunn for dev-appen og arkitekturen. Butikkslipp: `app-store-release.md` og `play-store-release.md`.
 
 Alt her gjelder dev-appen `no.tornygolf.dev` mot staging. **Butikkbygget**
 (`APP_VARIANT=store`, N8 #1954) har egen runbook: `app-store-release.md` —

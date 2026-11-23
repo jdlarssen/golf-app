@@ -1,5 +1,4 @@
 import 'server-only';
-import { revalidateTag } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { findSettledActionIds, type InboxRow } from './inboxSections';
 import { chunkIds } from './inboxReads';
@@ -91,8 +90,6 @@ export async function markNotificationsRead(
     return false;
   }
 
-  // Next.js 16 krever to-arg-form for revalidateTag.
-  revalidateTag(`notifications-${opts.userId}`, 'max');
   return true;
 }
 
@@ -142,13 +139,10 @@ export async function markReadOnVisit(opts: MarkReadOnVisitOpts): Promise<void> 
         .or(NOT_WAITING_FILTER);
       if (key && opts.entityId) q = q.eq(`payload->>${key}`, opts.entityId);
 
-      const { data, error } = await q.select('id');
+      const { error } = await q.select('id');
       if (error) {
         console.error('[notifications] markReadOnVisit failed', { surface: opts.surface, error });
         return;
-      }
-      if ((data?.length ?? 0) > 0) {
-        revalidateTag(`notifications-${opts.userId}`, 'max');
       }
     }
     await settleVisitRows(opts);
@@ -269,6 +263,5 @@ async function markIdsRead(opts: MarkIdsReadOpts, notWaitingOnly: boolean): Prom
     return false;
   }
 
-  revalidateTag(`notifications-${opts.userId}`, 'max');
   return true;
 }
