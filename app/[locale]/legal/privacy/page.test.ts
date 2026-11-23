@@ -36,4 +36,11 @@ describe('legal.privacy who-sees-it paragraphs', () => {
       expect(text, audience).toContain(audience);
     }
   });
+
+  it('says that ideas are published openly on GitHub without the name', () => {
+    expect(no.legal.privacy.s3Para5).toMatch(/GitHub.*uten navnet ditt/);
+    expect(en.legal.privacy.s3Para5).toMatch(/GitHub.*without your name/);
+    expect(no.legal.privacy.s1Item13).toContain('GitHub');
+    expect(en.legal.privacy.s1Item13).toContain('GitHub');
+  });
 });

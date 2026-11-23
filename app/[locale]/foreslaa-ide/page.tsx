@@ -67,7 +67,9 @@ export default async function ForeslaaIdePage({
 
       {errorCode && !sent && (
         <div className="mb-6">
-          <Banner tone="error">{t('errorEmpty')}</Banner>
+          <Banner tone="error">
+            {errorCode === 'rate' ? t('errorRate') : t('errorEmpty')}
+          </Banner>
         </div>
       )}
 
@@ -94,11 +96,17 @@ export default async function ForeslaaIdePage({
                   placeholder={t('fieldPlaceholder')}
                   defaultValue={prefill}
                   className="w-full resize-none rounded-xl border border-border bg-bg px-4 py-3 font-sans text-sm text-text placeholder:text-muted focus:ring-2 focus:ring-primary/30 leading-relaxed"
-                  aria-describedby="idea-helper"
+                  aria-describedby={courseSlug ? 'idea-helper' : 'idea-helper idea-public'}
                 />
                 <p id="idea-helper" className="mt-1.5 font-sans text-xs text-muted">
                   {t('fieldHelper')}
                 </p>
+                {/* Ideas are published openly on GitHub; a course report is not. */}
+                {!courseSlug && (
+                  <p id="idea-public" className="mt-1.5 font-sans text-xs font-medium text-text">
+                    {t('publicNotice')}
+                  </p>
+                )}
               </div>
 
               <SubmitButton className="w-full" pendingLabel={t('submitPending')}>
