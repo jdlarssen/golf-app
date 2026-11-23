@@ -464,11 +464,11 @@ describe('createLeagueDraft — scoring is net or gross (#2638)', () => {
     const stored = (row: Record<string, unknown>) => [row.hcp_allowance_pct, row.hcp_max_strokes];
 
     it.each<[string, () => FormData, string | null, string | null, [number, number | null]]>([
-      ['a regular league without the fields → 95 %, no cap', () => baseForm('net'), null, null, [95, null]],
+      ['a regular league without the fields → 100 %, no cap (#2942)', () => baseForm('net'), null, null, [100, null]],
       ['a simulator league without the fields → 75 %, at most 32', simulatorForm, null, null, [75, 32]],
       ['the organiser’s own share and cap', () => baseForm('net'), '90', '28', [90, 28]],
       ['an empty cap field means no cap', simulatorForm, '75', '', [75, null]],
-      ['an empty share field falls back to the default', () => baseForm('net'), '', '', [95, null]],
+      ['an empty share field falls back to the default', () => baseForm('net'), '', '', [100, null]],
       ['the bounds are allowed', () => baseForm('net'), '1', '54', [1, 54]],
       ['a gross league stores 100 % and no cap, whatever is posted', () => baseForm('gross'), '75', '32', [100, null]],
     ])('%s', async (_label, form, pct, cap, expected) => {

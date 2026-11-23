@@ -25,8 +25,9 @@ export type LeagueScoring = 'net' | 'gross' | 'both';
  *
  * Defaults: a simulator league plays 75 % with at most 32 strokes (how
  * simulator cups count it, the owner's answer 27.10); a regular league plays
- * 95 % without a cap, as WHS recommends for stableford and stroke play. A
- * gross league stores 100 and no cap. Leagues from before #2660 have 100.
+ * 100 % without a cap, as NGF recommends for individual stableford and stroke
+ * play (#2942, the owner's answer 23.11). A gross league stores 100 and no
+ * cap. Leagues keep the share they were created with.
  */
 export const LEAGUE_HCP_ALLOWANCE_MIN = 1;
 export const LEAGUE_HCP_ALLOWANCE_MAX = 100;
@@ -37,7 +38,7 @@ export type LeagueHcp = { allowancePct: number; maxStrokes: number | null };
 
 export const LEAGUE_HCP_DEFAULTS: { simulator: LeagueHcp; regular: LeagueHcp; gross: LeagueHcp } = {
   simulator: { allowancePct: 75, maxStrokes: 32 },
-  regular: { allowancePct: 95, maxStrokes: null },
+  regular: { allowancePct: 100, maxStrokes: null },
   gross: { allowancePct: 100, maxStrokes: null },
 };
 
