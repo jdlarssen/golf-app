@@ -11,7 +11,7 @@ feature-grafikk». Klikkstiene står under «Opplasting» nederst.
 | `ios-6.3-1206x2622/` | App Store Connect, iPhone 6,3" («iPhone with Dynamic Island (medium display)», påkrevd) | 8 bilder, 1206 × 2622, PNG uten alfakanal |
 | `android-1080x1920/` | Play Console, telefonskjermbilder | 8 bilder, 1080 × 1920 (9:16), PNG uten alfakanal |
 | `play-feature-graphic-1024x500.png` | Play Console, feature-grafikk | 1024 × 500, PNG uten alfakanal |
-| [`../../android/store_icon.png`](../../android/store_icon.png) | Play Console, app-ikon | 512 × 512, PNG med alfakanal (laget av `generate-icons.mjs`) |
+| [`../play-store-icon.png`](../play-store-icon.png) | Play Console, app-ikon | 512 × 512, PNG med alfakanal (laget av `generate-icons.mjs`) |
 
 Bildene lastes opp i rekkefølgen filnavnene har:
 
