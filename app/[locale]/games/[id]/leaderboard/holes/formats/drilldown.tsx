@@ -10,6 +10,7 @@ import {
 import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
+import { firstName } from '@/lib/firstName';
 import { signedStrokes } from '@/lib/scorecard/scoreRail';
 import { computeLeaderboard, type LeaderboardMode } from '@/lib/leaderboard';
 import {
@@ -200,7 +201,7 @@ function DrilldownView({
     : view.players
         .map(
           (p) =>
-            `${firstNameOf(p.name)} (HCP ${formatWholeHcpDisplay(frozenHandicapByUser.get(p.userId) ?? p.courseHandicap, locale)})`,
+            `${firstName(p.name) ?? ''} (HCP ${formatWholeHcpDisplay(frozenHandicapByUser.get(p.userId) ?? p.courseHandicap, locale)})`,
         )
         .join(' · ');
 
@@ -592,8 +593,3 @@ const TONE_VARS: Record<VsParTone, { fg: string; bg: string }> = {
   over2: { fg: '--score-over2-fg', bg: '--score-over2-bg' },
 };
 
-function firstNameOf(fullName: string): string {
-  const t = fullName.trim();
-  if (t === '') return '';
-  return t.split(/\s+/)[0];
-}
