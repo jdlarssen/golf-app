@@ -4,7 +4,7 @@ Frittstående Expo-app i `native/app/` som beviser fundamentet for epic #1816:
 delt `lib/scoring`-kilde med webappen, Supabase-OTP-innlogging mot staging
 (N1), et lokal-først datalag med sync-kø og realtime (N2) og spillerflatene
 hjem → game-home → hull-føring → scorekort → lever/godkjenn (N3). Dette er
-IKKE produkt-appen ennå — men fra N3 er det flatene spillerne skal arve.
+opprinnelig spike-runbook. Appen er nå i butikkene; denne fila er bakgrunn for dev-appen og arkitekturen. Butikkslipp: `app-store-release.md` og `play-store-release.md`.
 
 Alt her gjelder dev-appen `no.tornygolf.dev` mot staging. **Butikkbygget**
 (`APP_VARIANT=store`, N8 #1954) har egen runbook: `app-store-release.md` —
@@ -589,9 +589,10 @@ hvilken sone maskinen står i — som er sonen CI kjører i.
 
 `src/lib/rosterLimits.ts` speiler slot-tellingen i `gamePayload.ts`, fordi
 `fitsPlayerCount` alene er for løs: `fitsPlayerCount('stableford', 9)` er `true`, men
-byggeren leser bare 8 slots — spiller nr. 9 ville forsvunnet stille. Tak: stableford /
-modified / best ball 8, singles 2, greensome 4, wolf 5, skins / BBB 16. (Byggeren leser
-17 for skins/BBB med vilje, så en 17. spiller blir en FEIL og ikke en stille kutting.)
+byggeren leser bare et begrenset antall slots, og en spiller over det ville forsvunnet stille.
+Takene er ikke lenger skrevet her: de leses fra `lib/games/teamFormatLimits.ts` og
+`lib/games/startPlayerCount.ts` (stableford-familien 40, best ball opp til 20 par,
+singles 2, greensome 4). Se hodet i `rosterLimits.ts`.
 
 ### Verifisere en publisering mot staging
 

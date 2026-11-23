@@ -10,7 +10,7 @@ Trigger: `.githooks/pre-commit` peker hit når den advarer, og [`CLAUDE.md`](../
 
 Ny/endret norsk bruker-copy (i `.tsx`/`.ts`, mail-templates i `lib/mail/`, feilmeldinger, banner-/knapp-/helper-tekster): kjør `humanizer:humanizer`-skillet før commit. `.githooks/pre-commit` advarer (blokkerer ikke) på kjente AI-tells i nye `.tsx`/`.ts`-linjer; full pattern-katalog + `no-nb`-konvertering i [`docs/copy-style.md`](copy-style.md). Markdown-filer skannes ikke.
 
-**Bevisst bevart (ignorer hook-advarsel for disse):** brand-taglinen `Tørny — fyr opp golfturneringen` (per `### Brand`), mail-subject «Resultatet er klart — ${gameName}» (5 snapshot-tester låser strengen), «Sekretariat»-stemmen i admin-flater, engelske achievement-navn (Turkey/Solid/Snowman).
+**Bevisst bevart (ignorer hook-advarsel for disse):** brand-taglinen `Fyr opp golfturneringen på et par minutter` (per `### Brand`), mail-subject «Resultatet er klart — ${gameName}» (5 snapshot-tester låser strengen), «Sekretariat»-stemmen i admin-flater, engelske achievement-navn (Turkey/Solid/Snowman).
 
 ## Hva hooken fanger mekanisk
 
@@ -35,7 +35,7 @@ Etablert i [PR #170](https://github.com/jdlarssen/golf-app/pull/170) og [PR #174
 
 ## Bevisst bevart (false-positives å ignorere ved hook-advarsel)
 
-- Brand-tagline `Tørny — fyr opp golfturneringen` (kanonisk per `docs/style-and-brand.md → Brand`)
+- Brand-tagline `Fyr opp golfturneringen på et par minutter` (kanonisk per `docs/style-and-brand.md → Brand`)
 - Mail-subject «Resultatet er klart — ${gameName}» (5 snapshot-tester låser eksakt streng)
 - «Sekretariat»-stemmen i admin-flater
 - Engelske achievement-navn (Turkey/Solid/Snowman — bevisste sportstermer)

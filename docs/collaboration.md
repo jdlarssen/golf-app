@@ -6,7 +6,7 @@ Denne arbeidsdelingen har vist seg å fungere bra. Hold deg til den.
 
 ### Brukeren gjør (manuelt i nettleser-UIer)
 
-- **Supabase Dashboard:** kjører SQL i SQL Editor (alt jeg leverer som SQL — bruker limer inn), konfigurerer Auth UI (mal-subjects/body, URL Configuration, SMTP-settings), oppretter brukere i Authentication-fanen
+- **Supabase Dashboard:** konfigurerer Auth UI (mal-subjects/body, URL Configuration, SMTP-settings), oppretter brukere i Authentication-fanen
 - **Vercel Dashboard:** legger til Custom Domain, env-variabler, godkjenner deploys hvis nødvendig
 - **Resend Dashboard:** verifiserer domene, kopierer API-keys, sjekker mail-logger
 - **Domene-registrar (Domeneshop, Cloudflare, etc.):** legger til DNS-records jeg gir

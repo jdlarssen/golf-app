@@ -99,7 +99,7 @@ behandles som friksjon i brukte flater, som alltid er innenfor grensen.
 
 | Hva | Issues | Vekkes av |
 |---|---|---|
-| Flere språk | #61, #455 | Ekte ikke-norskspråklige brukere i prod |
+| Flere språk utover norsk og engelsk | #61, #455 | Ekte brukere i prod som trenger et tredje språk. Engelsk er levert (`messages/en.json`) |
 | Resend Pro / nytt mail-domene | #54, #55 | >100 mail/dag (som issuene selv sier) |
 | Booking-integrasjon | #51 | En klubb ber om det |
 | Emoji-reaksjoner på lag/matchplay | #977 | Målt bruk av reaksjoner i solo-formater |
