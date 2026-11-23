@@ -428,11 +428,11 @@
       "blockedBackLink": "Tilbake til profil",
       "deletedHeading": "Dette vil bli slettet",
       "bullet1": "Brukerprofilen din (navn, kallenavn, handicap)",
-      "bullet2": "E-postadressen din frigis og kan ikke brukes til å logge inn igjen",
+      "bullet2": "E-postadressen din blir ledig igjen. Du kan ikke logge inn på denne kontoen igjen.",
       "bullet3": "Vennskap, klubbmedlemskap, varsler og åpne invitasjoner",
-      "bullet4": "Plassen din i runder som pågår eller ikke har startet. Du blir trukket automatisk, og resten av gruppa spiller videre.",
+      "bullet4": "Plassen din i runder som ikke har startet, og i cuper og ligaer som ikke er ferdige. I en runde som pågår, blir du trukket automatisk, og resten av gruppa spiller videre.",
       "keptHeading": "Dette beholdes",
-      "keptBullet": "Resultatene fra fullførte runder. De blir stående i turneringen, men med «Slettet bruker» i stedet for navnet ditt",
+      "keptBullet": "Resultatene fra fullførte runder, og slagene du har ført i en runde som pågår. De blir stående i turneringen, men med «Slettet bruker» i stedet for navnet ditt",
       "accountFallback": "kontoen din",
       "confirmParagraph": "Du er i ferd med å slette <strong>{displayName}</strong> permanent. Handlingen kan ikke angres.",
       "deleteButton": "Slett kontoen min for alltid",
@@ -544,7 +544,7 @@
         },
         "rareShots": {
           "title": "Sjeldne slag",
-          "body": "Slår du hole-in-one, albatross eller eagle, står det på Topplista, og alle i Tørny ser det. Det kan du skru av i appen, under Du bestemmer."
+          "body": "Slår du hole-in-one, albatross eller eagle, står det på Topplista. Hole-in-one og albatross står også på Æreslista. Alle i Tørny ser det. Det kan du skru av i appen, under Du bestemmer."
         },
         "social": {
           "title": "Venner og klubber",
@@ -5379,7 +5379,7 @@
       "cancelInviteButton": "Trekk tilbake",
       "cancelInvitePending": "Trekker tilbake …",
       "roleChangedBanner": "Rollen er oppdatert.",
-      "frozenBanner": "Denne klubben er utløpt. Ta kontakt på klubb@tornygolf.no for å fornye avtalen. Pågående runder spilles ferdig som normalt.",
+      "frozenBanner": "Denne klubben er utløpt. Ta kontakt på klubb@tornygolf.no for å fornye klubben. Pågående runder spilles ferdig som normalt.",
       "requestsHeading": "Forespørsler ({count})",
       "membersHeading": "Medlemmer ({count})",
       "membersHeadingWithCap": "Medlemmer ({count} / {cap})",
@@ -5446,7 +5446,7 @@
         "not_found": "Fant ikke forespørselen. Den kan ha blitt trukket tilbake.",
         "club_full": "Klubben er full (maks {cap} medlemmer). Forespørselen står fortsatt åpen.",
         "club_full_generic": "Klubben er full. Forespørselen står fortsatt åpen.",
-        "club_expired": "Klubben er utløpt. Forespørselen kan ikke godkjennes før avtalen fornyes.",
+        "club_expired": "Klubben er utløpt. Forespørselen kan ikke godkjennes før klubben fornyes.",
         "unknown": "Noe gikk galt. Prøv igjen."
       }
     },
@@ -7102,6 +7102,10 @@
       "s1Item9": "Handicaphistorikken din, venner, klubber du er med i, og varslene i innboksen",
       "s1Item10": "Når du sist brukte Tørny, så vi vet om vi skal sende deg varsler",
       "s1Item11": "Svaret ditt på om AI-en kan skrive om deg, og når du svarte",
+      "s1Item12": "Reaksjoner du sender på en runde",
+      "s1Item13": "Ideer du sender inn til Tørny",
+      "s1Item14": "Forespørsler om å bli med i en klubb eller et spill, med beskjeden du eventuelt skriver",
+      "s1Item15": "Valgene dine om varsler og om å dele sjeldne slag",
       "s2Heading": "Hvor lagres dataene?",
       "s2Body": "Dataene lagres hos <supabase>Supabase</supabase> i EU. Serverne står i Stockholm og er underlagt EUs personvernregler (GDPR).",
       "pushHeading": "Varsler",
@@ -7121,6 +7125,11 @@
       "s3Heading": "Hvem ser dataene dine?",
       "s3Para1": "Andre spillere i samme turnering ser navn, kallenavn, handicap-indeks og spillresultatene dine.",
       "s3Para2": "Administrator ser i tillegg e-postadressen din og kan slette deg fra appen.",
+      "s3Para3": "Alle som har live-lenken til et spill eller en liga, kan følge det uten å logge inn. De ser navnet og resultatene til spillerne. En åpen påmeldingsside viser bare fornavn og forbokstav i etternavnet.",
+      "s3Para4": "Venner og klubbmedlemmer ser navnet og kallenavnet ditt. Setter en venn, en medspiller eller en arrangør i klubben din opp et spill, kan vedkommende også se handicap-indeksen din.",
+      "s3Para5": "Reaksjonene dine på en runde ser de som er med i spillet. Ideene du sender inn, ser bare du og administrator.",
+      "s3Para6": "Beskjeden du skriver når du ber om å bli med i en klubb, ser eierne av klubben. Beskjeden i en påmelding til et spill ser arrangøren.",
+      "s3Para7": "Hole-in-one, albatross og eagle står på Topplista i appen, og hole-in-one og albatross står på Æreslista. Alle i Tørny ser det. Du kan skru det av i appen, under «Du bestemmer».",
       "legalBasisHeading": "Rettslig grunnlag",
       "legalBasisIntro": "Personvernforordningen (GDPR) krever et rettslig grunnlag for det vi gjør med opplysningene dine. Slik er det for hvert formål:",
       "legalBasisAccount": "<term>Konto, spill, slag, resultater og punkter du lagrer ved greenen.</term> Vi trenger opplysningene for å gi deg tjenesten du har bedt om. Grunnlaget er avtalen med deg (personvernforordningen artikkel 6 nr. 1 bokstav b).",
@@ -7157,16 +7166,16 @@
       "deletedHeading": "Dette slettes",
       "deletedIntro": "Når du trykker «Slett kontoen min for alltid», skjer ett av to. Har du aldri vært med i et spill, slettes hele kontoen. Har du spilt, eller har du laget noe andre fortsatt bruker, fjerner vi navnet ditt og opplysningene under, og resultatene dine blir liggende uten navn. I begge tilfeller slettes dette:",
       "deletedItem1": "Navn, kallenavn, e-postadresse, kjønn, spillerklasse, språkvalg, handicap og handicaphistorikk.",
-      "deletedItem2": "Innloggingen. Du blir logget ut overalt og kan ikke logge inn på kontoen igjen. Sletter du i appen, tømmer appen også det den har lagret på telefonen.",
-      "deletedItem3": "Venner, klubbmedlemskap, forespørsler om å bli med i klubber, påmeldinger til spill, reaksjoner, ideer du har sendt inn, varslene i innboksen, Kavalkaden din, tellingen av kort du har delt fra den, og svaret ditt på om AI-en kan skrive om deg.",
+      "deletedItem2": "Innloggingen. E-postadressen din blir ledig igjen. Du kan ikke logge inn på denne kontoen igjen. Du blir logget ut overalt. Sletter du i appen, tømmer appen også det den har lagret på telefonen.",
+      "deletedItem3": "Venner, klubbmedlemskap, forespørsler om å bli med i klubber, påmeldinger til spill, reaksjoner, ideer du har sendt inn, varslene i innboksen, valgene dine om varsler og om å dele sjeldne slag, Kavalkaden din, tellingen av kort du har delt fra den, og svaret ditt på om AI-en kan skrive om deg.",
       "deletedItem6": "Invitasjoner som er sendt til e-postadressen din.",
       "deletedItem4": "Adressene vi sender varsler til i nettleseren og på telefonen din, så du ikke får flere varsler.",
       "deletedItem5": "Plassen din i spill som ikke har startet, og i cuper og ligaer som ikke er ferdige. I et spill som pågår, blir du trukket, og resten av gruppa spiller videre.",
       "keptHeading": "Dette blir igjen",
-      "keptItem1": "Resultatene fra spill du har vært med i, med teen, banehandicapet, handicapdifferansen for runden og når startkontingenten ble betalt. De står i listene og tavlene til de andre spillerne med «Slettet bruker» i stedet for navnet ditt, så lenge spillet finnes i Tørny.",
+      "keptItem1": "Resultatene og slagene fra spill du har vært med i, også spill som pågår, med teen, banehandicapet, handicapdifferansen for runden og når startkontingenten ble betalt. De står i listene og tavlene til de andre spillerne med «Slettet bruker» i stedet for navnet ditt, så lenge spillet finnes i Tørny.",
       "keptItem2": "Punkter du har lagret ved greenen. De står igjen uten tidsgrense og uten kobling til deg, og brukes fortsatt til å finne midten av greenen.",
       "keptItem3": "Baner, spill, cuper, ligaer og klubber du har satt opp. De står igjen uten navnet ditt så lenge de finnes i Tørny.",
-      "keptItem4": "Tekster som allerede er skrevet, for eksempel rundereferater og Kavalkaden til andre spillere, og varsler som andre spillere har fått, kan fortsatt ha navnet ditt så lenge spillet eller kontoen til den andre spilleren finnes. Det samme gjelder en intern logg over det du har gjort som arrangør. Den ser bare administratoren, og den slettes ikke i dag.",
+      "keptItem4": "Navnet ditt i varsler til andre spillere, i rundereferater, i Kavalkaden til andre og i loggen over det du har gjort som arrangør, blir byttet ut med «Slettet bruker». Noen ganger fjerner vi i stedet hele teksten. Vi finner navnet ved søk, så en tekst som staver navnet annerledes enn profilen din, kan stå igjen.",
       "keptItem5": "Har du spilt, eller har du laget noe andre fortsatt bruker, står noen tidspunkter igjen uten tidsgrense og uten navnet ditt: når kontoen ble laget, når profilen ble fylt ut, når handicapet sist ble oppdatert, når du meldte deg av månedsbrevet (hadde du ikke gjort det, står slettetidspunktet der) og når kontoen ble slettet.",
       "blockedHeading": "Når kontoen ikke kan slettes ennå",
       "blockedIntro": "Tørny stopper slettingen i disse tilfellene:",
@@ -7890,7 +7899,10 @@
         { "feature": "Norsk hele veien", "other": "Engelsk først" },
         { "feature": "Reklamefritt", "other": "Reklame i gratisversjonen" },
         { "feature": "Cup, liga og sideturneringer", "other": "Varierer" },
-        { "feature": "Premiepott med Vipps", "other": "Må ordnes utenom" },
+        {
+          "feature": "Oversikt over hvem som har betalt",
+          "other": "Må ordnes utenom"
+        },
         { "feature": "Scoring uten dekning", "other": "Krever nett" },
         { "feature": "WHS-handicap regnes automatisk", "other": "Varierer" }
       ]
@@ -7907,7 +7919,7 @@
       "chips": [
         { "label": "Nærmest pinnen" },
         { "label": "Lengste drive" },
-        { "label": "Premiepott" }
+        { "label": "Premiebord" }
       ]
     },
     "points": {

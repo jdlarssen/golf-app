@@ -428,11 +428,11 @@
       "blockedBackLink": "Back to profile",
       "deletedHeading": "What will be deleted",
       "bullet1": "Your user profile (name, nickname, handicap)",
-      "bullet2": "Your email address is freed up and can't be used to log in again",
+      "bullet2": "Your email address becomes free again. You can't log in to this account again.",
       "bullet3": "Friendships, club memberships, notifications and open invitations",
-      "bullet4": "Your place in rounds that are in progress or haven't started. You're withdrawn automatically, and the rest of the group plays on.",
+      "bullet4": "Your place in rounds that haven't started, and in cups and leagues that aren't finished. In a round in progress, you're withdrawn automatically, and the rest of the group plays on.",
       "keptHeading": "What is kept",
-      "keptBullet": "Results from finished rounds. They stay in the tournament, but with \"Slettet bruker\" in place of your name",
+      "keptBullet": "Results from finished rounds, and the strokes you have entered in a round in progress. They stay in the tournament, but with \"Slettet bruker\" in place of your name",
       "accountFallback": "your account",
       "confirmParagraph": "You are about to permanently delete <strong>{displayName}</strong>. This action cannot be undone.",
       "deleteButton": "Delete my account permanently",
@@ -544,7 +544,7 @@
         },
         "rareShots": {
           "title": "Rare shots",
-          "body": "When you make a hole-in-one, albatross or eagle, it shows on the leaderboard and everyone in Tørny sees it. You can turn that off in the app, under You decide."
+          "body": "When you make a hole-in-one, albatross or eagle, it shows on the Topplista (season leaderboard). Holes-in-one and albatrosses also show on the Æreslista (hall of fame). Everyone in Tørny sees it. You can turn that off in the app, under You decide."
         },
         "social": {
           "title": "Friends and clubs",
@@ -5379,7 +5379,7 @@
       "cancelInviteButton": "Withdraw",
       "cancelInvitePending": "Withdrawing …",
       "roleChangedBanner": "Role updated.",
-      "frozenBanner": "This club has expired. Contact us at klubb@tornygolf.no to renew the agreement. Ongoing rounds continue as normal.",
+      "frozenBanner": "This club has expired. Contact us at klubb@tornygolf.no to renew the club. Ongoing rounds continue as normal.",
       "requestsHeading": "Requests ({count})",
       "membersHeading": "Members ({count})",
       "membersHeadingWithCap": "Members ({count} / {cap})",
@@ -5446,7 +5446,7 @@
         "not_found": "Request not found. It may have been withdrawn.",
         "club_full": "The club is full (max {cap} members). The request remains open.",
         "club_full_generic": "The club is full. The request remains open.",
-        "club_expired": "The club has expired. The request cannot be approved until the agreement is renewed.",
+        "club_expired": "The club has expired. The request cannot be approved until the club is renewed.",
         "unknown": "Something went wrong. Please try again."
       }
     },
@@ -7102,6 +7102,10 @@
       "s1Item9": "Your handicap history, friends, clubs you belong to, and the notifications in your inbox",
       "s1Item10": "When you last used Tørny, so we know whether to send you notifications",
       "s1Item11": "Your answer on whether the AI may write about you, and when you answered",
+      "s1Item12": "Reactions you send on a round",
+      "s1Item13": "Ideas you send in to Tørny",
+      "s1Item14": "Requests to join a club or a game, with the message you may write",
+      "s1Item15": "Your choices about notifications and about sharing rare shots",
       "s2Heading": "Where is the data stored?",
       "s2Body": "Data is stored with <supabase>Supabase</supabase> in the EU. The servers are in Stockholm, Sweden, and are subject to EU data protection law (GDPR).",
       "pushHeading": "Notifications",
@@ -7121,6 +7125,11 @@
       "s3Heading": "Who can see your data?",
       "s3Para1": "Other players in the same tournament can see your name, nickname, handicap index, and game results.",
       "s3Para2": "Administrators can also see your email address and can remove you from the app.",
+      "s3Para3": "Anyone who has the live link to a game or a league can follow it without logging in. They see the players' names and results. An open sign-up page shows only first name and the initial of the last name.",
+      "s3Para4": "Friends and club members see your name and nickname. If a friend, a playing partner or an organiser in your club sets up a game, they can also see your handicap index.",
+      "s3Para5": "The players in a game see your reactions on that round. Only you and the administrator see the ideas you send in.",
+      "s3Para6": "The owners of a club see the message you write when you ask to join it. The organiser sees the message in a sign-up to a game.",
+      "s3Para7": "Holes-in-one, albatrosses and eagles show on the Topplista in the app, and holes-in-one and albatrosses show on the Æreslista. Everyone in Tørny sees it. You can turn it off in the app, under \"You decide\".",
       "legalBasisHeading": "Legal basis",
       "legalBasisIntro": "The GDPR requires a legal basis for what we do with your data. This is the basis for each purpose:",
       "legalBasisAccount": "<term>Account, games, strokes, results and spots you save at the green.</term> We need the data to provide the service you have asked for. The basis is our agreement with you (GDPR Article 6(1)(b)).",
@@ -7157,16 +7166,16 @@
       "deletedHeading": "What is deleted",
       "deletedIntro": "When you tap \"Delete my account permanently\" on the website (\"Slett kontoen min for alltid\" in the app), one of two things happens. If you have never been in a game, the whole account is deleted. If you have played, or made something others still use, we remove your name and the data below, and your results stay without a name. Either way, this is deleted:",
       "deletedItem1": "Name, nickname, email address, gender, player category, language choice, handicap and handicap history.",
-      "deletedItem2": "Your sign-in. You are signed out everywhere and cannot sign in to the account again. If you delete in the app, the app also clears what it has stored on your phone.",
-      "deletedItem3": "Friends, club memberships, requests to join clubs, registrations for games, reactions, ideas you have sent in, the notifications in your inbox, your cavalcade, the count of cards you have shared from it, and your answer on whether the AI may write about you.",
+      "deletedItem2": "Your sign-in. Your email address becomes free again. You can't sign in to this account again. You are signed out everywhere. If you delete in the app, the app also clears what it has stored on your phone.",
+      "deletedItem3": "Friends, club memberships, requests to join clubs, registrations for games, reactions, ideas you have sent in, the notifications in your inbox, your choices about notifications and sharing rare shots, your cavalcade, the count of cards you have shared from it, and your answer on whether the AI may write about you.",
       "deletedItem6": "Invitations sent to your email address.",
       "deletedItem4": "The addresses we send notifications to in your browser and on your phone, so you get no more notifications.",
       "deletedItem5": "Your place in games that have not started, and in cups and leagues that are not finished. In a game that is in progress, you are withdrawn and the rest of the group plays on.",
       "keptHeading": "What stays",
-      "keptItem1": "Results from games you have played, with the tee, course handicap, handicap differential for the round and when the entry fee was paid. They stay in the other players' lists and leaderboards with \"Slettet bruker\" (Deleted user) instead of your name, for as long as the game exists in Tørny.",
+      "keptItem1": "Results and strokes from games you have played, including games in progress, with the tee, course handicap, handicap differential for the round and when the entry fee was paid. They stay in the other players' lists and leaderboards with \"Slettet bruker\" (Deleted user) instead of your name, for as long as the game exists in Tørny.",
       "keptItem2": "Spots you have saved at the green. They stay with no time limit and no link to you, and are still used to find the middle of the green.",
       "keptItem3": "Courses, games, cups, leagues and clubs you have set up. They stay without your name for as long as they exist in Tørny.",
-      "keptItem4": "Texts that have already been written, such as round reports and other players' cavalcades, and notifications other players have received may still contain your name for as long as the game or the other player's account exists. So may an internal log of what you have done as an organiser. Only the administrator can see it, and it is not deleted today.",
+      "keptItem4": "Your name in notifications to other players, in round reports, in other players' cavalcades and in the log of what you have done as an organiser is replaced with \"Slettet bruker\". Sometimes we remove the whole text instead. We find the name by search, so a text that spells the name differently from your profile can remain.",
       "keptItem5": "If you have played, or made something others still use, some times stay with no time limit and without your name: when the account was created, when the profile was completed, when your handicap was last updated, when you unsubscribed from the monthly digest (if you had not, the deletion time is stored there) and when the account was deleted.",
       "blockedHeading": "When the account cannot be deleted yet",
       "blockedIntro": "Tørny stops the deletion in these cases:",
@@ -7889,7 +7898,10 @@
         { "feature": "Built for Norway", "other": "English first" },
         { "feature": "No ads", "other": "Ads in the free version" },
         { "feature": "Cup, league and side contests", "other": "Varies" },
-        { "feature": "Prize pot with Vipps", "other": "Sorted out separately" },
+        {
+          "feature": "Overview of who has paid",
+          "other": "Sorted out separately"
+        },
         { "feature": "Scoring with no coverage", "other": "Needs a connection" },
         { "feature": "WHS handicap worked out for you", "other": "Varies" }
       ]
@@ -7906,7 +7918,7 @@
       "chips": [
         { "label": "Closest to the pin" },
         { "label": "Longest drive" },
-        { "label": "Prize pot" }
+        { "label": "Prize table" }
       ]
     },
     "points": {

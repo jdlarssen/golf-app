@@ -194,13 +194,13 @@ export const ACCOUNT_TEXT = {
   deletedHeading: 'Dette vil bli slettet',
   deletedBullets: [
     'Brukerprofilen din (navn, kallenavn, handicap)',
-    'E-postadressen din frigis og kan ikke brukes til å logge inn igjen',
+    'E-postadressen din blir ledig igjen. Du kan ikke logge inn på denne kontoen igjen.',
     'Vennskap, klubbmedlemskap, varsler og åpne invitasjoner',
-    'Plassen din i runder som pågår eller ikke har startet. Du blir trukket automatisk, og resten av gruppa spiller videre.',
+    'Plassen din i runder som ikke har startet, og i cuper og ligaer som ikke er ferdige. I en runde som pågår, blir du trukket automatisk, og resten av gruppa spiller videre.',
   ],
   keptHeading: 'Dette beholdes',
   keptBullet:
-    'Resultatene fra fullførte runder. De blir stående i turneringen, men med «Slettet bruker» i stedet for navnet ditt',
+    'Resultatene fra fullførte runder, og slagene du har ført i en runde som pågår. De blir stående i turneringen, men med «Slettet bruker» i stedet for navnet ditt',
   // Webbens `confirmParagraph` er én streng med `<strong>{displayName}</strong>`
   // midt i, rendret med `t.rich`. React Native har ingen HTML, så setningen er
   // delt i to og navnet settes inn som en egen fet <Text> mellom dem:
