@@ -544,7 +544,7 @@
         },
         "rareShots": {
           "title": "Rare shots",
-          "body": "When you make a hole-in-one, albatross or eagle, it shows on the Topplista (season leaderboard). Holes-in-one and albatrosses also show on the Æreslista (hall of fame). Everyone in Tørny sees it. You can turn that off in the app, under You decide."
+          "body": "When you make a hole-in-one, albatross or eagle, it shows on the Topplista (season leaderboard). Holes-in-one and albatrosses also show on the Æreslista (hall of fame). Everyone in Tørny sees it. If you turn off \"Share rare shots with everyone\" in the app, under \"You decide\", you are left off the lists. Your friends still get a notice, and in a league round so do the others in the league."
         },
         "social": {
           "title": "Friends and clubs",
@@ -7125,11 +7125,11 @@
       "s3Heading": "Who can see your data?",
       "s3Para1": "Other players in the same tournament can see your name, nickname, handicap index, and game results.",
       "s3Para2": "Administrators can also see your email address and can remove you from the app.",
-      "s3Para3": "Anyone who has the live link to a game or a league can follow it without logging in. They see the players' names and results. An open sign-up page shows only first name and the initial of the last name.",
-      "s3Para4": "Friends and club members see your name and nickname. If a friend, a playing partner or an organiser in your club sets up a game, they can also see your handicap index.",
+      "s3Para3": "Anyone who has the live link to a game can follow it without logging in. They see the players' names and results. The same goes for the league table when the organiser turns on an open link to it. An open sign-up page shows only first name and the initial of the last name.",
+      "s3Para4": "Friends and club members see your name and nickname. Friends, people you have played with and club members who create a game in the club can see your handicap index when they add players.",
       "s3Para5": "The players in a game see your reactions on that round. Only you and the administrator see the ideas you send in.",
-      "s3Para6": "The owners of a club see the message you write when you ask to join it. The organiser sees the message in a sign-up to a game.",
-      "s3Para7": "Holes-in-one, albatrosses and eagles show on the Topplista in the app, and holes-in-one and albatrosses show on the Æreslista. Everyone in Tørny sees it. You can turn it off in the app, under \"You decide\".",
+      "s3Para6": "The owners and admins of a club see the message you write when you ask to join it. The organiser sees the message in a sign-up to a game.",
+      "s3Para7": "Holes-in-one, albatrosses and eagles show on the Topplista in the app, and holes-in-one and albatrosses show on the Æreslista. Everyone in Tørny sees it. If you turn off \"Share rare shots with everyone\" in the app, under \"You decide\", you are left off the lists. Your friends still get a notice, and in a league round so do the others in the league.",
       "legalBasisHeading": "Legal basis",
       "legalBasisIntro": "The GDPR requires a legal basis for what we do with your data. This is the basis for each purpose:",
       "legalBasisAccount": "<term>Account, games, strokes, results and spots you save at the green.</term> We need the data to provide the service you have asked for. The basis is our agreement with you (GDPR Article 6(1)(b)).",
