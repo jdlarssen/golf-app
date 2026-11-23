@@ -265,6 +265,28 @@ describe('Kjent avvik', () => {
     });
   });
 
+  // The share goes on the difference, not on each player's own handicap (NGF
+  // s. 8, 2024: «prosentandelen blir anvendt på differansen, i stedet for på
+  // enkeltspillerne»). At 85 % with 1 and 4, 85 % of 3 is 2,55, so B gets 3.
+  // Each player's own share gives round(3,4) − round(0,85) = 3 − 1 = 2: a fix
+  // that only subtracts the lowest player's strokes still fails here.
+  it.fails('F15: four-ball tar andelen av differansen, ikke forskjellen mellom egne andeler', () => {
+    const result = computeFourball(
+      ctx(
+        'fourball_matchplay',
+        fourball(85),
+        [player('A', 1, 1), player('B', 1, 4), player('C', 2, 1), player('D', 2, 1)],
+        PAR4_18,
+      ),
+    );
+    expect(fourballStrokesBySi(result)).toEqual({
+      A: zeros(18),
+      B: [...ones(3), ...zeros(15)],
+      C: zeros(18),
+      D: zeros(18),
+    });
+  });
+
   // Round Robin is four-ball match play in three six-hole segments with
   // rotating partners. Appendix C has no row for it; the four-ball rule above
   // is the closest («den laveste ... med null handicapslag», the others the
