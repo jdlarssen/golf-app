@@ -5,7 +5,8 @@
 //    «Prøv igjen», eller «Fant ikke ligaen …» uten knapp (finnes ikke, eller
 //    ikke for deg).
 //  - `LeagueNotice`: den gule boksen med i-en, avslagene på «Start runden».
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { LeagueLoadFailure } from '../../data/league';
 import { LEAGUE_TEXT, describeLeagueLoadFailure } from '../../lib/leagueCopy';
 import { FONTS, TAP, interLine, useTheme, withAlpha } from '../../theme';
@@ -44,7 +45,7 @@ export function LeagueLoadFailed({
       <Text style={[styles.error, { color: colors.danger }]} testID="league-error">
         {text}
       </Text>
-      <Pressable
+      <Tap
         onPress={onRetry}
         accessibilityRole="button"
         style={[styles.retry, { borderColor: colors.primary }]}
@@ -53,7 +54,7 @@ export function LeagueLoadFailed({
         <Text style={[styles.retryText, { color: colors.primary }]}>
           {retrying ? LEAGUE_TEXT.retrying : LEAGUE_TEXT.retry}
         </Text>
-      </Pressable>
+      </Tap>
     </View>
   );
 }

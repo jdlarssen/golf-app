@@ -19,7 +19,8 @@
 // tilbake går dit den kom fra. `RoundInvite` går tilbake hit.
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import type { AppTerminEntry, AppTerminView } from '../../../../lib/games/appTerminView';
 import {
   filterTermin,
@@ -100,7 +101,7 @@ export function Terminliste({ navigation, route }: ScreenProps<'Terminliste'>) {
         <Text style={[styles.stateText, { color: colors.danger }]} testID="terminliste-load-error">
           {describeTerminlisteFailure(failure)}
         </Text>
-        <Pressable
+        <Tap
           accessibilityRole="button"
           onPress={() => void load()}
           style={[styles.retry, { borderColor: colors.primary }]}
@@ -109,7 +110,7 @@ export function Terminliste({ navigation, route }: ScreenProps<'Terminliste'>) {
           <Text style={[styles.retryText, { color: colors.primary }]}>
             {loading ? TERMIN_TEXT.retrying : TERMIN_TEXT.retry}
           </Text>
-        </Pressable>
+        </Tap>
       </View>
     );
   }
@@ -125,14 +126,14 @@ export function Terminliste({ navigation, route }: ScreenProps<'Terminliste'>) {
         <View style={styles.empty} testID="terminliste-empty">
           <PinFlagHero color={colors.text} accent={colors.accent} size={72} />
           <Text style={[styles.emptyBody, { color: colors.muted }]}>{TERMIN_TEXT.emptyBody}</Text>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             onPress={() => navigation.navigate('CreateGame')}
             style={[ui.button, styles.emptyButton]}
             testID="terminliste-empty-create"
           >
             <Text style={ui.buttonText}>{TERMIN_TEXT.emptyAction}</Text>
-          </Pressable>
+          </Tap>
         </View>
       ) : (
         <>
@@ -140,7 +141,7 @@ export function Terminliste({ navigation, route }: ScreenProps<'Terminliste'>) {
             {CHIPS.map((chip) => {
               const active = chip.filter === filter;
               return (
-                <Pressable
+                <Tap
                   key={chip.filter}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
@@ -154,7 +155,7 @@ export function Terminliste({ navigation, route }: ScreenProps<'Terminliste'>) {
                   testID={`terminliste-chip-${chip.filter}`}
                 >
                   <Text style={[styles.chipText, { color: active ? colors.onPrimary : colors.text }]}>{chip.label}</Text>
-                </Pressable>
+                </Tap>
               );
             })}
           </View>
@@ -164,7 +165,7 @@ export function Terminliste({ navigation, route }: ScreenProps<'Terminliste'>) {
               <TerminDayHeading title={TERMIN_TEXT.myRequests} />
               <TerminDayCard>
                 {pendingRequests.map((request, index) => (
-                  <Pressable
+                  <Tap
                     key={request.id}
                     accessibilityRole="button"
                     onPress={() => openRound(request.short_id)}
@@ -177,7 +178,7 @@ export function Terminliste({ navigation, route }: ScreenProps<'Terminliste'>) {
                         ? pendingTeamLine(request.team_name, request.is_team_captain)
                         : TERMIN_TEXT.pendingApproval}
                     </Text>
-                  </Pressable>
+                  </Tap>
                 ))}
               </TerminDayCard>
             </View>
@@ -200,18 +201,18 @@ export function Terminliste({ navigation, route }: ScreenProps<'Terminliste'>) {
               <Text style={[styles.line, { color: colors.muted, fontSize: 13 }]}>
                 {filter === 'helg' ? TERMIN_TEXT.emptyWeekend : TERMIN_TEXT.emptyClub}
               </Text>
-              <Pressable
+              <Tap
                 accessibilityRole="button"
                 onPress={() => setFilter('alle')}
                 style={styles.showAll}
                 testID="terminliste-show-all"
               >
                 <Text style={[styles.showAllText, { color: colors.primary }]}>{TERMIN_TEXT.showAll}</Text>
-              </Pressable>
+              </Tap>
             </View>
           ) : null}
 
-          <Pressable
+          <Tap
             accessibilityRole="button"
             onPress={() => navigation.navigate('CreateGame')}
             style={[styles.createOwn, { borderColor: colors.fieldBorder }]}
@@ -219,7 +220,7 @@ export function Terminliste({ navigation, route }: ScreenProps<'Terminliste'>) {
           >
             <PlussIcon color={colors.primary} size={18} strokeWidth={2} />
             <Text style={[styles.createOwnText, { color: colors.primary }]}>{TERMIN_TEXT.createOwn}</Text>
-          </Pressable>
+          </Tap>
         </>
       )}
     </ScrollView>

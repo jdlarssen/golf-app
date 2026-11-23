@@ -8,7 +8,8 @@
 // sier det, og den står i fokusrekkefølgen. Et trykk flytter fokus til boksen,
 // så VoiceOver leser hvorfor.
 import { forwardRef, useEffect, type RefObject } from 'react';
-import { AccessibilityInfo, Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Tap } from '../Tap';
 import { FONTS, interLine, useTheme } from '../../theme';
 import { UtslagHakeIcon, UtslagVarselIcon } from '../icons/Icons';
 
@@ -103,7 +104,7 @@ export function TeeShotLockedSubmit({
 }) {
   const { colors, ui } = useTheme();
   return (
-    <Pressable
+    <Tap
       style={[ui.button, { backgroundColor: colors.trackBg }]}
       onPress={() => {
         if (boxRef.current) AccessibilityInfo.sendAccessibilityEvent(boxRef.current, 'focus');
@@ -115,7 +116,7 @@ export function TeeShotLockedSubmit({
       testID={testID}
     >
       <Text style={[ui.buttonText, { color: colors.muted }]}>{label}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 

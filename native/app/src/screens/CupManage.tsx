@@ -7,7 +7,8 @@
 // krever nett: uten nett står det skjermen alt har hentet, uten lenkene.
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type {
   AppCupManageMatch,
@@ -124,14 +125,14 @@ function CupManageRoom({ route, navigation }: ScreenProps<'CupManage'>) {
           {manageLoadFailureText(failure ?? 'load_failed')}
         </Text>
         {final ? null : (
-          <Pressable
+          <Tap
             onPress={() => void load()}
             accessibilityRole="button"
             style={[styles.retry, { borderColor: colors.primary }]}
             testID="cup-manage-retry"
           >
             <Text style={[styles.retryText, { color: colors.primary }]}>{MANAGE_APP_TEXT.retry}</Text>
-          </Pressable>
+          </Tap>
         )}
       </View>
     );
@@ -250,7 +251,7 @@ function CupManageRoom({ route, navigation }: ScreenProps<'CupManage'>) {
 function Door({ text, onPress, testID }: { text: string; onPress: () => void; testID: string }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       onPress={onPress}
       style={[styles.door, { backgroundColor: colors.surface, borderColor: colors.border }]}
@@ -258,7 +259,7 @@ function Door({ text, onPress, testID }: { text: string; onPress: () => void; te
     >
       <Text style={[styles.doorText, { color: colors.text }]}>{text}</Text>
       <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} />
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -282,7 +283,7 @@ function PendingChoice({
       <Text style={[styles.cardBody, { color: colors.text }]}>
         {formatMessage(MANAGE_APP_TEXT.playOnQuestion, { partner })}
       </Text>
-      <Pressable
+      <Tap
         accessibilityRole="button"
         disabled={disabled}
         style={ui.buttonSecondary}
@@ -290,8 +291,8 @@ function PendingChoice({
         testID={`cup-manage-choice-yes-${match.gameId}`}
       >
         <Text style={ui.buttonSecondaryText}>{formatMessage(WITHDRAW_TEXT.playOnYes, { partner })}</Text>
-      </Pressable>
-      <Pressable
+      </Tap>
+      <Tap
         accessibilityRole="button"
         disabled={disabled}
         style={ui.buttonSecondary}
@@ -299,7 +300,7 @@ function PendingChoice({
         testID={`cup-manage-choice-no-${match.gameId}`}
       >
         <Text style={ui.buttonSecondaryText}>{WITHDRAW_TEXT.playOnNo}</Text>
-      </Pressable>
+      </Tap>
       <Text style={[styles.small, { color: colors.muted }]}>{WITHDRAW_TEXT.playOnHelp}</Text>
     </View>
   );
@@ -328,7 +329,7 @@ function PlayerRow({
         </View>
       ) : null}
       {player.canAct && showLink ? (
-        <Pressable
+        <Tap
           accessibilityRole="button"
           accessibilityLabel={`${link}: ${player.name}`}
           onPress={onPress}
@@ -336,7 +337,7 @@ function PlayerRow({
           testID={`cup-manage-withdraw-${player.userId}`}
         >
           <Text style={[styles.linkText, { color: colors.primary }]}>{link}</Text>
-        </Pressable>
+        </Tap>
       ) : null}
     </View>
   );
@@ -375,18 +376,18 @@ function MatchRow({
           )}
         </View>
         {match.canSwap && !stale ? (
-          <Pressable
+          <Tap
             accessibilityRole="button"
             onPress={onSwap}
             style={styles.link}
             testID={`cup-manage-swap-${match.gameId}`}
           >
             <Text style={[styles.linkText, { color: colors.primary }]}>{MANAGE_APP_TEXT.swapLink}</Text>
-          </Pressable>
+          </Tap>
         ) : null}
       </View>
       {decided && !stale ? (
-        <Pressable
+        <Tap
           accessibilityRole="button"
           disabled={disabled}
           onPress={() => onToggle(!decided.playOn)}
@@ -398,7 +399,7 @@ function MatchRow({
               ? WITHDRAW_TEXT.playOnNo
               : formatMessage(WITHDRAW_TEXT.playOnYes, { partner: decided.partnerName })}
           </Text>
-        </Pressable>
+        </Tap>
       ) : null}
     </View>
   );

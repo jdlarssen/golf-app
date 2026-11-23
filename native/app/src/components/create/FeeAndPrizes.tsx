@@ -8,7 +8,8 @@
 // matchplay-familien, og LD/CTP bare opp til antallet hull i sideturneringen.
 // Lagringen beskjærer med samme regel (`parsePrizesFromFormData`), så et slott
 // som er skjult her, lagres aldri. Logo lastes ikke opp i appen.
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Tap } from '../Tap';
 import { activePrizeSlots, prizeShapeFor, type PrizeDraft, type PrizeSlot } from '../../../../../lib/games/prizes';
 import { MAX_ENTRY_FEE_KR } from '../../../../../lib/games/gamePayload';
 import { sideLabel } from '../../../../../lib/games/sideLabel';
@@ -110,7 +111,7 @@ export function FeeAndPrizes({
         <>
           <View style={styles.prizesHead}>
             <Text style={[ui.sectionTitle, styles.inRow]}>{WIZARD_FEE_TEXT.prizesLegend}</Text>
-            <Pressable
+            <Tap
               accessibilityRole="button"
               accessibilityState={{ expanded: fee.prizesOpen }}
               onPress={() => onFee({ prizesOpen: !fee.prizesOpen })}
@@ -124,7 +125,7 @@ export function FeeAndPrizes({
                     ? PRIZE_TEXT.count(filled)
                     : WIZARD_FEE_TEXT.toggleAdd}
               </Text>
-            </Pressable>
+            </Tap>
           </View>
           {fee.prizesOpen ? (
             <View

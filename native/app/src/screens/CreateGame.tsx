@@ -18,7 +18,8 @@
 // derfor rolig i stedet for å la det se ut som en databasefeil.
 import { usePreventRemove } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { ClubPicker } from '../components/create/ClubPicker';
 import { CourseStep } from '../components/create/CourseStep';
 import { FormatStep } from '../components/create/FormatStep';
@@ -791,7 +792,7 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
       ) : null}
 
       <View style={styles.nav}>
-        <Pressable
+        <Tap
           testID="create-back"
           accessibilityRole="button"
           // While the game is being created, back does nothing, as the swipe
@@ -808,10 +809,10 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
           <Text style={ui.buttonSecondaryText}>
             {stepIndex === 0 ? 'Avbryt' : 'Tilbake'}
           </Text>
-        </Pressable>
+        </Tap>
 
         {step === 'summary' ? null : (
-          <Pressable
+          <Tap
             testID="create-next"
             accessibilityRole="button"
             style={[ui.button, styles.navButton, blocker !== null && styles.dimmed]}
@@ -819,7 +820,7 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
             onPress={goNext}
           >
             <Text style={ui.buttonText}>Neste</Text>
-          </Pressable>
+          </Tap>
         )}
       </View>
 

@@ -26,7 +26,8 @@
 //     (`achievementRules.*`); de strengene er bevisst ikke speilet, så appen
 //     viser hovedlinjen alene.
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { formatHolesList } from '../../../../../lib/leaderboard/formatHolesList';
 import type {
   SideCategory,
@@ -379,7 +380,7 @@ function TeamRow({
       ]}
       testID={`side-team-${standing.teamId}`}
     >
-      <Pressable
+      <Tap
         accessibilityRole="button"
         accessibilityState={{ expanded }}
         onPress={onToggle}
@@ -413,7 +414,7 @@ function TeamRow({
         </Text>
         {/* Appens tegnede pil, ikke et tegn (#2716). */}
         <ChevronIcon color={colors.muted} size={14} strokeWidth={2} up={expanded} />
-      </Pressable>
+      </Tap>
 
       {expanded ? (
         <TeamAwards

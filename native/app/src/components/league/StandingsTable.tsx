@@ -21,7 +21,8 @@
 // #2878: navnet til en annen spiller kan trykkes på og åpner et lite ark med
 // personen (`onOpenPerson`). Trykkflaten fyller navnekolonnen i full radhøyde,
 // så den er minst 48 høy; teksten flytter seg ikke. Din egen rad er tekst.
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { AppLeagueView } from '../../../../../lib/league/appLeagueView';
 import {
   formatRoundCell,
@@ -169,17 +170,17 @@ export function StandingsTable({
           )}
         </View>
         {onOpenPerson && !you ? (
-          <Pressable
+          <Tap
             onPress={() => onOpenPerson(row.userId)}
             accessibilityRole="button"
             accessibilityLabel={openPersonLabel(participantLabel(byId.get(row.userId), participants))}
-            style={({ pressed }) => [styles.nameHit, nameStyle, pressed ? styles.pressed : null]}
+            style={[styles.nameHit, nameStyle]}
             testID={`league-standings-person-${row.userId}`}
           >
             <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
               {participantLabel(byId.get(row.userId), participants)}
             </Text>
-          </Pressable>
+          </Tap>
         ) : (
           <Text style={[styles.name, styles.centered, nameStyle, { color: colors.text }]} numberOfLines={1}>
             {participantLabel(byId.get(row.userId), participants)}
@@ -214,17 +215,17 @@ export function StandingsTable({
             );
           }
           return (
-            <Pressable
+            <Tap
               key={r.id}
               onPress={() => onOpenCard({ gameId, userId: row.userId })}
               hitSlop={CELL_HIT_SLOP}
               accessibilityRole="button"
               accessibilityLabel={openCardLabel(participantLabel(byId.get(row.userId), participants), r.label)}
-              style={({ pressed }) => [styles.roundCol, styles.roundCell, pressed ? styles.pressed : null]}
+              style={[styles.roundCol, styles.roundCell]}
               testID={`league-standings-card-${row.userId}-${r.id}`}
             >
               {text}
-            </Pressable>
+            </Tap>
           );
         })}
       </View>
@@ -289,7 +290,6 @@ const styles = StyleSheet.create({
   dot: { width: 5, height: 5, borderRadius: 2.5 },
   roundCell: { justifyContent: 'center', alignItems: 'flex-end', paddingRight: 4 },
   cell: { ...interLine(13, 18), fontFamily: FONTS.sans, textAlign: 'right', fontVariant: ['tabular-nums'] },
-  pressed: { opacity: 0.6 },
   // Gruppeoverskriften: 14 over, 6 under, 16 inn.
   group: { paddingTop: 14, paddingBottom: 6, paddingHorizontal: 16 },
 });

@@ -10,7 +10,8 @@
 // under, som på godkjenningsskjermen. «Send tilbake» åpner det samme arket med
 // valgfri grunn. Markøren endrer aldri et slag; spilleren retter selv.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { buildScorecardGrid } from '../../../../lib/scorecard/scorecardGrid';
 import type { MarkerCardResponse } from '../../../../lib/league/appLeagueView';
@@ -144,9 +145,9 @@ export function MarkerApprove({ route, navigation }: ScreenProps<'MarkerApprove'
         ) : (
           <>
             <Text style={ui.body}>{MARKER_TEXT.loadFailed}</Text>
-            <Pressable style={ui.buttonSecondary} onPress={retry} accessibilityRole="button" testID="marker-retry">
+            <Tap style={ui.buttonSecondary} onPress={retry} accessibilityRole="button" testID="marker-retry">
               <Text style={ui.buttonSecondaryText}>{MARKER_TEXT.retry}</Text>
-            </Pressable>
+            </Tap>
           </>
         )}
       </View>
@@ -204,7 +205,7 @@ export function MarkerApprove({ route, navigation }: ScreenProps<'MarkerApprove'
 
         {pending ? (
           <View style={styles.actions}>
-            <Pressable
+            <Tap
               style={[ui.button, styles.action]}
               onPress={() => void answer('approve')}
               disabled={locked}
@@ -212,8 +213,8 @@ export function MarkerApprove({ route, navigation }: ScreenProps<'MarkerApprove'
               testID="marker-approve"
             >
               <Text style={ui.buttonText}>{busy === 'approve' ? APPROVE_TEXT.working : APPROVE_TEXT.approve}</Text>
-            </Pressable>
-            <Pressable
+            </Tap>
+            <Tap
               style={[ui.buttonSecondary, styles.action]}
               onPress={() => setRejecting(true)}
               disabled={locked}
@@ -221,7 +222,7 @@ export function MarkerApprove({ route, navigation }: ScreenProps<'MarkerApprove'
               testID="marker-reject"
             >
               <Text style={ui.buttonSecondaryText}>{APPROVE_TEXT.sendBack}</Text>
-            </Pressable>
+            </Tap>
           </View>
         ) : (
           <Text style={[ui.body, styles.state]} testID={`marker-state-${card.state}`}>

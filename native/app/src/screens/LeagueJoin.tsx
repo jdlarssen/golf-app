@@ -18,7 +18,8 @@
 // ligaen alt under, går du tilbake til den og får ingen kopi.
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppLeagueJoinView } from '../../../../lib/league/appLeagueView';
 import { LeagueLoadFailed, LeagueLoading } from '../components/league/LeagueStates';
@@ -104,14 +105,14 @@ export function LeagueJoin({ navigation, route }: ScreenProps<'LeagueJoin'>) {
           <Text style={[styles.body, { color: colors.text }]} testID="league-join-not-found">
             {LEAGUE_JOIN_TEXT.notFound}
           </Text>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             onPress={() => navigation.popToTop()}
             style={[styles.button, { backgroundColor: colors.primary }]}
             testID="league-join-home"
           >
             <Text style={[styles.buttonText, { color: colors.onPrimary }]}>{LEAGUE_JOIN_TEXT.toHome}</Text>
-          </Pressable>
+          </Tap>
         </View>
       </ScrollView>
     );
@@ -147,7 +148,7 @@ export function LeagueJoin({ navigation, route }: ScreenProps<'LeagueJoin'>) {
             </Text>
           ) : null}
           <Text style={[styles.body, { color: colors.onStrongWarm }]}>{LEAGUE_JOIN_TEXT.invite}</Text>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             accessibilityState={{ disabled: busy, busy }}
             disabled={busy}
@@ -158,7 +159,7 @@ export function LeagueJoin({ navigation, route }: ScreenProps<'LeagueJoin'>) {
             <Text style={[styles.buttonText, { color: colors.surfaceStrong }]}>
               {busy ? LEAGUE_JOIN_TEXT.joinPending : joinError ? LEAGUE_TEXT.retry : LEAGUE_JOIN_TEXT.joinButton}
             </Text>
-          </Pressable>
+          </Tap>
           {joinError ? (
             <Text style={[styles.body, { color: colors.onStrongWarm }]} testID="league-join-error">
               {joinError}
@@ -179,7 +180,7 @@ export function LeagueJoin({ navigation, route }: ScreenProps<'LeagueJoin'>) {
           <Text style={[styles.body, { color: colors.text }]}>
             {decision === 'closed' ? LEAGUE_JOIN_TEXT.closed : LEAGUE_JOIN_TEXT.profileIncomplete}
           </Text>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             onPress={() =>
               decision === 'closed'
@@ -192,7 +193,7 @@ export function LeagueJoin({ navigation, route }: ScreenProps<'LeagueJoin'>) {
             <Text style={[styles.buttonText, { color: colors.onPrimary }]}>
               {decision === 'closed' ? LEAGUE_JOIN_TEXT.seeTable : LEAGUE_JOIN_TEXT.completeProfile}
             </Text>
-          </Pressable>
+          </Tap>
         </View>
       )}
     </ScrollView>

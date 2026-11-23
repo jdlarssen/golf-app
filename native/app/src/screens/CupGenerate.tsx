@@ -9,7 +9,8 @@
 // skrive, og du sendes til cupen for å se hva som finnes.
 import { useFocusEffect, usePreventRemove } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import type { AppCupGenerateView } from '../../../../lib/cup/appCupGenerateView';
 import {
   adjustedSessionOverrides,
@@ -154,27 +155,27 @@ export function CupGenerate({ route, navigation }: ScreenProps<'CupGenerate'>) {
         {plan === null ? (
           <View style={styles.empty}>
             <Note testID="cup-generate-no-plan">{GENERATE_TEXT.emptyNoPlan}</Note>
-            <Pressable
+            <Tap
               accessibilityRole="button"
               style={ui.buttonSecondary}
               onPress={() => openOrReturn(navigation, 'CreateCup', { cupId })}
               testID="cup-generate-open-setup"
             >
               <Text style={ui.buttonSecondaryText}>{GENERATE_TEXT.emptyNoPlanLink}</Text>
-            </Pressable>
+            </Tap>
           </View>
         ) : null}
         {view.players.length === 0 ? (
           <View style={styles.empty}>
             <Note testID="cup-generate-no-players">{GENERATE_TEXT.emptyNoParticipants}</Note>
-            <Pressable
+            <Tap
               accessibilityRole="button"
               style={ui.buttonSecondary}
               onPress={() => openOrReturn(navigation, 'CupParticipants', { cupId })}
               testID="cup-generate-open-players"
             >
               <Text style={ui.buttonSecondaryText}>{GENERATE_TEXT.emptyNoParticipantsLink}</Text>
-            </Pressable>
+            </Tap>
           </View>
         ) : null}
       </ScrollView>
@@ -292,7 +293,7 @@ export function CupGenerate({ route, navigation }: ScreenProps<'CupGenerate'>) {
             </Text>
           ) : null}
           <View style={styles.actions}>
-            <Pressable
+            <Tap
               accessibilityRole="button"
               accessibilityState={{ disabled: !canAdvance }}
               disabled={!canAdvance}
@@ -304,12 +305,12 @@ export function CupGenerate({ route, navigation }: ScreenProps<'CupGenerate'>) {
               testID="cup-generate-next"
             >
               <Text style={ui.buttonText}>{GENERATE_TEXT.next}</Text>
-            </Pressable>
+            </Tap>
           </View>
         </>
       ) : (
         <>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             disabled={busy}
             onPress={runGenerate}
@@ -317,7 +318,7 @@ export function CupGenerate({ route, navigation }: ScreenProps<'CupGenerate'>) {
             testID="cup-generate-regenerate"
           >
             <Text style={[styles.linkText, { color: colors.primary }]}>{GENERATE_TEXT.regenerate}</Text>
-          </Pressable>
+          </Tap>
           <GeneratePreview
             presetId={plan.presetId}
             disabled={busy}
@@ -347,7 +348,7 @@ export function CupGenerate({ route, navigation }: ScreenProps<'CupGenerate'>) {
             </Text>
           ) : null}
           <View style={styles.actions}>
-            <Pressable
+            <Tap
               accessibilityRole="button"
               accessibilityState={{ disabled: busy, busy }}
               disabled={busy}
@@ -360,7 +361,7 @@ export function CupGenerate({ route, navigation }: ScreenProps<'CupGenerate'>) {
                   ? GENERATE_TEXT.confirmPending
                   : formatMessage(GENERATE_TEXT.confirm, { count: submission.length })}
               </Text>
-            </Pressable>
+            </Tap>
           </View>
         </>
       )}
@@ -371,14 +372,14 @@ export function CupGenerate({ route, navigation }: ScreenProps<'CupGenerate'>) {
 function RetryButton({ onPress }: { onPress: () => void }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       accessibilityRole="button"
       style={[styles.retry, { borderColor: colors.primary }]}
       testID="cup-generate-retry"
     >
       <Text style={[styles.retryText, { color: colors.primary }]}>{SETUP_APP_TEXT.retry}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 

@@ -6,7 +6,8 @@
 //
 // #2894 PR 2: nederst står lenka til Æreslista (hole-in-one og albatross for alle år),
 // under «Vis alle N», og også når kortet er tomt eller ikke fikk hentet slagene.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { MomentRowModel, MomentsModel } from '../../lib/toppliste';
 import { TOPPLISTE_TEXT } from '../../lib/topplisteCopy';
 import { FONTS, fraunces, interLine, TAP, useTheme } from '../../theme';
@@ -84,14 +85,14 @@ export function TopplisteMoments({
           <Text numberOfLines={1} style={[styles.message, { color: colors.muted }]}>
             {TOPPLISTE_TEXT.momentsFailed}
           </Text>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             onPress={onRetry}
-            style={({ pressed }) => [styles.retry, { borderColor: colors.primary }, pressed ? styles.pressed : null]}
+            style={[styles.retry, { borderColor: colors.primary }]}
             testID="toppliste-moments-failed-retry"
           >
             <Text style={[styles.retryText, { color: colors.primary }]}>{TOPPLISTE_TEXT.retry}</Text>
-          </Pressable>
+          </Tap>
         </View>
       ) : model.state === 'empty' ? (
         <Text numberOfLines={1} style={[styles.empty, { color: colors.muted }]} testID="toppliste-moments-empty">
@@ -108,28 +109,27 @@ export function TopplisteMoments({
             />
           ))}
           {model.toggleLabel ? (
-            <Pressable
+            <Tap
               accessibilityRole="button"
               accessibilityState={{ expanded }}
               onPress={onToggle}
-              style={({ pressed }) => [
+              style={[
                 styles.toggle,
                 { borderTopColor: colors.divider },
-                pressed ? styles.pressed : null,
               ]}
               testID="toppliste-moments-toggle"
             >
               <Text style={[styles.toggleText, { color: colors.primary }]}>{model.toggleLabel}</Text>
-            </Pressable>
+            </Tap>
           ) : null}
         </>
       )}
 
-      <Pressable
+      <Tap
         accessibilityRole="link"
         accessibilityLabel={`${TOPPLISTE_TEXT.aeresHeading}. ${TOPPLISTE_TEXT.aeresLinkSubtitle}`}
         onPress={onOpenAeresliste}
-        style={({ pressed }) => [styles.link, { borderTopColor: colors.divider }, pressed ? styles.pressed : null]}
+        style={[styles.link, { borderTopColor: colors.divider }]}
         testID="toppliste-aeresliste-link"
       >
         <View style={styles.linkText}>
@@ -141,13 +141,12 @@ export function TopplisteMoments({
           </Text>
         </View>
         <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} />
-      </Pressable>
+      </Tap>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  pressed: { opacity: 0.6 },
   // 20 pt luft under lista; kortet er likt under alle tre fanene.
   card: { marginHorizontal: 16, marginTop: 20, borderWidth: 1, borderRadius: 16, overflow: 'hidden' },
   head: { paddingTop: 14, paddingHorizontal: 14 },

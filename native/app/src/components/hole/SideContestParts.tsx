@@ -18,7 +18,6 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,6 +25,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { Tap } from '../Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { parseClaimDistance } from '../../../../../lib/games/sideContest';
 import { formatDistance, SIDE_CONTEST_TEXT, stepDistance } from '../../lib/sideContestCopy';
@@ -68,7 +68,7 @@ export function ContestRow({
   const subtitleColor =
     state === 'offline' ? colors.warningText : state === 'answered' ? colors.text : colors.muted;
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       disabled={disabled}
       style={[styles.row, { borderColor: colors.border, backgroundColor: colors.surface }]}
@@ -96,7 +96,7 @@ export function ContestRow({
       ) : (
         <FeilIcon color={colors.muted} size={20} />
       )}
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -157,7 +157,8 @@ export function ContestSheet({
   return (
     <Modal transparent visible={open} animationType="slide" onRequestClose={onClose}>
       <View style={styles.fill} testID={testID}>
-        <Pressable
+        <Tap
+          feedback="none"
           style={[StyleSheet.absoluteFill, { backgroundColor: sheetScrim(colors, scheme) }]}
           onPress={onClose}
           accessible={false}
@@ -186,7 +187,7 @@ export function ContestSheet({
                     {title}
                   </Text>
                 </View>
-                <Pressable
+                <Tap
                   onPress={onClose}
                   style={[styles.close, { backgroundColor: colors.surface2 }]}
                   accessibilityRole="button"
@@ -194,7 +195,7 @@ export function ContestSheet({
                   testID={`${testID}-close`}
                 >
                   <LukkIcon color={colors.text} size={18} strokeWidth={2} />
-                </Pressable>
+                </Tap>
               </View>
               <View style={styles.headGap} />
               {notice ? (
@@ -237,14 +238,14 @@ export function ContestSheet({
                   {status}
                 </Text>
               </View>
-              <Pressable
+              <Tap
                 onPress={onClose}
                 style={[styles.done, { backgroundColor: colors.primary }]}
                 accessibilityRole="button"
                 testID={`${testID}-done`}
               >
                 <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.doneText, { color: colors.onPrimary }]}>{SIDE_CONTEST_TEXT.done}</Text>
-              </Pressable>
+              </Tap>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
@@ -294,7 +295,7 @@ export function ContestLine({
 }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       disabled={disabled}
       style={[
@@ -311,7 +312,7 @@ export function ContestLine({
       <Faces faces={faces} />
       <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.lineName, { color: colors.text }, checked && styles.lineNameChecked]}>{label}</Text>
       {kind === 'radio' ? <Radio checked={checked} /> : <Checkbox checked={checked} />}
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -468,7 +469,7 @@ function StepButton({
 }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       disabled={disabled}
       style={[styles.step, { borderColor: colors.fieldBorder, backgroundColor: colors.surface }]}
@@ -478,7 +479,7 @@ function StepButton({
       testID={testID}
     >
       <AvstandIcon plus={plus} color={colors.text} size={18} />
-    </Pressable>
+    </Tap>
   );
 }
 

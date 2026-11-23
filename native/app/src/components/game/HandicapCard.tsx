@@ -5,7 +5,8 @@
 // Kortet viser seg selv ikke: spill-hjem avgjør når det står (planlagt spill,
 // du står på lista, handicapet er fire uker gammelt).
 import type { Ref } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { HANDICAP_TEXT, handicapCardBody } from '../../lib/handicapCopy';
 import { FONTS, fraunces, interLine, TAP, useTheme } from '../../theme';
 import { HakeIcon } from '../icons/Icons';
@@ -46,7 +47,7 @@ export function HandicapCard({
         </Text>
       </View>
       <View style={styles.row}>
-        <Pressable
+        <Tap
           onPress={onConfirm}
           disabled={busy}
           accessibilityRole="button"
@@ -55,8 +56,8 @@ export function HandicapCard({
           testID="hcp-card-confirm"
         >
           <Text style={[styles.buttonText, { color: colors.onPrimary }]}>{HANDICAP_TEXT.confirm}</Text>
-        </Pressable>
-        <Pressable
+        </Tap>
+        <Tap
           ref={updateRef}
           onPress={onUpdate}
           disabled={busy}
@@ -66,7 +67,7 @@ export function HandicapCard({
           testID="hcp-card-update"
         >
           <Text style={[styles.buttonText, { color: colors.primary }]}>{HANDICAP_TEXT.update}</Text>
-        </Pressable>
+        </Tap>
       </View>
     </View>
   );

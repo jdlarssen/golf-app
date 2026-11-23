@@ -27,7 +27,8 @@
 // dempet kicker og «Lagtavla» i Fraunces 28/500.
 import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
 import { useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from './Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   FONTS,
@@ -384,7 +385,7 @@ function BareBack({
 }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
@@ -392,7 +393,7 @@ function BareBack({
       testID="header-back"
     >
       <TilbakeIcon color={color ?? colors.text} size={large ? 22 : 20} strokeWidth={large ? 2.4 : 2} />
-    </Pressable>
+    </Tap>
   );
 }
 

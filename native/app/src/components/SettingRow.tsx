@@ -25,7 +25,8 @@
 // dekkes av Profil-skjermens ene render-test (Type C — maks én render-test per
 // komponent, `docs/test-discipline.md`). Det er et valg, ikke en glipp.
 import { Children, Fragment, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Tap } from './Tap';
 import { FONTS, useTheme } from '../theme';
 import { ChevronIcon } from './icons/Icons';
 
@@ -78,7 +79,7 @@ export function SettingRow({
   const chevronColor = tone === 'danger' ? colors.danger : colors.primary;
 
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       // Et valg leses som etiketten (og underlinja) pluss «valgt», ikke som
       // «Lys hake».
@@ -107,7 +108,7 @@ export function SettingRow({
           <ChevronIcon direction="right" color={chevronColor} size={16} strokeWidth={2} />
         </View>
       ) : null}
-    </Pressable>
+    </Tap>
   );
 }
 

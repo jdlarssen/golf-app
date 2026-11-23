@@ -15,7 +15,8 @@
 // (det myke trekket under runden), blir spilleren stående, og trukket-banneret
 // med «Angre trekk» tar over.
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { withdrawSelf } from '../../data/withdrawSelf';
 import { CUP_TEXT } from '../../lib/cupCopy';
 import type { PlayerWithdrawKind } from '../../lib/playerWithdraw';
@@ -79,7 +80,7 @@ export function PlayerWithdraw({
 
   return (
     <View style={styles.wrap}>
-      <Pressable
+      <Tap
         accessibilityRole="button"
         disabled={busy}
         onPress={kind === 'cup' ? onCup : confirm}
@@ -89,7 +90,7 @@ export function PlayerWithdraw({
         <Text style={[ui.muted, styles.linkText, { textDecorationColor: colors.muted }]}>
           {kind === 'cup' ? CUP_TEXT.withdrawSelfLink : PLAYER_WITHDRAW.link}
         </Text>
-      </Pressable>
+      </Tap>
       {notice ? (
         <Text style={ui.error} testID="player-withdraw-notice">
           {notice}

@@ -26,13 +26,13 @@ import {
   AccessibilityInfo,
   Animated,
   Easing,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { Tap } from '../Tap';
 import type { AppRoundInviteView, AppTeamSignupForm } from '../../../../../lib/games/appRoundInviteView';
 import { TEAM_NAME_MAX } from '../../../../../lib/games/registration';
 import { validateTeamName } from '../../../../../lib/games/teamName';
@@ -334,7 +334,7 @@ export function TeamSignupForm({
               <Text style={[styles.counter, { color: colors.muted }]} testID="team-form-name-count">
                 {nameCounter(draft.trim().length, TEAM_NAME_MAX)}
               </Text>
-              <Pressable
+              <Tap
                 accessibilityRole="button"
                 accessibilityState={{ disabled: nameError !== null }}
                 onPress={finishEditing}
@@ -342,7 +342,7 @@ export function TeamSignupForm({
                 testID="team-form-name-done"
               >
                 <Text style={[styles.doneText, { color: colors.onPrimary }]}>{TEAM_SIGNUP_TEXT.done}</Text>
-              </Pressable>
+              </Tap>
             </View>
             {nameError ? (
               <Text style={[styles.error, { color: colors.danger }]} testID="team-form-name-error">
@@ -351,7 +351,7 @@ export function TeamSignupForm({
             ) : null}
           </>
         ) : (
-          <Pressable
+          <Tap
             accessibilityRole="button"
             accessibilityLabel={`${teamName}. ${TEAM_SIGNUP_TEXT.editName}`}
             onPress={() => {
@@ -365,7 +365,7 @@ export function TeamSignupForm({
               {teamName}
             </Text>
             <BlyantIcon color={colors.muted} />
-          </Pressable>
+          </Tap>
         )}
         <Text
           style={[teamStyles.meta, styles.meta, editing ? styles.metaAfterEdit : null, { color: colors.muted }]}

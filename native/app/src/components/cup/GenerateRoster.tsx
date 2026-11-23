@@ -1,6 +1,7 @@
 // #2752: steg 1 i «Fordel & generer»: hvert lag og antall matcher per økt. Nettets
 // `Step1Roster` og `Step1SessionCounts`. Tallene kommer fra `lib/cup/matchPlan.ts`.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { SessionCountRow } from '../../../../../lib/cup/cupTemplates';
 import type { TeamAssignment, WizardPlayer } from '../../../../../lib/cup/matchPlan';
 import { FORMAT_LABELS, GENERATE_TEXT } from '../../lib/cupGenerateCopy';
@@ -137,7 +138,7 @@ export function Stepper({
 }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled }}
@@ -147,7 +148,7 @@ export function Stepper({
       testID={testID}
     >
       <Text style={[styles.stepperSign, { color: colors.text }]}>{sign}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 

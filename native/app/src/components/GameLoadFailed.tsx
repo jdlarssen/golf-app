@@ -10,7 +10,8 @@
 // `notFound` (gjennomgangen av #2622): serveren svarte, men spillet finnes ikke
 // for spilleren (slettet, eller skjult av RLS, #1954 Del B). Da er det ikke
 // nettet, og «Prøv igjen» ville gitt samme svar. Setningen sier det, uten knapp.
-import { Pressable, Text } from 'react-native';
+import { Text } from 'react-native';
+import { Tap } from './Tap';
 import { ERROR_BOUNDARY_TEXT } from '../lib/errorBoundaryCopy';
 import { GAME_LOAD_RETRY_TEXT, GAME_NOT_FOUND_TEXT } from '../lib/seedCopy';
 import { useTheme } from '../theme';
@@ -43,9 +44,9 @@ export function GameLoadFailed(props: GameLoadFailedProps) {
       <Text style={ui.error} testID="game-error">
         {props.text ?? GAME_LOAD_RETRY_TEXT}
       </Text>
-      <Pressable accessibilityRole="button" style={ui.buttonSecondary} onPress={props.onRetry} testID="game-retry">
+      <Tap accessibilityRole="button" style={ui.buttonSecondary} onPress={props.onRetry} testID="game-retry">
         <Text style={ui.buttonSecondaryText}>{ERROR_BOUNDARY_TEXT.retry}</Text>
-      </Pressable>
+      </Tap>
     </>
   );
 }

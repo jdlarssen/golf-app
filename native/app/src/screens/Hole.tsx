@@ -55,12 +55,12 @@ import {
   AccessibilityInfo,
   ActivityIndicator,
   PanResponder,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIsFocused } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
@@ -423,7 +423,7 @@ function HoleTopTools({ sunlight, onLeaderboard }: { sunlight: boolean; onLeader
     <View style={styles.topTools}>
       <SunlightToggle on={sunlight} onToggle={() => setSunlight(!sunlight)} />
       {sunlight ? null : (
-        <Pressable
+        <Tap
           onPress={onLeaderboard}
           style={styles.topIcon}
           testID="hole-leaderboard"
@@ -431,7 +431,7 @@ function HoleTopTools({ sunlight, onLeaderboard }: { sunlight: boolean; onLeader
           accessibilityLabel="Vis resultatene"
         >
           <PokalHankerIcon color={colors.text} size={20} strokeWidth={1.8} />
-        </Pressable>
+        </Tap>
       )}
     </View>
   );
@@ -1166,31 +1166,31 @@ function HoleView({
             over («Føringen er låst»), uten knappen. */}
         {!locked && (holeNumber === lastOwnHole || allHolesFilled) ? (
           bridge ? (
-            <Pressable
+            <Tap
               style={ui.button}
               onPress={() => goToHole(bridge.holeNumber)}
               testID="hole-bridge"
             >
               <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.buttonText}>{bridgeLabel(bridge.holeNumber)}</Text>
-            </Pressable>
+            </Tap>
           ) : (
-            <Pressable style={ui.button} onPress={onSubmit} testID="hole-submit">
+            <Tap style={ui.button} onPress={onSubmit} testID="hole-submit">
               {/* Begge veier går til Scorecard — kø-vakta og hull-dialogen har ett
                   hjem der (#1918). */}
               <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.buttonText}>
                 {teamDelivers ? 'Lever lagets kort' : 'Lever scorekort'}
               </Text>
-            </Pressable>
+            </Tap>
           )
         ) : null}
         {boundary ? (
-          <Pressable
+          <Tap
             style={ui.buttonSecondary}
             onPress={() => goToHole(boundary.holeNumber)}
             testID="hole-boundary-link"
           >
             <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.buttonSecondaryText}>{bridgeLabel(boundary.holeNumber)}</Text>
-          </Pressable>
+          </Tap>
         ) : null}
         </View>
       </ScrollView>
@@ -1415,7 +1415,7 @@ function PlayerCard({
   // Pressables, og i React Native vinner den innerste berøringen — derfor
   // trengs ingen stopPropagation slik webben må ha.
   return (
-    <Pressable
+    <Tap
       style={[ui.card, locked && styles.cardLocked]}
       testID={`player-card-${entry.user_id}`}
       onPress={onFirstEntry}
@@ -1462,7 +1462,7 @@ function PlayerCard({
           {TAP_INSTRUCTION}
         </Text>
       ) : null}
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -1488,7 +1488,7 @@ function UndoStrokes({
   const { ui } = useTheme();
   if (!visible) return null;
   return (
-    <Pressable
+    <Tap
       style={[ui.link, styles.undo]}
       onPress={onPress}
       testID={testID}
@@ -1496,7 +1496,7 @@ function UndoStrokes({
       accessibilityLabel={label}
     >
       <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.linkText}>Angre</Text>
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -1524,25 +1524,25 @@ function Stepper({
   return (
     <View style={styles.stepperRow}>
       <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[ui.muted, styles.stepperLabel]}>{label}</Text>
-      <Pressable
+      <Tap
         style={stepStyle}
         onPress={() => onChange(-1)}
         disabled={disabled}
         testID={`${testIDPrefix}-minus`}
       >
         <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={stepTextStyle}>−</Text>
-      </Pressable>
+      </Tap>
       <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[ui.value, ui.num, styles.stepValue]} testID={`${testIDPrefix}-value`}>
         {value ?? '—'}
       </Text>
-      <Pressable
+      <Tap
         style={stepStyle}
         onPress={() => onChange(1)}
         disabled={disabled}
         testID={`${testIDPrefix}-plus`}
       >
         <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={stepTextStyle}>+</Text>
-      </Pressable>
+      </Tap>
     </View>
   );
 }

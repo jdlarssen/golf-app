@@ -18,7 +18,8 @@
 // etikett, og knappene er egne knapper. Midtpartiet kan fortsatt trykkes på
 // (seende brukere treffer kortet hvor som helst), men er ikke et eget element
 // for skjermleseren.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { HomeCard } from '../../data/homeList';
 import { ACTIVE_CARD_LABELS, LEAGUE_MARKER_STATE } from '../../lib/display';
 import {
@@ -70,7 +71,7 @@ export function HomeHeroCard({
         ]}
         testID={`home-hero-card-${card.gameId}`}
       >
-        <Pressable
+        <Tap
           onPress={onOpenGame}
           accessibilityRole="button"
           accessibilityLabel={[HOME_TEXT.inProgress, card.name, card.courseName]
@@ -88,10 +89,10 @@ export function HomeHeroCard({
           <Text style={[styles.where, ink]} numberOfLines={1} testID="home-hero-where">
             {[card.name, card.courseName].filter(Boolean).join(' · ')}
           </Text>
-        </Pressable>
+        </Tap>
 
         {playable ? (
-          <Pressable
+          <Tap
             onPress={onOpenGame}
             accessible={false}
             style={styles.middle}
@@ -106,7 +107,7 @@ export function HomeHeroCard({
             <View style={styles.standing}>
               <Standing model={model} />
             </View>
-          </Pressable>
+          </Tap>
         ) : null}
 
         <PrimaryAction
@@ -118,7 +119,7 @@ export function HomeHeroCard({
       </View>
 
       {model && model.approvals > 0 ? (
-        <Pressable
+        <Tap
           onPress={onApprove}
           accessibilityRole="button"
           style={[ui.banner, styles.approvals]}
@@ -127,7 +128,7 @@ export function HomeHeroCard({
           <Text style={[ui.body, { color: colors.primary, fontFamily: FONTS.sansSemiBold }]}>
             {approvalsLine(model.approvals)}
           </Text>
-        </Pressable>
+        </Tap>
       ) : null}
     </View>
   );
@@ -272,7 +273,7 @@ function PrimaryAction({
         : [HOME_TEXT.openRound, onOpenGame];
 
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       accessibilityRole="button"
       style={[styles.button, { backgroundColor: colors.onStrong }]}
@@ -281,7 +282,7 @@ function PrimaryAction({
       <Text style={[styles.buttonText, { color: colors.surfaceStrong }]}>
         {label}
       </Text>
-    </Pressable>
+    </Tap>
   );
 }
 

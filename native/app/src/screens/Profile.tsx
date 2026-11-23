@@ -32,7 +32,8 @@
 // «Logg ut» og utviklerflaten bor i «Personvern og konto»
 // (`AccountSettings.tsx`), sammen med personvernerklæringen og «Slett konto».
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BagTag, type FriendQr } from '../components/profile/BagTag';
 import { SeasonTiles } from '../components/profile/SeasonTiles';
@@ -179,20 +180,19 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
         <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
           {PROFILE_TEXT.heading}
         </Text>
-        <Pressable
+        <Tap
           accessibilityRole="button"
           onPress={openEditProfile}
-          style={({ pressed }) => [
+          style={[
             styles.editPill,
             { borderColor: colors.border, backgroundColor: colors.surface },
-            pressed ? styles.pressed : null,
           ]}
           testID="profile-edit-entry"
         >
           <Text style={[styles.editPillText, { color: colors.primary }]}>
             {PROFILE_TEXT.editAction}
           </Text>
-        </Pressable>
+        </Tap>
       </View>
       {updated ? (
         <View style={ui.banner}>
@@ -308,7 +308,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   editPillText: { ...interLine(14, EDIT_LINE), fontFamily: FONTS.sansSemiBold },
-  pressed: { opacity: 0.6 },
   // #2975: raden «Oppdater appen» står under tittelen, med luft til bag-taggen.
   updateApp: { marginTop: 12, marginBottom: 4 },
   // 20 pt fra flisene; lista har selv 8 på toppen.

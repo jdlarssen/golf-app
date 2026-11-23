@@ -24,7 +24,8 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
 import { useLeaveWhenFocused } from '../lib/useLeaveWhenFocused';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppLeagueParticipant, AppLeagueRound, AppLeagueView } from '../../../../lib/league/appLeagueView';
 import { MAX_CO_PLAYERS, minFlightPlayers } from '../../../../lib/league/flightRules';
@@ -198,7 +199,7 @@ export function LeagueRoundStart({ navigation, route }: ScreenProps<'LeagueRound
   };
 
   const button = (enabled: boolean) => (
-    <Pressable
+    <Tap
       onPress={() => void start()}
       disabled={!enabled}
       accessibilityRole="button"
@@ -209,7 +210,7 @@ export function LeagueRoundStart({ navigation, route }: ScreenProps<'LeagueRound
       <Text style={[styles.ctaText, { color: colors.onPrimary }]}>
         {pending ? ROUND_START_TEXT.startPending : ROUND_START_TEXT.startButton}
       </Text>
-    </Pressable>
+    </Tap>
   );
 
   const title = (
@@ -357,7 +358,7 @@ function PlayerRow({
   const lockText =
     lock === 'delivered' ? ROUND_START_TEXT.lockDelivered : lock === 'in_progress' ? ROUND_START_TEXT.lockInProgress : null;
   return (
-    <Pressable
+    <Tap
       onPress={onToggle}
       disabled={disabled}
       accessibilityRole="checkbox"
@@ -400,7 +401,7 @@ function PlayerRow({
           {checked ? <LigaHakeIcon color={colors.onPrimary} size={14} /> : null}
         </View>
       )}
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -412,7 +413,7 @@ function PlayerRow({
 function ConfirmRow({ checked, onToggle }: { checked: boolean; onToggle: () => void }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       onPress={onToggle}
       accessibilityRole="checkbox"
       accessibilityState={{ checked }}
@@ -436,7 +437,7 @@ function ConfirmRow({ checked, onToggle }: { checked: boolean; onToggle: () => v
         {checked ? <LigaHakeIcon color={colors.onPrimary} size={14} /> : null}
       </View>
       <Text style={[styles.confirmText, { color: colors.text }]}>{ROUND_START_TEXT.confirmSetup}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 

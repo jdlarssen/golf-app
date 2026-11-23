@@ -2,7 +2,8 @@
 // Nettets `SessionCard`, `TeamPanel`, `SlotList` og `LineupEditor`. `slots: null` betyr «ikke
 // synlig for deg», aldri «tomt», så panelet sier det og viser ingen tom oppstilling.
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../../Tap';
 import type {
   AppCupLineupPlayer,
   AppCupLineupSession,
@@ -93,7 +94,7 @@ export function LineupSessionCard({
       {cardError ? <LineupError message={cardError} testID={`cup-lineup-error-${session.sessionIndex}`} /> : null}
 
       {organizer && stuck ? (
-        <Pressable
+        <Tap
           accessibilityRole="button"
           accessibilityState={{ disabled: busy }}
           disabled={busy}
@@ -102,11 +103,11 @@ export function LineupSessionCard({
           testID={`cup-lineup-retry-${session.sessionIndex}`}
         >
           <Text style={ui.buttonText}>{LINEUP_TEXT.retryButton}</Text>
-        </Pressable>
+        </Tap>
       ) : null}
 
       {organizer && !revealed ? (
-        <Pressable
+        <Tap
           accessibilityRole="button"
           accessibilityState={{ disabled: busy }}
           disabled={busy}
@@ -115,7 +116,7 @@ export function LineupSessionCard({
           testID={`cup-lineup-delete-${session.sessionIndex}`}
         >
           <Text style={ui.buttonSecondaryText}>{LINEUP_TEXT.deleteSession}</Text>
-        </Pressable>
+        </Tap>
       ) : null}
     </View>
   );
@@ -188,7 +189,7 @@ function TeamPanel({
       {!(canEdit && team.slots !== null) && error ? <LineupError message={error} testID={`cup-lineup-error-${prefix}`} /> : null}
 
       {organizer && submitted && !revealed ? (
-        <Pressable
+        <Tap
           accessibilityRole="button"
           accessibilityState={{ disabled: busy }}
           disabled={busy}
@@ -197,7 +198,7 @@ function TeamPanel({
           testID={`cup-lineup-unlock-${prefix}`}
         >
           <Text style={ui.buttonSecondaryText}>{LINEUP_TEXT.unlock}</Text>
-        </Pressable>
+        </Tap>
       ) : null}
     </View>
   );
@@ -313,7 +314,7 @@ function LineupEditor({
         </View>
       ))}
       {error ? <LineupError message={error} testID={`cup-lineup-error-${prefix}`} /> : null}
-      <Pressable
+      <Tap
         accessibilityRole="button"
         accessibilityState={{ disabled, busy }}
         disabled={disabled}
@@ -322,7 +323,7 @@ function LineupEditor({
         testID={`cup-lineup-submit-${prefix}`}
       >
         <Text style={ui.buttonText}>{LINEUP_TEXT.submitButton}</Text>
-      </Pressable>
+      </Tap>
       {complete ? null : <Text style={ui.muted}>{LINEUP_TEXT.fillAllSlots}</Text>}
     </View>
   );

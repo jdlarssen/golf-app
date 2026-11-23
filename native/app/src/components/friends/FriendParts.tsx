@@ -4,7 +4,8 @@
 // erstattet av vennesiden (`screens/FriendPage.tsx`), så fila heter ikke lenger
 // etter det.
 import { Children, Fragment, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { nameInitials } from '../../../../../lib/names/initials';
 import { FONTS, TAP, useTheme } from '../../theme';
 
@@ -126,7 +127,7 @@ export function Pill({
   // Fylte piller har ingen kant i designet, så de blir ikke 2 pt bredere.
   const filled = tone === 'filled' || tone === 'onStrongFilled';
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled, busy: pending, ...(expanded === undefined ? {} : { expanded }) }}
@@ -152,7 +153,7 @@ export function Pill({
       >
         {pending && pendingLabel ? pendingLabel : label}
       </Text>
-    </Pressable>
+    </Tap>
   );
 }
 

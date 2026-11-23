@@ -14,7 +14,8 @@
 //
 // Webben har ingen «Vel spilt» under drilldownen, så heller ikke appen.
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { TeamLine } from '../../../../../lib/leaderboard';
 import {
   bestBallDrilldown,
@@ -310,7 +311,7 @@ function TeamNavButton({
   if (!target) return <View style={styles.navHalf} />;
   const label = bestBallTeamNav(direction, target.rank, target.teamNumber);
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={() => onPress(target.teamNumber)}
@@ -320,7 +321,7 @@ function TeamNavButton({
       <Text style={[styles.navText, { color: colors.muted }]}>
         {direction === 'prev' ? `‹ ${label}` : `${label} ›`}
       </Text>
-    </Pressable>
+    </Tap>
   );
 }
 

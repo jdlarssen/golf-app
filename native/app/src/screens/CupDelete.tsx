@@ -3,7 +3,8 @@
 // som alt er borte, er det du ville, så det regnes som slettet (et tapt svar og nytt trykk).
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppCupDeletePreview } from '../../../../lib/cup/appCupDeleteView';
 import { deleteCup, fetchCupDeletePreview } from '../data/cupSetup';
@@ -84,21 +85,21 @@ export function CupDelete({ route, navigation }: ScreenProps<'CupDelete'>) {
           {setupLoadFailureText(failure ?? 'load_failed')}
         </Text>
         {final ? null : (
-          <Pressable
+          <Tap
             accessibilityRole="button"
             style={ui.buttonSecondary}
             onPress={() => void load()}
             testID="cup-delete-retry"
           >
             <Text style={ui.buttonSecondaryText}>{SETUP_APP_TEXT.retry}</Text>
-          </Pressable>
+          </Tap>
         )}
       </View>
     );
   }
 
   const cancel = (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       disabled={busy}
       style={ui.buttonSecondary}
@@ -106,7 +107,7 @@ export function CupDelete({ route, navigation }: ScreenProps<'CupDelete'>) {
       testID="cup-delete-cancel"
     >
       <Text style={ui.buttonSecondaryText}>{DELETE_TEXT.cancel}</Text>
-    </Pressable>
+    </Tap>
   );
 
   if (locked || !preview.draft) {
@@ -165,7 +166,7 @@ export function CupDelete({ route, navigation }: ScreenProps<'CupDelete'>) {
       ) : null}
 
       <View style={styles.actions}>
-        <Pressable
+        <Tap
           accessibilityRole="button"
           accessibilityState={{ disabled: busy }}
           disabled={busy}
@@ -174,7 +175,7 @@ export function CupDelete({ route, navigation }: ScreenProps<'CupDelete'>) {
           testID="cup-delete-submit"
         >
           <Text style={ui.buttonText}>{busy ? DELETE_TEXT.pending : DELETE_TEXT.deleteButton}</Text>
-        </Pressable>
+        </Tap>
         {cancel}
       </View>
     </ScrollView>

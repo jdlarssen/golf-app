@@ -2,7 +2,8 @@
 // #2759: «Alle», «Krever handling · N» og «Venner», som webbens `InboxFilterChips`.
 // Tallet teller rader under «Krever handling» og står ikke ved 0, der brikka
 // fortsatt virker.
-import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
+import { Tap } from '../Tap';
 import type { InboxFilter } from '../../data/inbox';
 import { INBOX_TEXT, actionChipLabel } from '../../lib/inboxCopy';
 import { FONTS, TAP, interLine, useTheme } from '../../theme';
@@ -34,7 +35,7 @@ export function InboxFilterChips({
       {chips.map((chip) => {
         const on = value === chip.key;
         return (
-          <Pressable
+          <Tap
             key={chip.key}
             accessibilityRole="button"
             accessibilityState={{ selected: on }}
@@ -48,7 +49,7 @@ export function InboxFilterChips({
             testID={`inbox-filter-${chip.key}`}
           >
             <Text style={[styles.label, { color: on ? colors.onPrimary : colors.text }]}>{chip.label}</Text>
-          </Pressable>
+          </Tap>
         );
       })}
     </ScrollView>

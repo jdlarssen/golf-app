@@ -38,12 +38,12 @@ import {
   AppState,
   PixelRatio,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
 } from 'react-native';
+import { Tap } from './Tap';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
@@ -170,7 +170,7 @@ function LockScreen({ asking, onUnlock }: { asking: boolean; onUnlock: () => voi
     <Backdrop markPt={LOCK_MARK_PT} markTop={LOCK_MARK_TOP} testID="app-lock-screen">
       {/* Statuslinjen i appen står bak låsen og er ikke montert ennå: uten denne er teksten lys på lin. */}
       <StatusBar style="auto" />
-      <Pressable
+      <Tap
         accessibilityRole="button"
         accessibilityLabel={APP_LOCK_TEXT.unlockButton}
         accessibilityState={{ disabled: asking, busy: asking }}
@@ -185,7 +185,7 @@ function LockScreen({ asking, onUnlock }: { asking: boolean; onUnlock: () => voi
         testID="app-lock-unlock"
       >
         <Text style={ui.buttonText}>{APP_LOCK_TEXT.unlockButton}</Text>
-      </Pressable>
+      </Tap>
     </Backdrop>
   );
 }

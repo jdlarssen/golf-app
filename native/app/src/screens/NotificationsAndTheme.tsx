@@ -40,12 +40,12 @@ import {
   AppState,
   Linking,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   PUSH_GROUPS,
@@ -263,14 +263,14 @@ function PushSection({
               {PROFILE_TEXT.pushDeniedWhere}
             </Text>
           </View>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             onPress={() => void Linking.openSettings()}
             style={[ui.buttonSecondary, styles.lineButton]}
             testID="push-open-settings"
           >
             <Text style={ui.buttonSecondaryText}>{PROFILE_TEXT.pushOpenSettings}</Text>
-          </Pressable>
+          </Tap>
         </View>
       ) : null}
       {note ? (
@@ -429,14 +429,14 @@ function PushChoices() {
               {PROFILE_TEXT.pushReadHint}
             </Text>
           </View>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             onPress={onRetry}
             style={[ui.buttonSecondary, styles.lineButton]}
             testID="push-choices-retry"
           >
             <Text style={ui.buttonSecondaryText}>{PROFILE_TEXT.pushRetry}</Text>
-          </Pressable>
+          </Tap>
         </View>
       ) : (
         <Text style={[styles.small, styles.under, { color: colors.muted }]} testID="push-all-devices">

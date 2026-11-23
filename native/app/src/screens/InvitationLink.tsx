@@ -6,7 +6,8 @@
 // Tilbake (`docs/user-flows.md` §Tilbake): spillet tar skjermens plass (`backTo`), og
 // ligger det alt under, går du tilbake til det og får ingen kopi.
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   openInvitationLink,
@@ -78,21 +79,21 @@ export function InvitationLink({ navigation, route }: ScreenProps<'InvitationLin
             <Text style={[styles.body, { color: colors.text }]} testID={`invitation-link-${shown.outcome}`}>
               {OUTCOME_TEXT[shown.outcome]}
             </Text>
-            <Pressable
+            <Tap
               accessibilityRole="button"
               onPress={() => navigation.popToTop()}
               style={[styles.button, { backgroundColor: colors.primary }]}
               testID="invitation-link-home"
             >
               <Text style={[styles.buttonText, { color: colors.onPrimary }]}>{INVITATION_LINK_TEXT.toHome}</Text>
-            </Pressable>
+            </Tap>
           </>
         ) : (
           <>
             <Text style={[styles.body, { color: colors.text }]} testID="invitation-link-failed">
               {describeInvitationLinkFailure(shown.reason)}
             </Text>
-            <Pressable
+            <Tap
               accessibilityRole="button"
               onPress={() => {
                 setShown({ state: 'opening' });
@@ -102,7 +103,7 @@ export function InvitationLink({ navigation, route }: ScreenProps<'InvitationLin
               testID="invitation-link-retry"
             >
               <Text style={ui.buttonSecondaryText}>{INVITATION_LINK_TEXT.retry}</Text>
-            </Pressable>
+            </Tap>
           </>
         )}
       </View>

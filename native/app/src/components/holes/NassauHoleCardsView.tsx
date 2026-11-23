@@ -10,7 +10,8 @@
 // heller enn å kortes), fullt navn i hullkortet. Den som ser på er «Du» i
 // mynten og «Deg» ellers.
 import { useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Tap } from '../Tap';
 import type { NassauSectionKey } from '../../../../../lib/leaderboard/nassauBoard';
 import type {
   NassauHoleCard,
@@ -264,7 +265,7 @@ function CoinRow({
           const isSelected = h.holeNumber === selected;
           const winner = h.outcome === 'won' ? h.winnerUserId : null;
           return (
-            <Pressable
+            <Tap
               key={h.holeNumber}
               accessibilityRole="button"
               accessibilityLabel={nassauCoinLabel(h.holeNumber, h.outcome, winner === null ? null : names.spoken(winner))}
@@ -301,7 +302,7 @@ function CoinRow({
                   <Text style={[styles.equals, { color: colors.muted }]}>=</Text>
                 ) : null}
               </View>
-            </Pressable>
+            </Tap>
           );
         })}
       </View>
@@ -474,7 +475,7 @@ function HoleArrow({
         ? NASSAU_HOLES_TEXT.prevHole
         : NASSAU_HOLES_TEXT.nextHole;
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled }}
@@ -492,7 +493,7 @@ function HoleArrow({
       ) : (
         <ChevronIcon direction="right" color={colors.primary} size={18} strokeWidth={2} />
       )}
-    </Pressable>
+    </Tap>
   );
 }
 

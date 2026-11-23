@@ -4,7 +4,8 @@
 // native delene viser ingen knapp. Et lukket ark er ingen feil. Feiler bildet
 // eller arket, står en linje under knappen.
 import { useCallback, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { SHARE_CARD_WIDTH } from '../../../../../lib/og/shareCardLayout';
 import { RESULT_APP_TEXT, SHARE_RESULT_LABEL } from '../../lib/resultCardCopy';
 import type { ResultCardModel } from '../../lib/resultHero';
@@ -48,7 +49,7 @@ export function ShareResultButton({ card }: { card: ResultCardModel }) {
         </View>
       </View>
 
-      <Pressable
+      <Tap
         accessibilityRole="button"
         accessibilityState={{ disabled: busy, busy }}
         disabled={busy}
@@ -60,7 +61,7 @@ export function ShareResultButton({ card }: { card: ResultCardModel }) {
         <Text maxFontSizeMultiplier={RESULT_TEXT_CAP} style={[styles.label, { color: ink }]}>
           {SHARE_RESULT_LABEL}
         </Text>
-      </Pressable>
+      </Tap>
       {failed ? (
         <Text maxFontSizeMultiplier={RESULT_TEXT_CAP} style={[styles.error, { color: colors.onStrong }]} testID="share-result-error">
           {RESULT_APP_TEXT.shareFailed}

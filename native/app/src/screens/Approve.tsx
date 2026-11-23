@@ -23,7 +23,8 @@
 // ingenting venter, sier skjermen om alt er godkjent eller om en makker ikke
 // har levert ennå. Hvilken tavle som står, avgjør `approveScreenState`.
 import { useLayoutEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { parForPlayer } from '../../../../lib/games/parDisplay';
 import { buildScorecardGrid, type ScorecardGrid as Grid } from '../../../../lib/scorecard/scorecardGrid';
@@ -277,7 +278,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
               { marginTop: stamp && grid.totals.played > 0 ? 44 : 16 },
             ]}
           >
-            <Pressable
+            <Tap
               style={[ui.button, styles.action]}
               onPress={() =>
                 void run({ userId: open.user_id, action: 'approve' }, () =>
@@ -293,8 +294,8 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
                   ? APPROVE_TEXT.working
                   : APPROVE_TEXT.approve}
               </Text>
-            </Pressable>
-            <Pressable
+            </Tap>
+            <Tap
               style={[ui.buttonSecondary, styles.action]}
               onPress={() => setRejectUserId(open.user_id)}
               disabled={locked}
@@ -302,7 +303,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
               testID={`reject-${open.user_id}`}
             >
               <Text style={ui.buttonSecondaryText}>{APPROVE_TEXT.sendBack}</Text>
-            </Pressable>
+            </Tap>
           </View>
 
           {error?.userId === open.user_id && error.text ? (
@@ -318,7 +319,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
               </Text>
               <View style={styles.waitingList}>
                 {others.map((entry) => (
-                  <Pressable
+                  <Tap
                     key={entry.user_id}
                     style={[
                       styles.rowCard,
@@ -354,7 +355,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
                     >
                       ›
                     </Text>
-                  </Pressable>
+                  </Tap>
                 ))}
               </View>
             </>
@@ -494,16 +495,16 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
           },
         ]}
       >
-        <Pressable
+        <Tap
           style={[ui.button, styles.boardButton]}
           onPress={() => backTo(navigation, 'Leaderboard', { gameId })}
           accessibilityRole="button"
           testID="approve-see-board"
         >
           <Text style={ui.buttonText}>{APPROVE_TEXT.seeBoard}</Text>
-        </Pressable>
+        </Tap>
         {/* Spillsiden, ikke `goBack`: kom du fra hjem-kortet, ville det vært Hjem. */}
-        <Pressable
+        <Tap
           style={styles.backButton}
           onPress={() => backTo(navigation, 'GameHome', { gameId })}
           accessibilityRole="button"
@@ -512,7 +513,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
           <Text style={[styles.backText, { color: colors.primary }]}>
             {APPROVE_TEXT.backToGame}
           </Text>
-        </Pressable>
+        </Tap>
       </View>
     </View>
   );

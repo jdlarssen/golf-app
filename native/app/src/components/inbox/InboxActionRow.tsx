@@ -4,7 +4,8 @@
 //
 // En påmelding du kan svare på, får «Godta» og «Avslå». En annen sak får én knapp
 // som går dit varselet peker.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { InboxDecision, InboxEntry } from '../../data/inbox';
 import { INBOX_TEXT } from '../../lib/inboxCopy';
 import { FONTS, TAP, interLine, useTheme } from '../../theme';
@@ -46,7 +47,7 @@ export function InboxActionRow({
       <View style={styles.buttons}>
         {entry.decidable ? (
           <>
-            <Pressable
+            <Tap
               accessibilityRole="button"
               accessibilityState={{ disabled: locked, busy: locked }}
               disabled={locked}
@@ -55,8 +56,8 @@ export function InboxActionRow({
               testID="inbox-approve"
             >
               <Text style={[styles.buttonText, { color: colors.onPrimary }]}>{INBOX_TEXT.approve}</Text>
-            </Pressable>
-            <Pressable
+            </Tap>
+            <Tap
               accessibilityRole="button"
               accessibilityState={{ disabled: locked, busy: locked }}
               disabled={locked}
@@ -69,17 +70,17 @@ export function InboxActionRow({
               testID="inbox-reject"
             >
               <Text style={[styles.buttonText, { color: colors.text }]}>{INBOX_TEXT.reject}</Text>
-            </Pressable>
+            </Tap>
           </>
         ) : label && entry.destination ? (
-          <Pressable
+          <Tap
             accessibilityRole="button"
             onPress={onOpen}
             style={[styles.button, { backgroundColor: colors.primary }]}
             testID="inbox-action-button"
           >
             <Text style={[styles.buttonText, { color: colors.onPrimary }]}>{label}</Text>
-          </Pressable>
+          </Tap>
         ) : null}
       </View>
     </View>

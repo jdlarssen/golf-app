@@ -13,7 +13,8 @@
 // Lista ruller inne i kortet, så «Ingen kvalifiserte» står fast under den også
 // i en klubbrunde med 150 spillere.
 import { useState, type ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { reportedBoxView } from '../../../../../lib/games/sideClaimReports';
 import type { BundlePlayer } from '../../data/gameBundle';
@@ -87,7 +88,8 @@ export function WinnerSheet({
         accessibilityViewIsModal
         onAccessibilityEscape={onClose}
       >
-        <Pressable
+        <Tap
+          feedback="none"
           style={[StyleSheet.absoluteFill, { backgroundColor: scrim }]}
           onPress={onClose}
           onAccessibilityTap={onClose}
@@ -115,7 +117,7 @@ export function WinnerSheet({
                 {slotLabel(shown)}
               </Text>
             </View>
-            <Pressable
+            <Tap
               onPress={onClose}
               style={[styles.close, { backgroundColor: colors.surface2 }]}
               accessibilityRole="button"
@@ -123,7 +125,7 @@ export function WinnerSheet({
               testID="end-game-sheet-close"
             >
               <LukkIcon color={colors.text} size={18} strokeWidth={2} />
-            </Pressable>
+            </Tap>
           </View>
           <View style={styles.introBox}>
             <Text style={[styles.intro, { color: colors.muted }]}>{END_GAME_TEXT.sheetIntro}</Text>
@@ -137,7 +139,7 @@ export function WinnerSheet({
               {candidates.map((player, index) => {
                 const checked = value === player.userId;
                 return (
-                  <Pressable
+                  <Tap
                     key={player.userId}
                     onPress={() => pick(player.userId)}
                     style={[
@@ -167,13 +169,13 @@ export function WinnerSheet({
                     {checked ? (
                       <HakeIcon color={colors.primary} size={18} strokeWidth={2.5} />
                     ) : null}
-                  </Pressable>
+                  </Tap>
                 );
               })}
             </ScrollView>
           </View>
 
-          <Pressable
+          <Tap
             onPress={() => pick(NO_WINNER)}
             style={[
               styles.none,
@@ -201,7 +203,7 @@ export function WinnerSheet({
                 {END_GAME_TEXT.noQualifiedNote}
               </Text>
             </View>
-          </Pressable>
+          </Tap>
 
           {withdrawalSupported ? (
             <View style={styles.footBox}>

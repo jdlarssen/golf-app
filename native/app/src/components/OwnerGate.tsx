@@ -3,7 +3,8 @@
 // til #1959 ga den en tredje tilstand; egen fil så den kan render-testes uten
 // fonter, splash og hele app-rota.
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
+import { Tap } from './Tap';
 import { OwnerWipeFailedError, ensureLocalDataOwnerOnDevice } from '../data/localOwner';
 import { logOut } from '../data/logout';
 import { OWNER_GATE_TEXT } from '../lib/ownerGateCopy';
@@ -95,15 +96,15 @@ export function OwnerGate({ userId, children }: { userId: string; children: Reac
     return (
       <View style={ui.centered} testID="owner-gate-wipe-failed">
         <Text style={ui.body}>{OWNER_GATE_TEXT.wipeFailed}</Text>
-        <Pressable
+        <Tap
           style={ui.button}
           onPress={onRetry}
           disabled={busy != null}
           testID="owner-gate-retry"
         >
           <Text style={ui.buttonText}>{OWNER_GATE_TEXT.retry}</Text>
-        </Pressable>
-        <Pressable
+        </Tap>
+        <Tap
           style={ui.buttonSecondary}
           onPress={onLogOut}
           disabled={busy != null}
@@ -112,7 +113,7 @@ export function OwnerGate({ userId, children }: { userId: string; children: Reac
           <Text style={ui.buttonSecondaryText}>
             {busy === 'logout' ? OWNER_GATE_TEXT.logoutPending : OWNER_GATE_TEXT.logout}
           </Text>
-        </Pressable>
+        </Tap>
         {note ? <Text style={ui.error}>{note}</Text> : null}
       </View>
     );

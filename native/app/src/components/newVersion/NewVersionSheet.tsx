@@ -11,7 +11,8 @@
 // Stor tekst: tittelen og punktene ruller inne i arket, og knappene står fast
 // nederst, så «Oppdater» alltid er synlig.
 import { useEffect, useState } from 'react';
-import { AccessibilityInfo, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { releaseName } from '../../lib/newVersion';
 import { NEW_VERSION_TEXT, newVersionTitle } from '../../lib/newVersionCopy';
@@ -52,7 +53,8 @@ export function NewVersionSheet() {
       testID="new-version-modal"
     >
       <View style={styles.root}>
-        <Pressable
+        <Tap
+          feedback="none"
           style={[StyleSheet.absoluteFill, { backgroundColor: sheetScrim(colors, scheme) }]}
           onPress={later}
           accessible={false}
@@ -83,22 +85,22 @@ export function NewVersionSheet() {
             ) : null}
           </ScrollView>
           <View style={styles.actions}>
-            <Pressable
+            <Tap
               accessibilityRole="button"
               onPress={update}
-              style={({ pressed }) => [styles.update, { backgroundColor: colors.primary }, pressed ? styles.pressed : null]}
+              style={[styles.update, { backgroundColor: colors.primary }]}
               testID="new-version-update"
             >
               <Text style={[styles.updateText, { color: colors.onPrimary }]}>{NEW_VERSION_TEXT.update}</Text>
-            </Pressable>
-            <Pressable
+            </Tap>
+            <Tap
               accessibilityRole="button"
               onPress={later}
-              style={({ pressed }) => [styles.later, pressed ? styles.pressed : null]}
+              style={[styles.later]}
               testID="new-version-later"
             >
               <Text style={[styles.laterText, { color: colors.primary }]}>{NEW_VERSION_TEXT.later}</Text>
-            </Pressable>
+            </Tap>
           </View>
         </View>
       </View>
@@ -139,5 +141,4 @@ const styles = StyleSheet.create({
   updateText: { ...interLine(15, 20), fontFamily: FONTS.sansSemiBold },
   later: { minHeight: TAP, alignItems: 'center', justifyContent: 'center' },
   laterText: { ...interLine(15, 20), fontFamily: FONTS.sansMedium },
-  pressed: { opacity: 0.7 },
 });

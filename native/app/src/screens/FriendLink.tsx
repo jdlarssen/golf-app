@@ -12,7 +12,8 @@
 // maskert på serveren, #2271), koblingen fra `POST` på samme sti. Ingenting
 // legges i kø: uten nett står vennesidens linje og «Prøv igjen».
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import type { FriendLinkRelation } from '../../../../lib/friends/friendStatus';
 import { nameInitials } from '../../../../lib/names/initials';
 import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
@@ -140,7 +141,7 @@ export function FriendLink({ navigation, route }: ScreenProps<'FriendLink'>) {
           <Text style={bodyText} testID="friend-link-load-error">
             {view.reason === 'load_failed' ? FRIEND_LINK_TEXT.loadFailed : friendsFailureLine(view.reason)}
           </Text>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             style={[ui.buttonSecondary, styles.buttonFlush]}
             onPress={() => {
@@ -150,7 +151,7 @@ export function FriendLink({ navigation, route }: ScreenProps<'FriendLink'>) {
             testID="friend-link-retry"
           >
             <Text style={ui.buttonSecondaryText}>{FRIENDS_TEXT.retry}</Text>
-          </Pressable>
+          </Tap>
         </View>
       </ScrollView>
     );
@@ -187,7 +188,7 @@ export function FriendLink({ navigation, route }: ScreenProps<'FriendLink'>) {
               {friendLinkConnectCard(name)}
             </Text>
           </View>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             accessibilityState={{ disabled: busy, busy }}
             disabled={busy}
@@ -198,7 +199,7 @@ export function FriendLink({ navigation, route }: ScreenProps<'FriendLink'>) {
             <Text style={[styles.buttonText, { color: colors.surfaceStrong }]}>
               {busy ? FRIEND_LINK_TEXT.connectPending : FRIEND_LINK_TEXT.connectButton}
             </Text>
-          </Pressable>
+          </Tap>
         </View>
       ) : (
         <View style={card} testID={`friend-link-${relation}`}>
@@ -219,14 +220,14 @@ export function FriendLink({ navigation, route }: ScreenProps<'FriendLink'>) {
             </Text>
           )}
           {relation === 'self' ? null : (
-            <Pressable
+            <Tap
               accessibilityRole="button"
               onPress={toFriends}
               style={[styles.button, { backgroundColor: colors.primary }]}
               testID="friend-link-to-friends"
             >
               <Text style={[styles.buttonText, { color: colors.onPrimary }]}>{FRIEND_LINK_TEXT.toFriendsLink}</Text>
-            </Pressable>
+            </Tap>
           )}
         </View>
       )}

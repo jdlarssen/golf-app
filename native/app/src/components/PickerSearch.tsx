@@ -6,7 +6,8 @@
 // er bare tegningen: et 50 pt høyt felt med forstørrelsesglass, og en
 // tekstknapp på minst 44 pt. Fargene leses fra `useTheme()` i render, så
 // feltet står riktig i natt-modus fra første bilde.
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Tap } from './Tap';
 import { FONTS, TAP, interLine, useTheme } from '../theme';
 import { SokIcon } from './icons/Icons';
 
@@ -61,7 +62,7 @@ export function PickerMore({
 }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ expanded }}
@@ -69,7 +70,7 @@ export function PickerMore({
       testID={testID}
     >
       <Text style={[styles.moreText, { color: colors.primary }]}>{label}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 

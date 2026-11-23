@@ -4,7 +4,8 @@
 // har spilt den, med pila til høyre. Samme rad som «Forrige runde»
 // (`.lrow`). En liga uten åpen runde viser navnet og «Ingen åpen runde nå»
 // uten pille (orkestratorens avgjørelse 25.10); et utkast «Ikke startet ennå».
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { AppLeagueSummary } from '../../../../../lib/league/appLeagueView';
 import { LEAGUE_TEXT, homeRoundLine } from '../../lib/leagueCopy';
 import { FONTS, TAP, interLine, useTheme } from '../../theme';
@@ -23,7 +24,7 @@ export function LeagueHomeRow({ league, onPress }: { league: AppLeagueSummary; o
   const stateText =
     state === 'delivered' ? LEAGUE_TEXT.delivered : state === 'inProgress' ? LEAGUE_TEXT.inProgress : LEAGUE_TEXT.notPlayed;
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       accessibilityRole="button"
       // Pillen er en del av raden for skjermleseren også: navn, runde og om du har spilt.
@@ -41,7 +42,7 @@ export function LeagueHomeRow({ league, onPress }: { league: AppLeagueSummary; o
       </View>
       {open ? <PlayedPill state={state} testID={`home-league-played-${league.id}`} /> : null}
       <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} />
-    </Pressable>
+    </Tap>
   );
 }
 

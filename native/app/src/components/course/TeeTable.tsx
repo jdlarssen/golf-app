@@ -8,7 +8,8 @@
 // nok å treffe. Komma er det telefonen gir på norsk, og det får stå i feltet;
 // `courseDraftToFormData` bytter det før parseren.
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Tap } from '../Tap';
 import { MAX_TEE_BOXES } from '../../../../../lib/courses/constants';
 import {
   TEE_CHIP_ORDER,
@@ -144,14 +145,14 @@ export function TeeTable({
               autoCorrect={false}
               autoFocus
             />
-            <Pressable
+            <Tap
               testID="tee-custom-add"
               accessibilityRole="button"
               style={[ui.buttonSecondary, styles.otherAdd]}
               onPress={addOther}
             >
               <Text style={ui.buttonSecondaryText}>{COURSE_TEXT.teeCustomNameAdd}</Text>
-            </Pressable>
+            </Tap>
           </View>
           {duplicate ? (
             <Text style={[ui.muted, styles.line, { color: colors.warningText }]} testID="tee-custom-duplicate">
@@ -231,14 +232,14 @@ export function TeeTable({
             ))}
           </View>
           <Text style={[ui.muted, styles.line]}>{COURSE_TEXT.teeEmptyHint}</Text>
-          <Pressable
+          <Tap
             testID="tee-juniors-toggle"
             accessibilityRole="button"
             style={[styles.dashed, { borderColor: colors.border }]}
             onPress={toggleJuniors}
           >
             <Text style={ui.muted}>{juniorsOpen ? COURSE_TEXT.removeJuniors : COURSE_TEXT.addJuniors}</Text>
-          </Pressable>
+          </Tap>
         </>
       ) : null}
     </View>

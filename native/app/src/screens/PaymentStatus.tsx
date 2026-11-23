@@ -7,7 +7,8 @@
 // (`lib/games/payments.ts`); skjermen viser svaret og henter på nytt etter hver
 // lagring, så tallet på purre-knappen alltid er serverens.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
 import { BetaltHakeIcon } from '../components/icons/Icons';
 import { fetchPayments, remindUnpaid, setPaid, type PaymentsOverview, type PaymentsPlayer } from '../data/payments';
@@ -118,14 +119,14 @@ export function PaymentStatus({ route }: ScreenProps<'PaymentStatus'>) {
       <View style={[styles.center, { backgroundColor: colors.bg }]} testID="payment-status-failed">
         <Text style={[ui.muted, styles.centerText]}>{load.noFee ? BETALING_TEXT.noFee : BETALING_TEXT.loadFailed}</Text>
         {load.noFee ? null : (
-          <Pressable
+          <Tap
             accessibilityRole="button"
             onPress={() => void reload()}
             style={ui.buttonSecondary}
             testID="payment-status-retry"
           >
             <Text style={ui.buttonSecondaryText}>{BETALING_TEXT.retry}</Text>
-          </Pressable>
+          </Tap>
         )}
       </View>
     );
@@ -150,7 +151,7 @@ export function PaymentStatus({ route }: ScreenProps<'PaymentStatus'>) {
       </View>
 
       {overview.remindable > 0 ? (
-        <Pressable
+        <Tap
           accessibilityRole="button"
           disabled={reminding}
           onPress={() => void remind()}
@@ -160,7 +161,7 @@ export function PaymentStatus({ route }: ScreenProps<'PaymentStatus'>) {
           <Text style={[styles.remindText, { color: colors.primary }]}>
             {BETALING_TEXT.remindButton(overview.remindable)}
           </Text>
-        </Pressable>
+        </Tap>
       ) : null}
       {remindNote ? (
         <Text style={[styles.note, { color: colors.muted }]} testID="payment-status-remind-note">
@@ -181,7 +182,7 @@ export function PaymentStatus({ route }: ScreenProps<'PaymentStatus'>) {
           const name = player.userId === userId ? BETALING_TEXT.you(base) : base;
           const last = index === overview.players.length - 1;
           return (
-            <Pressable
+            <Tap
               key={player.userId}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: paid }}
@@ -220,7 +221,7 @@ export function PaymentStatus({ route }: ScreenProps<'PaymentStatus'>) {
               >
                 {paid ? <BetaltHakeIcon color={colors.onPrimary} size={16} strokeWidth={2.6} /> : null}
               </View>
-            </Pressable>
+            </Tap>
           );
         })}
       </View>

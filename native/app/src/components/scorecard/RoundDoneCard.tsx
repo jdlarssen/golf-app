@@ -9,7 +9,8 @@
 //
 // Formene på hullene er den delte `ScoreShape` (ringene i scoretonen), som på
 // scorekortet. Tallet i formen følger antall ringer der, ikke tegningens 16.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   birdieUnit,
@@ -140,17 +141,17 @@ export function RoundDoneBar({ lastHole, onReview, onBack }: RoundDoneBarProps) 
       ]}
       testID="round-done-bar"
     >
-      <Pressable
+      <Tap
         onPress={onReview}
         accessibilityRole="button"
         style={[styles.review, { backgroundColor: colors.primary }]}
         testID="round-done-review"
       >
         <Text style={[styles.reviewText, { color: colors.onPrimary }]}>{ROUND_DONE_TEXT.review}</Text>
-      </Pressable>
-      <Pressable onPress={onBack} accessibilityRole="button" style={styles.back} testID="round-done-back">
+      </Tap>
+      <Tap onPress={onBack} accessibilityRole="button" style={styles.back} testID="round-done-back">
         <Text style={[styles.backText, { color: colors.primary }]}>{roundDoneBack(lastHole)}</Text>
-      </Pressable>
+      </Tap>
     </View>
   );
 }
@@ -257,7 +258,7 @@ function FlightRow({
 
   if (row.kind === 'missing') {
     return (
-      <Pressable
+      <Tap
         onPress={() => onOpenHole(row.firstHole)}
         accessibilityRole="button"
         accessibilityLabel={missingSpoken(row)}
@@ -274,7 +275,7 @@ function FlightRow({
         <Text style={[styles.flightStatus, styles.missingStatus, { color: colors.scoreOver1Fg }]}>
           {missingText(row.holes)}
         </Text>
-      </Pressable>
+      </Tap>
     );
   }
 

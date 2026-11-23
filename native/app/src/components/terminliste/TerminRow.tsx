@@ -3,7 +3,8 @@
 // #2753, så Hjem-seksjonen «Klubbturneringer» viser radene likt (én hjem for
 // raden, trap 4).
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { AppTerminEntry } from '../../../../../lib/games/appTerminView';
 import { capacityState, terminTimeNote } from '../../../../../lib/games/terminliste';
 import type { AppLeagueSummary } from '../../../../../lib/league/appLeagueView';
@@ -55,7 +56,7 @@ export function TerminRow({
     third: entry.capacity ? seatLineText(entry.capacity) : entry.socialProof ? socialProofText(entry.socialProof) : null,
   });
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
@@ -86,7 +87,7 @@ export function TerminRow({
           <Text style={[styles.ctaText, { color: colors.primary }]}>{TERMIN_TEXT.request}</Text>
         </View>
       )}
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -109,7 +110,7 @@ export function TerminLeagueRow({
 }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={`${league.name}. ${LEAGUE_TEXT.homeNotJoined}. ${signUpLabel(league.name)}`}
       onPress={onPress}
@@ -131,7 +132,7 @@ export function TerminLeagueRow({
       <View style={[styles.cta, { backgroundColor: colors.primary }]}>
         <Text style={[styles.ctaText, { color: colors.onPrimary }]}>{TERMIN_TEXT.signUp}</Text>
       </View>
-    </Pressable>
+    </Tap>
   );
 }
 

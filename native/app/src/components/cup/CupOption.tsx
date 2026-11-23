@@ -1,5 +1,6 @@
 // #2752: ett valg i en liste, med rund markør. Brukt i byttet og i makkervalget.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { FONTS, TAP, interLine, useTheme } from '../../theme';
 
 export function CupOption({
@@ -19,7 +20,7 @@ export function CupOption({
 }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="radio"
@@ -40,7 +41,7 @@ export function CupOption({
       />
       <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
       {detail ? <Text style={[styles.detail, { color: colors.muted }]}>{detail}</Text> : null}
-    </Pressable>
+    </Tap>
   );
 }
 

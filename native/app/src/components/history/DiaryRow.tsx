@@ -5,7 +5,8 @@
 //
 // Skjermleseren leser hele raden som én setning (`diaryRowLabel`), så dato,
 // tall og medaljong er skjult hver for seg.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { diaryResult, diaryRowLabel, diarySubline } from '../../lib/roundDiary';
 import { formatDiaryDay } from '../../lib/homeDates';
 import type { HistoryRound } from '../../lib/roundHistory';
@@ -34,7 +35,7 @@ export function DiaryRow({
   const result = diaryResult(round.resultSummary, { leagueFlight: round.leagueFlight });
 
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={diaryRowLabel(round, points)}
@@ -65,7 +66,7 @@ export function DiaryRow({
         </Text>
       </View>
       {result ? <DiaryMedallion result={result} testID={`diary-result-${round.gameId}`} /> : null}
-    </Pressable>
+    </Tap>
   );
 }
 

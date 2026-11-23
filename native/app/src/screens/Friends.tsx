@@ -37,7 +37,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   Share,
   StyleSheet,
@@ -45,6 +44,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Tap } from '../components/Tap';
 import {
   addFriendByEmail,
   fetchFriends,
@@ -231,7 +231,7 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
         <Text style={ui.body} testID="friends-load-error">
           {load.reason === 'offline' ? FRIENDS_TEXT.offline : FRIENDS_TEXT.loadFailed}
         </Text>
-        <Pressable
+        <Tap
           accessibilityRole="button"
           style={ui.buttonSecondary}
           onPress={() => {
@@ -241,7 +241,7 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
           testID="friends-retry"
         >
           <Text style={ui.buttonSecondaryText}>{FRIENDS_TEXT.retry}</Text>
-        </Pressable>
+        </Tap>
       </ScrollView>
     );
   }
@@ -418,7 +418,7 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
                   accessibilityLabel={personActionA11yLabel(FRIENDS_TEXT.acceptLabel, r.name)}
                   testID={`friends-accept-${r.id}`}
                 />
-                <Pressable
+                <Tap
                   accessibilityRole="button"
                   accessibilityLabel={personActionA11yLabel(FRIENDS_TEXT.declineLabel, r.name)}
                   accessibilityState={{ disabled: locked, busy: busy === `decline:${r.requestId}` }}
@@ -440,7 +440,7 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
                   ) : (
                     <Text style={[styles.roundButtonText, { color: colors.muted }]}>✕</Text>
                   )}
-                </Pressable>
+                </Tap>
               </View>
             ))}
           </View>
@@ -461,12 +461,12 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
                     key={s.id}
                     style={[styles.suggestionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   >
-                    <Pressable
+                    <Tap
                       accessibilityRole="button"
                       accessibilityLabel={openPersonA11yLabel(s.name)}
                       disabled={locked}
                       onPress={() => openPerson(s, 'none')}
-                      style={({ pressed }) => [styles.suggestionLink, pressed ? styles.pressed : null]}
+                      style={[styles.suggestionLink]}
                       testID={`friends-open-${s.id}`}
                     >
                       <Avatar name={s.name} tone="warm" />
@@ -486,7 +486,7 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
                           </Text>
                         ) : null}
                       </View>
-                    </Pressable>
+                    </Tap>
                     {/* «+ Legg til» nederst, så knappene står på linje også når et kort ikke har underlinje. */}
                     <View style={styles.suggestionButton}>
                       <Pill
@@ -525,19 +525,19 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
               {friends.map((f) => {
                 const sub = friendSubline(f, now);
                 return (
-                  <Pressable
+                  <Tap
                     key={f.id}
                     accessibilityRole="button"
                     accessibilityLabel={friendRowA11yLabel(f.name, sub)}
                     disabled={locked}
                     onPress={() => openPerson(f, 'friend', f.hcp)}
-                    style={({ pressed }) => [styles.personRow, pressed ? styles.pressed : null]}
+                    style={[styles.personRow]}
                     testID={`friends-open-${f.id}`}
                   >
                     <Avatar name={f.name} tone="strong" />
                     <NameBlock name={f.name} sub={sub} />
                     <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} />
-                  </Pressable>
+                  </Tap>
                 );
               })}
             </RowsCard>
@@ -604,17 +604,17 @@ function PersonLink({
   testID: string;
 }) {
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={openPersonA11yLabel(name)}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.personLink, pressed ? styles.pressed : null]}
+      style={[styles.personLink]}
       testID={testID}
     >
       <Avatar name={name} tone={tone} />
       <NameBlock name={name} sub={sub} arrow />
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -756,7 +756,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
   },
-  pressed: { opacity: 0.6 },
   // Nettleserens linje for 15 pt Inter, med luften over navnet (målt).
   name: { fontSize: 15, lineHeight: 19.5, fontFamily: FONTS.sansSemiBold },
   sub: { fontSize: 12, lineHeight: 14.5, fontFamily: FONTS.sans },

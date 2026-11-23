@@ -12,7 +12,8 @@
 // «Prøv igjen». Selve kampene virker uten nett som andre spill.
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppCupMatch, AppCupView } from '../../../../lib/cup/appCupView';
 import { CupMatchRow } from '../components/cup/CupMatchRow';
@@ -276,25 +277,25 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
       ) : null}
 
       {view.canWithdrawSelf && !stale ? (
-        <Pressable
+        <Tap
           accessibilityRole="button"
           onPress={() => openOrReturn(navigation, 'CupWithdraw', { cupId })}
           style={[styles.quiet, { backgroundColor: colors.surface, borderColor: colors.border }]}
           testID="cup-withdraw-self"
         >
           <Text style={[styles.quietText, { color: colors.text }]}>{CUP_TEXT.withdrawSelfLink}</Text>
-        </Pressable>
+        </Tap>
       ) : null}
 
       {draft && view.canManage && !stale ? (
-        <Pressable
+        <Tap
           accessibilityRole="button"
           onPress={() => openOrReturn(navigation, 'CupDelete', { cupId })}
           style={[styles.quiet, { backgroundColor: colors.surface, borderColor: colors.border }]}
           testID="cup-open-delete"
         >
           <Text style={[styles.quietText, { color: colors.danger }]}>{DELETE_TEXT.link}</Text>
-        </Pressable>
+        </Tap>
       ) : null}
     </ScrollView>
   );
@@ -303,7 +304,7 @@ function CupRoom({ route, navigation }: ScreenProps<'Cup'>) {
 function Door({ text, sub, onPress, testID }: { text: string; sub?: string; onPress: () => void; testID: string }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       onPress={onPress}
       style={[styles.doorRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
@@ -314,7 +315,7 @@ function Door({ text, sub, onPress, testID }: { text: string; sub?: string; onPr
         {sub ? <Text style={[styles.doorSub, { color: colors.muted }]}>{sub}</Text> : null}
       </View>
       <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} />
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -351,7 +352,7 @@ function StartCup({
   const disabled = !canStart || starting;
   return (
     <View style={styles.start}>
-      <Pressable
+      <Tap
         accessibilityRole="button"
         accessibilityState={{ disabled, busy: starting }}
         disabled={disabled}
@@ -360,7 +361,7 @@ function StartCup({
         testID="cup-start"
       >
         <Text style={ui.buttonText}>{starting ? START_TEXT.pending : START_TEXT.button}</Text>
-      </Pressable>
+      </Tap>
       {canStart ? null : (
         <Text style={ui.muted} testID="cup-start-hint">
           {START_TEXT.hint}
@@ -390,7 +391,7 @@ function CupLoadFailed({
     <View style={ui.centered} testID={reason === 'not_found' ? 'cup-not-found' : 'cup-load-failed'}>
       <Text style={[styles.failure, { color: reason === 'not_found' ? colors.text : colors.danger }]}>{text}</Text>
       {reason === 'not_found' ? null : (
-        <Pressable
+        <Tap
           onPress={onRetry}
           accessibilityRole="button"
           style={[styles.retry, { borderColor: colors.primary }]}
@@ -399,7 +400,7 @@ function CupLoadFailed({
           <Text style={[styles.retryText, { color: colors.primary }]}>
             {retrying ? CUP_APP_TEXT.retrying : CUP_APP_TEXT.retry}
           </Text>
-        </Pressable>
+        </Tap>
       )}
     </View>
   );

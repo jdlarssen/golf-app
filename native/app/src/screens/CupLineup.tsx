@@ -6,7 +6,8 @@
 // tapt, står handlingen kanskje likevel, og skjermen skal vise det som faktisk er.
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import type { AppCupLineupView } from '../../../../lib/cup/appCupLineupView';
 import { Note } from '../components/create/primitives';
 import { OpenSessionCard, PlannedCountCard } from '../components/cup/lineup/LineupForms';
@@ -151,14 +152,14 @@ export function CupLineup({ route, navigation }: ScreenProps<'CupLineup'>) {
         <View style={styles.gapTop}>
           <Note testID="cup-lineup-needs-captains">{LINEUP_TEXT.needsCaptains}</Note>
           {view.cupStatus === 'draft' ? (
-            <Pressable
+            <Tap
               accessibilityRole="button"
               style={ui.buttonSecondary}
               onPress={() => openOrReturn(navigation, 'CupParticipants', { cupId })}
               testID="cup-lineup-open-players"
             >
               <Text style={ui.buttonSecondaryText}>{SETUP_APP_TEXT.playersDoor}</Text>
-            </Pressable>
+            </Tap>
           ) : null}
         </View>
       ) : null}
@@ -209,14 +210,14 @@ export function CupLineup({ route, navigation }: ScreenProps<'CupLineup'>) {
 function RetryButton({ onPress }: { onPress: () => void }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       accessibilityRole="button"
       style={[styles.retry, { borderColor: colors.primary }]}
       testID="cup-lineup-retry"
     >
       <Text style={[styles.retryText, { color: colors.primary }]}>{SETUP_APP_TEXT.retry}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 

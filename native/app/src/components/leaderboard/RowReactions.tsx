@@ -7,13 +7,13 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
-  Pressable,
   StyleSheet,
   Text,
   View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { Tap } from '../Tap';
 import { topReactions } from '../../../../../lib/games/reactions/aggregate';
 import {
   EMOJI_NAME_KEY,
@@ -96,7 +96,7 @@ export function ReactableRow({
     );
   }
   return (
-    <Pressable
+    <Tap
       ref={ref}
       style={style}
       onPress={() => {
@@ -110,7 +110,7 @@ export function ReactableRow({
       testID={testID}
     >
       {children}
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -140,7 +140,7 @@ function ReactionButton({
   const { colors } = useTheme();
   const name = REACTIONS_TEXT[EMOJI_NAME_KEY[emoji]];
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={formatMessage(mine ? REACTIONS_TEXT.toggleActive : REACTIONS_TEXT.toggle, {
@@ -160,7 +160,7 @@ function ReactionButton({
       <Text style={[styles.buttonCount, { color: mine ? colors.primary : colors.muted }]}>
         {count > 0 ? count : ' '}
       </Text>
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -215,7 +215,7 @@ export function ReactionStrip({
         <Text style={[styles.title, { color: colors.text }]} numberOfLines={1} testID="reaction-strip-title">
           {title}
         </Text>
-        <Pressable
+        <Tap
           onPress={ctx.close}
           accessibilityRole="button"
           accessibilityLabel={REACTIONS_TEXT.close}
@@ -223,7 +223,7 @@ export function ReactionStrip({
           testID="reaction-strip-close"
         >
           <LukkIcon size={20} color={colors.text} />
-        </Pressable>
+        </Tap>
       </View>
       {message ? (
         <Text

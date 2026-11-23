@@ -18,12 +18,12 @@ import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { Tap } from '../Tap';
 import { APPROVE_TEXT, rejectSheetText } from '../../lib/approveCopy';
 import { useBottomInsetUnlessKeyboard } from '../KeyboardInset';
 import { FONTS, fraunces, interLine, sheetGrabber, sheetScrim, useTheme } from '../../theme';
@@ -67,7 +67,8 @@ export function RejectSheet({
   return (
     <Modal transparent visible animationType="none" onRequestClose={cancel}>
       <View style={styles.root}>
-        <Pressable
+        <Tap
+          feedback="none"
           style={[StyleSheet.absoluteFill, { backgroundColor: sheetScrim(colors, scheme) }]}
           onPress={cancel}
           accessible={false}
@@ -119,7 +120,7 @@ export function RejectSheet({
               ) : null}
             </View>
             <View style={styles.actions}>
-              <Pressable
+              <Tap
                 style={[styles.submit, { backgroundColor: colors.danger }]}
                 onPress={() => onSubmit(reason.trim() === '' ? undefined : reason)}
                 disabled={busy}
@@ -129,8 +130,8 @@ export function RejectSheet({
                 <Text style={[styles.submitText, { color: colors.onPrimary }]}>
                   {busy ? APPROVE_TEXT.working : APPROVE_TEXT.sendBack}
                 </Text>
-              </Pressable>
-              <Pressable
+              </Tap>
+              <Tap
                 style={styles.cancel}
                 onPress={cancel}
                 disabled={busy}
@@ -140,7 +141,7 @@ export function RejectSheet({
                 <Text style={[styles.cancelText, { color: colors.primary }]}>
                   {APPROVE_TEXT.cancel}
                 </Text>
-              </Pressable>
+              </Tap>
             </View>
           </View>
         </KeyboardAvoidingView>

@@ -12,7 +12,8 @@
 // er dekor; etiketten er knappens navn.
 // «Hull for hull» har ingen tegning på lerretet; flagget sier «hull».
 import type { ComponentType } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { HOLES_TEXT } from '../../lib/holesCopy';
 import { TICKET_TEXT } from '../../lib/ticketCopy';
 import { FONTS, useTheme } from '../../theme';
@@ -93,13 +94,13 @@ function Tile({
 }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.tile,
         {
-          backgroundColor: pressed ? colors.primarySoft : colors.surface,
+          backgroundColor: colors.surface,
           borderColor: colors.border,
         },
       ]}
@@ -107,7 +108,7 @@ function Tile({
     >
       <Icon color={colors.primary} size={22} strokeWidth={ICON_STROKE} />
       <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 

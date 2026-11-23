@@ -10,7 +10,8 @@
 // som ✓-rutene i arket. Bare den gule er tegnet; grønn og rød er avledet. I
 // sollys er pillen hvit med svart kant og svart tekst, som resten av hullsiden;
 // bare prikken har farge.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { SyncChipState } from '../../../../../lib/sync/roundSyncState';
 import { SYNC_CHIP_TEXT } from '../../lib/syncChipCopy';
 import { FONTS, TAP, type ThemeColors, useTheme, withAlpha } from '../../theme';
@@ -50,7 +51,7 @@ export function SyncChip({
     : { backgroundColor: tone.bg, borderColor: tone.border, borderWidth: 1 };
 
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       style={[styles.pill, pill]}
       testID="sync-chip"
@@ -61,7 +62,7 @@ export function SyncChip({
     >
       <View style={[styles.dot, { backgroundColor: tone.dot }]} testID={`sync-chip-dot-${state}`} />
       <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.text, { color: sunlight ? colors.text : tone.text }]}>{text}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 

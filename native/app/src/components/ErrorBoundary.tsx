@@ -11,7 +11,8 @@
 // Ingen global handler (`ErrorUtils.setGlobalHandler`): den ville erstattet
 // React Natives fatale standard-handler og gjort krasjrapportene verre.
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from './Tap';
 import { ERROR_BOUNDARY_TEXT, type ErrorBoundaryVariant } from '../lib/errorBoundaryCopy';
 import { FONTS, fraunces, interLine, useTheme } from '../theme';
 
@@ -74,14 +75,14 @@ function ErrorFallback({
           {ERROR_BOUNDARY_TEXT.gameNote}
         </Text>
       ) : null}
-      <Pressable
+      <Tap
         style={ui.button}
         onPress={onRetry}
         accessibilityRole="button"
         testID="error-boundary-retry"
       >
         <Text style={ui.buttonText}>{ERROR_BOUNDARY_TEXT.retry}</Text>
-      </Pressable>
+      </Tap>
     </View>
   );
 }

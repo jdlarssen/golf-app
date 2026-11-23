@@ -24,7 +24,8 @@
 //     ble avsluttet mens telefonen sto i lomma treffer fortsatt låsen, og da
 //     er det den norske meldingen spilleren får.
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { isBingoBangoBongoNoOp } from '../../../../../lib/bbb/mergeBingoBangoBongoCategory';
 import type { BingoBangoBongoHoleInput } from '../../../../../lib/scoring/modes/types';
 import { setBingoBangoBongoHole } from '../../data/choices';
@@ -204,7 +205,7 @@ function Chip({
   // I sollys er kant og tekst svarte, så valget vises som fylt flate (#2252).
   const filled = selected && hole.selectedFill;
   return (
-    <Pressable
+    <Tap
       style={[
         styles.chip,
         {
@@ -222,7 +223,7 @@ function Chip({
       <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[selected ? ui.body : ui.muted, filled && { color: colors.onPrimary }]}>
         {label}
       </Text>
-    </Pressable>
+    </Tap>
   );
 }
 

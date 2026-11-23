@@ -24,7 +24,8 @@
 // blir knappene stående slik at spilleren kan prøve igjen når nettet er
 // tilbake — vi later ikke som om noe ble lagret.
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { WolfChoice } from '../../../../../lib/scoring/modes/types';
 import { setWolfChoice } from '../../data/choices';
 import { describeChoiceFailure } from '../../lib/actionFeedback';
@@ -213,7 +214,7 @@ function ChoiceButton({
 }) {
   const { colors, hole, ui } = useTheme();
   return (
-    <Pressable
+    <Tap
       style={[
         styles.choice,
         {
@@ -235,7 +236,7 @@ function ChoiceButton({
         {aside ? <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[ui.muted, styles.tabular]}>{aside}</Text> : null}
       </View>
       {subtitle ? <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={ui.muted}>{subtitle}</Text> : null}
-    </Pressable>
+    </Tap>
   );
 }
 

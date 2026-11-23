@@ -26,12 +26,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebLinkButton } from '../components/WebLinkButton';
 import { deleteAccount, fetchDeleteStatus, type AccountDeleteStatus } from '../data/account';
@@ -160,13 +160,13 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
             />
           ) : null}
         </View>
-        <Pressable
+        <Tap
           style={ui.link}
           onPress={() => navigation.goBack()}
           testID="delete-account-back"
         >
           <Text style={ui.linkText}>{ACCOUNT_TEXT.backLabel}</Text>
-        </Pressable>
+        </Tap>
       </ScrollView>
     );
   }
@@ -211,7 +211,7 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
           <Text style={ui.body} testID="delete-account-unreachable">
             {unreachableText}
           </Text>
-          <Pressable
+          <Tap
             style={ui.buttonSecondary}
             onPress={() => {
               setStatus(null);
@@ -221,10 +221,10 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
             testID="delete-account-retry"
           >
             <Text style={ui.buttonSecondaryText}>{ACCOUNT_TEXT.retry}</Text>
-          </Pressable>
+          </Tap>
         </View>
       ) : (
-        <Pressable
+        <Tap
           style={[ui.button, { backgroundColor: colors.danger }, pending && styles.buttonOff]}
           disabled={pending}
           accessibilityState={{ disabled: pending }}
@@ -234,17 +234,17 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
           <Text style={ui.buttonText}>
             {pending ? ACCOUNT_TEXT.deletePending : ACCOUNT_TEXT.deleteButton}
           </Text>
-        </Pressable>
+        </Tap>
       )}
 
-      <Pressable
+      <Tap
         style={ui.link}
         disabled={pending}
         onPress={() => navigation.goBack()}
         testID="delete-account-cancel"
       >
         <Text style={ui.linkText}>{ACCOUNT_TEXT.cancelButton}</Text>
-      </Pressable>
+      </Tap>
 
       {notice ? (
         <Text style={ui.error} testID="delete-account-notice">

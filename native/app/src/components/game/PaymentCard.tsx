@@ -7,7 +7,8 @@
 // nettleseren, og «Kopier» legger Vipps-nummeret på utklippstavla.
 import * as Clipboard from 'expo-clipboard';
 import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Linking, Platform, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { PAYMENT_TEXT } from '../../lib/paymentCopy';
 import type { PaymentView } from '../../lib/paymentView';
 import { FONTS, fraunces, interLine, TAP, useTheme } from '../../theme';
@@ -61,7 +62,7 @@ export function PaymentCard({ view }: { view: PaymentView }) {
         <Text style={[styles.amount, { color: colors.text }]}>{PAYMENT_TEXT.amount(view.amountKr)}</Text>
       </View>
       {view.kind === 'link' ? (
-        <Pressable
+        <Tap
           accessibilityRole="link"
           onPress={() => void Linking.openURL(view.url).catch(() => undefined)}
           style={[styles.pay, { backgroundColor: colors.primary }]}
@@ -69,11 +70,11 @@ export function PaymentCard({ view }: { view: PaymentView }) {
         >
           <Text style={[styles.payText, { color: colors.onPrimary }]}>{PAYMENT_TEXT.payVia}</Text>
           <PilUtIcon color={colors.onPrimary} />
-        </Pressable>
+        </Tap>
       ) : view.kind === 'vipps' ? (
         <View style={styles.vipps}>
           <Text style={[styles.vippsText, { color: colors.text }]}>{PAYMENT_TEXT.vippsTo(view.number)}</Text>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             onPress={() => void copy(view.number)}
             style={[styles.copy, { borderColor: colors.primary }]}
@@ -82,7 +83,7 @@ export function PaymentCard({ view }: { view: PaymentView }) {
             <Text style={[styles.copyText, { color: colors.primary }]}>
               {copied ? PAYMENT_TEXT.copied : PAYMENT_TEXT.copy}
             </Text>
-          </Pressable>
+          </Tap>
         </View>
       ) : (
         <Text style={[styles.arrange, { color: colors.muted }]}>{PAYMENT_TEXT.arrangeWithHost}</Text>

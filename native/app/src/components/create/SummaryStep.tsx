@@ -13,7 +13,8 @@
 // Knappen låses mens skrivingen pågår og åpnes igjen ved feil: et dobbelttrykk
 // ville laget to runder, og en knapp som blir stående grå etter en feilet
 // skriving ser ut som om noe ble lagret.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import {
   CREATE_ON_WEB_LABEL,
   CREATE_ON_WEB_PATH,
@@ -118,19 +119,19 @@ export function SummaryStep({
         <View key={warning.key}>
           <Note testID={`create-warning-${warning.key}`}>{warning.text}</Note>
           {warning.action === 'profile' && onEditProfile ? (
-            <Pressable
+            <Tap
               testID="create-warning-profile"
               accessibilityRole="button"
               style={ui.buttonSecondary}
               onPress={onEditProfile}
             >
               <Text style={ui.buttonSecondaryText}>{EDIT_PROFILE_LABEL}</Text>
-            </Pressable>
+            </Tap>
           ) : null}
         </View>
       ))}
 
-      <Pressable
+      <Tap
         testID="create-publish"
         accessibilityRole="button"
         style={[ui.button, (busy || !canPublish) && styles.dimmed]}
@@ -138,7 +139,7 @@ export function SummaryStep({
         onPress={onPublish}
       >
         <Text style={ui.buttonText}>{busy ? 'Oppretter …' : 'Publiser spillet'}</Text>
-      </Pressable>
+      </Tap>
 
       {error ? (
         <Text style={ui.error} testID="create-error">

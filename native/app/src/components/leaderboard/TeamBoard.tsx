@@ -10,7 +10,8 @@
 //
 // Stripa nederst («Laget ditt») er en egen komponent fordi skjermen legger den
 // fast over innholdet, utenfor rullingen, i full bredde.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { TeamHoleTone } from '../../../../../lib/leaderboard/teamLiveBoard';
 import { BOARD_TEAM_TEXT } from '../../lib/boardCopy';
 import { Medal } from './Medal';
@@ -415,7 +416,7 @@ export function TeamStrip({
         </Text>
       </View>
       {strip.action ? (
-        <Pressable
+        <Tap
           onPress={onAction}
           accessibilityRole="button"
           style={[styles.stripButton, { backgroundColor: ink }]}
@@ -424,7 +425,7 @@ export function TeamStrip({
           <Text maxFontSizeMultiplier={textCap} style={[styles.stripButtonText, { color: colors.surfaceStrong }]}>
             {strip.action.label}
           </Text>
-        </Pressable>
+        </Tap>
       ) : null}
     </View>
   );

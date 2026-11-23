@@ -9,7 +9,8 @@
 // Tre varianter: solo-tavla (de siste 8 pt går bak tavleflaten, som
 // `bandTail` før), lagtavla (egen kremfarge, ingen overlapp) og formater uten
 // egen tavle (ingen skogflate, mørk tekst på den lyse bakgrunnen).
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { ROUND_REPORT_APP_TEXT } from '../../lib/boardCopy';
 import { FONTS, fraunces, interLine, TAP, useTheme, withAlpha } from '../../theme';
 import { ChevronIcon } from '../icons/Icons';
@@ -63,7 +64,7 @@ export function RoundReportQuote({
         <Text maxFontSizeMultiplier={RESULT_TEXT_CAP} style={[styles.quote, { color: ink }]} testID="round-report-quote-text">
           {`«${quote}»`}
         </Text>
-        <Pressable
+        <Tap
           accessibilityRole="link"
           accessibilityLabel={ROUND_REPORT_APP_TEXT.quoteLink}
           onPress={onReadMore}
@@ -74,7 +75,7 @@ export function RoundReportQuote({
             {ROUND_REPORT_APP_TEXT.quoteLink}
           </Text>
           <ChevronIcon size={14} color={linkColor} strokeWidth={2} />
-        </Pressable>
+        </Tap>
       </View>
     </View>
   );

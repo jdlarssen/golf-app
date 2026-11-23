@@ -37,12 +37,12 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { Tap } from '../components/Tap';
 import { NO_REJECTION_REASON } from '../../../../lib/games/rejectionReason';
 import { STATUS_LABELS, type GameStatus } from '../../../../lib/games/status';
 import { deliveryCoversWholeTeam } from '../../../../lib/games/teamDelivery';
@@ -572,14 +572,14 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
       ) : null}
 
       {approvals.length > 0 ? (
-        <Pressable
+        <Tap
           accessibilityRole="button"
           style={ui.buttonSecondary}
           onPress={() => navigation.navigate('Approve', { gameId })}
           testID="open-approve"
         >
           <Text style={ui.buttonSecondaryText}>{approveButton(approvals.length)}</Text>
-        </Pressable>
+        </Tap>
       ) : null}
 
       {showRoster ? (
@@ -661,7 +661,7 @@ function ShareLiveButton({ token }: { token: string }) {
     if (!result.ok) Alert.alert(TICKET_TEXT.shareFailed);
   }, [token]);
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={TICKET_TEXT.share}
       hitSlop={8}
@@ -670,7 +670,7 @@ function ShareLiveButton({ token }: { token: string }) {
       testID="share-live"
     >
       <DelIcon color={colors.text} size={20} strokeWidth={1.8} />
-    </Pressable>
+    </Tap>
   );
 }
 

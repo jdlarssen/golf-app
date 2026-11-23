@@ -3,7 +3,8 @@
 // Hjem, så en markør ser at det ligger kort å godkjenne uten å åpne ligaen.
 // Overskriften over står i skjermen som bruker kortet: de to skjermene har
 // hver sin seksjonsoverskrift.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { MARKER_TEXT } from '../../lib/markerCopy';
 import { FONTS, interLine, useTheme } from '../../theme';
 
@@ -27,7 +28,7 @@ export function MarkerQueueCard<T extends { gameId: string; userId: string; name
       ]}
     >
       {rows.map((row, i) => (
-        <Pressable
+        <Tap
           key={`${row.gameId}:${row.userId}`}
           onPress={() => onOpen(row)}
           accessibilityRole="button"
@@ -43,7 +44,7 @@ export function MarkerQueueCard<T extends { gameId: string; userId: string; name
             </Text>
           </View>
           <Text style={[styles.queueLink, { color: colors.primary }]}>{MARKER_TEXT.review}</Text>
-        </Pressable>
+        </Tap>
       ))}
     </View>
   );

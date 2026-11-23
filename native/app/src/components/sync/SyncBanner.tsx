@@ -12,7 +12,8 @@
 // Oppsummeringen er webbens egen (`lib/sync/quarantineSummary.ts`) — én regel
 // for hvilke hull som står fast, ett hjem. Aldri gatet på `isStagingBuild()`.
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { isActiveForGame } from '../../../../../lib/sync/queueScope';
 import { summarizeQuarantine } from '../../../../../lib/sync/quarantineSummary';
 import { isLockedCardError } from '../../../../../lib/sync/classifyError';
@@ -230,16 +231,16 @@ export function SyncBanner({ gameId }: { gameId: string }) {
             </View>
           )}
           <View style={styles.actions}>
-            <Pressable
+            <Tap
               accessibilityRole="button"
               onPress={dismissQuarantine}
               style={actionStyle}
               testID="quarantine-dismiss"
             >
               <Text style={actionText}>{SYNC_BANNER_TEXT.quarantineDismiss}</Text>
-            </Pressable>
+            </Tap>
             {active.length > 0 && (
-              <Pressable
+              <Tap
                 accessibilityRole="button"
                 onPress={() => void retry()}
                 disabled={retrying}
@@ -249,7 +250,7 @@ export function SyncBanner({ gameId }: { gameId: string }) {
                 <Text style={actionText}>
                   {retrying ? SYNC_BANNER_TEXT.retrying : SYNC_BANNER_TEXT.retry}
                 </Text>
-              </Pressable>
+              </Tap>
             )}
           </View>
         </View>
@@ -263,7 +264,7 @@ export function SyncBanner({ gameId }: { gameId: string }) {
           <Text style={[styles.message, styles.flex, { color: colors.text }]}>
             {conflictText(conflict.holeNumber, conflict.forOwnScore)}
           </Text>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             onPress={() => void dismissConflict(conflict.id)}
             style={[styles.action, edge, { borderColor: colors.text }]}
@@ -272,7 +273,7 @@ export function SyncBanner({ gameId }: { gameId: string }) {
             <Text style={[styles.actionText, { color: colors.text }]}>
               {SYNC_BANNER_TEXT.conflictDismiss}
             </Text>
-          </Pressable>
+          </Tap>
         </View>
       ))}
     </View>

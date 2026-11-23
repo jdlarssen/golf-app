@@ -4,7 +4,8 @@
 // sponsor (`Venterom-forslag-runden-foldet`, eierens svar 10.11). Logoer vises
 // ikke i appen. Raden er lukket hver gang skjermen åpnes.
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { GamePrize } from '../../../../../lib/games/prizes';
 import { PRIZE_TEXT } from '../../lib/paymentCopy';
 import { prizeRows, type PrizeRow } from '../../lib/paymentView';
@@ -27,7 +28,7 @@ export function PrizeTable({ prizes }: { prizes: readonly GamePrize[] | undefine
 
   return (
     <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]} testID="prize-table">
-      <Pressable
+      <Tap
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         accessibilityLabel={`${PRIZE_TEXT.boardTitle}, ${PRIZE_TEXT.count(rows.length)}`}
@@ -38,7 +39,7 @@ export function PrizeTable({ prizes }: { prizes: readonly GamePrize[] | undefine
         <Text style={[styles.title, { color: colors.text }]}>{PRIZE_TEXT.boardTitle}</Text>
         <Text style={[styles.count, { color: colors.muted }]}>{PRIZE_TEXT.count(rows.length)}</Text>
         <ChevronIcon direction={open ? 'up' : 'down'} size={18} strokeWidth={2} color={colors.muted} />
-      </Pressable>
+      </Tap>
       {open ? (
         <View style={styles.list} testID="prize-table-list">
           {rows.map((row) => (

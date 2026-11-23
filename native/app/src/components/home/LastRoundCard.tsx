@@ -12,7 +12,8 @@
 // Hjem v2 (#2385): medaljongen er designets hevede sølvskive (`MedalDisc`), og
 // i formatene der tavla viser poeng står poengene dine i stedet for brutto,
 // som «34 poeng» i designet. Poengene regnes på telefonen (`lastRoundPoints`).
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { finishedResultBadge } from '../../../../../lib/games/finishedResultBadge';
 import type { HomeCard, LastRoundScore } from '../../data/homeList';
 import { HOME_TEXT, bruttoText, finishedResultText, pointsText } from '../../lib/homeCopy';
@@ -60,7 +61,7 @@ export function LastRoundCard({
   const line = parts.join(' · ');
 
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       accessibilityRole="button"
       // Komma, ikke «·»: VoiceOver leser midtpunktet høyt.
@@ -109,7 +110,7 @@ export function LastRoundCard({
         ) : null}
       </View>
       <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} testID="home-last-round-arrow" />
-    </Pressable>
+    </Tap>
   );
 }
 

@@ -13,7 +13,8 @@
 // nettet). Rekkefølgen er serverens (navn); den valgte blir stående selv når
 // lista er kuttet.
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from './Tap';
 import { PICKER_VISIBLE_ROWS, pickerRows } from '../../../../lib/league/pickerRows';
 import { showAllLine } from '../lib/leagueCopy';
 import { MARKER_TEXT } from '../lib/markerCopy';
@@ -54,7 +55,7 @@ export function MarkerPicker({
       {picker.rows.map((o) => {
         const checked = value === o.userId;
         return (
-          <Pressable
+          <Tap
             key={o.userId}
             onPress={() => onChange(o.userId)}
             accessibilityRole="radio"
@@ -74,7 +75,7 @@ export function MarkerPicker({
             <Text style={[ui.body, styles.name]} numberOfLines={1}>
               {o.name ?? MARKER_TEXT.unknownPlayer}
             </Text>
-          </Pressable>
+          </Tap>
         );
       })}
       {picker.searching && picker.total === 0 ? (

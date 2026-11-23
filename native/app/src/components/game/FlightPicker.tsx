@@ -13,13 +13,13 @@
 import { useRef, useState } from 'react';
 import {
   Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
 } from 'react-native';
+import { Tap } from '../Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { GameBundle } from '../../data/gameBundle';
 import { joinFlight, type JoinFlightResult } from '../../data/joinFlight';
@@ -92,7 +92,7 @@ export function FlightPicker({
 
   return (
     <>
-      <Pressable
+      <Tap
         accessibilityRole="button"
         accessibilityLabel={`${model.title}. ${model.rowSub}`}
         onPress={show}
@@ -115,7 +115,7 @@ export function FlightPicker({
           </Text>
         </View>
         <ChevronIcon direction="right" color={colors.muted} size={18} strokeWidth={2} />
-      </Pressable>
+      </Tap>
 
       <Modal transparent visible={open} animationType="slide" onRequestClose={close}>
         <View
@@ -125,7 +125,8 @@ export function FlightPicker({
           accessibilityViewIsModal
           onAccessibilityEscape={close}
         >
-          <Pressable
+          <Tap
+            feedback="none"
             style={[StyleSheet.absoluteFill, { backgroundColor: sheetScrim(colors, scheme) }]}
             onPress={close}
             onAccessibilityTap={close}
@@ -148,7 +149,7 @@ export function FlightPicker({
               <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header">
                 {model.title}
               </Text>
-              <Pressable
+              <Tap
                 onPress={close}
                 style={styles.close}
                 accessibilityRole="button"
@@ -156,7 +157,7 @@ export function FlightPicker({
                 testID="flight-sheet-close"
               >
                 <LukkIcon color={colors.text} size={20} strokeWidth={2} />
-              </Pressable>
+              </Tap>
             </View>
             {notice ? (
               <View
@@ -213,7 +214,7 @@ function FlightOption({
   // Tegningens fulle rad: `surface2` i lys, bakgrunnen i natt.
   const fullFill = scheme === 'dark' ? colors.bg : colors.surface2;
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={flight.a11y}
       accessibilityState={{ selected: flight.mine, disabled }}
@@ -242,7 +243,7 @@ function FlightOption({
           {flight.status}
         </Text>
       </View>
-    </Pressable>
+    </Tap>
   );
 }
 

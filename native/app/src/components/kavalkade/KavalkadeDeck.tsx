@@ -12,7 +12,8 @@
 // Alle kortene i en fane er like høye (det høyeste), som på webben, der lista
 // strekker kortene i høyden.
 import { useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Tap } from '../Tap';
 import type {
   KavalkadeCardId,
   KavalkadeDeck as Deck,
@@ -63,7 +64,7 @@ export function KavalkadeDeck({
         {(['personal', 'gang'] as const).map((tab) => {
           const selected = active === tab;
           return (
-            <Pressable
+            <Tap
               key={tab}
               accessibilityRole="tab"
               accessibilityState={{ selected }}
@@ -74,7 +75,7 @@ export function KavalkadeDeck({
               <Text style={[styles.tabText, { color: selected ? colors.text : colors.muted }]}>
                 {tab === 'personal' ? t('tabPersonal') : t('tabGang')}
               </Text>
-            </Pressable>
+            </Tap>
           );
         })}
       </View>

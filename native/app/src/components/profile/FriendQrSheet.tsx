@@ -8,7 +8,8 @@
 // i begge draktene, fordi svart på hvitt er det kameraet leser best.
 //
 // «Lukk», trykk på hinnen og Android-tilbake lukker arket.
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PROFILE_TEXT } from '../../lib/profileCopy';
 import { FONTS, fraunces, interLine, sheetGrabber, sheetScrim, useTheme } from '../../theme';
@@ -37,7 +38,8 @@ export function FriendQrSheet({
   return (
     <Modal transparent visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.root}>
-        <Pressable
+        <Tap
+          feedback="none"
           style={[StyleSheet.absoluteFill, { backgroundColor: sheetScrim(colors, scheme) }]}
           onPress={onClose}
           accessible={false}
@@ -60,14 +62,14 @@ export function FriendQrSheet({
           <View style={styles.paper} testID="friend-qr-sheet-code">
             <QrCode value={url} size={QR_SIZE} color={QR_INK} />
           </View>
-          <Pressable
+          <Tap
             onPress={onClose}
-            style={({ pressed }) => [styles.close, { borderColor: colors.border }, pressed ? styles.pressed : null]}
+            style={[styles.close, { borderColor: colors.border }]}
             accessibilityRole="button"
             testID="friend-qr-sheet-close"
           >
             <Text style={[styles.closeText, { color: colors.primary }]}>{PROFILE_TEXT.friendQrClose}</Text>
-          </Pressable>
+          </Tap>
         </View>
       </View>
     </Modal>
@@ -111,5 +113,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   closeText: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
-  pressed: { opacity: 0.6 },
 });

@@ -4,7 +4,8 @@
 // serveren som sjekker dem. En startet cup har en låst liste.
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Share, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { AppCupEnrolled, AppCupParticipantsView } from '../../../../../lib/cup/appCupSetupView';
 import { PICKER_VISIBLE_ROWS, pickerRows } from '../../../../../lib/league/pickerRows';
 import { addCupParticipant, fetchCupParticipants, setCupParticipantRole } from '../../data/cupSetup';
@@ -174,7 +175,7 @@ export function CupPlayersBody({
               </Text>
             </View>
             {open ? (
-              <Pressable
+              <Tap
                 accessibilityRole="button"
                 accessibilityLabel={`${PLAYERS_TEXT.remove}: ${player.name}`}
                 disabled={busy !== null}
@@ -190,7 +191,7 @@ export function CupPlayersBody({
                 testID={`cup-player-remove-${player.userId}`}
               >
                 <Text style={[styles.linkText, { color: colors.primary }]}>{PLAYERS_TEXT.remove}</Text>
-              </Pressable>
+              </Tap>
             ) : null}
           </View>
           {open ? (
@@ -212,14 +213,14 @@ export function CupPlayersBody({
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]} testID="cup-share">
           <Text style={[styles.cardTitle, { color: colors.text }]}>{PLAYERS_TEXT.shareHeading}</Text>
           <Text style={[styles.body, { color: colors.muted }]}>{PLAYERS_TEXT.shareHelper}</Text>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             style={ui.buttonSecondary}
             onPress={() => shareLink(url)}
             testID="cup-share-button"
           >
             <Text style={ui.buttonSecondaryText}>{SETUP_APP_TEXT.share}</Text>
-          </Pressable>
+          </Tap>
         </View>
       ) : null}
 
@@ -256,7 +257,7 @@ export function CupPlayersBody({
                 </Text>
               </View>
               {candidate.pending ? null : (
-                <Pressable
+                <Tap
                   accessibilityRole="button"
                   accessibilityLabel={`${PLAYERS_TEXT.add}: ${candidate.name}`}
                   disabled={busy !== null}
@@ -265,7 +266,7 @@ export function CupPlayersBody({
                   testID={`cup-candidate-add-${candidate.userId}`}
                 >
                   <Text style={[styles.linkText, { color: colors.primary }]}>{PLAYERS_TEXT.add}</Text>
-                </Pressable>
+                </Tap>
               )}
             </View>
           ))}
@@ -289,14 +290,14 @@ export function CupPlayersBody({
 function RetryButton({ onPress }: { onPress: () => void }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       accessibilityRole="button"
       style={[styles.retry, { borderColor: colors.primary }]}
       testID="cup-players-retry"
     >
       <Text style={[styles.retryText, { color: colors.primary }]}>{SETUP_APP_TEXT.retry}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 
