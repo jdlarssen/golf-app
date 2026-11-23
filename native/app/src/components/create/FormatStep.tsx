@@ -27,7 +27,7 @@ import {
 import { describePlayerCounts } from '../../lib/rosterLimits';
 import { useTheme } from '../../theme';
 import { WebLinkButton } from '../WebLinkButton';
-import { linkSlop, SelectRow } from './primitives';
+import { linkTarget, SelectRow } from './primitives';
 
 export function FormatStep({
   entries,
@@ -63,7 +63,7 @@ export function FormatStep({
               uten å flytte noe; over står bare feilteksten. */}
           <Tap
             onPress={onRetry}
-            hitSlop={linkSlop()}
+            hitSlop={linkTarget().hitSlop}
             testID="create-format-retry"
             accessibilityRole="button"
           >

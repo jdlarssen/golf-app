@@ -15,16 +15,23 @@ import { DesignSwitch, listSwitchOffColor } from '../DesignSwitch';
 
 /** Luften mellom etiketten, feltet og det som står under i et {@link Field}. */
 export const FIELD_GAP = 6;
+/** Luften over et {@link Field}, fra feltet over. */
+export const FIELD_SPACE = 12;
 
 /**
- * #2928: den usynlige utvidelsen som gjør en lenke i `ui.linkText` (Inter 15,
- * 18,15 pt høy) til en trykkflate på 44 pt, uten å flytte noe. `roomAbove` er
- * luften opp til en knapp over lenka: utvidelsen stopper der, og resten går nedover.
+ * #2928: hvordan en lenke i `ui.linkText` (Inter 15, 18,15 pt høy) blir en
+ * trykkflate på 44 pt. Først en usynlig utvidelse over og under, som aldri går
+ * lenger enn luften til en knapp eller tekst ved siden av (`roomAbove`,
+ * `roomBelow`). Det som mangler, legges til som luft under teksten.
  */
-export function linkSlop(roomAbove = Infinity): { top: number; bottom: number } {
+export function linkTarget(
+  roomAbove = Infinity,
+  roomBelow = Infinity,
+): { hitSlop: { top: number; bottom: number }; paddingBottom: number } {
   const need = TAP - 15 * INTER_LINE;
   const top = Math.min(roomAbove, Math.ceil(need / 2));
-  return { top, bottom: Math.ceil(need - top) };
+  const bottom = Math.min(roomBelow, Math.ceil(need - top));
+  return { hitSlop: { top, bottom }, paddingBottom: Math.max(0, Math.ceil(need - top - bottom)) };
 }
 
 /** Etikett over et felt, med feltet under. */
@@ -329,7 +336,7 @@ export function Note({ children, testID }: { children: string; testID: string })
 }
 
 const styles = StyleSheet.create({
-  field: { gap: FIELD_GAP, marginTop: 12 },
+  field: { gap: FIELD_GAP, marginTop: FIELD_SPACE },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
