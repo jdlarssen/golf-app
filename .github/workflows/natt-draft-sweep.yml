@@ -39,7 +39,7 @@ jobs:
       - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
+          node-version: 22
 
       # Fail-loud: uten PAT-en ville flippen ikke trigget kortet, og sweepen hadde
       # gjort skade i stillhet (draft → ready, men fortsatt ingen kort).
@@ -58,4 +58,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PR_AUTHOR_PAT }}
           GH_REPO: ${{ github.repository }}
-        run: npx --yes tsx@4.23.15 scripts/loops/sweep-natt-drafts.ts
+        run: npx --yes tsx scripts/loops/sweep-natt-drafts.ts
