@@ -225,6 +225,27 @@ describe('GameForm — mode/lagstørrelse-velgere (fase 4)', () => {
     ).not.toBeInTheDocument();
   });
 
+  // #2942: Brutto → Netto lands on the default of the format on screen, also
+  // after a format switch in the form (the field remounts with the format).
+  it('brutto ved lasting, bytte til best ball, så Netto → 85 (formatets standard)', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        initialValues={{ game_mode: 'stableford', hcp_allowance_pct: '0' }}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('radio', { name: /best ball/i }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Netto' }));
+    const input = screen.getByLabelText('Handicap-andel (%)') as HTMLInputElement;
+    expect(input.value).toBe('85');
+  });
+
   it('stableford-modus: kan publisere med 1+ spiller uten lag-tildeling', () => {
     render(
       <GameForm
