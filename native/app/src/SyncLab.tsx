@@ -10,12 +10,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { Tap } from './components/Tap';
 // Delt kilde: hvilke kø-elementer som «teller» for ett spill er webbens regel
 // (#1370), ikke en ny en.
 import { isActiveForGame } from '../../../lib/sync/queueScope';
@@ -249,26 +249,26 @@ export function SyncLab({
                   <Text style={[styles.holeLabel, { color: colors.text }]}>
                     Hull {holeNumber}
                   </Text>
-                  <Pressable
+                  <Tap
                     style={stepStyle}
                     onPress={() => void adjust(holeNumber, -1)}
                     testID={`hole-${holeNumber}-minus`}
                   >
                     <Text style={stepTextStyle}>−</Text>
-                  </Pressable>
+                  </Tap>
                   <Text
                     style={[styles.strokes, { color: colors.text }]}
                     testID={`hole-${holeNumber}-strokes`}
                   >
                     {row?.strokes ?? '—'}
                   </Text>
-                  <Pressable
+                  <Tap
                     style={stepStyle}
                     onPress={() => void adjust(holeNumber, 1)}
                     testID={`hole-${holeNumber}-plus`}
                   >
                     <Text style={stepTextStyle}>+</Text>
-                  </Pressable>
+                  </Tap>
                   <Text
                     style={[styles.synced, { color: colors.muted }]}
                     testID={`hole-${holeNumber}-synced`}
@@ -298,7 +298,7 @@ export function SyncLab({
             </Text>
           </View>
 
-          <Pressable
+          <Tap
             style={[styles.button, { backgroundColor: colors.primary }]}
             onPress={() => void syncNow()}
             disabled={busy}
@@ -307,7 +307,7 @@ export function SyncLab({
             <Text style={[styles.buttonText, { color: colors.onPrimary }]}>
               {busy ? 'Jobber …' : 'Synk nå'}
             </Text>
-          </Pressable>
+          </Tap>
 
           {errorText ? (
             <Text style={errorStyle} testID="lab-error">
@@ -317,11 +317,11 @@ export function SyncLab({
         </>
       ) : null}
 
-      <Pressable style={styles.buttonSecondary} onPress={onBack} testID="lab-back">
+      <Tap style={styles.buttonSecondary} onPress={onBack} testID="lab-back">
         <Text style={[styles.buttonSecondaryText, { color: colors.primary }]}>
           Tilbake
         </Text>
-      </Pressable>
+      </Tap>
     </ScrollView>
   );
 }

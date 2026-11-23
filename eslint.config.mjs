@@ -96,6 +96,29 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    // #2928: hver knapp i appen er `Tap` (`native/app/src/components/Tap.tsx`),
+    // som viser at trykket tok: dempet på iOS, ripple på Android. En `Pressable`
+    // rett fra react-native ville gitt en knapp uten trykk-tilstand. Testene
+    // står utenfor: stubbene der er rigg, ikke knapper i appen.
+    files: ["native/app/src/**/*.{ts,tsx}"],
+    ignores: ["native/app/src/components/Tap.tsx", "**/*.test.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "react-native",
+              importNames: ["Pressable"],
+              message:
+                "Bruk Tap fra components/Tap i stedet for Pressable: da får knappen trykk-tilstand på iOS og ripple på Android (#2928).",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Next.js 16-felle (AGENTS.md): middleware-konvensjonen heter `proxy.ts`,
     // IKKE `middleware.ts`. En root `middleware.ts` ignoreres STILLE av Next 16
     // — auth/session-refresh-logikken som havner der kjører aldri, og ingenting

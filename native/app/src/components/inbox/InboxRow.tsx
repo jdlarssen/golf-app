@@ -5,7 +5,8 @@
 //
 // `product_update` beholder brødteksten og knappen i raden. Uten mål merker raden
 // seg bare lest, og har ingen pil: en pil ville lovet en side.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { InboxEntry } from '../../data/inbox';
 import { INBOX_TEXT } from '../../lib/inboxCopy';
 import { FONTS, TAP, interLine, useTheme } from '../../theme';
@@ -63,7 +64,7 @@ export function InboxRow({
   if (entry.body != null) {
     return (
       <View style={[styles.bodyRow, divider]} testID="inbox-row">
-        <Pressable
+        <Tap
           accessibilityRole="button"
           accessibilityLabel={label}
           onPress={onOpen}
@@ -71,23 +72,23 @@ export function InboxRow({
         >
           {disc}
           {text}
-        </Pressable>
+        </Tap>
         {entry.cta ? (
-          <Pressable
+          <Tap
             accessibilityRole="link"
             onPress={onCta}
             style={[styles.cta, { backgroundColor: colors.primary }]}
             testID="inbox-row-cta"
           >
             <Text style={[styles.ctaText, { color: colors.onPrimary }]}>{entry.cta.label}</Text>
-          </Pressable>
+          </Tap>
         ) : null}
       </View>
     );
   }
 
   return (
-    <Pressable
+    <Tap
       accessibilityRole={entry.destination ? 'link' : 'button'}
       accessibilityLabel={label}
       onPress={onOpen}
@@ -99,7 +100,7 @@ export function InboxRow({
       {entry.destination ? (
         <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} testID="inbox-row-arrow" />
       ) : null}
-    </Pressable>
+    </Tap>
   );
 }
 

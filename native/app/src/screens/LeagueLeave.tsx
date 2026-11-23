@@ -13,7 +13,8 @@
 // flytter ikke en skjerm som har mistet fokus (#2757).
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LeagueLoadFailed, LeagueLoading } from '../components/league/LeagueStates';
 import { fetchLeague, leaveClubLeague, type LeagueLoadFailure } from '../data/league';
@@ -99,7 +100,7 @@ export function LeagueLeave({ navigation, route }: ScreenProps<'LeagueLeave'>) {
       ) : null}
 
       <View style={styles.actions}>
-        <Pressable
+        <Tap
           accessibilityRole="button"
           accessibilityState={{ disabled: busy, busy }}
           disabled={busy}
@@ -108,8 +109,8 @@ export function LeagueLeave({ navigation, route }: ScreenProps<'LeagueLeave'>) {
           testID="league-leave-submit"
         >
           <Text style={ui.buttonText}>{busy ? LEAGUE_SELF_TEXT.leavePending : LEAGUE_SELF_TEXT.leaveButton}</Text>
-        </Pressable>
-        <Pressable
+        </Tap>
+        <Tap
           accessibilityRole="button"
           disabled={busy}
           style={ui.buttonSecondary}
@@ -117,7 +118,7 @@ export function LeagueLeave({ navigation, route }: ScreenProps<'LeagueLeave'>) {
           testID="league-leave-cancel"
         >
           <Text style={ui.buttonSecondaryText}>{LEAGUE_SELF_TEXT.cancel}</Text>
-        </Pressable>
+        </Tap>
       </View>
     </ScrollView>
   );

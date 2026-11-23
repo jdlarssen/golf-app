@@ -6,7 +6,8 @@
 // hadde før billetten. Her er bare drakten og ordlyden ny. testID-ene er de
 // samme som før, så skjermtestene beviser de samme grenene.
 import { useCallback, useState } from 'react';
-import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Platform, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { GameBundle } from '../../data/gameBundle';
 import { undoSelfWithdraw } from '../../data/withdrawSelf';
 import { WITHDRAW_TEXT } from '../../lib/cupManageCopy';
@@ -90,14 +91,14 @@ export function TicketStub({
         <View style={styles.block} testID="derived-notice">
           <Text style={[styles.registered, { color: colors.text }]}>{TICKET_TEXT.derivedHeading}</Text>
           <Text style={[styles.text, { color: colors.muted }]}>{derivedBody(stub.hostName)}</Text>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             style={[ui.buttonSecondary, styles.cta]}
             onPress={() => onOpenGame?.(stub.hostGameId)}
             testID="derived-open-host"
           >
             <Text style={ui.buttonSecondaryText}>{derivedLink(stub.hostName)}</Text>
-          </Pressable>
+          </Tap>
         </View>
       );
     case 'notPlayer':
@@ -153,14 +154,14 @@ export function TicketStub({
           ) : (
             <Text style={[styles.text, { color: colors.muted }]}>{TICKET_TEXT.finishedNoResult}</Text>
           )}
-          <Pressable
+          <Tap
             accessibilityRole="button"
             style={[ui.button, styles.cta]}
             onPress={() => onNavigate('Leaderboard', { gameId })}
             testID="ticket-board"
           >
             <Text style={ui.buttonText}>{HOME_TEXT.board}</Text>
-          </Pressable>
+          </Tap>
         </View>
       );
     case 'active':
@@ -201,14 +202,14 @@ function ActiveStub({
 }) {
   const { colors, ui } = useTheme();
   const flightButton = flightCta ? (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       style={[ui.button, styles.cta]}
       onPress={() => onNavigate('Scorecard', { gameId })}
       testID="deliver-flight-cta"
     >
       <Text style={ui.buttonText}>{flightCta}</Text>
-    </Pressable>
+    </Tap>
   ) : null;
   const openBridge = (bridge: RoundHole) =>
     onNavigate('Hole', { gameId: bridge.gameId, holeNumber: bridge.holeNumber });
@@ -219,14 +220,14 @@ function ActiveStub({
         {flightButton}
         {/* Første halvdel levert for hånd på nettet: runden er ikke ferdig ennå. */}
         {stub.bridge ? (
-          <Pressable
+          <Tap
             accessibilityRole="button"
             style={[ui.buttonSecondary, styles.cta]}
             onPress={() => openBridge(stub.bridge as RoundHole)}
             testID="ticket-bridge"
           >
             <Text style={ui.buttonSecondaryText}>{bridgeLabel(stub.bridge.holeNumber)}</Text>
-          </Pressable>
+          </Tap>
         ) : null}
         <View testID="submitted-banner">
           <Text style={[styles.text, { color: colors.muted }]}>
@@ -280,14 +281,14 @@ function ActiveStub({
       >
         <View style={[styles.fill, { width: `${share * 100}%`, backgroundColor: colors.primary }]} />
       </View>
-      <Pressable
+      <Tap
         accessibilityRole="button"
         style={[ui.button, styles.cta, styles.progressCta]}
         onPress={onPress}
         testID="primary-cta"
       >
         <Text style={ui.buttonText}>{label}</Text>
-      </Pressable>
+      </Tap>
     </View>
   );
 }
@@ -332,7 +333,7 @@ function ScheduledActions({
     <View style={styles.actions}>
       <View style={styles.actionRow}>
         {calendarEvent ? (
-          <Pressable
+          <Tap
             accessibilityRole="button"
             // Lengst tekst, så litt mer plass: «Legg til i kalender» står da
             // på én linje på en 390 pt-telefon.
@@ -341,17 +342,17 @@ function ScheduledActions({
             testID="add-to-calendar"
           >
             <Text style={[ui.buttonSecondaryText, styles.actionText]}>{TICKET_TEXT.addToCalendar}</Text>
-          </Pressable>
+          </Tap>
         ) : null}
         {courseName ? (
-          <Pressable
+          <Tap
             accessibilityRole="button"
             style={[ui.buttonSecondary, styles.action]}
             onPress={() => void openMap(courseName)}
             testID="view-on-map"
           >
             <Text style={[ui.buttonSecondaryText, styles.actionText]}>{TICKET_TEXT.viewOnMap}</Text>
-          </Pressable>
+          </Tap>
         ) : null}
       </View>
       {notice ? (
@@ -405,7 +406,7 @@ function WithdrawnStub({
         {bySelf ? WITHDRAW_SELF.withdrawnBySelf : WITHDRAW_SELF.withdrawnByOrganiser}
       </Text>
       {canUndo ? (
-        <Pressable
+        <Tap
           style={ui.buttonSecondary}
           disabled={busy}
           accessibilityRole="button"
@@ -419,7 +420,7 @@ function WithdrawnStub({
           }
         >
           <Text style={ui.buttonSecondaryText}>{WITHDRAW_SELF.undoLabel}</Text>
-        </Pressable>
+        </Tap>
       ) : null}
       {notice ? (
         <Text style={ui.error} testID="withdrawn-undo-notice">

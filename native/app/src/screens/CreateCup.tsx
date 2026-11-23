@@ -8,7 +8,8 @@
 // hver kode. Alt krever nett.
 import { useFocusEffect, usePreventRemove } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import type { AppCupSetupView } from '../../../../lib/cup/appCupSetupView';
 import type { CupSessionFormat } from '../../../../lib/cup/cupTemplates';
 import type { SideAwardConfigInput } from '../../../../lib/cup/sideAwardRows';
@@ -257,14 +258,14 @@ export function CreateCup({ route, navigation }: ScreenProps<'CreateCup'>) {
           {setupLoadFailureText(loadFailure ?? 'load_failed')}
         </Text>
         {final ? null : (
-          <Pressable
+          <Tap
             onPress={() => void loadSetup()}
             accessibilityRole="button"
             style={[styles.retry, { borderColor: colors.primary }]}
             testID="create-cup-retry"
           >
             <Text style={[styles.retryText, { color: colors.primary }]}>{SETUP_APP_TEXT.retry}</Text>
-          </Pressable>
+          </Tap>
         )}
       </View>
     );
@@ -499,17 +500,17 @@ export function CreateCup({ route, navigation }: ScreenProps<'CreateCup'>) {
                   testID={`create-cup-award-count-${row.key}`}
                 />
               </Field>
-              <Pressable
+              <Tap
                 accessibilityRole="button"
                 onPress={() => setAwards((rows) => rows.filter((other) => other.key !== row.key))}
                 style={styles.link}
                 testID={`create-cup-award-remove-${row.key}`}
               >
                 <Text style={[styles.linkText, { color: colors.primary }]}>{SETUP_APP_TEXT.removeRow}</Text>
-              </Pressable>
+              </Tap>
             </View>
           ))}
-          <Pressable
+          <Tap
             accessibilityRole="button"
             onPress={() => {
               const key = `ny-${nextKey.current++}`;
@@ -519,7 +520,7 @@ export function CreateCup({ route, navigation }: ScreenProps<'CreateCup'>) {
             testID="create-cup-award-add"
           >
             <Text style={[styles.linkText, { color: colors.primary }]}>{AWARD_SETUP_TEXT.addRow}</Text>
-          </Pressable>
+          </Tap>
           <Text style={ui.muted}>{AWARD_SETUP_TEXT.winnersHelp}</Text>
         </View>
       ) : null}
@@ -550,11 +551,11 @@ export function CreateCup({ route, navigation }: ScreenProps<'CreateCup'>) {
 
       <View style={styles.actions}>
         {step === 'players' ? (
-          <Pressable accessibilityRole="button" style={ui.button} onPress={finish} testID="create-cup-done">
+          <Tap accessibilityRole="button" style={ui.button} onPress={finish} testID="create-cup-done">
             <Text style={ui.buttonText}>{SETUP_APP_TEXT.done}</Text>
-          </Pressable>
+          </Tap>
         ) : (
-          <Pressable
+          <Tap
             accessibilityRole="button"
             accessibilityState={{ disabled: busy, busy }}
             disabled={busy}
@@ -563,7 +564,7 @@ export function CreateCup({ route, navigation }: ScreenProps<'CreateCup'>) {
             testID="create-cup-next"
           >
             <Text style={ui.buttonText}>{busy ? SETUP_APP_TEXT.saving : SETUP_APP_TEXT.next}</Text>
-          </Pressable>
+          </Tap>
         )}
       </View>
     </ScrollView>

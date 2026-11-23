@@ -2,7 +2,8 @@
 // knappen sto rett under «Prøv igjen» (eierens svar 02.11). Er økta avdekket imens, sier
 // serveren nei. En økt som alt er borte, er det du ville.
 import { useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deleteCupLineupSession } from '../data/cupSetup';
 import { backTo } from '../lib/backTo';
@@ -74,7 +75,7 @@ export function CupDeleteSession({ route, navigation }: ScreenProps<'CupDeleteSe
       ) : null}
 
       <View style={styles.actions}>
-        <Pressable
+        <Tap
           accessibilityRole="button"
           accessibilityState={{ disabled: busy }}
           disabled={busy}
@@ -83,8 +84,8 @@ export function CupDeleteSession({ route, navigation }: ScreenProps<'CupDeleteSe
           testID="cup-delete-session-submit"
         >
           <Text style={ui.buttonText}>{busy ? DELETE_TEXT.pending : SESSION_DELETE_TEXT.button}</Text>
-        </Pressable>
-        <Pressable
+        </Tap>
+        <Tap
           accessibilityRole="button"
           disabled={busy}
           style={ui.buttonSecondary}
@@ -92,7 +93,7 @@ export function CupDeleteSession({ route, navigation }: ScreenProps<'CupDeleteSe
           testID="cup-delete-session-cancel"
         >
           <Text style={ui.buttonSecondaryText}>{DELETE_TEXT.cancel}</Text>
-        </Pressable>
+        </Tap>
       </View>
     </ScrollView>
   );

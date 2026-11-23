@@ -49,12 +49,12 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { firstName } from '../../../../lib/firstName';
@@ -305,9 +305,9 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
           <Text style={ui.error} testID="home-error">
             Fikk ikke tak i spillene dine. Sjekk nettet og prøv igjen.
           </Text>
-          <Pressable style={ui.button} onPress={() => void refresh()} testID="home-retry">
+          <Tap style={ui.button} onPress={() => void refresh()} testID="home-retry">
             <Text style={ui.buttonText}>{refreshing ? 'Prøver …' : 'Prøv igjen'}</Text>
-          </Pressable>
+          </Tap>
         </ScrollView>
         {/* #1954 D3: fast stripe over statuslinja når innholdet ruller under den. */}
         <StatusBarBand color={colors.bg} />
@@ -449,18 +449,18 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
     ) : null;
 
   const createGame = (
-    <Pressable
+    <Tap
       style={ui.button}
       onPress={() => navigation.navigate('CreateGame')}
       testID="home-create-game"
     >
       <Text style={ui.buttonText}>{HOME_TEXT.createGame}</Text>
-    </Pressable>
+    </Tap>
   );
 
   // #2838: veien inn til åpne runder, under «Opprett spill». Står der alltid.
   const findTournaments = (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={`${HOME_TEXT.findTournaments}. ${HOME_TEXT.findTournamentsSub}`}
       style={[styles.findRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
@@ -472,7 +472,7 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
         <Text style={[styles.findSub, { color: colors.muted }]}>{HOME_TEXT.findTournamentsSub}</Text>
       </View>
       <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} />
-    </Pressable>
+    </Tap>
   );
 
   return (
@@ -623,14 +623,14 @@ export function Home({ navigation, route }: ScreenProps<'Home'>) {
             {/* #2265: alle rundene står i Rundedagboka (eierens svar 2 på
                 #2254), også når det bare er én: formkortet og statistikken
                 står der. */}
-            <Pressable
+            <Tap
               style={[ui.link, styles.allRounds]}
               accessibilityRole="button"
               onPress={() => navigation.navigate('RoundDiary', { from: 'home' })}
               testID="home-all-rounds"
             >
               <Text style={ui.linkText}>{HOME_TEXT.allRounds}</Text>
-            </Pressable>
+            </Tap>
           </View>
         ) : null}
 
@@ -683,6 +683,8 @@ function Top({
   const withDot = (label: string) => (updateDot ? `${label}. ${NEW_VERSION_TEXT.dotA11y}` : label);
   const dot = updateDot ? (
     <View
+      // #2928: prikken ligger over pillens hjørne; trykket går gjennom til pillen.
+      pointerEvents="none"
       style={[styles.updateDot, { backgroundColor: colors.accent, borderColor: colors.bg }]}
       testID="profile-update-dot"
     />
@@ -699,31 +701,35 @@ function Top({
       </Text>
       <View style={styles.topRow}>
         {name !== null ? (
-          <Pressable
-            onPress={onProfile}
-            hitSlop={HCP_SLOP}
-            accessibilityRole="link"
-            accessibilityLabel={withDot(hcp !== null ? hcpA11yLabel(hcp) : profileA11yLabel(name))}
-            style={[
-              styles.hcpPill,
-              { backgroundColor: colors.surface, borderColor: stale ? colors.accent : colors.border },
-            ]}
-            testID="open-profile"
-          >
-            <Text numberOfLines={1} style={[styles.hcpName, { color: colors.text }]}>
-              {name}
-            </Text>
-            {hcp !== null ? (
-              <>
-                <Text style={[styles.hcpDot, { color: colors.muted }]}>·</Text>
-                <Text style={[styles.hcpLabel, { color: colors.muted }]}>{HOME_TEXT.hcp}</Text>
-                <Text style={[styles.hcpValue, { color: colors.text }]}>{hcp}</Text>
-              </>
-            ) : null}
+          // #2928: prikken står ved siden av pillen, ikke i den. Android klipper
+          // en rund knapp til hjørnene sine, og da ville prikken forsvunnet.
+          <View>
+            <Tap
+              onPress={onProfile}
+              hitSlop={HCP_SLOP}
+              accessibilityRole="link"
+              accessibilityLabel={withDot(hcp !== null ? hcpA11yLabel(hcp) : profileA11yLabel(name))}
+              style={[
+                styles.hcpPill,
+                { backgroundColor: colors.surface, borderColor: stale ? colors.accent : colors.border },
+              ]}
+              testID="open-profile"
+            >
+              <Text numberOfLines={1} style={[styles.hcpName, { color: colors.text }]}>
+                {name}
+              </Text>
+              {hcp !== null ? (
+                <>
+                  <Text style={[styles.hcpDot, { color: colors.muted }]}>·</Text>
+                  <Text style={[styles.hcpLabel, { color: colors.muted }]}>{HOME_TEXT.hcp}</Text>
+                  <Text style={[styles.hcpValue, { color: colors.text }]}>{hcp}</Text>
+                </>
+              ) : null}
+            </Tap>
             {dot}
-          </Pressable>
+          </View>
         ) : (
-          <Pressable
+          <Tap
             onPress={onProfile}
             accessibilityRole="link"
             // Lenka er én liten tekstlinje; slakken gir den 44 pt å treffe på.
@@ -735,9 +741,9 @@ function Top({
               {PROFILE_TEXT.heading}
             </Text>
             {dot}
-          </Pressable>
+          </Tap>
         )}
-        <Pressable
+        <Tap
           onPress={onInbox}
           hitSlop={HCP_SLOP}
           accessibilityRole="button"
@@ -751,7 +757,7 @@ function Top({
               {unread}
             </Text>
           ) : null}
-        </Pressable>
+        </Tap>
       </View>
     </View>
   );
@@ -784,7 +790,7 @@ function Section({
     <View testID={testID}>
       <SectionHead title={title} />
       {cards.map((card) => (
-        <Pressable
+        <Tap
           key={card.gameId}
           style={[
             styles.gameCard,
@@ -806,7 +812,7 @@ function Section({
                 : (STATUS_LABELS[card.status as GameStatus] ?? card.status)}
             </Text>
           </View>
-        </Pressable>
+        </Tap>
       ))}
     </View>
   );

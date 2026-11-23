@@ -13,7 +13,8 @@
 // Med stor tekst (`fontScale` over 1,2) viker merket, så navn og bane får plass på én linje
 // (tegnet med 135 % på 320).
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Tap } from '../Tap';
 import { useFocusEffect } from '@react-navigation/native';
 import { closeRareShot, fetchAeresliste, readClosedRareShot } from '../../data/aeresliste';
 import { buildRareShotBanner, type RareShotBannerModel } from '../../lib/aeresliste';
@@ -57,11 +58,11 @@ export function RareShotBanner({ onOpen }: { onOpen: () => void }) {
     <View style={styles.wrap} testID="rare-shot-banner">
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={[styles.stripe, { backgroundColor: colors.accent }]} />
-        <Pressable
+        <Tap
           accessibilityRole="link"
           accessibilityLabel={banner.spoken}
           onPress={onOpen}
-          style={({ pressed }) => [styles.open, pressed ? styles.pressed : null]}
+          style={[styles.open]}
           testID="rare-shot-banner-open"
         >
           {fontScale > BADGE_MAX_FONT_SCALE ? null : <AchievementBadge mark={banner.mark} earned />}
@@ -90,17 +91,17 @@ export function RareShotBanner({ onOpen }: { onOpen: () => void }) {
               {banner.where}
             </Text>
           </View>
-        </Pressable>
-        <Pressable
+        </Tap>
+        <Tap
           accessibilityRole="button"
           accessibilityLabel={TOPPLISTE_TEXT.bannerClose}
           hitSlop={CLOSE_SLOP}
           onPress={onClose}
-          style={({ pressed }) => [styles.close, pressed ? styles.pressed : null]}
+          style={[styles.close]}
           testID="rare-shot-banner-close"
         >
           <LukkIcon color={colors.text} size={18} strokeWidth={2} />
-        </Pressable>
+        </Tap>
       </View>
     </View>
   );
@@ -108,7 +109,6 @@ export function RareShotBanner({ onOpen }: { onOpen: () => void }) {
 
 // Linjehøydene er tegningens (gruppe 11, målt i DOM-en: 15, 19 og 17), så kortet blir 81 høyt.
 const styles = StyleSheet.create({
-  pressed: { opacity: 0.6 },
   // 8 pt luft under, som Kavalkade-banneret.
   wrap: { marginBottom: 8 },
   card: {

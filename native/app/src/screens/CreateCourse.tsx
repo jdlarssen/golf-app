@@ -15,7 +15,8 @@
 // overlever ikke at appen lukkes.
 import { usePreventRemove } from '@react-navigation/native';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import { Tap } from '../components/Tap';
 import { HoleGrid } from '../components/course/HoleGrid';
 import { SimilarCoursesPanel } from '../components/course/SimilarCoursesPanel';
 import { TeeTable } from '../components/course/TeeTable';
@@ -129,7 +130,7 @@ export function CreateCourse({ navigation, route }: ScreenProps<'CreateCourse'>)
         onTees={(tees) => setDraft((prev) => ({ ...prev, tees }))}
       />
 
-      <Pressable
+      <Tap
         testID="course-save"
         accessibilityRole="button"
         accessibilityState={{ disabled: blocked }}
@@ -138,7 +139,7 @@ export function CreateCourse({ navigation, route }: ScreenProps<'CreateCourse'>)
         onPress={() => void save()}
       >
         <Text style={ui.buttonText}>{busy ? COURSE_TEXT.saving : COURSE_TEXT.save}</Text>
-      </Pressable>
+      </Tap>
 
       {problem ? (
         <Text style={[ui.muted, styles.status]} testID="course-save-status">

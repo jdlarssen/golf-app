@@ -4,7 +4,8 @@
 // admin leser alle. En ferdig kamp du ikke kan åpne, har knapp til tavla
 // (`boardOpen`, eierens svar 02.11), som lenka på nettets cup-side.
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { AppCupMatch } from '../../../../../lib/cup/appCupView';
 import { CUP_TEXT, matchOutcomeLine, matchScore, matchStatusLabel } from '../../lib/cupCopy';
 import { formatMessage } from '../../lib/kavalkadeCopy';
@@ -53,7 +54,7 @@ export function CupMatchRow({ match, onOpen }: { match: AppCupMatch; onOpen: () 
     );
   }
   return (
-    <Pressable
+    <Tap
       onPress={onOpen}
       accessibilityRole="button"
       style={rowStyle}
@@ -61,7 +62,7 @@ export function CupMatchRow({ match, onOpen }: { match: AppCupMatch; onOpen: () 
     >
       {body}
       <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} />
-    </Pressable>
+    </Tap>
   );
 }
 

@@ -3,7 +3,8 @@
 // Lista stopper aldri noen: «Nei, legg til …» skjuler den, og uten treff eller ved
 // feil står det ingenting. Hvilke navn som ligner, avgjør databasen (0222).
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { clipQuery, isDismissed, isSearchable } from '../../../../../lib/courses/similarCoursesPanel';
 import { fetchSimilarCourses, type SimilarCourse } from '../../data/similarCourses';
 import { COURSE_TEXT, addAnywayLabel, similarCourseMeta } from '../../lib/courseCopy';
@@ -57,14 +58,14 @@ export function SimilarCoursesPanel({
           right={<Text style={[styles.use, { color: colors.primary }]}>{COURSE_TEXT.useThis}</Text>}
         />
       ))}
-      <Pressable
+      <Tap
         testID="similar-courses-add-anyway"
         accessibilityRole="button"
         style={styles.addAnyway}
         onPress={() => setDismissed(clipQuery(query))}
       >
         <Text style={ui.linkText}>{addAnywayLabel(query)}</Text>
-      </Pressable>
+      </Tap>
     </View>
   );
 }

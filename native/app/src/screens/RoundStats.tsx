@@ -9,7 +9,8 @@
 // Rundedagboka og bag-taggen, og regner alt med `historyStats`. Uten nett står
 // feillinja med «Prøv igjen».
 import { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   AchievementSection,
@@ -55,14 +56,14 @@ export function RoundStats(_props: ScreenProps<'RoundStats'>) {
           <Text style={ui.error} testID="round-stats-error">
             {HISTORY_TEXT.loadFailed}
           </Text>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             style={ui.buttonSecondary}
             onPress={retry}
             testID="round-stats-retry"
           >
             <Text style={ui.buttonSecondaryText}>{HISTORY_TEXT.retry}</Text>
-          </Pressable>
+          </Tap>
         </View>
       ) : stats && load.state === 'ready' && load.rounds.length === 0 ? (
         <View style={[ui.card, styles.empty]}>

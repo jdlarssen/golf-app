@@ -12,7 +12,8 @@
 // modellen, og `buildKavalkadeCardModel` gir `null` når faktumet mangler,
 // slik webbens rute svarer 404 og knappen der aldri blir synlig.
 import { useCallback, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { KAVALKADE_CARD_IMAGE_WIDTH, computeCardHeight } from '../../../../../lib/kavalkade/cardImageLayout';
 import type { KavalkadeCardModel } from '../../../../../lib/kavalkade/cardModel';
 import { logKavalkadeShare } from '../../data/kavalkade';
@@ -61,7 +62,7 @@ export function ShareKavalkadeCardButton({ year, model }: { year: number; model:
         </View>
       </View>
 
-      <Pressable
+      <Tap
         accessibilityRole="button"
         accessibilityState={{ disabled: busy, busy }}
         disabled={busy}
@@ -71,7 +72,7 @@ export function ShareKavalkadeCardButton({ year, model }: { year: number; model:
       >
         <ShareCardIcon color={ink} size={16} />
         <Text style={[styles.label, { color: ink }]}>{KAVALKADE_SHARE_TEXT.shareCard}</Text>
-      </Pressable>
+      </Tap>
       {failed ? (
         <Text style={ui.error} testID={`share-kavalkade-error-${model.kind}`}>
           {KAVALKADE_APP_TEXT.shareFailed}

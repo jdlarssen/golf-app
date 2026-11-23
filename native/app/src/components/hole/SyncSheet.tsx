@@ -12,7 +12,8 @@
 // Bygget som `SpecificValueSheet`: Modal uten animasjon, bakgrunnen og arket er
 // søsken (ellers hører VoiceOver bare «Lukk»), og arkets felles hinne og grep.
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   syncCellState,
@@ -125,7 +126,8 @@ export function SyncSheet({
         accessibilityViewIsModal
         onAccessibilityEscape={onClose}
       >
-        <Pressable
+        <Tap
+          feedback="none"
           style={StyleSheet.absoluteFill}
           onPress={onClose}
           onAccessibilityTap={onClose}
@@ -178,7 +180,7 @@ export function SyncSheet({
           {retakeHoles.length > 0 ? (
             <View style={styles.retakes}>
               {retakeHoles.map((n) => (
-                <Pressable
+                <Tap
                   key={n}
                   onPress={() => onGoToHole(n)}
                   style={styles.retake}
@@ -186,7 +188,7 @@ export function SyncSheet({
                   accessibilityRole="link"
                 >
                   <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.retakeText, { color: colors.danger }]}>{retakeHoleText(n)}</Text>
-                </Pressable>
+                </Tap>
               ))}
             </View>
           ) : null}
@@ -255,7 +257,7 @@ export function SyncSheet({
 
           <View style={styles.actions}>
             {pending ? (
-              <Pressable
+              <Tap
                 onPress={() => void retry()}
                 disabled={retrying}
                 style={[
@@ -270,16 +272,16 @@ export function SyncSheet({
                 <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.actionText, { color: colors.primary }]}>
                   {retrying ? SYNC_BANNER_TEXT.retrying : SYNC_CHIP_TEXT.retryNow}
                 </Text>
-              </Pressable>
+              </Tap>
             ) : null}
-            <Pressable
+            <Tap
               onPress={onClose}
               style={[styles.action, { backgroundColor: colors.primary }]}
               testID="sync-sheet-continue"
               accessibilityRole="button"
             >
               <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.actionText, { color: colors.onPrimary }]}>{SYNC_CHIP_TEXT.continueRound}</Text>
-            </Pressable>
+            </Tap>
           </View>
         </View>
       </View>

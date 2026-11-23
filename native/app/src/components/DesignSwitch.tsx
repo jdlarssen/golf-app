@@ -2,7 +2,8 @@
 // Bryteren fra Varsler-tegningen (#2256), flyttet ut av `NotificationsAndTheme`
 // da «Personvern og konto» fikk en bryter for AI-tekstene (#2561). Utseende og
 // oppførsel er uendret.
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Tap } from './Tap';
 import { PALETTES, type Scheme, type ThemeColors } from '../theme';
 
 /**
@@ -29,7 +30,7 @@ export function DesignSwitch({
   testID: string;
 }) {
   return (
-    <Pressable
+    <Tap
       accessibilityRole="switch"
       accessibilityLabel={label}
       accessibilityState={{ checked: value, disabled }}
@@ -45,7 +46,7 @@ export function DesignSwitch({
       testID={testID}
     >
       <View style={styles.switchKnob} />
-    </Pressable>
+    </Tap>
   );
 }
 

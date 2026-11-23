@@ -17,7 +17,8 @@
 // slippet kan ta opptil et minutt). Uten nett, eller når kallet ryker, står en
 // feillinje med «Prøv igjen», og neste forsøk leser raden serveren har skrevet.
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { buildKavalkadeCardModel, isKavalkadeCardKind } from '../../../../lib/kavalkade/cardModel';
 import { buildKavalkadeDeck, isKavalkadeEmpty } from '../../../../lib/kavalkade/kavalkadeCards';
@@ -173,9 +174,9 @@ export function Kavalkade(_props: ScreenProps<'Kavalkade'>) {
           <Text style={ui.error} testID="kavalkade-error">
             {KAVALKADE_APP_TEXT.loadFailed}
           </Text>
-          <Pressable accessibilityRole="button" style={ui.buttonSecondary} onPress={retry} testID="kavalkade-retry">
+          <Tap accessibilityRole="button" style={ui.buttonSecondary} onPress={retry} testID="kavalkade-retry">
             <Text style={ui.buttonSecondaryText}>{KAVALKADE_APP_TEXT.retry}</Text>
-          </Pressable>
+          </Tap>
         </View>
       ) : (
         content(load.view)

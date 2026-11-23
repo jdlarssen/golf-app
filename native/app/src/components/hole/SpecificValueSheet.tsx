@@ -12,7 +12,8 @@
 // Bakgrunnen og arket er søsken, ikke forelder og barn. En Pressable er
 // tilgjengelig som standard, og på iOS gjør det alt inni til ÉTT element for
 // VoiceOver. Lå knappene inni bakgrunnen, hørte en skjermleser bare «Lukk».
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MAX_STROKES } from '../../../../../lib/scorecard/strokeEntry';
 import { FONTS, fraunces, sheetGrabber, sheetScrim, useTheme } from '../../theme';
@@ -63,7 +64,8 @@ export function SpecificValueSheet({
         accessibilityViewIsModal
         onAccessibilityEscape={onClose}
       >
-        <Pressable
+        <Tap
+          feedback="none"
           style={StyleSheet.absoluteFill}
           onPress={onClose}
           // Et dobbelttrykk med VoiceOver trykker ellers midt på bakgrunnen,
@@ -83,7 +85,7 @@ export function SpecificValueSheet({
           </Text>
           <View style={styles.grid}>
             {VALUES.map((v) => (
-              <Pressable
+              <Tap
                 key={v}
                 onPress={() => {
                   onPick(v);
@@ -96,9 +98,9 @@ export function SpecificValueSheet({
                 accessibilityLabel={`Sett score til ${v}`}
               >
                 <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={cellText}>{v}</Text>
-              </Pressable>
+              </Tap>
             ))}
-            <Pressable
+            <Tap
               onPress={() => {
                 onClear();
                 onClose();
@@ -109,10 +111,10 @@ export function SpecificValueSheet({
               accessibilityLabel="Fjern score"
             >
               <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={cellText}>X</Text>
-            </Pressable>
+            </Tap>
           </View>
           {strike ? (
-            <Pressable
+            <Tap
               onPress={() => {
                 onPick(strike.value);
                 onClose();
@@ -122,7 +124,7 @@ export function SpecificValueSheet({
               accessibilityRole="button"
             >
               <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.strikeText, { color: colors.text }]}>{strike.label}</Text>
-            </Pressable>
+            </Tap>
           ) : null}
           <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.caption, { color: colors.muted }]}>
             Trykk for å sette. X fjerner.

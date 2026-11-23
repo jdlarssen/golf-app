@@ -9,7 +9,8 @@
 //
 // Ingen tegning finnes for skjermen. Den følger «Fullfør profilen»: overskrift
 // i Fraunces 28, brødtekst i 15, knappene 52 høye nederst.
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AI_CONSENT_TEXT } from '../lib/aiConsentCopy';
 import { FONTS, fraunces, useTheme } from '../theme';
@@ -31,7 +32,7 @@ export function AiConsentQuestion({
   const busy = pending !== null;
 
   const button = (granted: boolean, label: string, testID: string) => (
-    <Pressable
+    <Tap
       style={[
         styles.button,
         granted
@@ -48,7 +49,7 @@ export function AiConsentQuestion({
       <Text style={[styles.buttonText, { color: granted ? colors.onPrimary : colors.text }]}>
         {pending === granted ? AI_CONSENT_TEXT.saving : label}
       </Text>
-    </Pressable>
+    </Tap>
   );
 
   return (

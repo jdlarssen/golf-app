@@ -24,13 +24,13 @@ import {
   AccessibilityInfo,
   ActivityIndicator,
   Platform,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { Tap } from '../components/Tap';
 import { InboxActionRow } from '../components/inbox/InboxActionRow';
 import { InboxFilterChips } from '../components/inbox/InboxFilterChips';
 import { InboxRow } from '../components/inbox/InboxRow';
@@ -216,7 +216,7 @@ export function Inbox({ navigation }: ScreenProps<'Inbox'>) {
         {INBOX_TEXT.heading}
       </Text>
       {!empty ? (
-        <Pressable
+        <Tap
           accessibilityRole="button"
           accessibilityState={{ disabled: locked, busy: locked }}
           disabled={locked}
@@ -231,7 +231,7 @@ export function Inbox({ navigation }: ScreenProps<'Inbox'>) {
           <Text style={[styles.pillText, { color: colors.primary }]}>
             {data?.hasUnread ? INBOX_TEXT.markAll : INBOX_TEXT.clearRead}
           </Text>
-        </Pressable>
+        </Tap>
       ) : null}
     </View>
   );
@@ -256,9 +256,9 @@ export function Inbox({ navigation }: ScreenProps<'Inbox'>) {
       <Text style={[styles.problemText, { color: colors.text }]} testID="inbox-load-error">
         {problem === 'offline' ? INBOX_TEXT.offline : INBOX_TEXT.loadFailed}
       </Text>
-      <Pressable accessibilityRole="button" style={ui.buttonSecondary} onPress={() => void reload()} testID="inbox-retry">
+      <Tap accessibilityRole="button" style={ui.buttonSecondary} onPress={() => void reload()} testID="inbox-retry">
         <Text style={ui.buttonSecondaryText}>{INBOX_TEXT.retry}</Text>
-      </Pressable>
+      </Tap>
     </View>
   ) : null;
 

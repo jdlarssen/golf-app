@@ -18,7 +18,8 @@
 // overstyring selv, og skriver ingen innstillingstekst selv
 // (`simSettingGroups`, `lib/league/simSettings.ts`).
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { AppLeagueRound } from '../../../../../lib/league/appLeagueView';
 import { simSettingGroups } from '../../../../../lib/league/simSettings';
 import { SIM_SETTINGS_TEXT } from '../../lib/leagueCopy';
@@ -42,7 +43,7 @@ export function SimSettingsCard({
       style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
       testID="sim-settings-card"
     >
-      <Pressable
+      <Tap
         onPress={() => setOpen((value) => !value)}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
@@ -53,7 +54,7 @@ export function SimSettingsCard({
         <View style={styles.chevron}>
           <ChevronIcon color={colors.muted} size={14} up={open} strokeWidth={2} />
         </View>
-      </Pressable>
+      </Tap>
       {open ? (
         <View testID="sim-settings-values">
           {groups.map((group) => (

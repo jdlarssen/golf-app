@@ -44,7 +44,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -53,6 +52,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { Tap } from '../components/Tap';
 import Constants from 'expo-constants';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -263,7 +263,7 @@ export function Login() {
             { backgroundColor: colors.surfaceStrong, paddingTop: insets.top + 22 },
           ]}
         >
-          <Pressable
+          <Tap
             onLongPress={() => setPasswordMode(true)}
             delayLongPress={REVEAL_PASSWORD_LOGIN_MS}
             accessibilityRole="header"
@@ -272,7 +272,7 @@ export function Login() {
             <Text style={[styles.wordmark, { color: colors.onStrongWarm }]}>
               {Constants.expoConfig?.name ?? APP_NAME_FALLBACK}
             </Text>
-          </Pressable>
+          </Tap>
           {step === 'email' ? (
             <Text style={[styles.tagline, { color: withAlpha(colors.onStrongWarm, 0.85) }]}>
               {LOGIN_TEXT.taglinePre}
@@ -365,7 +365,7 @@ export function Login() {
               <View testID="dev-login-section" style={styles.devSection}>
                 <Text style={ui.sectionTitle}>{DEV_LOGIN_TEXT.sectionTitle}</Text>
                 {devUsers.map((user, index) => (
-                  <Pressable
+                  <Tap
                     key={user.email}
                     style={[ui.buttonSecondary, styles.devRow]}
                     onPress={() => void signInAsDev(user)}
@@ -378,7 +378,7 @@ export function Login() {
                     <View style={[ui.badge, styles.devBadge]}>
                       <Text style={ui.badgeText}>{DEV_LOGIN_ROLE_LABEL[user.role]}</Text>
                     </View>
-                  </Pressable>
+                  </Tap>
                 ))}
               </View>
             ) : null}
@@ -405,7 +405,7 @@ export function Login() {
                   </Text>
                   {LOGIN_TEXT.sentToSuffix}{' '}
                 </Text>
-                <Pressable
+                <Tap
                   onPress={changeEmail}
                   disabled={busy != null}
                   hitSlop={CHANGE_EMAIL_HIT_SLOP}
@@ -416,7 +416,7 @@ export function Login() {
                   <Text style={[styles.sentTo, styles.changeEmail, { color: colors.primary }]}>
                     {LOGIN_TEXT.changeEmail}
                   </Text>
-                </Pressable>
+                </Tap>
               </View>
               {errorLine}
             </View>
@@ -467,7 +467,7 @@ function PillButton({
 }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       style={[styles.pill, { backgroundColor: colors.primary }, disabled && styles.pillOff, style]}
       onPress={onPress}
       disabled={disabled}
@@ -476,7 +476,7 @@ function PillButton({
       testID={testID}
     >
       <Text style={[styles.pillText, { color: colors.onPrimary }]}>{label}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -599,7 +599,7 @@ function ResendCard({
         ) : (
           <View />
         )}
-        <Pressable
+        <Tap
           style={[
             styles.resendButton,
             off
@@ -620,7 +620,7 @@ function ResendCard({
           >
             {busy ? LOGIN_TEXT.resendPending : LOGIN_TEXT.resendButton}
           </Text>
-        </Pressable>
+        </Tap>
       </View>
     </View>
   );

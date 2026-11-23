@@ -4,7 +4,8 @@
 // den delte `lib/leaderboard/nassauBoard.ts` ut (samme som nettets tavle); her
 // er bare tegningen og teksten. Ingen animasjon.
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import {
   NASSAU_SECTION_KEYS,
   summarizeNassau,
@@ -214,7 +215,7 @@ function Card({
   const divider = selected ? colors.youBorder : colors.divider;
 
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       accessibilityRole="tab"
       accessibilityState={{ selected }}
@@ -260,7 +261,7 @@ function Card({
           {viewer.text}
         </Text>
       ) : null}
-    </Pressable>
+    </Tap>
   );
 }
 

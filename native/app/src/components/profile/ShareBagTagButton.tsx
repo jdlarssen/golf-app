@@ -11,7 +11,8 @@
 // Feiler bildet eller arket, står en linje under knappen. Et avbrutt ark er
 // ingen feil.
 import { useCallback, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { HandicapTrend } from '../../../../../lib/stats/handicapTrend';
 import type { BagTagModel } from '../../lib/bagTag';
 import { PROFILE_TEXT } from '../../lib/profileCopy';
@@ -67,22 +68,22 @@ export function ShareBagTagButton({
         </ThemeScope>
       </View>
 
-      <Pressable
+      <Tap
         accessibilityRole="button"
         accessibilityState={{ disabled: busy, busy }}
         disabled={busy}
         onPress={() => void onShare()}
-        style={({ pressed }) => [
+        style={[
           styles.button,
           { borderColor: colors.border },
-          pressed || busy ? styles.dimmed : null,
+          busy ? styles.dimmed : null,
         ]}
         testID="profile-share-bag-tag"
       >
         {/* Designet tegner ikonet med 1,8 i strek (i 24-rutenettet). */}
         <DelIcon color={colors.primary} size={18} strokeWidth={1.8} />
         <Text style={[styles.buttonText, { color: colors.primary }]}>{PROFILE_TEXT.shareBagTag}</Text>
-      </Pressable>
+      </Tap>
       {failed ? (
         <Text style={ui.error} testID="profile-share-error">
           {PROFILE_TEXT.shareBagTagFailed}

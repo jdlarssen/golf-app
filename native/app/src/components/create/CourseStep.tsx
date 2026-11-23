@@ -12,7 +12,7 @@
 // pynt, ikke porten: den delte `isTeeOffInPast` (med 5 minutters slingrings-
 // monn) avgjør ved publisering.
 import { useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import DateTimePicker, {
   DateTimePickerAndroid,
   type DateTimePickerChangeEvent,
@@ -161,14 +161,14 @@ export function CourseStep({
             />
           ))}
           {courses !== null && onCreateCourse ? (
-            <Pressable
+            <Tap
               testID="create-course-new"
               accessibilityRole="button"
               style={styles.newCourse}
               onPress={() => onCreateCourse(search.trim())}
             >
               <Text style={ui.linkText}>{COURSE_TEXT.newCourseLink}</Text>
-            </Pressable>
+            </Tap>
           ) : null}
         </Field>
       ) : (

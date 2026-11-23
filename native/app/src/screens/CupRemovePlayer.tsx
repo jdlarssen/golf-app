@@ -2,7 +2,8 @@
 // flyter har egen skjerm. Serveren rører aldri kamper som alt er laget, og en spiller
 // som alt er borte, er suksess. Har cupen startet imens, sier skjermen det.
 import { useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { removeCupParticipant } from '../data/cupSetup';
 import { backTo } from '../lib/backTo';
@@ -81,7 +82,7 @@ export function CupRemovePlayer({ route, navigation }: ScreenProps<'CupRemovePla
 
       <View style={styles.actions}>
         {locked ? null : (
-          <Pressable
+          <Tap
             accessibilityRole="button"
             disabled={busy}
             style={[ui.button, { backgroundColor: colors.danger }]}
@@ -91,9 +92,9 @@ export function CupRemovePlayer({ route, navigation }: ScreenProps<'CupRemovePla
             <Text style={ui.buttonText}>
               {busy ? REMOVE_TEXT.pending : formatMessage(REMOVE_TEXT.confirm, { firstName })}
             </Text>
-          </Pressable>
+          </Tap>
         )}
-        <Pressable
+        <Tap
           accessibilityRole="button"
           disabled={busy}
           style={ui.buttonSecondary}
@@ -101,7 +102,7 @@ export function CupRemovePlayer({ route, navigation }: ScreenProps<'CupRemovePla
           testID="cup-remove-cancel"
         >
           <Text style={ui.buttonSecondaryText}>{REMOVE_TEXT.cancel}</Text>
-        </Pressable>
+        </Tap>
       </View>
     </ScrollView>
   );

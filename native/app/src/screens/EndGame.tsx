@@ -47,12 +47,12 @@ import {
 import {
   ActivityIndicator,
   Alert,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { WinnerSheet } from '../components/endGame/WinnerSheet';
@@ -496,7 +496,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
 
   // Tegningen har 2 pt ekstra over knappen i fremdriftskortet, ikke i det sterke.
   const toggleDeliveries = (ink: string, border: string) => (
-    <Pressable
+    <Tap
       onPress={() => setExpanded((open) => !open)}
       style={[
         styles.outlinePill,
@@ -512,7 +512,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
         {expanded ? END_GAME_TEXT.hideDeliveries : END_GAME_TEXT.showDeliveries}
       </Text>
       <ChevronIcon color={ink} size={14} strokeWidth={2} up={expanded} />
-    </Pressable>
+    </Tap>
   );
 
   // #2580: «Per har 2 av 4 utslag», bare med innstillingen på.
@@ -527,7 +527,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
         bar={
           <>
             {noticeFor('list')}
-            <Pressable
+            <Tap
               style={[
                 styles.submit,
                 ready
@@ -551,7 +551,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
               <Text style={[styles.submitText, { color: ready ? colors.onPrimary : colors.muted }]}>
                 {END_GAME_TEXT.submit}
               </Text>
-            </Pressable>
+            </Tap>
             <Text style={[styles.barHint, { color: colors.muted }]} testID="end-game-submit-hint">
               {ready
                 ? END_GAME_TEXT.submitHint
@@ -670,7 +670,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
                         userId,
                         player.userId,
                       ) ? null : (
-                      <Pressable
+                      <Tap
                         style={[
                           styles.outlinePill,
                           { borderColor: colors.primary, backgroundColor: colors.surface },
@@ -697,7 +697,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
                         <Text style={[styles.pillText14, { color: colors.primary }]}>
                           {END_GAME_TEXT.approveOnBehalf}
                         </Text>
-                      </Pressable>
+                      </Tap>
                     )}
                     {noticeFor(`approve:${player.userId}`)}
                   </Card>
@@ -769,7 +769,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
               // en knapp inni den ville stjålet tappet. #1917: her sto en lenke
               // til nettsiden. Nå gjøres frafallet her.
               <View style={styles.actionBox}>
-                <Pressable
+                <Tap
                   style={[styles.outlinePill, { borderColor: colors.primary }]}
                   disabled={busy}
                   accessibilityRole="button"
@@ -789,7 +789,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
                   <Text style={[styles.pillText15, { color: colors.primary }]}>
                     {WITHDRAW_SELF.label}
                   </Text>
-                </Pressable>
+                </Tap>
                 {noticeFor('withdraw-self')}
               </View>
             ) : null}
@@ -825,7 +825,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
                           },
                         );
                 return (
-                  <Pressable
+                  <Tap
                     key={slot.key}
                     style={[
                       styles.slotRow,
@@ -857,7 +857,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
                     <Text style={[styles.pillText14, { color: colors.primary }]}>
                       {winner ? END_GAME_TEXT.changeWinner : END_GAME_TEXT.chooseWinner}
                     </Text>
-                  </Pressable>
+                  </Tap>
                 );
               })}
             </Card>
@@ -1102,7 +1102,7 @@ function ConfirmStep({
                 {notice}
               </Text>
             ) : null}
-            <Pressable
+            <Tap
               style={[styles.submit, { backgroundColor: colors.primary }]}
               disabled={busy}
               accessibilityRole="button"
@@ -1113,8 +1113,8 @@ function ConfirmStep({
               <Text style={[styles.submitText, { color: colors.onPrimary }]}>
                 {busy ? END_GAME_TEXT.submitBusy : END_GAME_TEXT.confirmCta}
               </Text>
-            </Pressable>
-            <Pressable
+            </Tap>
+            <Tap
               style={styles.cancel}
               disabled={busy}
               accessibilityRole="button"
@@ -1125,7 +1125,7 @@ function ConfirmStep({
               <Text style={[styles.pillText15, { color: colors.primary }]}>
                 {END_GAME_TEXT.cancel}
               </Text>
-            </Pressable>
+            </Tap>
           </>
         }
       >
@@ -1297,7 +1297,7 @@ function ReminderPanel({ gameId }: { gameId: string }) {
   return (
     <View style={styles.reminder} testID="end-game-reminder">
       {preview !== null && preview.targets > 0 ? (
-        <Pressable
+        <Tap
           style={[styles.outlinePill, { borderColor: colors.primary }, busy && styles.buttonOff]}
           disabled={busy}
           accessibilityRole="button"
@@ -1308,7 +1308,7 @@ function ReminderPanel({ gameId }: { gameId: string }) {
           <Text style={[styles.pillText15, { color: colors.primary }]}>
             {busy ? REMIND_BUSY_LABEL : remindLabel(preview.targets)}
           </Text>
-        </Pressable>
+        </Tap>
       ) : null}
 
       {sentences.length > 0 ? (
@@ -1399,7 +1399,7 @@ function CheckRow({
 }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       testID={testID}
       accessibilityRole="checkbox"
       accessibilityState={{ checked, disabled }}
@@ -1427,7 +1427,7 @@ function CheckRow({
         <Text style={[styles.name15, { color: colors.text }]}>{label}</Text>
         <Text style={[styles.sub12, { color: colors.muted }]}>{action}</Text>
       </View>
-    </Pressable>
+    </Tap>
   );
 }
 

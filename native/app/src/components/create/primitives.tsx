@@ -8,7 +8,8 @@
 // Alle er tema-bevisste via `useTheme()`: dette er de første flatene i appen
 // som bygges etter #1833, så ingenting her leser den statiske lys-paletten.
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Tap } from '../Tap';
 import { FONTS, INTER_LINE, TAP, fraunces, interLine, useTheme } from '../../theme';
 import { DesignSwitch, listSwitchOffColor } from '../DesignSwitch';
 
@@ -76,7 +77,7 @@ export function SelectRow({
 }) {
   const { colors, ui } = useTheme();
   return (
-    <Pressable
+    <Tap
       testID={testID}
       accessibilityRole="button"
       accessibilityState={{ selected, disabled }}
@@ -95,7 +96,7 @@ export function SelectRow({
         {subtitle ? <Text style={ui.muted}>{subtitle}</Text> : null}
       </View>
       {right}
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -148,7 +149,7 @@ export function Chips<T extends string | number>({
         const active = isChosen(value, option.value);
         const disabled = option.disabled === true;
         return (
-          <Pressable
+          <Tap
             key={option.testID}
             testID={option.testID}
             accessibilityRole="button"
@@ -165,7 +166,7 @@ export function Chips<T extends string | number>({
           >
             {option.leading}
             <Text style={active ? ui.body : ui.muted}>{option.label}</Text>
-          </Pressable>
+          </Tap>
         );
       })}
     </View>
@@ -242,7 +243,7 @@ export function ChoiceCards<T extends string | number>({
         const active = option.value === value;
         return (
           <View key={option.testID} style={{ width: `${100 / columns}%`, paddingHorizontal: gap / 2 }}>
-            <Pressable
+            <Tap
               testID={option.testID}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
@@ -272,7 +273,7 @@ export function ChoiceCards<T extends string | number>({
                   {option.hint}
                 </Text>
               ) : null}
-            </Pressable>
+            </Tap>
           </View>
         );
       })}

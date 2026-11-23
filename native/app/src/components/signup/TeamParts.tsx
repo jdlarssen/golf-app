@@ -8,7 +8,8 @@
 // Ringene i tegningen er `box-shadow` og tar ingen plass; her er de en kant utenpå
 // skiva med negativ avstand, så skiva står på samme sted med og uten ring.
 import { forwardRef, useEffect, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { fetchOwnProfile } from '../../data/profile';
 import { useSession } from '../../session';
 import { TEAM_SIGNUP_TEXT } from '../../lib/teamSignupCopy';
@@ -113,7 +114,7 @@ export function LineupCell({
     </>
   );
   return onPress ? (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       onPress={onPress}
@@ -121,7 +122,7 @@ export function LineupCell({
       testID={testID}
     >
       {body}
-    </Pressable>
+    </Tap>
   ) : (
     <View style={styles.cell} testID={testID} accessible={accessibilityLabel != null} accessibilityLabel={accessibilityLabel}>
       {body}
@@ -192,19 +193,19 @@ export function DockButton({
     );
   }
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityState={{ disabled: busy, busy }}
       disabled={busy}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.button,
         variant === 'primary'
           ? { backgroundColor: colors.primary }
           : variant === 'danger'
             ? { backgroundColor: colors.danger }
             : { borderWidth: 1, borderColor: colors.primary },
-        pressed || busy ? styles.pressed : null,
+        busy ? styles.pressed : null,
       ]}
       testID={testID}
     >
@@ -217,7 +218,7 @@ export function DockButton({
       >
         {label}
       </Text>
-    </Pressable>
+    </Tap>
   );
 }
 

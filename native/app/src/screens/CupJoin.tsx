@@ -11,7 +11,8 @@
 // på en annen skjerm, går tilbake dit.
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppCupJoinView } from '../../../../lib/cup/appCupSetupView';
 import { WebLinkButton } from '../components/WebLinkButton';
@@ -77,14 +78,14 @@ export function CupJoin({ route, navigation }: ScreenProps<'CupJoin'>) {
           {joinLoadFailureText(failure ?? 'load_failed')}
         </Text>
         {final ? null : (
-          <Pressable
+          <Tap
             onPress={() => void load()}
             accessibilityRole="button"
             style={[styles.retry, { borderColor: colors.primary }]}
             testID="cup-join-retry"
           >
             <Text style={[styles.retryText, { color: colors.primary }]}>{SETUP_APP_TEXT.retry}</Text>
-          </Pressable>
+          </Tap>
         )}
       </View>
     );
@@ -148,7 +149,7 @@ export function CupJoin({ route, navigation }: ScreenProps<'CupJoin'>) {
         <View style={[styles.hero, { backgroundColor: colors.surfaceStrong }]} testID="cup-join-can_join">
           {planLine ? <Text style={[styles.fact, { color: withAlpha(onStrong, 0.85) }]}>{planLine}</Text> : null}
           <Text style={[styles.body, { color: onStrong }]}>{sentence}</Text>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             accessibilityState={{ disabled: busy, busy }}
             disabled={busy}
@@ -157,7 +158,7 @@ export function CupJoin({ route, navigation }: ScreenProps<'CupJoin'>) {
             testID="cup-join-button"
           >
             <Text style={[styles.ctaText, { color: colors.surfaceStrong }]}>{JOIN_TEXT.join}</Text>
-          </Pressable>
+          </Tap>
         </View>
       </ScrollView>
     );
@@ -177,14 +178,14 @@ export function CupJoin({ route, navigation }: ScreenProps<'CupJoin'>) {
       </View>
       <View style={styles.actions}>
         {decision === 'profile_incomplete' ? (
-          <Pressable
+          <Tap
             accessibilityRole="button"
             style={ui.button}
             onPress={() => openOrReturn(navigation, 'EditProfile')}
             testID="cup-join-profile"
           >
             <Text style={ui.buttonText}>{JOIN_TEXT.completeProfile}</Text>
-          </Pressable>
+          </Tap>
         ) : null}
         {decision === 'not_member' && club ? (
           <WebLinkButton
@@ -194,12 +195,12 @@ export function CupJoin({ route, navigation }: ScreenProps<'CupJoin'>) {
           />
         ) : null}
         {canOpenCup && (decision === 'already_joined' || decision === 'closed' || decision === 'full') ? (
-          <Pressable accessibilityRole="button" style={ui.button} onPress={goToCup} testID="cup-join-open-cup">
+          <Tap accessibilityRole="button" style={ui.button} onPress={goToCup} testID="cup-join-open-cup">
             <Text style={ui.buttonText}>{JOIN_TEXT.goToCup}</Text>
-          </Pressable>
+          </Tap>
         ) : null}
         {decision === 'already_joined' ? (
-          <Pressable
+          <Tap
             accessibilityRole="button"
             accessibilityState={{ disabled: busy, busy }}
             disabled={busy}
@@ -208,7 +209,7 @@ export function CupJoin({ route, navigation }: ScreenProps<'CupJoin'>) {
             testID="cup-join-leave"
           >
             <Text style={ui.buttonSecondaryText}>{JOIN_TEXT.leave}</Text>
-          </Pressable>
+          </Tap>
         ) : null}
       </View>
     </ScrollView>

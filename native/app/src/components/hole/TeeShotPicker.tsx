@@ -5,7 +5,8 @@
 // leveringslåsen og linja under knappene kommer fra lib/games/teeShots.ts;
 // setningene fra `teeShotsCopy.ts`. Skrivingen gjør skjermen (`onPick`), så
 // komponenten bare viser og melder trykket.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { GameMode } from '../../../../../lib/scoring/modes/types';
 import { deliveryCoversWholeTeam } from '../../../../../lib/games/teamDelivery';
 import { selectableOnHole, teamTeeShotDelivery, teeShotHoleLine } from '../../../../../lib/games/teeShots';
@@ -125,7 +126,7 @@ function TeamBlock({
                 : colors.muted;
           const countBold = canTap && (chosen || lockInEffect);
           return (
-            <Pressable
+            <Tap
               key={player.userId}
               onPress={() => onPick(team.teamNumber, chosen ? null : player.userId)}
               disabled={!canTap}
@@ -153,7 +154,7 @@ function TeamBlock({
                   {teeShotCountText(player, minimum)}
                 </Text>
               </View>
-            </Pressable>
+            </Tap>
           );
         })}
       </View>

@@ -8,7 +8,8 @@
 // dialogen, har spilleren alt svart. En feil gjør det om til et nytt forsøk, så
 // kortet står. Mens en runde pågår, vises ingenting.
 import { useCallback, useState } from 'react';
-import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
+import { Tap } from './Tap';
 import { useFocusEffect } from '@react-navigation/native';
 import { turnOnPush } from '../data/pushDevice';
 import {
@@ -97,7 +98,7 @@ export function PushPromptCard({ roundInProgress }: { roundInProgress: boolean }
           </Text>
         ) : null}
         <View style={styles.row}>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             disabled={busy}
             onPress={() => void onEnable()}
@@ -105,8 +106,8 @@ export function PushPromptCard({ roundInProgress }: { roundInProgress: boolean }
             testID="push-prompt-enable"
           >
             <Text style={[styles.enableText, { color: colors.onPrimary }]}>{PROFILE_TEXT.pushPromptEnable}</Text>
-          </Pressable>
-          <Pressable
+          </Tap>
+          <Tap
             accessibilityRole="button"
             disabled={busy}
             onPress={() => void onLater()}
@@ -114,7 +115,7 @@ export function PushPromptCard({ roundInProgress }: { roundInProgress: boolean }
             testID="push-prompt-later"
           >
             <Text style={[styles.laterText, { color: colors.text }]}>{PROFILE_TEXT.pushPromptLater}</Text>
-          </Pressable>
+          </Tap>
         </View>
       </View>
     </View>

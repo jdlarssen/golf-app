@@ -9,7 +9,8 @@
 //   kortet er ikke en lenke, og banneret kan ikke lukkes.
 //
 // Hvem som ser dem og når, avgjør serveren (`useKavalkadeStatus`).
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { KavalkadeHomeSlot } from '../../../../../lib/kavalkade/release';
 import { kavalkadeT as t } from '../../lib/kavalkadeCopy';
 import { FONTS, TAP, interLine, useTheme } from '../../theme';
@@ -19,13 +20,13 @@ export function KavalkadeHistoryRow({ year, onOpen }: { year: number; onOpen: ()
   const title = t('historikkLinkTitle', { year });
   const body = t('historikkLinkBody');
   return (
-    <Pressable
+    <Tap
       accessibilityRole="link"
       accessibilityLabel={`${title}. ${body}`}
       onPress={onOpen}
-      style={({ pressed }) => [
+      style={[
         styles.row,
-        { backgroundColor: pressed ? colors.bg : colors.surface, borderColor: colors.border },
+        { backgroundColor: colors.surface, borderColor: colors.border },
       ]}
       testID="round-diary-kavalkade"
     >
@@ -33,7 +34,7 @@ export function KavalkadeHistoryRow({ year, onOpen }: { year: number; onOpen: ()
         <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
         <Text style={[styles.body, { color: colors.muted }]}>{body}</Text>
       </View>
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -63,14 +64,14 @@ export function KavalkadeHomeBanner({
             {teaser ? t('homeTeaserBody') : t('homeLinkBody')}
           </Text>
           {teaser ? null : (
-            <Pressable
+            <Tap
               accessibilityRole="link"
               onPress={onOpen}
               style={[styles.cta, { backgroundColor: colors.primary }]}
               testID="kavalkade-home-banner-cta"
             >
               <Text style={[styles.ctaText, { color: colors.bg }]}>{t('homeLinkCta')}</Text>
-            </Pressable>
+            </Tap>
           )}
         </View>
       </View>

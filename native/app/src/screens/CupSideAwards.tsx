@@ -8,7 +8,8 @@
 // med `fetchCupManage` (`sideReports`); en tjener som ikke har den, gir ingen bokser.
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import type { AppCupManageView, AppCupSideAward } from '../../../../lib/cup/appCupManageView';
 import { girReportsFor, slotReportsFor, type CupGirReport, type CupSlotReports } from '../../../../lib/cup/cupSideReports';
 import { PICKER_VISIBLE_ROWS, pickerRows } from '../../../../lib/league/pickerRows';
@@ -81,14 +82,14 @@ export function CupSideAwards({ route }: ScreenProps<'CupSideAwards'>) {
           {manageLoadFailureText(failure ?? 'load_failed')}
         </Text>
         {final ? null : (
-          <Pressable
+          <Tap
             onPress={() => void load()}
             accessibilityRole="button"
             style={[styles.retry, { borderColor: colors.primary }]}
             testID="cup-side-awards-retry"
           >
             <Text style={[styles.retryText, { color: colors.primary }]}>{MANAGE_APP_TEXT.retry}</Text>
-          </Pressable>
+          </Tap>
         )}
       </View>
     );
@@ -251,7 +252,7 @@ function WinnerCard({
         testID={`side-award-option-${award.id}-none`}
       />
       {reports !== null ? <SlotReportsBox testKey={award.id} kind={award.kind} reports={reports} /> : null}
-      <Pressable
+      <Tap
         accessibilityRole="button"
         disabled={!choice || busy || stale}
         style={[ui.buttonSecondary, !choice || stale ? styles.dimmed : null]}
@@ -261,7 +262,7 @@ function WinnerCard({
         <Text style={ui.buttonSecondaryText}>
           {busy ? SIDE_AWARD_TEXT.registerPending : SIDE_AWARD_TEXT.register}
         </Text>
-      </Pressable>
+      </Tap>
       {error ? (
         <Text style={[styles.small, { color: colors.danger }]} testID={`side-award-error-${award.id}`}>
           {error}
@@ -363,7 +364,7 @@ function GirCard({
       {reports !== null ? (
         <GirReportsBox testKey={award.id} reports={reports} team1Name={team1Name} team2Name={team2Name} />
       ) : null}
-      <Pressable
+      <Tap
         accessibilityRole="button"
         disabled={!filled || busy || stale}
         style={[ui.buttonSecondary, !filled || stale ? styles.dimmed : null]}
@@ -373,7 +374,7 @@ function GirCard({
         <Text style={ui.buttonSecondaryText}>
           {busy ? SIDE_AWARD_TEXT.registerPending : SIDE_AWARD_TEXT.register}
         </Text>
-      </Pressable>
+      </Tap>
       {error ? (
         <Text style={[styles.small, { color: colors.danger }]} testID={`side-award-error-${award.id}`}>
           {error}

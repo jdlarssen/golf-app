@@ -5,7 +5,8 @@
 // slakkes aldri. Alt krever nett.
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppCupFinishMatch, AppCupManageView } from '../../../../lib/cup/appCupManageView';
 import { fetchCupManage, finishCup, finishCupMatch } from '../data/cupManage';
@@ -79,14 +80,14 @@ export function CupFinish({ route, navigation }: ScreenProps<'CupFinish'>) {
           {manageLoadFailureText(failure ?? 'load_failed')}
         </Text>
         {final ? null : (
-          <Pressable
+          <Tap
             onPress={() => void load()}
             accessibilityRole="button"
             style={[styles.retry, { borderColor: colors.primary }]}
             testID="cup-finish-retry"
           >
             <Text style={[styles.retryText, { color: colors.primary }]}>{MANAGE_APP_TEXT.retry}</Text>
-          </Pressable>
+          </Tap>
         )}
       </View>
     );
@@ -181,7 +182,7 @@ export function CupFinish({ route, navigation }: ScreenProps<'CupFinish'>) {
           </Text>
         ) : null}
         <View style={styles.actions}>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             disabled={busy || stale}
             style={[ui.button, current.blocksFinish ? { backgroundColor: colors.danger } : null, stale ? styles.dimmed : null]}
@@ -195,8 +196,8 @@ export function CupFinish({ route, navigation }: ScreenProps<'CupFinish'>) {
                   ? FINISH_TEXT.anywayButton
                   : FINISH_APP_TEXT.matchButton}
             </Text>
-          </Pressable>
-          <Pressable
+          </Tap>
+          <Tap
             accessibilityRole="button"
             disabled={busy}
             style={ui.buttonSecondary}
@@ -207,7 +208,7 @@ export function CupFinish({ route, navigation }: ScreenProps<'CupFinish'>) {
             testID="cup-finish-match-cancel"
           >
             <Text style={ui.buttonSecondaryText}>{FINISH_APP_TEXT.cancel}</Text>
-          </Pressable>
+          </Tap>
         </View>
       </ScrollView>
     );
@@ -245,14 +246,14 @@ export function CupFinish({ route, navigation }: ScreenProps<'CupFinish'>) {
             testID="cup-finish-awards-hint"
           />
           {stale ? null : (
-            <Pressable
+            <Tap
               accessibilityRole="button"
               onPress={() => openOrReturn(navigation, 'CupSideAwards', { cupId })}
               style={styles.link}
               testID="cup-finish-open-awards"
             >
               <Text style={[styles.linkText, { color: colors.primary }]}>{FINISH_APP_TEXT.registerLink}</Text>
-            </Pressable>
+            </Tap>
           )}
         </View>
       ) : null}
@@ -284,7 +285,7 @@ export function CupFinish({ route, navigation }: ScreenProps<'CupFinish'>) {
                 </Text>
               </View>
               {stale ? null : (
-                <Pressable
+                <Tap
                   accessibilityRole="button"
                   accessibilityLabel={`${FINISH_APP_TEXT.matchLink}: ${labelOf(match)}`}
                   disabled={busy}
@@ -297,7 +298,7 @@ export function CupFinish({ route, navigation }: ScreenProps<'CupFinish'>) {
                   testID={`cup-finish-open-match-${match.gameId}`}
                 >
                   <Text style={[styles.linkText, { color: colors.primary }]}>{FINISH_APP_TEXT.matchLink}</Text>
-                </Pressable>
+                </Tap>
               )}
             </View>
           ))}
@@ -306,7 +307,7 @@ export function CupFinish({ route, navigation }: ScreenProps<'CupFinish'>) {
 
       <View style={styles.actions}>
         {running ? (
-          <Pressable
+          <Tap
             accessibilityRole="button"
             disabled={busy || awardsOpen || stale}
             style={[
@@ -326,9 +327,9 @@ export function CupFinish({ route, navigation }: ScreenProps<'CupFinish'>) {
                   ? FINISH_TEXT.anywayButton
                   : FINISH_TEXT.button}
             </Text>
-          </Pressable>
+          </Tap>
         ) : null}
-        <Pressable
+        <Tap
           accessibilityRole="button"
           disabled={busy}
           style={ui.buttonSecondary}
@@ -336,7 +337,7 @@ export function CupFinish({ route, navigation }: ScreenProps<'CupFinish'>) {
           testID="cup-finish-cancel"
         >
           <Text style={ui.buttonSecondaryText}>{FINISH_APP_TEXT.cancel}</Text>
-        </Pressable>
+        </Tap>
       </View>
     </ScrollView>
   );

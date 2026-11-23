@@ -1,8 +1,8 @@
 // #2928: den delte knappen (Type A). Låser at ingenting endres i ro, hvor
 // trykk-stilen havner, at Android får ripplen i stedet, og at `feedback="none"`
 // ikke viser noe. Trykket tilstand settes med `testOnly_pressed`.
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { render, screen } from '@testing-library/react-native';
 import { Platform, processColor, StyleSheet, Text, type ViewStyle } from 'react-native';
 import { PALETTES } from '../theme';
@@ -138,3 +138,40 @@ describe('Tap.tsx', () => {
     expect(src).not.toMatch(/\bAnimated\./);
   });
 });
+
+// Alle kildefilene i appen (ikke tester), for reglene som gjelder hele appen.
+function appSources(dir = join(__dirname, '..')): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const path = join(dir, e.name);
+    if (e.isDirectory()) return appSources(path);
+    return /\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name) ? [path] : [];
+  });
+}
+
+describe('knappene i appen (#2928)', () => {
+  const sources = appSources().map((path) => ({
+    file: relative(join(__dirname, '..'), path),
+    src: readFileSync(path, 'utf8'),
+  }));
+
+  it('henter aldri Pressable fra react-native utenom Tap.tsx', () => {
+    const importsPressable = sources
+      .filter(({ file }) => file !== join('components', 'Tap.tsx'))
+      .filter(({ src }) => /import\s*\{[^}]*\bPressable\b[^}]*\}\s*from\s*'react-native'/.test(src))
+      .map(({ file }) => file);
+    expect(importsPressable).toEqual([]);
+  });
+
+  it('gir hvert bakteppe bak et ark feedback="none"', () => {
+    const backdrops = sources.flatMap(({ file, src }) =>
+      // `=>` i en pil-funksjon avslutter ikke taggen.
+      [...src.matchAll(/<Tap\b((?:=>|[^>])*)>/g)]
+        .map((m) => m[1])
+        .filter((props) => props.includes('StyleSheet.absoluteFill'))
+        .map((props) => ({ file, none: props.includes('feedback="none"') })),
+    );
+    expect(backdrops.length).toBeGreaterThanOrEqual(12);
+    expect(backdrops.filter((b) => !b.none)).toEqual([]);
+  });
+});
+

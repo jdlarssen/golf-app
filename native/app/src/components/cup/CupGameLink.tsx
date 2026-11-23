@@ -1,5 +1,6 @@
 // #2752: «Se cupen» på spillets side, som `CupStandingsLink` på nettet.
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
+import { Tap } from '../Tap';
 import { CUP_TEXT } from '../../lib/cupCopy';
 import { FONTS, TAP, useTheme } from '../../theme';
 import { ChevronIcon } from '../icons/Icons';
@@ -7,7 +8,7 @@ import { ChevronIcon } from '../icons/Icons';
 export function CupGameLink({ onPress }: { onPress: () => void }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       accessibilityRole="button"
       style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
@@ -15,7 +16,7 @@ export function CupGameLink({ onPress }: { onPress: () => void }) {
     >
       <Text style={[styles.text, { color: colors.text }]}>{CUP_TEXT.gameLink}</Text>
       <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} />
-    </Pressable>
+    </Tap>
   );
 }
 

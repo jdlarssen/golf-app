@@ -56,7 +56,6 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObje
 import {
   AccessibilityInfo,
   Alert,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -65,6 +64,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { GameStatus } from '../../../../lib/games/status';
@@ -856,13 +856,13 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
             {/* Står også mens kø-vakta holder lever-knappen igjen: det er lov å
                 rette mens slagene synker. Avstanden ned til lever-knappen er
                 minst 24 pt (#1793), for de to knappene gjør det motsatte. */}
-            <Pressable
+            <Tap
               style={[ui.buttonSecondary, styles.editButton]}
               onPress={() => openHole(ownHoles[0])}
               testID="scorecard-edit"
             >
               <Text style={ui.buttonSecondaryText}>Rediger hullene</Text>
-            </Pressable>
+            </Tap>
             {wholeRound ? (
               <Text style={ui.muted} testID="scorecard-whole-round">
                 {WHOLE_ROUND_NOTICE}
@@ -881,7 +881,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
                 onLayout={onSubmitLayout}
               />
             ) : (
-            <Pressable
+            <Tap
               style={[ui.button, (queueBlocked || busy || markerBlocked) && styles.buttonDisabled]}
               onLayout={onSubmitLayout}
               onPress={onSubmitPress}
@@ -895,13 +895,13 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
                     ? syncingLabel
                     : submitLabel}
               </Text>
-            </Pressable>
+            </Tap>
             )}
           </>
         ) : (
           <>
             {bridge && me.submitted_at == null ? (
-              <Pressable
+              <Tap
                 style={ui.button}
                 onPress={() =>
                   openOrReturn(navigation, 'Hole', {
@@ -912,7 +912,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
                 testID="scorecard-bridge"
               >
                 <Text style={ui.buttonText}>{bridgeLabel(bridge.holeNumber)}</Text>
-              </Pressable>
+              </Tap>
             ) : readonlyText ? (
               <Text style={ui.muted} testID="scorecard-readonly">
                 {readonlyText}
@@ -932,7 +932,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
                     testID="deliver-for-flight"
                   />
                 ) : (
-                <Pressable
+                <Tap
                   style={[ui.button, (queueBlocked || busy || markerBlocked) && styles.buttonDisabled]}
                   onPress={onDeliverForPress}
                   disabled={queueBlocked || busy || markerBlocked}
@@ -945,7 +945,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
                         ? syncingLabel
                         : deliverForLabel}
                   </Text>
-                </Pressable>
+                </Tap>
                 )}
               </>
             ) : null}

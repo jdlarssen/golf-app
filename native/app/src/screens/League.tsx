@@ -16,7 +16,8 @@
 // noe hentet står feilen med «Prøv igjen».
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppLeagueRound, AppLeagueView } from '../../../../lib/league/appLeagueView';
 import { OpenRoundCard, type RoundAction } from '../components/league/OpenRoundCard';
@@ -207,7 +208,7 @@ function LeagueRoom({ navigation, route }: ScreenProps<'League'>) {
             {LEAGUE_SELF_TEXT.joinHeading}
           </Text>
           <Text style={[styles.signupBody, { color: colors.onStrongWarm }]}>{LEAGUE_SELF_TEXT.joinSubtitle}</Text>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             accessibilityState={{ disabled: joining, busy: joining }}
             disabled={joining}
@@ -218,7 +219,7 @@ function LeagueRoom({ navigation, route }: ScreenProps<'League'>) {
             <Text style={[styles.signupButtonText, { color: colors.surfaceStrong }]}>
               {joining ? LEAGUE_SELF_TEXT.joinPending : LEAGUE_SELF_TEXT.joinButton}
             </Text>
-          </Pressable>
+          </Tap>
         </View>
       ) : null}
 
@@ -271,27 +272,27 @@ function LeagueRoom({ navigation, route }: ScreenProps<'League'>) {
       {league.shareUrl ? (
         <View testID="league-share">
           <SectionHead title={LEAGUE_TEXT.shareHeading} />
-          <Pressable
+          <Tap
             accessibilityRole="button"
             onPress={() => shareLink(league.shareUrl)}
             style={[ui.buttonSecondary, styles.share]}
             testID="league-share-link"
           >
             <Text style={ui.buttonSecondaryText}>{LEAGUE_TEXT.shareButton}</Text>
-          </Pressable>
+          </Tap>
         </View>
       ) : null}
 
       {/* #2839: avmeldingen er en destruktiv handling, så den har sin egen skjerm. */}
       {me.canLeave ? (
-        <Pressable
+        <Tap
           accessibilityRole="link"
           onPress={() => openOrReturn(navigation, 'LeagueLeave', { leagueId })}
           style={styles.leaveLink}
           testID="league-leave-link"
         >
           <Text style={[styles.leaveLinkText, { color: colors.muted }]}>{LEAGUE_SELF_TEXT.leaveLink}</Text>
-        </Pressable>
+        </Tap>
       ) : null}
     </ScrollView>
   );

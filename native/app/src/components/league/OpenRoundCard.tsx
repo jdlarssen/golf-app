@@ -5,7 +5,8 @@
 // `roundPlayerLocks` som startporten), og under dem enten «Spill runden»,
 // «Du har levert» eller ingenting. Når knappen vises, avgjør skjermen
 // (`League.tsx`); kortet tegner bare det det får.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { AppLeagueRound, AppLeagueView } from '../../../../../lib/league/appLeagueView';
 import {
   LEAGUE_TEXT,
@@ -119,14 +120,14 @@ function Action({ action }: { action: RoundAction }) {
   switch (action.kind) {
     case 'play':
       return (
-        <Pressable
+        <Tap
           onPress={action.onPress}
           accessibilityRole="button"
           style={[styles.cta, { backgroundColor: colors.primary }]}
           testID="league-play-round"
         >
           <Text style={[styles.ctaText, { color: colors.onPrimary }]}>{LEAGUE_TEXT.playRound}</Text>
-        </Pressable>
+        </Tap>
       );
     case 'play-offline':
       return (

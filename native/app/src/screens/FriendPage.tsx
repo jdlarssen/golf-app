@@ -19,7 +19,8 @@
 // Handlingene har ingen kø, som i Venner: uten nett står linja og knappen
 // igjen. Knappen er låst mens handlingen går.
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { FriendStatus } from '../../../../lib/friends/friendStatus';
 import {
@@ -351,16 +352,16 @@ function FriendRounds({
               />
             ))}
             {hasMore ? (
-              <Pressable
+              <Tap
                 accessibilityRole="button"
                 accessibilityState={{ expanded: false }}
                 onPress={onExpand}
-                style={({ pressed }) => [styles.showAll, pressed ? styles.pressed : null]}
+                style={[styles.showAll]}
                 testID="friend-page-show-all"
               >
                 <Text style={[styles.showAllText, { color: colors.primary }]}>{showAllRounds(rounds.length)}</Text>
                 <ChevronIcon direction="down" size={16} strokeWidth={2} color={colors.primary} />
-              </Pressable>
+              </Tap>
             ) : null}
           </View>
         </>
@@ -462,14 +463,13 @@ function RoundRow({
   const sub = roundRowSubline(round, now);
   const badge = round.badge ? roundBadgeLabel(round.badge, name) : null;
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={[round.name, sub, badge].filter(Boolean).join(', ')}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.roundRow,
         divider ? { borderBottomWidth: 1, borderBottomColor: colors.divider } : null,
-        pressed ? styles.pressed : null,
       ]}
       testID={`friend-page-round-${round.gameId}`}
     >
@@ -484,7 +484,7 @@ function RoundRow({
         ) : null}
       </View>
       {round.badge && badge ? <Badge badge={round.badge} label={badge} /> : null}
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -586,14 +586,14 @@ function FailureCard({ line, onRetry }: { line: string; onRetry: () => void }) {
   return (
     <View style={[styles.failureCard, { backgroundColor: colors.surface, borderColor: colors.border }]} testID="friend-page-failure">
       <Text style={[styles.failureText, { color: colors.text }]}>{line}</Text>
-      <Pressable
+      <Tap
         accessibilityRole="button"
         onPress={onRetry}
         style={[ui.buttonSecondary, styles.retry]}
         testID="friend-page-retry"
       >
         <Text style={ui.buttonSecondaryText}>{FRIENDS_TEXT.retry}</Text>
-      </Pressable>
+      </Tap>
     </View>
   );
 }
@@ -619,7 +619,6 @@ function Loading() {
 // Målene er tegningens (`project/Venneside-C-*.dc.html`).
 const styles = StyleSheet.create({
   scroll: { flexGrow: 1 },
-  pressed: { opacity: 0.6 },
 
   head: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingTop: 14, paddingHorizontal: 20 },
   headText: { flex: 1, minWidth: 0 },

@@ -5,7 +5,8 @@
 // fokus eller appen kommer tilbake (`useGameBundle`). Da stemmer de når
 // arrangøren kommer tilbake fra «Hvem har betalt?».
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { fetchPayments } from '../../data/payments';
 import { BETALING_TEXT, PAYMENT_TEXT } from '../../lib/paymentCopy';
 import { FONTS, fraunces, interLine, TAP, useTheme } from '../../theme';
@@ -55,14 +56,14 @@ export function PaymentOverview({
             </Text>
           </View>
         </View>
-        <Pressable
+        <Tap
           accessibilityRole="button"
           onPress={onOpen}
           style={[styles.open, { borderColor: colors.primary }]}
           testID="payment-overview-open"
         >
           <Text style={[styles.openText, { color: colors.primary }]}>{BETALING_TEXT.viewAll}</Text>
-        </Pressable>
+        </Tap>
       </View>
     </View>
   );

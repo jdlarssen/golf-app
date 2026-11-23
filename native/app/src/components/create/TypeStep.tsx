@@ -6,7 +6,8 @@
 // linje forklaring. Et trykk velger flisen, og «Neste» går videre, som på
 // artboardet. Hvilke typer som vises, avgjør skjermen: «Solo / test» finnes
 // ikke i appen.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import {
   ARRANGEMENT_TEXT,
   ARRANGEMENT_TILES,
@@ -45,7 +46,7 @@ export function TypeStep({
           const tile = ARRANGEMENT_TILES[intent];
           return (
             <View key={intent} style={styles.cell}>
-              <Pressable
+              <Tap
                 testID={`create-type-${intent}`}
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
@@ -61,7 +62,7 @@ export function TypeStep({
                 <Icon color={colors.primary} size={26} strokeWidth={1.6} />
                 <Text style={[styles.label, { color: colors.text }]}>{tile.label}</Text>
                 <Text style={[styles.description, { color: colors.muted }]}>{tile.description}</Text>
-              </Pressable>
+              </Tap>
             </View>
           );
         })}

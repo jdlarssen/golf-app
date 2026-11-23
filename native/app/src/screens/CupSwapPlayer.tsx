@@ -4,7 +4,8 @@
 // på serveren, så en feil her er serverens ord.
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import type { AppCupSwapCandidates } from '../../../../lib/cup/appCupManageView';
 import { PICKER_VISIBLE_ROWS, pickerRows } from '../../../../lib/league/pickerRows';
 import { CupOption } from '../components/cup/CupOption';
@@ -84,14 +85,14 @@ export function CupSwapPlayer({ route, navigation }: ScreenProps<'CupSwapPlayer'
     return (
       <View style={ui.centered} testID="cup-swap-failed">
         <Text style={[styles.failure, { color: colors.text }]}>{manageLoadFailureText(failure)}</Text>
-        <Pressable
+        <Tap
           onPress={() => void load()}
           accessibilityRole="button"
           style={[styles.retry, { borderColor: colors.primary }]}
           testID="cup-swap-retry"
         >
           <Text style={[styles.retryText, { color: colors.primary }]}>{MANAGE_APP_TEXT.retry}</Text>
-        </Pressable>
+        </Tap>
       </View>
     );
   }
@@ -219,7 +220,7 @@ export function CupSwapPlayer({ route, navigation }: ScreenProps<'CupSwapPlayer'
 
       <View style={styles.actions}>
         {ready ? (
-          <Pressable
+          <Tap
             accessibilityRole="button"
             disabled={busy}
             style={ui.button}
@@ -227,9 +228,9 @@ export function CupSwapPlayer({ route, navigation }: ScreenProps<'CupSwapPlayer'
             testID="cup-swap-submit"
           >
             <Text style={ui.buttonText}>{busy ? SWAP_TEXT.submitPending : SWAP_TEXT.submitButton}</Text>
-          </Pressable>
+          </Tap>
         ) : null}
-        <Pressable
+        <Tap
           accessibilityRole="button"
           disabled={busy}
           style={ui.buttonSecondary}
@@ -237,7 +238,7 @@ export function CupSwapPlayer({ route, navigation }: ScreenProps<'CupSwapPlayer'
           testID="cup-swap-cancel"
         >
           <Text style={ui.buttonSecondaryText}>{SWAP_TEXT.cancelButton}</Text>
-        </Pressable>
+        </Tap>
       </View>
     </ScrollView>
   );

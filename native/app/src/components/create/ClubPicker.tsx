@@ -5,7 +5,8 @@
 // to i bredden, 72 høye, klubbnavnet og antall medlemmer, med rollen din der du
 // styrer klubben. Det finnes ikke noe «Ingen klubb»: med én klubb er den valgt
 // fra start, ellers venter «Neste» på et valg (`lib/wizard/clubChoice.ts`).
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { AppClubOption } from '../../../../../lib/clubs/appClubOptionsView';
 import { CLUB_TEXT, clubCardLine } from '../../lib/arrangementCopy';
 import { FONTS, fraunces, interLine, useTheme } from '../../theme';
@@ -29,7 +30,7 @@ export function ClubPicker({
           const active = club.id === selected;
           return (
             <View key={club.id} style={styles.cell}>
-              <Pressable
+              <Tap
                 testID={`create-club-${club.id}`}
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
@@ -45,7 +46,7 @@ export function ClubPicker({
                 <Text style={[styles.line, { color: colors.muted }]}>
                   {clubCardLine(club.role, club.memberCount)}
                 </Text>
-              </Pressable>
+              </Tap>
             </View>
           );
         })}

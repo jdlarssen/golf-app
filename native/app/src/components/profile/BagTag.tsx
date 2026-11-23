@@ -40,7 +40,8 @@
 // står ringen som før. Deleversjonen har aldri kode (eierens beslutning i
 // issuet: et bilde på sosiale medier skal ikke gi hvem som helst en vei inn).
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import Svg, { Circle, Polyline } from 'react-native-svg';
 import type { HandicapTrend } from '../../../../../lib/stats/handicapTrend';
 import type { BagTagModel } from '../../lib/bagTag';
@@ -202,20 +203,19 @@ function FriendQrButton({ url, name }: { url: string; name: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Pressable
+      <Tap
         accessibilityRole="button"
         accessibilityLabel={PROFILE_TEXT.friendQrLabel}
         onPress={() => setOpen(true)}
         hitSlop={QR_HIT_SLOP}
-        style={({ pressed }) => [
+        style={[
           styles.qrFlat,
           { backgroundColor: colors.onStrongWarm },
-          pressed ? styles.qrPressed : null,
         ]}
         testID="bag-tag-qr"
       >
         <QrCode value={url} size={RING} color={colors.surfaceStrong} />
-      </Pressable>
+      </Tap>
       <FriendQrSheet visible={open} name={name} url={url} onClose={() => setOpen(false)} />
     </>
   );
@@ -263,7 +263,7 @@ function HandicapAge({
 
   const label = model.hcpAge ? model.hcpAge.text : PROFILE_TEXT.setHandicap;
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       onPress={onEditProfile}
       // Linja er liten; trykkflaten er 44 pt høy uansett.
@@ -271,7 +271,7 @@ function HandicapAge({
       testID={model.hcpAge ? 'profile-hcp-age' : 'profile-set-handicap'}
     >
       <Text style={[styles.side, styles.sideLink, ink]}>{label}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -417,5 +417,4 @@ const styles = StyleSheet.create({
   // sonen er 4 moduler (4,8 pt), så hjørnene klipper bare krem, aldri koden
   // (rundturtesten i `lib/qrMatrix.test.ts` klipper likt).
   qrFlat: { width: RING, height: RING, borderRadius: 10, overflow: 'hidden' },
-  qrPressed: { opacity: 0.6 },
 });

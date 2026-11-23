@@ -2,7 +2,8 @@
 // (`Aeresbrett-tilstander`, rad 95): segmentkontrollen, «Din plass»-kortet,
 // lederkortet, lista med streker og de to meldingskortene. All tekst står på
 // én linje i 390 og 320 (`numberOfLines={1}`); ingenting brekker.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type {
   TopplisteLeaderModel,
   TopplisteRowModel,
@@ -47,7 +48,7 @@ export function TopplisteTabs({
       {TOPPLISTE_TABS.map((id) => {
         const selected = id === tab;
         return (
-          <Pressable
+          <Tap
             key={id}
             accessibilityRole="tab"
             accessibilityState={{ selected, disabled }}
@@ -64,7 +65,7 @@ export function TopplisteTabs({
                 {TAB_LABEL[id]}
               </Text>
             </View>
-          </Pressable>
+          </Tap>
         );
       })}
     </View>
@@ -244,14 +245,14 @@ export function TopplisteMessage({
       <Text numberOfLines={1} style={[styles.messageBody, { color: colors.muted }]}>
         {body}
       </Text>
-      <Pressable
+      <Tap
         accessibilityRole="button"
         onPress={onRetry}
-        style={({ pressed }) => [styles.retry, { borderColor: colors.primary }, pressed ? styles.pressed : null]}
+        style={[styles.retry, { borderColor: colors.primary }]}
         testID={`${testID}-retry`}
       >
         <Text style={[styles.retryText, { color: colors.primary }]}>{TOPPLISTE_TEXT.retry}</Text>
-      </Pressable>
+      </Tap>
     </View>
   );
 }
@@ -366,7 +367,6 @@ const NAME = interLine(15, 18);
 
 const styles = StyleSheet.create({
   flex: { flexGrow: 1, flexShrink: 1, minWidth: 0 },
-  pressed: { opacity: 0.6 },
   card: { marginHorizontal: 16, marginTop: 12, borderWidth: 1, borderRadius: 16 },
 
   // Sporet: 4 pt luft og 1 pt kant. Knappene er 44 høye og trekker 2 pt fra

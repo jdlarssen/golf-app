@@ -23,7 +23,8 @@
 // som er 1 pt midt på og smalner mot sidene. Her er den to sirkler, en i
 // kantfarge forskjøvet 1 pt inn i billetten og en i bakgrunnsfarge over den.
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { GameBundle } from '../../data/gameBundle';
 import type { HomeCard } from '../../data/homeList';
 import { APP_MODE_LABELS, isAppSupportedMode } from '../../lib/appFormats';
@@ -94,7 +95,7 @@ export function NextStartTicket({
   const [perforation, setPerforation] = useState(0);
   return (
     <View style={styles.wrap}>
-      <Pressable
+      <Tap
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={a11yLabel}
@@ -157,7 +158,7 @@ export function NextStartTicket({
             />
           ) : null}
         </View>
-      </Pressable>
+      </Tap>
       {(['top', 'bottom'] as const).map((side) => (
         <View
           key={side}

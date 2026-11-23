@@ -10,7 +10,8 @@
 // for destruktive flyter: egen skjerm, aldri en dialog.
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppCupWithdrawalView } from '../../../../lib/cup/appCupManageView';
 import { CupOption } from '../components/cup/CupOption';
@@ -113,14 +114,14 @@ export function CupWithdraw({ route, navigation }: ScreenProps<'CupWithdraw'>) {
     return (
       <View style={ui.centered} testID="cup-withdraw-failed">
         <Text style={[styles.failure, { color: colors.text }]}>{manageLoadFailureText(failure)}</Text>
-        <Pressable
+        <Tap
           onPress={() => void load()}
           accessibilityRole="button"
           style={[styles.retry, { borderColor: colors.primary }]}
           testID="cup-withdraw-retry"
         >
           <Text style={[styles.retryText, { color: colors.primary }]}>{MANAGE_APP_TEXT.retry}</Text>
-        </Pressable>
+        </Tap>
       </View>
     );
   }
@@ -274,7 +275,7 @@ export function CupWithdraw({ route, navigation }: ScreenProps<'CupWithdraw'>) {
 
       <View style={styles.actions}>
         {canWrite ? (
-          <Pressable
+          <Tap
             accessibilityRole="button"
             disabled={busy}
             style={[ui.button, { backgroundColor: colors.danger }]}
@@ -288,10 +289,10 @@ export function CupWithdraw({ route, navigation }: ScreenProps<'CupWithdraw'>) {
                   ? WITHDRAW_TEXT.withdrawButtonSelf
                   : WITHDRAW_TEXT.withdrawButtonAdmin}
             </Text>
-          </Pressable>
+          </Tap>
         ) : null}
         {isUndo && active ? (
-          <Pressable
+          <Tap
             accessibilityRole="button"
             disabled={busy}
             style={ui.button}
@@ -299,9 +300,9 @@ export function CupWithdraw({ route, navigation }: ScreenProps<'CupWithdraw'>) {
             testID="cup-withdraw-undo"
           >
             <Text style={ui.buttonText}>{busy ? WITHDRAW_TEXT.undoPending : WITHDRAW_TEXT.undoButton}</Text>
-          </Pressable>
+          </Tap>
         ) : null}
-        <Pressable
+        <Tap
           accessibilityRole="button"
           disabled={busy}
           style={ui.buttonSecondary}
@@ -309,7 +310,7 @@ export function CupWithdraw({ route, navigation }: ScreenProps<'CupWithdraw'>) {
           testID="cup-withdraw-cancel"
         >
           <Text style={ui.buttonSecondaryText}>{WITHDRAW_TEXT.cancelButton}</Text>
-        </Pressable>
+        </Tap>
       </View>
     </ScrollView>
   );

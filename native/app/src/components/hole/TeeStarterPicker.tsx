@@ -2,7 +2,8 @@
 // på telefonen og sendes når det er nett, så det lykkes uansett. Valget kan ikke
 // endres etterpå, som på nettet. Hvem som får spørsmålet, er `showsTeeStarterPicker`;
 // skrivingen gjør skjermen (`onPick`).
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { TEE_STARTER_TEXT } from '../../lib/holesCopy';
 import { FONTS, TAP, fraunces, interLine, useTheme } from '../../theme';
 import { HOLE_TEXT_CAP } from './holeTextCap';
@@ -31,7 +32,7 @@ export function TeeStarterPicker({
       </Text>
       <View style={styles.buttons}>
         {options.map((option) => (
-          <Pressable
+          <Tap
             key={option.userId}
             onPress={() => onPick(option.userId)}
             accessibilityRole="button"
@@ -41,7 +42,7 @@ export function TeeStarterPicker({
             <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.name, { color: colors.text }]} numberOfLines={1}>
               {option.name}
             </Text>
-          </Pressable>
+          </Tap>
         ))}
       </View>
       {saveFailed ? (

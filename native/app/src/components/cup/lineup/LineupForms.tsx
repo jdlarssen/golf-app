@@ -2,7 +2,8 @@
 // `PlannedMatchCountForm` og `OpenSessionForm`. Reglene er serverens. Her regnes bare det
 // skjermen viser før du trykker, med samme funksjoner.
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Tap } from '../../Tap';
 import type { AppCupLineupView } from '../../../../../../lib/cup/appCupLineupView';
 import { sessionMatchCount, type CupSessionFormat } from '../../../../../../lib/cup/cupTemplates';
 import { derivePointsToWin } from '../../../../../../lib/cup/pointsToWin';
@@ -66,7 +67,7 @@ export function PlannedCountCard({
         </Text>
       ) : null}
       {error ? <FormError message={error} testID="cup-lineup-planned-error" /> : null}
-      <Pressable
+      <Tap
         accessibilityRole="button"
         accessibilityState={{ disabled }}
         disabled={disabled}
@@ -75,7 +76,7 @@ export function PlannedCountCard({
         testID="cup-lineup-planned-save"
       >
         <Text style={ui.buttonText}>{LINEUP_TEXT.plannedSave}</Text>
-      </Pressable>
+      </Tap>
     </View>
   );
 }
@@ -142,7 +143,7 @@ export function OpenSessionCard({
         />
       </View>
       {error ? <FormError message={error} testID="cup-lineup-open-error" /> : null}
-      <Pressable
+      <Tap
         accessibilityRole="button"
         accessibilityState={{ disabled }}
         disabled={disabled}
@@ -151,7 +152,7 @@ export function OpenSessionCard({
         testID="cup-lineup-open"
       >
         <Text style={ui.buttonText}>{LINEUP_TEXT.openButton}</Text>
-      </Pressable>
+      </Tap>
       {needsPlanned ? (
         <Text style={ui.muted} testID="cup-lineup-needs-planned">
           {LINEUP_TEXT.needsPlanned}

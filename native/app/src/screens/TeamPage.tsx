@@ -23,7 +23,8 @@
 // skjermen som åpnet den (påmeldingen, runden, innboksen).
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type {
   AppTeamPageMember,
@@ -139,7 +140,7 @@ export function TeamPage({ navigation, route }: ScreenProps<'TeamPage'>) {
         <Text style={[styles.stateText, { color: colors.danger }]} testID="team-page-load-error">
           {describeTeamPageLoadFailure(failure)}
         </Text>
-        <Pressable
+        <Tap
           accessibilityRole="button"
           onPress={() => void load()}
           style={[styles.retry, { borderColor: colors.primary }]}
@@ -148,7 +149,7 @@ export function TeamPage({ navigation, route }: ScreenProps<'TeamPage'>) {
           <Text style={[styles.retryText, { color: colors.primary }]}>
             {loading ? ROUND_INVITE_TEXT.retrying : ROUND_INVITE_TEXT.retry}
           </Text>
-        </Pressable>
+        </Tap>
       </View>
     );
   }
@@ -340,18 +341,18 @@ function TeamView({
                     </Text>
                   </View>
                   {actions.length > 0 ? (
-                    <Pressable
+                    <Tap
                       accessibilityRole="button"
                       accessibilityLabel={moreLabel(person.displayName)}
                       onPress={() => {
                         setNotice(null);
                         setMenuFor(person);
                       }}
-                      style={({ pressed }) => [styles.dots, pressed ? styles.pressed : null]}
+                      style={[styles.dots]}
                       testID={`team-page-row-${person.requestId}-menu`}
                     >
                       <Text style={[styles.dotsText, { color: colors.muted }]}>•••</Text>
-                    </Pressable>
+                    </Tap>
                   ) : team.kind === 'captain' && editable && state === 'declined' ? (
                     <RowAction label={TEAM_PAGE_TEXT.swap} onPress={() => pick(person.requestId)} testID={`team-page-row-${person.requestId}-swap`} />
                   ) : null}
@@ -406,14 +407,14 @@ function TeamView({
 function RowAction({ label, onPress, testID }: { label: string; onPress: () => void; testID: string }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [styles.act, { borderColor: colors.primary }, pressed ? styles.pressed : null]}
+      style={[styles.act, { borderColor: colors.primary }]}
       testID={testID}
     >
       <Text style={[styles.actText, { color: colors.primary }]}>{label}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -475,7 +476,8 @@ function MemberSheet({
   return (
     <Modal transparent visible={member !== null} animationType="slide" onRequestClose={close}>
       <View style={styles.sheetRoot}>
-        <Pressable
+        <Tap
+          feedback="none"
           style={[StyleSheet.absoluteFill, { backgroundColor: sheetScrim(colors, scheme) }]}
           onPress={close}
           accessible={false}
@@ -550,16 +552,16 @@ function MenuItem({
 }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.item, pressed ? { backgroundColor: colors.primarySoft } : null]}
+      style={[styles.item]}
       testID={testID}
     >
       <Text style={[styles.itemText, { color }]}>{label}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -660,7 +662,6 @@ const styles = StyleSheet.create({
   note: { marginTop: 12, marginHorizontal: 16, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 16 },
   noteText: { ...interLine(14, 19.6, { multiline: true }), fontFamily: FONTS.sans },
   notice: { ...interLine(14, 19.6, { multiline: true }), fontFamily: FONTS.sans, marginTop: 12, marginHorizontal: 20 },
-  pressed: { opacity: 0.6 },
   sheetRoot: { flex: 1, justifyContent: 'flex-end' },
   // `.menu`: 22 i de øvre hjørnene, 10 over, 18 under.
   menu: { borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingTop: 10 },

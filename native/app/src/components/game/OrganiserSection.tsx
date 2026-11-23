@@ -38,12 +38,12 @@ import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { Tap } from '../Tap';
 import {
   eligibleForFlightAssignment,
   needsFlightAssignment,
@@ -377,7 +377,7 @@ export function OrganiserSection({
           ikon alene (#1879-føringen). Står over lista, så lista vokser
           nedover når den åpnes og knappen blir stående. */}
       {canAdjust ? (
-        <Pressable
+        <Tap
           style={[ui.buttonSecondary, styles.rowButton]}
           disabled={busy}
           testID="organiser-adjust-toggle"
@@ -386,7 +386,7 @@ export function OrganiserSection({
           <Text style={ui.buttonSecondaryText}>
             {adjusting ? 'Ferdig' : 'Juster'}
           </Text>
-        </Pressable>
+        </Tap>
       ) : null}
 
       <View style={[ui.card, styles.list]}>
@@ -453,7 +453,7 @@ export function OrganiserSection({
                     // eller RLS har en, og to flater med hver sin regel er verre
                     // enn regelen selv. Cupkamper har ingen knapp: RLS (0178)
                     // nekter slettingen, og spilleren byttes på cupsiden (#1937).
-                    <Pressable
+                    <Tap
                       style={[ui.buttonSecondary, styles.rowAction]}
                       hitSlop={ROW_ACTION_SLOP}
                       disabled={busy}
@@ -468,11 +468,11 @@ export function OrganiserSection({
                       }
                     >
                       <Text style={[ui.buttonSecondaryText, styles.rowActionText]}>Fjern</Text>
-                    </Pressable>
+                    </Tap>
                   ) : null}
 
                   {canPull ? (
-                    <Pressable
+                    <Tap
                       style={[ui.buttonSecondary, styles.rowAction]}
                       hitSlop={ROW_ACTION_SLOP}
                       disabled={busy}
@@ -487,11 +487,11 @@ export function OrganiserSection({
                       }
                     >
                       <Text style={[ui.buttonSecondaryText, styles.rowActionText]}>Trekk</Text>
-                    </Pressable>
+                    </Tap>
                   ) : null}
 
                   {canUndo ? (
-                    <Pressable
+                    <Tap
                       style={[ui.buttonSecondary, styles.rowAction]}
                       hitSlop={ROW_ACTION_SLOP}
                       disabled={busy}
@@ -506,7 +506,7 @@ export function OrganiserSection({
                       }
                     >
                       <Text style={[ui.buttonSecondaryText, styles.rowActionText]}>Angre trekk</Text>
-                    </Pressable>
+                    </Tap>
                   ) : null}
 
                   {/* #2220: alle leverte kort i en aktiv runde, også mitt eget og
@@ -514,7 +514,7 @@ export function OrganiserSection({
                       (#2215), som også varsler spilleren. I lagformatene med felles
                       kort åpnes hele laget. */}
                   {canReopen ? (
-                    <Pressable
+                    <Tap
                       style={[ui.buttonSecondary, styles.rowAction]}
                       hitSlop={ROW_ACTION_SLOP}
                       disabled={busy}
@@ -535,7 +535,7 @@ export function OrganiserSection({
                       <Text style={[ui.buttonSecondaryText, styles.rowActionText]}>
                         {REOPEN_SCORECARD.label}
                       </Text>
-                    </Pressable>
+                    </Tap>
                   ) : null}
                 </View>
               ) : null}
@@ -545,7 +545,7 @@ export function OrganiserSection({
       </View>
 
       {showOwnRowWithdraw ? (
-        <Pressable
+        <Tap
           style={[ui.buttonSecondary, styles.rowButton]}
           disabled={busy}
           testID="organiser-withdraw-self"
@@ -559,11 +559,11 @@ export function OrganiserSection({
           }
         >
           <Text style={ui.buttonSecondaryText}>{WITHDRAW_SELF.label}</Text>
-        </Pressable>
+        </Tap>
       ) : null}
 
       {scheduled && !isCupGame ? (
-        <Pressable
+        <Tap
           style={ui.buttonSecondary}
           disabled={busy}
           testID="organiser-add-toggle"
@@ -581,7 +581,7 @@ export function OrganiserSection({
               {picking ? 'Lukk listen' : 'Legg til spiller'}
             </Text>
           </View>
-        </Pressable>
+        </Tap>
       ) : null}
 
       {scheduled && picking ? (
@@ -605,7 +605,7 @@ export function OrganiserSection({
             <Text style={ui.muted}>{INVITE_BY_EMAIL.emptyList}</Text>
           ) : (
             pickable.map((candidate) => (
-              <Pressable
+              <Tap
                 key={candidate.id}
                 style={[ui.buttonSecondary, styles.rowButton]}
                 disabled={busy}
@@ -613,7 +613,7 @@ export function OrganiserSection({
                 onPress={() => void run(() => addPlayerToGame(game.id, candidate))}
               >
                 <Text style={ui.buttonSecondaryText}>{displayName(candidate)}</Text>
-              </Pressable>
+              </Tap>
             ))
           )}
 
@@ -633,14 +633,14 @@ export function OrganiserSection({
             inputMode="email"
             testID="organiser-invite-email"
           />
-          <Pressable
+          <Tap
             style={[ui.buttonSecondary, styles.rowButton]}
             disabled={busy}
             testID="organiser-invite-submit"
             onPress={() => void sendInvite()}
           >
             <Text style={ui.buttonSecondaryText}>{INVITE_BY_EMAIL.submit}</Text>
-          </Pressable>
+          </Tap>
 
           {/* Blir stående (#1891): pending-oversyn, «Send på nytt» og avlysning
               av en invitasjon bor på nettsiden. */}
@@ -653,7 +653,7 @@ export function OrganiserSection({
       ) : null}
 
       {scheduled ? (
-        <Pressable
+        <Tap
           style={ui.button}
           disabled={busy}
           testID="organiser-start"
@@ -668,18 +668,18 @@ export function OrganiserSection({
           }
         >
           <Text style={ui.buttonText}>Start runden nå</Text>
-        </Pressable>
+        </Tap>
       ) : null}
 
       {active ? (
-        <Pressable
+        <Tap
           style={ui.button}
           disabled={busy}
           testID="organiser-finish"
           onPress={onFinish}
         >
           <Text style={ui.buttonText}>Avslutt runden</Text>
-        </Pressable>
+        </Tap>
       ) : null}
 
       {notice ? (
@@ -714,7 +714,7 @@ function ChipRow({
       {values.map((value) => {
         const on = selected === value;
         return (
-          <Pressable
+          <Tap
             key={value}
             style={[
               styles.chip,
@@ -730,7 +730,7 @@ function ChipRow({
             <Text style={[ui.body, ui.num, on ? { color: colors.onPrimary } : null]}>
               {value}
             </Text>
-          </Pressable>
+          </Tap>
         );
       })}
     </View>

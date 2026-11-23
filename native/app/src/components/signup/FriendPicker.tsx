@@ -14,13 +14,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
-  Pressable,
   Share,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { Tap } from '../Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { nameInitials } from '../../../../../lib/names/initials';
 import { fetchFriends, type FriendItem } from '../../data/friends';
@@ -110,16 +110,16 @@ export function FriendSearchBar({
           testID={`${idPrefix}-search`}
         />
       </View>
-      <Pressable
+      <Tap
         accessibilityRole="button"
         accessibilityLabel={TEAM_SIGNUP_TEXT.addFriend}
         onPress={onAddFriend}
-        style={({ pressed }) => [styles.addFriend, { borderColor: colors.primary }, pressed ? styles.pressed : null]}
+        style={[styles.addFriend, { borderColor: colors.primary }]}
         testID={`${idPrefix}-add-friend`}
       >
         <Text style={[styles.addPlus, { color: colors.primary }]}>+</Text>
         <Text style={[styles.addText, { color: colors.primary }]}>{TEAM_SIGNUP_TEXT.addFriend}</Text>
-      </Pressable>
+      </Tap>
     </View>
   );
 }
@@ -136,14 +136,14 @@ export function NoFriends({ onAddFriend, idPrefix }: { onAddFriend: () => void; 
         {TEAM_SIGNUP_TEXT.noFriends}
       </Text>
       <View style={styles.firstFriend}>
-        <Pressable
+        <Tap
           accessibilityRole="button"
           onPress={onAddFriend}
           style={[styles.lineButton, { borderColor: colors.primary }]}
           testID={`${idPrefix}-add-first-friend`}
         >
           <Text style={[styles.lineButtonText, { color: colors.primary }]}>{`+ ${TEAM_SIGNUP_TEXT.addFirstFriend}`}</Text>
-        </Pressable>
+        </Tap>
       </View>
     </>
   );
@@ -174,14 +174,14 @@ export function FriendsStatus({
         <Text style={[styles.statusText, { color: colors.danger }]} testID={`${idPrefix}-friends-failed`}>
           {TEAM_SIGNUP_TEXT.friendsFailed}
         </Text>
-        <Pressable
+        <Tap
           accessibilityRole="button"
           onPress={onRetry}
           style={[styles.retry, { borderColor: colors.primary }]}
           testID={`${idPrefix}-friends-retry`}
         >
           <Text style={[styles.retryText, { color: colors.primary }]}>{ROUND_INVITE_TEXT.retry}</Text>
-        </Pressable>
+        </Tap>
       </View>
     );
   }
@@ -212,16 +212,15 @@ export function FriendRow({
 }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={line ? `${friend.name}, ${line}` : friend.name}
       accessibilityState={{ selected, disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.row,
         disabled ? styles.dim : null,
-        pressed ? { backgroundColor: colors.primarySoft } : null,
       ]}
       testID={`${idPrefix}-friend-${friend.id}`}
     >
@@ -244,7 +243,7 @@ export function FriendRow({
           </Text>
         ) : null}
       </View>
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -288,7 +287,8 @@ export function AddFriendSheet({
   return (
     <Modal transparent visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.sheetRoot}>
-        <Pressable
+        <Tap
+          feedback="none"
           style={[StyleSheet.absoluteFill, { backgroundColor: sheetScrim(colors, scheme) }]}
           onPress={onClose}
           accessible={false}
@@ -354,7 +354,6 @@ const styles = StyleSheet.create({
   statusText: { ...interLine(15, 21, { multiline: true }), fontFamily: FONTS.sans, textAlign: 'center' },
   retry: { minHeight: TAP, borderWidth: 1, borderRadius: 999, paddingHorizontal: 20, justifyContent: 'center' },
   retryText: { ...interLine(16, 19), fontFamily: FONTS.sansSemiBold },
-  pressed: { opacity: 0.6 },
   firstFriend: { paddingTop: 14, paddingHorizontal: 16 },
   lineButton: { minHeight: 52, borderRadius: 999, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   lineButtonText: { fontSize: 16, fontFamily: FONTS.sansSemiBold },

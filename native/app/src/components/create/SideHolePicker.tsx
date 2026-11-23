@@ -8,7 +8,8 @@
 //
 // Arket er bygd som kåringsarket (`endGame/WinnerSheet.tsx`): hinne og ark er
 // søsken, VoiceOver holdes inne, og «tilbake» lukker.
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   SIDE_HOLE_TEXT,
@@ -43,7 +44,7 @@ export function SideHoleRow({
   const { colors } = useTheme();
   const kind = category === 'longest_drive' ? 'ld' : 'ctp';
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       style={[styles.row, { borderColor: colors.border, backgroundColor: colors.surface }]}
       accessibilityRole="button"
@@ -57,7 +58,7 @@ export function SideHoleRow({
         <Text style={[styles.rowValue, { color: colors.text }]}>{sideHoleValue(hole)}</Text>
       )}
       <ChevronIcon direction="right" color={colors.muted} size={18} strokeWidth={2} />
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -93,7 +94,8 @@ export function SideHoleSheet({
   return (
     <Modal transparent visible animationType="slide" onRequestClose={onClose}>
       <View style={styles.fill} testID="create-side-hole-sheet" accessibilityViewIsModal onAccessibilityEscape={onClose}>
-        <Pressable
+        <Tap
+          feedback="none"
           style={[StyleSheet.absoluteFill, { backgroundColor: sheetScrim(colors, scheme) }]}
           onPress={onClose}
           accessible={false}
@@ -108,7 +110,7 @@ export function SideHoleSheet({
                 {sideHoleSheetTitle(slot.category, slot.position, slot.count)}
               </Text>
             </View>
-            <Pressable
+            <Tap
               onPress={onClose}
               style={[styles.close, { backgroundColor: colors.surface2 }]}
               accessibilityRole="button"
@@ -116,7 +118,7 @@ export function SideHoleSheet({
               testID="create-side-hole-close"
             >
               <LukkIcon color={colors.text} size={18} strokeWidth={2} />
-            </Pressable>
+            </Tap>
           </View>
           <Text style={[styles.intro, { color: colors.muted }]}>{sideHoleSheetIntro(slot.category)}</Text>
           <View style={styles.grid}>
@@ -129,7 +131,7 @@ export function SideHoleSheet({
                   // hole 1.7 pt wider than the rest (53 each on the drawing).
                   return (
                     <View key={hole} style={styles.holeCell}>
-                      <Pressable
+                      <Tap
                         onPress={() => pick(hole)}
                         style={[
                           styles.hole,
@@ -143,21 +145,21 @@ export function SideHoleSheet({
                         testID={`create-side-${kind}-hole-${slot.position}-pick-${hole}`}
                       >
                         <Text style={[styles.holeText, { color: colors.text }]}>{hole}</Text>
-                      </Pressable>
+                      </Tap>
                     </View>
                   );
                 })}
               </View>
             ))}
           </View>
-          <Pressable
+          <Tap
             onPress={() => pick(null)}
             style={[styles.later, { borderColor: colors.border, backgroundColor: colors.surface }]}
             accessibilityRole="button"
             testID={`create-side-${kind}-hole-${slot.position}-later`}
           >
             <Text style={[styles.laterText, { color: colors.text }]}>{SIDE_HOLE_TEXT.later}</Text>
-          </Pressable>
+          </Tap>
         </View>
       </View>
     </Modal>

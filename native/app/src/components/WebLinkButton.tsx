@@ -16,7 +16,8 @@
 // Å oppdage det først etter at nettleseren har åpnet seg, føles som en feil —
 // derfor står den som en setning under knappen, ikke som en overraskelse.
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from './Tap';
 import { WEB_LINK_TEXT, describeWebLinkFailure, openWeb } from '../lib/webLink';
 import { useTheme } from '../theme';
 
@@ -50,14 +51,14 @@ export function WebLinkButton({ label, path, testID }: WebLinkButtonProps) {
 
   return (
     <View style={styles.wrap}>
-      <Pressable
+      <Tap
         accessibilityRole="button"
         style={ui.buttonSecondary}
         onPress={() => void open()}
         testID={testID}
       >
         <Text style={ui.buttonSecondaryText}>{label}</Text>
-      </Pressable>
+      </Tap>
       <Text style={ui.muted}>{WEB_LINK_TEXT.hint}</Text>
       {errorText ? <Text style={ui.error}>{errorText}</Text> : null}
     </View>

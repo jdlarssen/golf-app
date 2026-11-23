@@ -1,7 +1,8 @@
 // #2752: lag og kaptein for én spiller på lista, nettets `RoleForm` i Spillere-rommet.
 // Kaptein krever lag, og å ta spilleren av laget tar også kapteinsflagget, som på nettet.
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { AppCupEnrolled } from '../../../../../lib/cup/appCupSetupView';
 import { ROLE_TEXT } from '../../lib/cupLineupCopy';
 import { formatMessage } from '../../lib/kavalkadeCopy';
@@ -60,7 +61,7 @@ export function PlayerRoleControls({
         </Text>
       ) : null}
       {dirty ? (
-        <Pressable
+        <Tap
           accessibilityRole="button"
           accessibilityLabel={formatMessage(ROLE_TEXT.saveRoleLabel, { name: player.name })}
           accessibilityState={{ disabled }}
@@ -70,7 +71,7 @@ export function PlayerRoleControls({
           testID={`cup-player-save-role-${player.userId}`}
         >
           <Text style={ui.buttonSecondaryText}>{ROLE_TEXT.saveRole}</Text>
-        </Pressable>
+        </Tap>
       ) : null}
     </View>
   );

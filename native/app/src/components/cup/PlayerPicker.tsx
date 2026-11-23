@@ -1,6 +1,7 @@
 // #2752: en plass i en kamp, og lista den åpner. På nettet er det en `<select>`. Her åpner et
 // trykk lista, og valget lukker den. Brukes av forslaget i «Fordel & generer» og av uttaket.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { FONTS, interLine, TAP, useTheme } from '../../theme';
 import { ChevronIcon } from '../icons/Icons';
 
@@ -23,7 +24,7 @@ export function PlayerSlot({
   const { colors } = useTheme();
   const shown = name || placeholder || '';
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={`${label}: ${shown}`}
       accessibilityState={{ expanded: open }}
@@ -40,7 +41,7 @@ export function PlayerSlot({
         {shown}
       </Text>
       <ChevronIcon direction={open ? 'up' : 'down'} color={colors.muted} size={14} strokeWidth={2} />
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -64,19 +65,19 @@ export function PlayerPicker({
   return (
     <View style={[styles.picker, { borderColor: colors.border }]} testID={testID}>
       {clearLabel ? (
-        <Pressable
+        <Tap
           accessibilityRole="button"
           onPress={() => onChoose('')}
           style={[styles.pickerRow, { borderBottomColor: colors.border }]}
           testID={`${testID}-clear`}
         >
           <Text style={[styles.value, { color: colors.muted }]}>{clearLabel}</Text>
-        </Pressable>
+        </Tap>
       ) : null}
       {players.map((player) => {
         const disabled = isDisabled(player.id);
         return (
-          <Pressable
+          <Tap
             key={player.id}
             accessibilityRole="button"
             accessibilityState={{ disabled, selected: player.id === current }}
@@ -91,7 +92,7 @@ export function PlayerPicker({
             testID={`${testID}-${player.id}`}
           >
             <Text style={[styles.value, { color: colors.text }]}>{player.name}</Text>
-          </Pressable>
+          </Tap>
         );
       })}
     </View>

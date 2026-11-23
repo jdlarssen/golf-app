@@ -3,7 +3,8 @@
 // som ikke sender en kamp som pågår. Tegningen er appens egen tavle, så de to ikke
 // kan si noe ulikt.
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { fetchCupMatchBoard, type CupBoardResult } from '../data/cupBoard';
@@ -72,14 +73,14 @@ export function CupMatchBoard({ route }: ScreenProps<'CupMatchBoard'>) {
           {final ? FINISH_APP_TEXT.boardNotFound : boardFailureText(reason)}
         </Text>
         {final ? null : (
-          <Pressable
+          <Tap
             onPress={() => void load()}
             accessibilityRole="button"
             style={[styles.retry, { borderColor: colors.primary }]}
             testID="cup-board-retry"
           >
             <Text style={[styles.retryText, { color: colors.primary }]}>{MANAGE_APP_TEXT.retry}</Text>
-          </Pressable>
+          </Tap>
         )}
       </View>
     );

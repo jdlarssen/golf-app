@@ -24,13 +24,13 @@ import { useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   Keyboard,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { nameInitials } from '../../../../lib/names/initials';
 import { fetchOnboardingGame, type OnboardingGame } from '../data/onboardingGame';
@@ -204,7 +204,7 @@ export function CompleteProfile({
             <View style={styles.hcpRow}>
               {/* «+» er en knapp og ikke en bryter, som på nettsiden og i
                   «Rediger profil»: en bryter ville lest som en innstilling. */}
-              <Pressable
+              <Tap
                 style={[
                   styles.plus,
                   isPlus
@@ -220,7 +220,7 @@ export function CompleteProfile({
                 <Text style={[styles.plusText, { color: isPlus ? colors.onPrimary : colors.muted }]}>
                   +
                 </Text>
-              </Pressable>
+              </Tap>
               <TextInput
                 style={[fieldStyle('hcp'), styles.hcpField]}
                 value={magnitude}
@@ -264,7 +264,7 @@ export function CompleteProfile({
         </View>
 
         <View style={styles.bottom}>
-          <Pressable
+          <Tap
             style={[styles.submit, { backgroundColor: colors.primary }, pending && styles.submitOff]}
             onPress={onSave}
             disabled={pending}
@@ -275,7 +275,7 @@ export function CompleteProfile({
             <Text style={[styles.submitText, { color: colors.onPrimary }]}>
               {pending ? ONBOARDING_TEXT.submitPending : ONBOARDING_TEXT.submitButton}
             </Text>
-          </Pressable>
+          </Tap>
           <Text style={[styles.footnote, { color: colors.muted }]}>{ONBOARDING_TEXT.footnote}</Text>
         </View>
       </ScrollView>

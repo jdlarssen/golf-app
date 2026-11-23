@@ -9,7 +9,8 @@
 //
 // Ingen regel bor her: det som er en gyldig indeks, sier de delte funksjonene.
 import { useRef, useState } from 'react';
-import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Tap } from '../Tap';
 import { coursePar, indexStatusLine } from '../../../../../lib/courses/courseCard';
 import { findStrokeIndexGaps, strokeIndexCellState } from '../../../../../lib/courses/coursePayload';
 import { canSplitSingleIndices } from '../../../../../lib/courses/nineHoles';
@@ -154,7 +155,7 @@ export function HoleGrid({
             {COURSE_TEXT.gridPar}
           </Text>
           {holes.map((hole, i) => (
-            <Pressable
+            <Tap
               key={i}
               testID={`course-par-${from + i + 1}`}
               accessibilityRole="button"
@@ -167,7 +168,7 @@ export function HoleGrid({
                   {hole.par}
                 </Text>
               </View>
-            </Pressable>
+            </Tap>
           ))}
         </View>
         {indexRow(
@@ -239,7 +240,7 @@ export function HoleGrid({
         <View>
           <Text style={[ui.muted, styles.line]}>{COURSE_TEXT.nineHint}</Text>
           {canSplit ? (
-            <Pressable
+            <Tap
               testID="course-split"
               accessibilityRole="button"
               style={[styles.dashed, { borderColor: colors.border }]}
@@ -249,7 +250,7 @@ export function HoleGrid({
               }}
             >
               <Text style={ui.muted}>{COURSE_TEXT.splitButton}</Text>
-            </Pressable>
+            </Tap>
           ) : null}
           {splitDone ? (
             <Text style={[ui.body, styles.line]} testID="course-split-done">

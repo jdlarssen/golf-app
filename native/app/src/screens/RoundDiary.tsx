@@ -19,7 +19,8 @@
 // spinner). Uten nett står en feillinje med «Prøv igjen». Uten ferdige runder
 // står webbens tomtekst.
 import { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FormCard } from '../components/history/FormCard';
 import { HistoryTitle } from '../components/history/HistoryTitle';
@@ -80,14 +81,14 @@ export function RoundDiary({ navigation }: ScreenProps<'RoundDiary'>) {
           <Text style={ui.error} testID="round-diary-error">
             {HISTORY_TEXT.loadFailed}
           </Text>
-          <Pressable
+          <Tap
             accessibilityRole="button"
             style={ui.buttonSecondary}
             onPress={retry}
             testID="round-diary-retry"
           >
             <Text style={ui.buttonSecondaryText}>{HISTORY_TEXT.retry}</Text>
-          </Pressable>
+          </Tap>
         </View>
       ) : view && view.months.length === 0 ? (
         <View style={[ui.card, styles.empty]}>

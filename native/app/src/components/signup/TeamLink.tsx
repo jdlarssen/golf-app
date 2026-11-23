@@ -8,7 +8,8 @@
 // er en snarvei, ikke et sted å vise feil.
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Tap } from '../Tap';
 import type { AppTeamPageTeam } from '../../../../../lib/games/appRoundInviteView';
 import { nameInitials } from '../../../../../lib/names/initials';
 import { fetchTeamPage } from '../../data/teamPage';
@@ -51,11 +52,11 @@ export function TeamLink({
   const line = teamLinkLine(team);
 
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={`${title}, ${line}`}
       onPress={onOpen}
-      style={({ pressed }) => [styles.link, { backgroundColor: colors.surface }, style, pressed ? styles.pressed : null]}
+      style={[styles.link, { backgroundColor: colors.surface }, style]}
       testID="team-link"
     >
       <View style={styles.mini}>
@@ -78,7 +79,7 @@ export function TeamLink({
         </Text>
       </View>
       <Text style={[styles.chev, { color: colors.primary }]}>›</Text>
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -101,5 +102,4 @@ const styles = StyleSheet.create({
   title: { ...interLine(15, 19), fontFamily: FONTS.sansSemiBold },
   line: { ...interLine(13, 16), fontFamily: FONTS.sans, fontVariant: ['tabular-nums'] },
   chev: { fontSize: 20 },
-  pressed: { opacity: 0.6 },
 });

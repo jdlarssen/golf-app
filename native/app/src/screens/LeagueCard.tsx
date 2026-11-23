@@ -10,7 +10,8 @@
 // (stableford) per hull. Serveren har regnet alt: tallene, summene og
 // resultatet, som er tallet i tabellens celle. Appen tegner det bare.
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { LeagueCardResponse } from '../../../../lib/league/appLeagueView';
 import { kickerHeader } from '../components/KickerHeader';
@@ -71,14 +72,14 @@ export function LeagueCard({ route, navigation }: ScreenProps<'LeagueCard'>) {
         ) : (
           <>
             <Text style={ui.body}>{LEAGUE_CARD_TEXT.loadFailed}</Text>
-            <Pressable
+            <Tap
               style={ui.buttonSecondary}
               onPress={() => void reload()}
               accessibilityRole="button"
               testID="league-card-retry"
             >
               <Text style={ui.buttonSecondaryText}>{LEAGUE_CARD_TEXT.retry}</Text>
-            </Pressable>
+            </Tap>
           </>
         )}
       </View>

@@ -11,7 +11,8 @@
 //
 // #2754: reaksjonene (`RowReactions.tsx`). Uten provider er tavla som før.
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { toneKey, visibleBoardRows } from '../../../../../lib/leaderboard/boardRules';
 import type { ScoreTone } from '../../../../../lib/scoring/scoreTone';
 import { BOARD_APP_TEXT, BOARD_TEXT } from '../../lib/boardCopy';
@@ -96,7 +97,7 @@ export function SoloBoard({ model }: { model: SoloBoardModel }) {
       </View>
 
       {canCollapse ? (
-        <Pressable
+        <Tap
           onPress={() => setShowAll((value) => !value)}
           accessibilityRole="button"
           accessibilityState={{ expanded: showAll }}
@@ -108,7 +109,7 @@ export function SoloBoard({ model }: { model: SoloBoardModel }) {
               ? BOARD_TEXT.showFewer
               : formatMessage(BOARD_TEXT.showAll, { count: model.rows.length })}
           </Text>
-        </Pressable>
+        </Tap>
       ) : null}
     </View>
   );
@@ -370,7 +371,7 @@ export function BoardStrip({
         </Text>
       </View>
       {strip.action ? (
-        <Pressable
+        <Tap
           onPress={onAction}
           accessibilityRole="button"
           style={[styles.stripButton, { backgroundColor: colors.primary }]}
@@ -379,7 +380,7 @@ export function BoardStrip({
           <Text maxFontSizeMultiplier={textCap} style={[styles.stripButtonText, { color: colors.onPrimary }]}>
             {strip.action.label}
           </Text>
-        </Pressable>
+        </Tap>
       ) : null}
     </View>
   );

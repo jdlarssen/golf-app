@@ -40,7 +40,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -49,6 +48,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { Tap } from '../components/Tap';
 import { fetchOwnProfile, saveProfile } from '../data/profile';
 import { backTo } from '../lib/backTo';
 import { useLeaveWhenFocused } from '../lib/useLeaveWhenFocused';
@@ -258,7 +258,7 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
         <Text style={ui.error} testID="edit-profile-load-error">
           {PROFILE_TEXT.loadFailedNote}
         </Text>
-        <Pressable
+        <Tap
           style={ui.buttonSecondary}
           onPress={() => {
             setLoadFailed(false);
@@ -268,7 +268,7 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
           testID="edit-profile-retry"
         >
           <Text style={ui.buttonSecondaryText}>{PROFILE_TEXT.retry}</Text>
-        </Pressable>
+        </Tap>
       </ScrollView>
     );
   }
@@ -404,7 +404,7 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
         </Text>
       ) : null}
 
-      <Pressable
+      <Tap
         style={[ui.button, (!dirty || pending) && styles.buttonOff]}
         disabled={!dirty || pending}
         accessibilityState={{ disabled: !dirty || pending }}
@@ -414,7 +414,7 @@ export function EditProfile({ navigation, route }: ScreenProps<'EditProfile'>) {
         <Text style={ui.buttonText}>
           {pending ? PROFILE_TEXT.savePending : PROFILE_TEXT.saveButton}
         </Text>
-      </Pressable>
+      </Tap>
 
       {/* Uten denne linja leser en grå «Lagre» som en ødelagt knapp. */}
       {!dirty ? (
@@ -461,7 +461,7 @@ function Chip({
 }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityState={{ selected }}
       accessibilityLabel={accessibilityLabel}
@@ -479,7 +479,7 @@ function Chip({
       <Text style={[styles.chipText, { color: selected ? colors.onPrimary : colors.text }]}>
         {label}
       </Text>
-    </Pressable>
+    </Tap>
   );
 }
 

@@ -12,7 +12,8 @@
 //
 // Komponenten avgjør ingenting selv. Skjermen gir den valgene slik de lagres
 // (`resolveRegistration`), og om merknaden skal stå.
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { RegistrationMode } from '../../../../../lib/games/registration';
 import {
   REGISTRATION_MODE_CARDS,
@@ -66,7 +67,7 @@ export function RegistrationChoice({
           const card = REGISTRATION_MODE_CARDS[option];
           return (
             <View key={option} style={cardStyle(active)}>
-              <Pressable
+              <Tap
                 testID={`create-registration-${option}`}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active, checked: active }}
@@ -76,7 +77,7 @@ export function RegistrationChoice({
               >
                 <Text style={[styles.cardTitle, { color: colors.text }]}>{card.title}</Text>
                 <Text style={[styles.cardHint, { color: colors.muted }]}>{card.hint}</Text>
-              </Pressable>
+              </Tap>
               {/* Tegningen: bryteren står inne i kortet når det er valgt, som
                   nettets innrykkede avkrysning. */}
               {option === 'manual_approval' && active ? (
@@ -115,7 +116,7 @@ export function RegistrationChoice({
               const active = option === type;
               return (
                 <View key={option} style={styles.half}>
-                  <Pressable
+                  <Tap
                     testID={`create-registration-type-${option}`}
                     accessibilityRole="radio"
                     accessibilityState={{ selected: active, checked: active }}
@@ -125,7 +126,7 @@ export function RegistrationChoice({
                     <Text style={[styles.cardTitle, styles.centered, { color: colors.text }]}>
                       {REGISTRATION_TYPE_LABELS[option]}
                     </Text>
-                  </Pressable>
+                  </Tap>
                 </View>
               );
             })}

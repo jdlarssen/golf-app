@@ -21,13 +21,13 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Modal,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
   type GestureResponderEvent,
 } from 'react-native';
+import { Tap } from '../Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ProfileSaveResult } from '../../data/profile';
 import {
@@ -170,7 +170,8 @@ export function HandicapSheet({
       testID="hcp-sheet-modal"
     >
       <View style={styles.root}>
-        <Pressable
+        <Tap
+          feedback="none"
           style={[StyleSheet.absoluteFill, { backgroundColor: sheetScrim(colors, scheme) }]}
           onPress={cancel}
           accessible={false}
@@ -218,7 +219,7 @@ export function HandicapSheet({
                       {sheetSubtitle(updatedAt, stored)}
                     </Text>
                   </View>
-                  <Pressable
+                  <Tap
                     onPress={cancel}
                     style={styles.close}
                     accessibilityRole="button"
@@ -226,7 +227,7 @@ export function HandicapSheet({
                     testID="hcp-sheet-close"
                   >
                     <LukkIcon color={colors.text} size={20} strokeWidth={2} />
-                  </Pressable>
+                  </Tap>
                 </View>
               </View>
 
@@ -275,18 +276,18 @@ export function HandicapSheet({
                     disabled={pending}
                     accessibilityValueText={rulerA11yValue(value, change)}
                   />
-                  <Pressable
+                  <Tap
                     onPress={startTyping}
                     style={styles.typeButton}
                     accessibilityRole="button"
                     testID="hcp-sheet-type"
                   >
                     <Text style={[styles.typeText, { color: colors.primary }]}>{HANDICAP_TEXT.typeNumber}</Text>
-                  </Pressable>
+                  </Tap>
                 </>
               )}
 
-              <Pressable
+              <Tap
                 onPress={() => void save()}
                 disabled={!canSave}
                 accessibilityRole="button"
@@ -295,7 +296,7 @@ export function HandicapSheet({
                 testID="hcp-sheet-save"
               >
                 <Text style={[styles.saveText, { color: colors.onPrimary }]}>{saveText}</Text>
-              </Pressable>
+              </Tap>
               {error ? (
                 <Text
                   accessibilityRole="alert"

@@ -12,7 +12,8 @@
 // ved en feil står ingenting: påmeldingen finnes også via delelenken.
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import { fetchTeamPage } from '../../data/teamPage';
 import { OWN_TEAM_TEXT } from '../../lib/registrationCopy';
 import { FONTS, fraunces, interLine, useTheme } from '../../theme';
@@ -40,14 +41,14 @@ export function OwnTeamCard({ shortId, onOpen }: { shortId: string; onOpen: () =
     <View style={[styles.card, { backgroundColor: colors.surface }]} testID="own-team-card">
       <Text style={[styles.title, { color: colors.text }]}>{OWN_TEAM_TEXT.title}</Text>
       <Text style={[styles.body, { color: colors.text }]}>{OWN_TEAM_TEXT.body}</Text>
-      <Pressable
+      <Tap
         testID="own-team-open"
         accessibilityRole="button"
         onPress={onOpen}
-        style={({ pressed }) => [ui.button, styles.button, pressed ? styles.pressed : null]}
+        style={[ui.button, styles.button]}
       >
         <Text style={ui.buttonText}>{OWN_TEAM_TEXT.button}</Text>
-      </Pressable>
+      </Tap>
     </View>
   );
 }
@@ -61,5 +62,4 @@ const styles = StyleSheet.create({
   body: { ...interLine(15, 21.75, { multiline: true }), fontFamily: FONTS.sans },
   // `.btn`: 52 høy. Kortets mellomrom står allerede over.
   button: { marginTop: 0, minHeight: 52 },
-  pressed: { opacity: 0.6 },
 });

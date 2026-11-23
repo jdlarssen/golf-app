@@ -1,6 +1,7 @@
 // #2752: én cup i «Cupene dine» på Hjem. Samme rad som ligaen (`LeagueHomeRow`):
 // navnet, fremdriften og pila. Ingen poeng (#1468).
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { AppCupSummary } from '../../../../../lib/cup/appCupView';
 import { homeCupLine } from '../../lib/cupCopy';
 import { FONTS, fraunces, interLine, TAP, useTheme } from '../../theme';
@@ -10,7 +11,7 @@ export function CupHomeRow({ cup, onPress }: { cup: AppCupSummary; onPress: () =
   const { colors } = useTheme();
   const line = homeCupLine(cup.status, cup.progress);
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${cup.name}. ${line}`}
@@ -26,7 +27,7 @@ export function CupHomeRow({ cup, onPress }: { cup: AppCupSummary; onPress: () =
         </Text>
       </View>
       <ChevronIcon direction="right" color={colors.primary} size={16} strokeWidth={2} />
-    </Pressable>
+    </Tap>
   );
 }
 

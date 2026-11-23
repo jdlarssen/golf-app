@@ -8,7 +8,8 @@
 //
 // Bryteren styrer bare visningen, så den virker også når kortet er låst.
 // Ingen animasjon ved bytte. VoiceOver sier «Sollys» og om den er på.
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
+import { Tap } from '../Tap';
 import { SolIcon } from '../icons/Icons';
 import { FONTS, TAP, useTheme } from '../../theme';
 import { HOLE_TEXT_CAP } from './holeTextCap';
@@ -16,7 +17,7 @@ import { HOLE_TEXT_CAP } from './holeTextCap';
 export function SunlightToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       onPress={onToggle}
       style={on ? [styles.pill, { backgroundColor: colors.text }] : styles.round}
       testID="hole-sunlight-toggle"
@@ -32,7 +33,7 @@ export function SunlightToggle({ on, onToggle }: { on: boolean; onToggle: () => 
       ) : (
         <SolIcon color={colors.text} size={20} strokeWidth={1.8} />
       )}
-    </Pressable>
+    </Tap>
   );
 }
 

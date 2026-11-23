@@ -30,7 +30,8 @@
 // et sendt skjema, så skjermen er borte fra tilbake-veien etterpå (`backTo`).
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Tap } from '../components/Tap';
 import type { AppRoundInviteView } from '../../../../lib/games/appRoundInviteView';
 import { REGISTRATION_MESSAGE_MAX } from '../../../../lib/games/registration';
 import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
@@ -217,7 +218,7 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
         <Text style={[styles.stateText, { color: colors.danger }]} testID="round-invite-load-error">
           {describeRoundInviteLoadFailure(failure)}
         </Text>
-        <Pressable
+        <Tap
           accessibilityRole="button"
           onPress={() => void load()}
           style={[styles.retry, { borderColor: colors.primary }]}
@@ -226,7 +227,7 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
           <Text style={[styles.retryText, { color: colors.primary }]}>
             {loading ? ROUND_INVITE_TEXT.retrying : ROUND_INVITE_TEXT.retry}
           </Text>
-        </Pressable>
+        </Tap>
       </View>
     );
   }
@@ -322,7 +323,7 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
               />
             </View>
           ) : null}
-          <Pressable
+          <Tap
             accessibilityRole="button"
             accessibilityState={{ disabled: busy, busy }}
             disabled={busy}
@@ -335,7 +336,7 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
             testID="round-invite-button"
           >
             <Text style={[styles.buttonText, { color: colors.surfaceStrong }]}>{label}</Text>
-          </Pressable>
+          </Tap>
           {errorText ? (
             <Text style={[styles.body, { color: onStrong }]} testID="round-invite-error">
               {errorText}
@@ -376,7 +377,7 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
             </Text>
             <Text style={[styles.body, { color: colors.text }]}>{ROUND_INVITE_TEXT.sentBody}</Text>
             {view.canCancelRequest ? (
-              <Pressable
+              <Tap
                 accessibilityRole="button"
                 accessibilityState={{ disabled: busy, busy }}
                 disabled={busy}
@@ -387,7 +388,7 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
                 <Text style={[styles.buttonText, { color: colors.primary }]}>
                   {busy ? ROUND_INVITE_TEXT.cancelPending : ROUND_INVITE_TEXT.cancelButton}
                 </Text>
-              </Pressable>
+              </Tap>
             ) : null}
             {errorText ? (
               <Text style={[styles.body, { color: colors.danger }]} testID="round-invite-error">
@@ -415,14 +416,14 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
 function PrimaryButton({ label, onPress, testID }: { label: string; onPress: () => void; testID: string }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       onPress={onPress}
       style={[styles.button, { backgroundColor: colors.primary }]}
       testID={testID}
     >
       <Text style={[styles.buttonText, { color: colors.onPrimary }]}>{label}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 
