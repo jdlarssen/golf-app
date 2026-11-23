@@ -32,7 +32,7 @@ import {
   WOLF_SETUP_TEXT,
   sumEquivalentText,
 } from '../../lib/formatSetupCopy';
-import { defaultTeamHandicapPct } from '../../../../../lib/games/formatSetupDefaults';
+import { defaultHcpAllowancePct, defaultTeamHandicapPct } from '../../../../../lib/games/formatSetupDefaults';
 import { TEAM_FORMAT_TEAM_SIZES } from '../../../../../lib/games/teamFormatLimits';
 import { averagePctToSumPct, sumPctToAveragePct } from '../../../../../lib/games/teamHandicapUnit';
 import { SETTLEMENT_TEXT } from '../../lib/settlementCopy';
@@ -259,7 +259,8 @@ export function SetupStep({
       ) : null}
 
       {/* #1980: webbens AllowanceField for de fire formatene. «0» er brutto,
-          som i webbens datamodell; tomt felt er 100 (fullt banehandicap). */}
+          som i webbens datamodell; tomt felt er formatets standard (#2942):
+          85 for best ball og stableford i par, ellers 100. */}
       {hasHcpAllowanceField(mode) ? (
         <Field label={ALLOWANCE_TEXT.legend}>
           {/* #2880: forklaringen over kortene og kortene 52 høye, som `Nyttspill-5-avansert-a`. */}
@@ -290,7 +291,7 @@ export function SetupStep({
                   onText({ allowance: allowance.replace(/[^0-9]/g, '') })
                 }
                 keyboardType="number-pad"
-                placeholder="100"
+                placeholder={String(defaultHcpAllowancePct(mode, setup.stablefordTeamSize ?? 1))}
                 placeholderTextColor={colors.muted}
               />
             </NestedField>

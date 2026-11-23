@@ -28,7 +28,7 @@ export const ALLOWANCE_TEXT = {
   description:
     'Styrer hvor stor andel av handicap som regnes med. Brutto = ingen handicap, bare bruttoscoren teller.',
   nettoHelper:
-    'Andel av spillerens handicap som teller. 100 = fullt banehandicap (standard).',
+    'Andel av spillerens handicap som teller. NGF anbefaler 100 % når alle spiller for seg selv, og 85 % i best ball og stableford i par.',
   nettoLabel: 'Netto',
   bruttoLabel: 'Brutto',
   inputLabel: 'Handicap-andel (%)',

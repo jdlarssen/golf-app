@@ -1442,7 +1442,7 @@
       "scoring": {
         "legend": "Scoring",
         "description": "Controls what share of handicap is counted. Gross = no handicap, gross scores only.",
-        "nettoHelper": "The share of the player's handicap that counts. 100 = full course handicap (standard)."
+        "nettoHelper": "The share of the player's handicap that counts. NGF recommends 100% when everyone plays for themselves, and 85% in best ball and stableford in pairs."
       },
       "roundRobin": {
         "legend": "Scoring for Round Robin",
@@ -1613,7 +1613,7 @@
       "scoring": {
         "legend": "Scoring",
         "description": "Controls how much of the handicap is applied. Gross = no handicap, only gross strokes.",
-        "nettoHelper": "Share of the player's handicap that counts. 100 = full course handicap (standard)."
+        "nettoHelper": "Share of the player's handicap that counts. NGF recommends 100% when everyone plays for themselves, and 85% in best ball and stableford in pairs."
       },
       "sumEquivalent": "Your choice equals {sumPct}% of the sum of course handicaps.",
       "texas": {
