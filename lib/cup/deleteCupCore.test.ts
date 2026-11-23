@@ -17,7 +17,6 @@ function respond(op: QueryOp): QueryResponse {
 }
 const fake = createAdminClientMock({ tokens: {}, respond });
 vi.mock('@/lib/supabase/admin', () => ({ getAdminClient: () => fake.client }));
-vi.mock('@/lib/games/expireGameCache', () => ({ expireTournamentCache: vi.fn() }));
 vi.mock('@/lib/i18n/revalidateLocalePath', () => ({ revalidatePath: vi.fn() }));
 
 const plan = vi.hoisted(() => ({ planTournamentGameDeletion: vi.fn() }));

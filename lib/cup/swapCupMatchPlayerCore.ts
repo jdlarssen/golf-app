@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Tables } from '@/lib/database.types';
-import { expireGameCache, expireTournamentCache } from '@/lib/games/expireGameCache';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 import { teeGenderOf } from '@/lib/games/teeGender';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { expectAffected } from '@/lib/supabase/affectedRows';
@@ -542,7 +542,6 @@ export async function swapCupMatchPlayerCore(
 
 /** Buster cachene et bytte kan ha endret. Stiene bor hos kalleren. */
 export function expireCupSwapCaches(tournamentId: string, gameIds: string[]): void {
-  expireTournamentCache(tournamentId);
   // Hver skrevet match har sin egen cache-tag (`getGameWithPlayers`) — uten
   // dette viser hull-siden og kamp-hjemmet den gamle spilleren i opptil 15 min.
   for (const writtenGameId of gameIds) {

@@ -54,10 +54,6 @@ const syncFinishedCupWinnerMock = vi.fn<(tournamentId: string) => Promise<void>>
 vi.mock('./finishedCupWinner', () => ({
   syncFinishedCupWinner: (tournamentId: string) => syncFinishedCupWinnerMock(tournamentId),
 }));
-const expireTournamentCacheMock = vi.fn();
-vi.mock('@/lib/games/expireGameCache', () => ({
-  expireTournamentCache: (...args: unknown[]) => expireTournamentCacheMock(...args),
-}));
 
 function setUser(id: string) {
   (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -612,7 +608,7 @@ describe('the winner follows a corrected side award (#2214)', () => {
   it.each([
     ['registerSideAwardWinner', winnerCall],
     ['registerGirCounts', girCall],
-  ])('%s syncs the winner after the write and before the cache expiry', async (_name, call) => {
+  ])('%s syncs the winner after the write', async (_name, call) => {
     let wroteBeforeSync = false;
     syncFinishedCupWinnerMock.mockImplementationOnce(async () => {
       wroteBeforeSync = adminMock.__fromCalls.some(
@@ -622,14 +618,11 @@ describe('the winner follows a corrected side award (#2214)', () => {
 
     const result = await call()();
 
-    const syncOrder = syncFinishedCupWinnerMock.mock.invocationCallOrder[0];
-    const expireOrder = expireTournamentCacheMock.mock.invocationCallOrder[0];
     expect({
       result,
       syncedWith: syncFinishedCupWinnerMock.mock.calls[0]?.[0],
       wroteBeforeSync,
-      syncBeforeExpire: syncOrder !== undefined && expireOrder !== undefined && syncOrder < expireOrder,
-    }).toEqual({ result: { ok: true }, syncedWith: 'cup-1', wroteBeforeSync: true, syncBeforeExpire: true });
+    }).toEqual({ result: { ok: true }, syncedWith: 'cup-1', wroteBeforeSync: true });
   });
 
   it.each([

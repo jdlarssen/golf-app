@@ -1,7 +1,7 @@
 import { revalidateTag } from 'next/cache';
 
 /**
- * The one home for "a mutation on a game or cup expires its cache at once"
+ * The one home for "a mutation on a game expires its cache at once"
  * (#2068).
  *
  * - `revalidateTag(tag, 'max')` is stale-while-revalidate: the first reader
@@ -18,9 +18,4 @@ import { revalidateTag } from 'next/cache';
  */
 export function expireGameCache(gameId: string): void {
   revalidateTag(`game-${gameId}`, { expire: 0 });
-}
-
-/** Same rule for a cup's `tournament-${id}` tag. */
-export function expireTournamentCache(tournamentId: string): void {
-  revalidateTag(`tournament-${tournamentId}`, { expire: 0 });
 }

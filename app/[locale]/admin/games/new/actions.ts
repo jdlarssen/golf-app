@@ -418,17 +418,13 @@ async function createGameInternal(
     }
   }
 
-  // Hvis spillet er koblet til en cup, refresh cup-leaderboard-cachen så
-  // /admin/cup/[id] og /cup/[id] viser den nye matchen umiddelbart, og
-  // redirect tilbake til cup-detaljsiden i stedet for game-detalj.
+  // Hvis spillet er koblet til en cup, refresh cup-sidene så /admin/cup/[id]
+  // og /cup/[id] viser den nye matchen umiddelbart, og redirect tilbake til
+  // cup-detaljsiden i stedet for game-detalj.
   if (tournamentId) {
-    const { expireTournamentCache } = await import(
-      '@/lib/games/expireGameCache'
-    );
     const { revalidatePath } = await import(
       '@/lib/i18n/revalidateLocalePath'
     );
-    expireTournamentCache(tournamentId);
     revalidatePath(`/admin/cup/${tournamentId}`);
     revalidatePath(`/cup/${tournamentId}`);
     redirect({ href: `/admin/cup/${tournamentId}?status=match_added`, locale });

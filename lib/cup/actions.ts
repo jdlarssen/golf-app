@@ -1,7 +1,6 @@
 'use server';
 
 import { redirect } from '@/lib/nav/redirect';
-import { expireTournamentCache } from '@/lib/games/expireGameCache';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
@@ -137,7 +136,6 @@ export async function startTournament(formData: FormData) {
     redirect(`${base.path}?error=${started.error}`);
   }
 
-  expireTournamentCache(id);
   base.revalidate();
   revalidatePath(`/cup/${id}`);
   redirect(`${base.path}?status=started`);
@@ -172,7 +170,6 @@ export async function finishTournament(formData: FormData) {
   }
   if (result.alreadyFinished) redirect(`${base.path}?error=already_finished`);
 
-  expireTournamentCache(id);
   base.revalidate();
   revalidatePath(`/cup/${id}`);
   redirect(`${base.path}?status=finished`);

@@ -1,6 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
-import { expireTournamentCache } from '@/lib/games/expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { syncFinishedCupWinner } from './finishedCupWinner';
@@ -35,7 +34,6 @@ const SIDE_AWARD_COLUMNS =
 
 /** Buster det en registrering kan ha endret. */
 export function revalidateCupSideAwards(tournamentId: string, groupId: string | null): void {
-  expireTournamentCache(tournamentId);
   revalidatePath(`/admin/cup/${tournamentId}`);
   if (groupId) revalidatePath(`/klubber/${groupId}/cup/${tournamentId}`);
   revalidatePath(`/cup/${tournamentId}`);
