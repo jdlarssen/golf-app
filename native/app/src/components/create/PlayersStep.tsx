@@ -39,6 +39,7 @@
 // finnes det ikke noe valg å ta, og raden byttes ut med én rolig linje.
 import { useState, type ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Tap } from '../Tap';
 import type { RosterCandidate } from '../../data/createGame';
 import { APP_MODE_LABELS, type AppGameMode } from '../../lib/appFormats';
 import { displayName } from '../../lib/display';
@@ -55,7 +56,7 @@ import type { TeeGenderAvailability } from '../../lib/teeChoice';
 import type { DraftPlayer, TeeGenderUi } from '../../lib/wizardPayload';
 import { FONTS, interLine, useTheme } from '../../theme';
 import { WebLinkButton } from '../WebLinkButton';
-import { Chips, Field, Note, SelectRow, type ChipOption } from './primitives';
+import { Chips, Field, linkTarget, Note, SelectRow, type ChipOption } from './primitives';
 
 /** Tee- og lagvalget står 8 pt under spillerraden, ikke klistret til den (#2716). */
 const CHIP_ROW = { marginTop: 8 } as const;
@@ -228,9 +229,15 @@ export function PlayersStep({
           <Text style={ui.error} testID="create-players-error">
             Fikk ikke hentet spillerne. Sjekk nettet og prøv igjen.
           </Text>
-          <Text style={ui.linkText} onPress={onRetry} testID="create-players-retry">
-            Prøv igjen
-          </Text>
+          {/* #2928: en ekte knapp, som «Prøv igjen» i formatsteget. */}
+          <Tap
+            onPress={onRetry}
+            hitSlop={linkTarget().hitSlop}
+            testID="create-players-retry"
+            accessibilityRole="button"
+          >
+            <Text style={ui.linkText}>Prøv igjen</Text>
+          </Tap>
         </View>
       ) : null}
 

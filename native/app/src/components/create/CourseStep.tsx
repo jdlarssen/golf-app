@@ -116,9 +116,15 @@ export function CourseStep({
           <Text style={ui.error} testID="create-course-error">
             Fikk ikke hentet banene. Sjekk nettet og prøv igjen.
           </Text>
-          <Text style={ui.linkText} onPress={onRetry} testID="create-course-retry">
-            Prøv igjen
-          </Text>
+          {/* #2928: en ekte knapp, som «Prøv igjen» i formatsteget. */}
+          <Tap
+            onPress={onRetry}
+            hitSlop={linkTarget().hitSlop}
+            testID="create-course-retry"
+            accessibilityRole="button"
+          >
+            <Text style={ui.linkText}>Prøv igjen</Text>
+          </Tap>
         </View>
       ) : null}
 
