@@ -1792,7 +1792,7 @@
           },
           {
             "heading": "Handicap and strokes received",
-            "body": "Everything in Stableford is decided on net, so the handicap is the engine. Tørny first works out your course handicap: your handicap index multiplied by the slope divided by 113, plus the difference between the course rating and par on the tee you play from. The strokes are then spread by the stroke index on the card. With a course handicap of 12 you get one extra stroke on the twelve holes with the lowest stroke index. With 22 you get a stroke on all 18 holes and a second one on the four hardest. WHS recommends 95 per cent of the course handicap for large individual Stableford competitions, and whoever sets up the round in Tørny chooses the allowance. Change tee and your course handicap changes, which is exactly what the slope is there for."
+            "body": "Everything in Stableford is decided on net, so the handicap is the engine. Tørny first works out your course handicap: your handicap index multiplied by the slope divided by 113, plus the difference between the course rating and par on the tee you play from. The strokes are then spread by the stroke index on the card. With a course handicap of 12 you get one extra stroke on the twelve holes with the lowest stroke index. With 22 you get a stroke on all 18 holes and a second one on the four hardest. The R&A recommends 95 per cent of the course handicap for large individual Stableford competitions. In Norway the NGF recommends 100 per cent, and whoever sets up the round in Tørny chooses the allowance. Change tee and your course handicap changes, which is exactly what the slope is there for."
           },
           {
             "heading": "When to pick up",
@@ -5645,7 +5645,7 @@
       "hcpAllowanceLabel": "Handicap (%)",
       "hcpMaxStrokesLabel": "Max strokes",
       "hcpMaxStrokesPlaceholder": "No cap",
-      "hcpHint": "The percentage is taken of the course handicap. Max strokes applies after the percentage; leave it empty for no cap. WHS recommends 95% for stroke play and stableford.",
+      "hcpHint": "The percentage is taken of the course handicap. Max strokes applies after the percentage; leave it empty for no cap. NGF recommends 100% for stroke play and stableford.",
       "courseScopeHeading": "Course scope",
       "courseScopeLegend": "Course scope",
       "scopeFixedBothLabel": "Fixed course and tee",

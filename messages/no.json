@@ -1792,7 +1792,7 @@
           },
           {
             "heading": "Handicap og tildelte slag",
-            "body": "Alt i stableford avgjøres av netto, så handicapet er selve motoren. Tørny regner først banehandicapet ditt: hcp-indeksen ganget med slope delt på 113, pluss forskjellen mellom course rating og par på teen du spiller fra. Deretter fordeles slagene etter stroke index på scorekortet. Har du 12 i banehandicap, får du ett ekstra slag på de tolv hullene med lavest stroke index. Har du 22, får du ett slag på alle 18 hull og et ekstra på de fire vanskeligste. WHS anbefaler 95 prosent av banehandicapet i store individuelle stablefordturneringer, og den som setter opp runden i Tørny velger andelen selv. Bytter du tee, endrer banehandicapet seg, og det er nettopp det slope er til for."
+            "body": "Alt i stableford avgjøres av netto, så handicapet er selve motoren. Tørny regner først banehandicapet ditt: hcp-indeksen ganget med slope delt på 113, pluss forskjellen mellom course rating og par på teen du spiller fra. Deretter fordeles slagene etter stroke index på scorekortet. Har du 12 i banehandicap, får du ett ekstra slag på de tolv hullene med lavest stroke index. Har du 22, får du ett slag på alle 18 hull og et ekstra på de fire vanskeligste. R&A anbefaler 95 prosent av banehandicapet i store individuelle stablefordturneringer. I Norge anbefaler NGF 100 prosent, og den som setter opp runden i Tørny velger andelen selv. Bytter du tee, endrer banehandicapet seg, og det er nettopp det slope er til for."
           },
           {
             "heading": "Når skal du plukke opp ballen",
@@ -5645,7 +5645,7 @@
       "hcpAllowanceLabel": "Handicap (%)",
       "hcpMaxStrokesLabel": "Maks slag",
       "hcpMaxStrokesPlaceholder": "Ingen tak",
-      "hcpHint": "Prosenten regnes av banehandicapet. Maks slag gjelder etter prosenten, og står feltet tomt, er det ikke noe tak. WHS anbefaler 95 % for slagspill og stableford.",
+      "hcpHint": "Prosenten regnes av banehandicapet. Maks slag gjelder etter prosenten, og står feltet tomt, er det ikke noe tak. NGF anbefaler 100 % for slagspill og stableford.",
       "courseScopeHeading": "Baneomfang",
       "courseScopeLegend": "Baneomfang",
       "scopeFixedBothLabel": "Fast bane og tee",

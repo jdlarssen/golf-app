@@ -69,7 +69,8 @@ describe('CreateLigaForm — handicap share and stroke cap (#2660)', () => {
     };
     const simulator = within(screen.getByTestId('liga-create-simulator')).getByRole('checkbox');
 
-    expect(posted()).toEqual(['95', '']);
+    // #2942: a regular league starts on NGF's 100 %.
+    expect(posted()).toEqual(['100', '']);
     fireEvent.click(simulator);
     expect(posted()).toEqual(['75', '32']);
 
