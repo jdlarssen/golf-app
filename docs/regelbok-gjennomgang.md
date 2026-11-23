@@ -196,7 +196,7 @@ Formater: Wolf, Nassau, Skins, Nines, Acey Deucey og Bingo Bango Bongo. Testene 
 
 | Nr | Format | Motoren gjør | Regelen sier | Regneeksempel | Hvor ofte og hvor mye | Forslag | Eierens svar |
 |---|---|---|---|---|---|---|---|
-| F34 | Skins, Wolf, Nines og Acey Deucey: spillene som avgjøres hull for hull, som matchspill. | Hver spiller får sine egne slag etter hullindeks, ikke differansen til den laveste (linjene i F28–F32). | Regelboka har ingen rad for disse spillene. For matchspill sier NGF vedlegg C, s. 76, at den laveste spiller på null og at de andre får differansen. Det er regelen bak F15. | Banehandicap 10 mot 18: i dag får begge et slag på hullindeks 1–10, så 18-spilleren har et slag mer på hullindeks 11–18. Med differansen får 18-spilleren slagene på hullindeks 1–8. | Gjelder alle netto-spill av disse fire der spillerne har ulikt handicap. Ved 100 % blir antallet slag i forskjell det samme. Det er bare hullene som blir andre, med samme betingelse som i F15. Hvor ofte et hull får en annen vinner, er ikke målt. | la stå. Regelboka sier ikke noe om disse spillene. Vil du ha samme regel som i F15 også her, kan det tas med i #2997. | |
+| F34 | Skins, Wolf, Nines og Acey Deucey: spillene som avgjøres hull for hull, som matchspill. | Hver spiller får sine egne slag etter hullindeks, ikke differansen til den laveste (linjene i F28 og F30–F32). | Regelboka har ingen rad for disse spillene. For matchspill sier NGF vedlegg C, s. 76, at den laveste spiller på null og at de andre får differansen. Det er regelen bak F15. | Banehandicap 10 mot 18: i dag får begge et slag på hullindeks 1–10, så 18-spilleren har et slag mer på hullindeks 11–18. Med differansen får 18-spilleren slagene på hullindeks 1–8. | Gjelder netto-spill av disse fire der spillerne har ulikt handicap, med samme betingelse som i F15. Ved 100 % blir antallet slag i forskjell det samme. Det er bare hullene som blir andre. Hvor ofte et hull får en annen vinner, er ikke målt. | la stå. Regelboka sier ikke noe om disse spillene. Vil du ha samme regel som i F15 også her, kan det tas med i #2997. | |
 
 ### Testene og funnene, runde 4
 
@@ -212,15 +212,15 @@ Gjennomgangen gikk i fire runder fra 20. til 24.11.2026. Tabellen viser hvert fu
 
 | Nr | Runde | Funn | Forslag | Eierens svar | Sak |
 |---|---|---|---|---|---|
-| F1 | 1 | Differensialen regnet netto dobbeltbogey av spillehandicapet, ikke fullt banehandicap | rett | «Rett» | Levert i gjennomgangen 20.11; står i #2939 |
+| F1 | 1 | Differensialen regnet netto dobbeltbogey av spillehandicapet, ikke fullt banehandicap | rett | «Rett» | Rettet 21.11 i 20.11-gjennomgangen eieren bestilte (f43fd4b86); spørsmålet om gamle runder står i #2939 |
 | F2 | 1 | Hulltaket over 54 i banehandicap er ikke par + 5 | rett | «Rett» | #2939 |
 | F3 | 1 | Halve tall rundes ned i flyttall (45 ved 70 % gir 31) | rett | «Rett» | #2939 |
 | F4 | 1 | Tilbaketellingen stopper på hull 18 | produktvalg | «Følg regelen» | #2940 |
 | F5 | 1 | Solo slagspill teller tilbake uten halve handicapet | produktvalg | «Følg regelen» | #2940 |
 | F6 | 1 | Eldre slagspill gir ikke tilleggsslag for ulik par | la stå | «Rett» | #2941 |
-| F7 | 1 | Best ball og lag-stableford startet på 100 %, forbundet sier 85 % | la stå | «Rett» | #2942, levert |
+| F7 | 1 | Best ball og lag-stableford startet på 100 %, forbundet sier 85 % | la stå | Først «La stå», så «Rett» | #2942, levert |
 | F8–F14 | 1 | Ingen avvik | la stå | | |
-| F15 | 2 | Four-ball og Round Robin gir egne slag, ikke differansen til den laveste | produktvalg | «Rett» | #2997 (singles levert i gjennomgangen 20.11) |
+| F15 | 2 | Four-ball og Round Robin gir egne slag, ikke differansen til den laveste | produktvalg | «Rett» | #2997 (singles rettet 21.11 i 20.11-gjennomgangen eieren bestilte, af4773c0c) |
 | F16 | 2 | Dobbeltavrunding i four-ball, Round Robin og foursomes-familien | ikke nytt | «Rett» | #2997 |
 | F17 | 2 | Matchspill gir ikke tilleggsslag for ulik par | rett | «Rett» | #2941 |
 | F18 | 2 | Four-ball starter på 85 %, forbundet sier 90 % | la stå | «Rett» | #2997 |
