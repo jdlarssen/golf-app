@@ -550,7 +550,6 @@ function MenuItem({
   onPress: () => void;
   testID: string;
 }) {
-  const { colors } = useTheme();
   return (
     <Tap
       accessibilityRole="button"
