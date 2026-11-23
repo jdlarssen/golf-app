@@ -150,7 +150,7 @@ describe('wolfForHole — catch_up, terskelen', () => {
 });
 
 describe('wolfForHole — regneeksempelet i kontrakten, n=3', () => {
-  // Jørgen plass 1 (p1), kompis plass 2 (p2), Jussa plass 3 (p3). Terskel 3.
+  // p1 holds place 1, p2 place 2 and p3 place 3. Threshold 3.
   const players = playersN(3);
   it.each<[number, Record<string, number>, string, boolean]>([
     [16, { p1: 20, p2: 19, p3: 12 }, 'p3', true],
