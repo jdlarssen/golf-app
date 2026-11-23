@@ -13,12 +13,10 @@
 // footer) come from the `mail` catalog. The digest ENTRIES (title/body)
 // are authored content — they are NOT translated and stay as-is.
 
-import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
+import { getMailTranslator, resolveMailLocale, mailUrl, APP_BASE_URL } from './i18n';
 import { sendMail } from './send';
 import { mailWordmarkHtml } from './wordmark';
 import { escapeHtml } from './escapeHtml';
-
-const APP_BASE_URL = 'https://tornygolf.no';
 
 export type ProductUpdateDigestEntry = {
   title: string;
@@ -75,7 +73,7 @@ export async function sendProductUpdateDigest(
               ${
                 u.link && u.cta_label
                   ? `<div style="margin:12px 0 0;">
-                       <a href="${APP_BASE_URL}${escapeHtmlAttr(u.link)}" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:10px 18px;border-radius:9999px;font-weight:600;font-size:14px;">
+                       <a href="${APP_BASE_URL}${escapeHtml(u.link)}" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:10px 18px;border-radius:9999px;font-weight:600;font-size:14px;">
                          ${escapeHtml(u.cta_label)}
                        </a>
                      </div>`
@@ -165,6 +163,3 @@ export async function sendProductUpdateDigest(
   });
 }
 
-function escapeHtmlAttr(s: string): string {
-  return escapeHtml(s);
-}
