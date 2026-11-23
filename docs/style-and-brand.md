@@ -17,8 +17,7 @@
 
 ### Brand
 
-- **Tagline (canonical):** «Tørny — fyr opp golfturneringen på et par minutter»
-- **Subordinate form** (ved siden av BrandMark, for å unngå navn-repetisjon): «Fyr opp golfturneringen på et par minutter»
+- **Tagline (canonical):** «Fyr opp golfturneringen på et par minutter». Slik står den i all ekte copy i dag (`messages/no.json`: `tagline` i app, mail og deling), alltid ved siden av merket, så «Tørny — » foran er droppet for å unngå navn-repetisjon. Mailens `mail.common.tagline` har punktum til slutt fordi den er en hel setning; de andre har ikke det.
 - **Brand-stemme:** Sporty kompis-energi. Action-verb framfor passiv beskrivelse. Norske idiomer framfor «smart»-engelsk.
 - **Ballen på T-en** (#1985): T-en i merket er en tee, og en champagne-ball hviler midt på tverrstreken. Det gjelder app-ikonet, ordmerket «Tørny», delingsbildene og e-postene, og ingen flate har prikken etter «y» lenger. Ikon og e-postbilde lages av `native/assets/generate-icons.mjs`, og Play-feature-grafikken av `native/assets/store/generate-feature-graphic.mjs` fra samme ordmerke-master; på nett tegner bare `BrandMark` og `lib/og/wordmark.tsx` ballen, med forholdene fra `lib/brand/wordmarkBall.ts`.
 - **BrandMark-subtitle** («Turnering» under logo) er logo-lockup, **ikke** tagline — endres ikke uten visuell redesign.

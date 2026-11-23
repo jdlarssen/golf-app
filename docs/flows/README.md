@@ -1,6 +1,6 @@
 <!--
   Nedbrutte brukerflyt-diagrammer for Tørny. Hver flyt finnes i to versjoner:
-    <n>-<navn>.svg/.png          = slik flyten er i dag (med ⚠ forbedringspunkter)
+    <n>-<navn>.svg/.png          = historisk øyeblikksbilde fra 2026-05-31 (med ⚠ forbedringspunkter, de fleste er rettet siden)
     <n>-<navn>-fremtid.svg/.png  = slik flyten blir etter planlagte endringer (NY-merker)
   .svg = skarp/zoom · .png = rask visning. Oversikts-kartet: docs/user-flows.svg.
   Gjennomgått flyt-for-flyt 2026-05-31, hver grunnet i faktisk kode. Forbedringer sporet som issues #355–#377.
@@ -8,9 +8,9 @@
 
 # Brukerflyt-diagrammer — de suksess-kritiske flytene
 
-Fem kjerne-flyter appen står og faller på, pluss liga (flyt 6, ny). Hver er tegnet steg-for-steg (les ovenfra og ned), i **to versjoner**: slik den er i dag, og slik den blir etter de planlagte endringene (liga finnes kun som fremtids-flyt — den var ikke der før). Oversikten over alt: [`../user-flows.svg`](../user-flows.svg). Full tekst-referanse: [`../user-flows.md`](../user-flows.md).
+Fem kjerne-flyter appen står og faller på, pluss liga (flyt 6, ny). Hver er tegnet steg-for-steg (les ovenfra og ned), i **to versjoner**: et historisk øyeblikksbilde fra 2026-05-31 («I dag»-kolonnen, ikke oppdatert siden), og slik den ble etter de planlagte endringene («Fremtid»; disse følger `user-flows.md` best) (liga finnes kun som fremtids-flyt — den var ikke der før). Oversikten over alt: [`../user-flows.svg`](../user-flows.svg) (også fra 2026-05-31; etikettene er ikke sjekket mot dagens skjermer). Nåværende flyt står i teksten i [`../user-flows.md`](../user-flows.md). Full tekst-referanse: [`../user-flows.md`](../user-flows.md).
 
-| # | Flyt | Hvem | I dag | Fremtid |
+| # | Flyt | Hvem | I dag (mai 2026, historisk) | Fremtid |
 |---|---|---|---|---|
 | 1 | **Bli bruker** | Ny spiller | [PNG](01-bli-bruker.png) · [SVG](01-bli-bruker.svg) | [PNG](01-bli-bruker-fremtid.png) · [SVG](01-bli-bruker-fremtid.svg) |
 | 2 | **Bli med i et spill** | Spiller | [PNG](02-bli-med-i-spill.png) · [SVG](02-bli-med-i-spill.svg) | [PNG](02-bli-med-i-spill-fremtid.png) · [SVG](02-bli-med-i-spill-fremtid.svg) |

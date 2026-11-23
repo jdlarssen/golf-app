@@ -6,7 +6,7 @@
 
 # Tørny — brukerflyt-kart
 
-Mobil-først PWA. To personas: **Admin/arrangør** (`is_admin`) og **Spiller** (invitert).
+Mobil-først PWA. To personas: **Admin** (`is_admin`, sekretariatet) og **Spiller** (alle innloggede; kan selv arrangere). Se `CLAUDE.md` §Brukere.
 
 Diagrammene under er Mermaid (renderes på GitHub / i preview). Lenger ned:
 teknisk-kobling per steg, og en prioritert brukervennlighets-vurdering.
@@ -15,7 +15,7 @@ teknisk-kobling per steg, og en prioritert brukervennlighets-vurdering.
 
 ## 0. Inngang & routing
 
-`proxy.ts` gater alt unntatt `/login`, `/legal/*`, `/signup/*`, og PWA-assets.
+`proxy.ts` gater alt unntatt de offentlige stiene (`PUBLIC_PATH_PATTERN` i `proxy.ts`): `/login`, `/register`, `/review-login`, `/legal`, `/signup`, `/spectate`, `/baner`, `/embed`, `/demo`, `/opengraph-image`, `/invitasjon`, `/runde`, `/pamelding`, og PWA-assets.
 Uinnlogget → `/login?next=<path>`. Innlogget uten fullført profil → `/complete-profile`.
 **Unntak — auth-valgfrie ruter** (#1185, #1264, #1265): `/`, `/finn-turneringer` og
 `/spillformater/*` redirecter IKKE anonyme. `/` rendrer den offentlige forsiden
@@ -300,7 +300,7 @@ flowchart LR
 
 **Heiagjengen (#2286):** på live-lenka (spectate) er skiltene følg-lenker. Trykk på et navn gir `?folg=<user_id>` og følg-siden (`FollowView`): plass og total, de fem siste hullene, flighten og tavla. Valget huskes per spill på telefonen (`FollowMemory`, nøkkel `torny:folg:<token>`).
 
-**Hent appen på live-lenka (#2562):** med appen ute står en rolig linje med butikkmerkene under tavla, over «Lag din egen turnering». Følg-siden skjuler den sammen med CTA-en, og storskjermen (`/tv`) og innbyggingen (`/embed`) får den ikke.
+**Hent appen på live-lenka (#2562):** med appen ute står en rolig linje med butikkmerkene under tavla, over «Lag din egen turnering». Følg-siden skjuler den sammen med CTA-en, og storskjermen (`/spectate/[token]/tv`) og innbyggingen (`/embed`) får den ikke.
 
 **Skinspotten (#2317):** mens et Skins-spill pågår, står potten øverst på et skoggrønt kort: hvor mange skins som står på spill og på hvilket hull, hvilke delte hull som fikk potten til å vokse, og om hullet venter på resten av slagene. Under står «Hull for hull» som én mynt per hull (vinnerens initialer, stiplet mynt for delt hull, gullring der potten ble vunnet) og stillingen som en slank liste. Et ferdig spill har pallen i stedet for kortet. Appen viser det samme, med resultatets topp i stedet for pallen, og Skins-stillingen har ingen reaksjoner der heller. Utregningen bor i `lib/leaderboard/skinsPot.ts`.
 
@@ -378,7 +378,7 @@ Publiserer en arrangør som ikke er admin uten å stå på lista selv, lander he
 
 | Område | Ruter | Notat |
 |---|---|---|
-| Baner | `/admin/courses` (+ `/new`, `/[id]/edit`) | Hull/par/SI/tee-bokser. Tee soft-arkiveres hvis i bruk. «Hvor mange hull?» velger 18 hull eller «9 hull, spilles to ganger»: da skrives hull 1–9 inn én gang med to indeksrader, og banen lagres som 18 hull med `courses.nine_holes` (#2484). Valget låses når banen er brukt i en runde. **Sletting er inline (ingen confirm-side)** — avvik. |
+| Baner | `/admin/courses` (+ `/new`, `/[id]/edit`) | Hull/par/SI/tee-bokser. Tee soft-arkiveres hvis i bruk. «Hvor mange hull?» velger 18 hull eller «9 hull, spilles to ganger»: da skrives hull 1–9 inn én gang med to indeksrader, og banen lagres som 18 hull med `courses.nine_holes` (#2484). Valget låses når banen er brukt i en runde. Sletting har egen bekreftelsesside (`/admin/courses/[id]/slett`, som spill og spillere). |
 | Spillere | `/admin/spillere` (+ `/[id]`, `/[id]/slett`) | Registeret viser runder og siste runde i hver rad, de som spilte sist øverst, og filtrene «Alle», «Spilt i år» og «Gjester» (`?vis=`, `lib/admin/playerRegister.ts`, #2346). Ventende invitasjoner viser hvor langt mottakeren har kommet (Sendt → Ba om kode → Inne). Inviter (`sendInvitation` + Resend, «+ Inviter en spiller» fast nederst), resend, **trekk tilbake** (`/invitations/[id]/trekk-tilbake`), rediger, slett (**dedikert side**). |
 | Cup | `/admin/cup` (+ `/[id]`, `/generer`, `/slett`, `/trekk/[userId]`) | Fler-match-turnering; matcher legges til via wizard cup-link. **Trekk underveis** (#1814, **dedikert side**): flagger spillerens ikke-startede kamper, som halveres (≥ 30 min før tee-off) eller går som walkover til motstanderlaget. Samme side angrer trekket. Spilleren selv går via `/cup/[id]/trekk`. |
 | Cup i appen | `CreateCup`, `CupParticipants`, `CupGenerate`, `CupLineup`, `CupDeleteSession`, `Cup`, `CupManage`, `CupFinish`, `CupDelete` | Døra er Cup i typevalget i «Opprett spill» (#2753); Hjem har ingen egen cup-dør. Bare personlig cup lages i appen; en klubb-cup lages på nettsiden, men spilles, styres og avsluttes i appen. Veien er navn og lag → bane og oppsett → sidepoeng → spillere → «Fordel & generer» → «Start cupen» (#2752). Forslaget regnes av samme kode som på nettet (`lib/cup/matchPlan.ts`), og kampene skrives med arrangørens egen klient. Kapteinuttaket (`CupLineup`) har dør fra cup-rommet: arrangøren setter lag og kaptein i spillerlista mens cupen er et utkast og åpner øktene, hver kaptein tar ut laget sitt i hemmelighet, og kampene kommer når begge har levert. Serveren holder motstanderens uttak skjult (`loadCupLineupBoardFor`). Et utkast slettes fra cup-rommet, med egen bekreftelse (`CupDelete`), og en økt i uttaket likeså (`CupDeleteSession`). En startet cup slettes på nettsiden. |
@@ -421,18 +421,20 @@ Sluttbruker har **null programmeringserfaring**, tester på **iPhone Safari/PWA*
 
 ### Funn (prioritert)
 
+> **Status 2026-11-23:** tabellen er fra mai (kartlagt 2026-05-31). Fire funn er sjekket mot koden og rettet (markert «Rettet»): #1, #3, #4 og #10. De andre åtte er ikke sjekket på nytt og kan være rettet eller foreldet; les dem som historikk, ikke som åpne feil.
+
 | # | Funn | Alvor | Hvorfor / hva å vurdere |
 |---|---|---|---|
-| 1 | **Ingen bunn-nav / meny.** Hjem er eneste nav. Bytte spill, nå profil/innboks/leaderboard = via hjem + tilbake. | Høy | I PWA uten nettleser-chrome føles dette som blindvei. Vurder en enkel bunn-tab (Hjem / Innboks / Profil) eller en vedvarende «hjem»-snarvei. |
+| 1 | **Rettet: bunn-navigasjonen `BottomNav` finnes.** *(Opprinnelig:)* **Ingen bunn-nav / meny.** Hjem er eneste nav. Bytte spill, nå profil/innboks/leaderboard = via hjem + tilbake. | Høy | I PWA uten nettleser-chrome føles dette som blindvei. Vurder en enkel bunn-tab (Hjem / Innboks / Profil) eller en vedvarende «hjem»-snarvei. |
 | 2 | **Onboarding hopper: OTP → auto-innmeldt i spill → `/complete-profile` → hjem.** Ingen «fortsett til spillet ditt». | Høy | Ny spiller havner på et profilskjema uten kontekst, og må selv finne spillet under «Mine spill». Vurder å sende rett til spillet etter profil, eller vis tydelig «Du er meldt på X». |
-| 3 | **«Funn turneringer» vises kun i tom-tilstand.** Har spilleren ≥1 spill, finnes ingen vei til å oppdage/melde seg på nye åpne spill fra hjem. | Middels | Gi en vedvarende «Finn turneringer»-inngang uavhengig av om man har spill. |
-| 4 | **Leaderboard er ikke realtime.** Må refreshe for å se nye tall. | Middels | For «følg runden live» er dette skuffende. Vurder lett poll/refresh på leaderboard-siden. |
+| 3 | **Rettet: «Finn turneringer» er terminlista (#2258, #2838).** *(Opprinnelig:)* **«Funn turneringer» vises kun i tom-tilstand.** Har spilleren ≥1 spill, finnes ingen vei til å oppdage/melde seg på nye åpne spill fra hjem. | Middels | Gi en vedvarende «Finn turneringer»-inngang uavhengig av om man har spill. |
+| 4 | **Rettet: leaderboard oppdaterer seg via realtime (`LeaderboardRealtime`, #679).** *(Opprinnelig:)* **Leaderboard er ikke realtime.** Må refreshe for å se nye tall. | Middels | For «følg runden live» er dette skuffende. Vurder lett poll/refresh på leaderboard-siden. |
 | 5 | **Offline last-write-wins overskriver stille.** To som taster samme hull → eldste forsvinner uten varsel. | Middels | `SyncBanner` viser kø-status, men ikke konflikt. Vurder per-slag «lagret/synket»-merke + konflikt-hint. |
 | 6 | **Peer-godkjenning kan låse flighten.** Forsvinner en peer, henger kortet til admin overstyrer. | Middels | Vurder timeout/auto-eskalering til admin, eller gjør peer-godkjenning valgfritt-default-av. |
 | 7 | **Selv-påmelding/utløpt invitasjon gir kryptiske feil.** «user_not_found» når selv-reg er av; utløpt invitasjon = samme uklare feil. | Middels | Egne, vennlige meldinger: «Invitasjonen er utløpt — be arrangøren sende ny». |
 | 8 | **Lag-påmelding: langt skjema, ingen inline-validering, oppslag uten autocomplete; «Bli med på lag» forklarer ikke hva som skjer.** | Middels | Valider per felt; vis hva som skjer ved innmelding; autocomplete på kjente spillere. |
 | 9 | **Trusted-creator-redirect bouncer:** suksess → `/admin/games/[id]` → auto-bounce til `/`. (Kjent «rough edge» i koden.) | Lav→middels | Send trusted creator rett til `/games/[id]` eller en egen kvittering. |
-| 10 | **Bane-sletting er inline uten confirm-side**, mens spill/spiller har dedikert side. Bane-sletting cascader hull + tees. | Lav | Konsistens: gi bane-sletting samme `/slett`-mønster. |
+| 10 | **Rettet: bane-sletting har `/slett`-side.** *(Opprinnelig:)* **Bane-sletting er inline uten confirm-side**, mens spill/spiller har dedikert side. Bane-sletting cascader hull + tees. | Lav | Konsistens: gi bane-sletting samme `/slett`-mønster. |
 | 11 | **Ingen aktiv-spill-nudge.** Pågår en runde, er det bare ett kort blant flere. | Lav | Løft aktivt spill visuelt øverst på hjem. |
 | 12 | **Utløpt/slettet invitasjons-lenke → 404** uten vennlig fallback. | Lav | Egen «denne lenken gjelder ikke lenger»-side med vei videre. |
 

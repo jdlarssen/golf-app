@@ -98,8 +98,10 @@ NY ENDRING
 │   4. Kun oppdater eksisterende tester hvis logikken faktisk endret seg
 │
 ├─ COPY-ENDRING
-│   1. Endre source-strengen i komponenten/templatet
-│   2. Kjør `npx vitest -u` på affected snapshots
+│   1. Endre strengen der den bor: bruker-copy og mail-copy ligger i `messages/no.json` og
+│      `messages/en.json` (mailene også), ikke i komponenten eller mail-fila
+│   2. Kjør `npx vitest run <sti-til-berørte-tester> -u`. Sti FØR `-u`: uten sti kjører
+│      vitest hele suiten og skriver om alle snapshots
 │   3. Review hver diff visuelt — sjekk om noe annet endret seg utilsiktet
 │   4. IKKE legg til nye tester. Aldri.
 │
@@ -135,8 +137,14 @@ Default-handlingen ved upassende test er **å foreslå sletting**, ikke konverte
 
 Der test-stilen avviker fra default, skriv det ned i den lokale `AGENTS.md`. Den skal være maks 1 side, lese-tid <2 minutter, ha eksplisitte gjør/gjør-ikke-eksempler. Filer som finnes per i dag:
 
+- `AGENTS.md` (rota) — Next.js 16 og de fem fellene
+- `lib/cron/AGENTS.md` — cron-helse, staging uten cron
+- `lib/games/AGENTS.md` — spill-cache
 - `lib/mail/AGENTS.md` — Type B-regler for Resend-mailer
 - `lib/scoring/AGENTS.md` — Type A-disiplin (mest «ikke rør»)
+- `lib/supabase/AGENTS.md` — skriveregler og RLS
+- `lib/sync/AGENTS.md` — sync og realtime
+- `native/app/AGENTS.md` — native-appen
 
 Lag ny `AGENTS.md` når et område får mer enn én avvikende regel.
 
@@ -195,6 +203,6 @@ Eksisterende test-suite er ikke i samsvar med disse reglene. Kandidater for clea
 2. **Leaderboard-klyngen** — 8 filer, ~104 tester under `app/[locale]/games/[id]/leaderboard/`. Bør evalueres mot Type C-regelen. Sterk hypotese om at flertallet er kandidater for sletting fordi de re-asserter `lib/scoring/`-output via DOM.
 3. **Admin-form-trioen** — `CourseForm.test.tsx` (54), `GameForm.test.tsx` (38), `CoursesLedgerClient.test.tsx` (38). Split per Type — Type A for validering (ekstrahert til pure funksjon), Type C for render, Type D for én happy-path E2E.
 4. **Andre `toContain`-tunge tester** — alle filer over fil-nivået i toContain-trappa (§ Type B).
-5. **Mail-test-familien** — vurder konsolidering av Resend-kontrakt-tester til én delt fil hvis PR #261 ikke gjør det.
+5. **Mail-test-familien** — gjort: Resend-kontrakten bor i `lib/mail/__tests__/resend-contract.test.ts` (én tabell over alle sendere).
 
 Sekvens og prioritering tas i et eget cleanup-issue. **Inntil det issue-et er åpnet og prioritert, gjelder disse reglene kun nye endringer.**

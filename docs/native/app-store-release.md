@@ -213,7 +213,7 @@ App Store Connect avviser et duplikat (versjon, build). Før hver ny opplasting:
 - Et merke flyttes aldri: `native-ios/v1.1.0-3` peker for alltid på commiten bygg 3 kom fra.
   Nytt bygg = nytt buildnummer = nytt merke.
 
-Første kandidat er `1.1.0 (2)`; skallet brukte `1.0 (1)`.
+Den første kandidaten var `1.1.0 (2)` (historisk). Gjeldende versjon og build står i `native/app/app.config.ts`; sjekk der før du bumper.
 
 **Minsteversjonen** (`lib/app/minVersion.ts`, vist av `/api/app/min-version`, #2619) heves bare
 når en serverendring knekker eldre bygg, og aldri forbi et bygg som ikke ligger i butikken ennå:
