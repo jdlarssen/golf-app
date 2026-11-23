@@ -126,6 +126,7 @@ import { writeScore } from '../data/writeScore';
 import { writeTeeShot } from '../data/writeTeeShot';
 import { writeTeeStarter } from '../data/writeTeeStarter';
 import { LOCAL_SAVE_FAILED, type LocalSaveAction } from '../lib/actionFeedback';
+import { landingTap } from '../lib/haptics';
 import { backTo, openOrReturn } from '../lib/backTo';
 import { holeTopLine } from '../lib/holeHeader';
 import {
@@ -753,10 +754,15 @@ function HoleView({
   // stedet for at trykket forsvinner stille. Lesingen og drainen kjøres bare
   // når scoren faktisk ble lagret. Kallet avviser aldri og svarer om det
   // lagret, så skinna kan rulle tilbake.
+  //
+  // #2928: et ført slag eller en ført putt gir et lett dunk med en gang, før
+  // skrivingen. Dunket sier at trykket tok; feiler lagringen, sier banneret fra
+  // som før. Nullstill og utslag er stille, så dunket alltid betyr «ført».
   const saveLocally = async (
     input: Parameters<typeof writeScore>[0],
     action: LocalSaveAction,
   ): Promise<boolean> => {
+    if (action === 'strokes' || action === 'putts') landingTap();
     try {
       await writeScore(input);
     } catch (err: unknown) {
