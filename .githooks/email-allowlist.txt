@@ -49,3 +49,6 @@
 # ingen, og guarden kan ikke testes uten et domene som faktisk står på lista i
 # `lib/auth/disposableDomains.ts`.
 @mailinator\.com$
+
+# npm-pakkespesifikasjon («tsx@4.23.15»), ikke en adresse: versjonslåst npx-kall.
+^tsx@[0-9.]+$

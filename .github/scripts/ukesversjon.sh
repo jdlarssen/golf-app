@@ -21,6 +21,13 @@ RUN_URL="${GITHUB_SERVER_URL:-https://github.com}/$REPO/actions/runs/${GITHUB_RU
 DATE="$(date -u +%Y-%m-%d)"
 WEEK="$(date -u +%V)"
 BRANCH="claude/ukesversjon-$DATE"
+# Samme-dags rerun: grenen fra første kjøring kan stå igjen på origin (PR lukket
+# uten sletting, eller kjøringen døde etter pushen). Da ville pushen avvises som
+# non-fast-forward. Bruk et unikt suffiks i stedet for å røre den gamle grenen.
+if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+  BRANCH="$BRANCH-r${GITHUB_RUN_ID:-$$}-${GITHUB_RUN_ATTEMPT:-1}"
+  echo "Grenen finnes alt på origin — bruker $BRANCH."
+fi
 
 TMP="$(mktemp -d)"
 SUMMARY="$TMP/summary.json"

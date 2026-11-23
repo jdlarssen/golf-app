@@ -71,7 +71,7 @@ fi
 month_args=()
 [ -n "$MONTH" ] && month_args=(--month "$MONTH")
 
-runner() { npx --yes tsx scripts/loops/archive-boards.ts "$@"; }
+runner() { npx --yes tsx@4.23.15 scripts/loops/archive-boards.ts "$@"; }
 
 # ── Dry-run: vis alt, rør ingenting ──
 if [ "$DRY_RUN" = "true" ]; then

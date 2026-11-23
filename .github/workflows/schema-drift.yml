@@ -15,8 +15,8 @@
 # → Actions → New repository secret) — one token covers both projects. Generate
 # one at https://supabase.com/dashboard/account/tokens.
 #
-# Until that secret exists the job SKIPS gracefully (green, with a notice) so it
-# never blocks a PR. First real run may flag a formatting-only diff between the
+# Until that secret exists the job SKIPS on PR and manual runs (green, with a notice)
+# so it never blocks a PR; a SCHEDULED run fails red. First real run may flag a formatting-only diff between the
 # CLI output and the committed file — if so, regenerate against the target
 # project once and commit to canonicalise.
 name: Schema drift
@@ -47,13 +47,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Skip if Supabase token is not configured
+      - name: Fail on schedule / skip otherwise if Supabase token is not configured
         id: guard
         env:
           TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           if [ -z "$TOKEN" ]; then
             echo "::notice::SUPABASE_ACCESS_TOKEN not set — skipping schema-drift check. Add it in Settings → Secrets and variables → Actions."
+            # Planlagt kjøring uten nøkkel = stille tapt overvåking. Rødt, ikke grønt.
+            if [ "$EVENT_NAME" = "schedule" ]; then
+              echo "::error::SUPABASE_ACCESS_TOKEN mangler på planlagt kjøring — schema-drift kan ikke sjekkes."
+              exit 1
+            fi
             echo "run=false" >> "$GITHUB_OUTPUT"
           else
             echo "run=true" >> "$GITHUB_OUTPUT"
@@ -89,7 +95,7 @@ jobs:
       - uses: supabase/setup-cli@v1
         if: steps.guard.outputs.run == 'true'
         with:
-          version: latest
+          version: 3.2.0
           github-token: ${{ github.token }}
 
       - name: Regenerate types from ${{ steps.target.outputs.target_name }} and diff against committed file

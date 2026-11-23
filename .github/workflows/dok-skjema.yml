@@ -31,13 +31,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Skip if Supabase token is not configured
+      - name: Fail on schedule / skip otherwise if Supabase token is not configured
         id: guard
         env:
           TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           if [ -z "$TOKEN" ]; then
             echo "::notice::SUPABASE_ACCESS_TOKEN ikke satt — dok-skjema kan ikke lese skjemaet. Legg til i Settings → Secrets and variables → Actions."
+            # Planlagt kjøring uten nøkkel = stille tapt overvåking. Rødt, ikke grønt.
+            if [ "$EVENT_NAME" = "schedule" ]; then
+              echo "::error::SUPABASE_ACCESS_TOKEN mangler på planlagt kjøring — dok-skjema kan ikke lese skjemaet."
+              exit 1
+            fi
             echo "run=false" >> "$GITHUB_OUTPUT"
           else
             echo "run=true" >> "$GITHUB_OUTPUT"

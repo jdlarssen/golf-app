@@ -20,13 +20,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Skip if Supabase token is not configured
+      - name: Fail on schedule / skip otherwise if Supabase token is not configured
         id: guard
         env:
           TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           if [ -z "$TOKEN" ]; then
             echo "::notice::SUPABASE_ACCESS_TOKEN ikke satt — prod-vakta kan ikke lese telemetri."
+            # Planlagt kjøring uten nøkkel = stille tapt overvåking. Rødt, ikke grønt.
+            if [ "$EVENT_NAME" = "schedule" ]; then
+              echo "::error::SUPABASE_ACCESS_TOKEN mangler på planlagt kjøring — prod-vakta kan ikke lese telemetri."
+              exit 1
+            fi
             echo "run=false" >> "$GITHUB_OUTPUT"
           else
             echo "run=true" >> "$GITHUB_OUTPUT"

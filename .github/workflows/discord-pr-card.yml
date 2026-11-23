@@ -120,7 +120,7 @@ jobs:
         if: steps.guard.outputs.run == 'true'
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
 
       # Gate + visuell-diff-deteksjon (ingen npm ci). Ved dispatch venter steget på
       # at checkene lander (maks ~10 min, #1301) — timeout-minutes rommer ventingen
@@ -140,7 +140,7 @@ jobs:
           # Unntak (#2095): ready-flipp mens ci.yml fortsatt kjører gir fra seg med en
           # gang — relékjøringen (workflow_run) kommer garantert og tar over.
           WAIT_FOR_CHECKS: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event.workflow_run.name == 'CI (docs no-op)') && 'true' || 'false' }}
-        run: npx --yes tsx scripts/loops/decide-pr-card.ts
+        run: npx --yes tsx@4.23.15 scripts/loops/decide-pr-card.ts
 
       # Planen går videre som jobb-utdata, ikke som fil: de to neste jobbene får
       # den slik decide skrev den, og jobben som kjører PR-ens kode kan ikke endre
@@ -183,7 +183,7 @@ jobs:
       - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
 
       - name: Skjermbilder av GUI-ruter (staging)
         env:
@@ -213,7 +213,7 @@ jobs:
             if [ "$CODE" != "000" ] && [ -n "$CODE" ]; then echo "dev up (HTTP $CODE)"; break; fi
             sleep 3
           done
-          npx --yes tsx scripts/loops/screenshot-routes.ts || echo "::warning::skjermbilder feilet (best-effort)"
+          npx --yes tsx@4.23.15 scripts/loops/screenshot-routes.ts || echo "::warning::skjermbilder feilet (best-effort)"
           kill "$DEV_PID" 2>/dev/null || true
 
       # Også når steget over feilet halvveis: bildene som rakk å bli tatt, blir med.
@@ -250,7 +250,7 @@ jobs:
       - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
 
       # Bildene kommer fra jobben som kjørte PR-ens kode. De leses bare som
       # bildefiler og festes på kortet; planen kommer fra decide.
@@ -270,7 +270,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           printf '%s' "$PLAN_B64" | base64 -d > pr-card-plan.json
-          npx --yes tsx scripts/loops/post-pr-card.ts
+          npx --yes tsx@4.23.15 scripts/loops/post-pr-card.ts
 
   # Rød kjøring skal aldri dø stille (samme mønster som prod-vakt/schema-drift).
   # Skjermbilde-jobben er best-effort og teller ikke.
