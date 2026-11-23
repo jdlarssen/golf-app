@@ -130,7 +130,7 @@ const ANCHORS = [
   // Style and brand
   'Tall i tabeller/leaderboards: ALLTID `tabular-nums`',
   'tap-targets ≥44px',
-  '«Tørny — fyr opp golfturneringen på et par minutter»',
+  '«Fyr opp golfturneringen på et par minutter»',
   'logo-lockup',
   // Auth flow
   'Bytte fra magic-link skjedde 2026-05-13',
