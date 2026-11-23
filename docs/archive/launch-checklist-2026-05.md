@@ -1,3 +1,5 @@
+> **Arkivert 2026-11-23.** Sjekklista er fra mai 2026 og beskriver skjermer som ikke finnes lenger (gammelt «+ Nytt spill»-skjema, «Admin → Invitasjoner», magic-link). Bruk den ikke som fasit. Appens egen «Kom i gang»-liste (`app/[locale]/admin/GettingStartedChecklist.tsx`) er den levende versjonen.
+
 # Tørny — lanseringsdag-sjekkliste
 
 For deg som admin (Jørgen). Hold dette dokumentet åpent på telefonen din når dere skal kjøre runde.

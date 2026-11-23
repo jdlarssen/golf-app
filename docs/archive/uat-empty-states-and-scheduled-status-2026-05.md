@@ -1,3 +1,5 @@
+> **Arkivert 2026-11-23.** UAT-skriptet er fra mai 2026. Teksten det forventer («Klubbhuset er åpent», «Opprett en turnering» m.fl.) finnes ikke lenger i `messages/no.json`, så et avvik her er ikke nødvendigvis en feil. Bruk `docs/staging-testing.md` for ny testing.
+
 # UAT — Empty States + Scheduled Status
 
 Stegvis sjekkliste for å verifisere hele leveransen i prod på [tornygolf.no](https://tornygolf.no). Krever to nettlesere/telefoner: én med admin-konto (Jørgen), én med en testspiller (eller bare et tomt sekundærvindu).

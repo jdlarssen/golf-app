@@ -133,7 +133,7 @@ Utløsertabellen står i `core.md` (lastet øverst). Les fila når utløseren in
 - `docs/forge-workflow.md` — kontrakt-først for `/forge:auto`
 - `docs/hva-er-nok.md` — ferdiggrensen: fryst, parkert, vekke-triggere
 - `docs/issue-workflow.md` — milestone, flyt-forankring, closing-kommentar, null-vekst
-- `docs/launch-checklist.md` — admin-sjekkliste
+- `docs/archive/` — arkiverte sjekklister fra mai (launch, UAT); ferdige planer i `docs/plans/` og `docs/superpowers/`
 - `docs/pr-workflow.md` — PR-form, draft-først, auto-merge, produktvalg-markøren
 - `docs/regelbok-gjennomgang.md` — poengmotoren mot handicapreglene, ett F-nummer per funn (#2927)
 - `docs/roadmap.md` — månedsmålene og kapasitetsregelen (tre mot målet, to til drift/bugs/forvaltning); issues lages fra målene
@@ -141,7 +141,6 @@ Utløsertabellen står i `core.md` (lastet øverst). Les fila når utløseren in
 - `docs/staging-testing.md` — staging-oppsett, autonom login, prod-vakt
 - `docs/style-and-brand.md` — palett, typografi, tagline, brand-stemme
 - `docs/test-discipline.md` — test-typene A–D og beslutningstreet
-- `docs/uat-empty-states-and-scheduled-status.md` — UAT-sjekkliste for tomtilstander og planlagt status
 - `docs/user-flows.md` — brukerflytene i tekst
 - `docs/visjon.md` — visjonen, planleggingsløken (visjon → kvartalsmål → månedsmål → uke → issue) og reglene harnesset håndhever
 - `docs/writing-to-owner.md` — de 16 skrivereglene for alt eieren skal lese (lastet øverst)

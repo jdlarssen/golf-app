@@ -5,7 +5,7 @@ import { ChevronRightIcon } from '@/components/icons';
 // ─── «Kom i gang»-sjekkliste (#1177) ───────────────────────────────────────
 //
 // Goal-gradient onboarding for a brand-new admin: the launch runbook
-// (docs/launch-checklist.md) surfaced in-app as a checklist that starts above
+// (docs/archive/launch-checklist-2026-05.md) surfaced in-app as a checklist that starts above
 // zero — «Konto opprettet» is pre-checked — so the very first screen shows
 // progress instead of a blank slate.
 //
