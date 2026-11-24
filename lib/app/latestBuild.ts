@@ -27,10 +27,18 @@ export const RELEASE_NOTES_MAX_CHARS = 500;
  *   same text testers get in TestFlight or Play for it. Shown as a list in the
  *   app's sheet; an empty list shows the sheet without it.
  *
- * Replace a platform's notes when its number is raised. Build 14 ships before
- * the sheet exists, so no app shows these notes.
+ * Replace a platform's notes when its number is raised.
  */
 export const LATEST_APP_BUILD = {
-  ios: { latestBuild: 14, latestVersion: '1.2.0', notes: [] as readonly string[] },
+  ios: {
+    latestBuild: 15,
+    latestVersion: '1.2.0',
+    notes: [
+      'Appen sier fra når en ny versjon er klar, og viser hva som er nytt.',
+      'Bedre kontrast på brytere og på «Neste hull» om kvelden.',
+      'Tydeligere tekst om hva som skjer når du sletter kontoen.',
+      'Flere småfeil er rettet i cup-oppsettet.',
+    ] as readonly string[],
+  },
   android: { latestVersionCode: 14, latestVersion: '1.2.0', notes: [] as readonly string[] },
 } as const;
