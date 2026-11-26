@@ -19,6 +19,7 @@
 
 import { strokeBasis } from '../courseHandicap';
 import { matchDifferenceStrokes } from '../matchStrokes';
+import { parDifferenceStrokes, usesParDifference, withParDifference } from '../parDifference';
 import { strokesForHole } from '../strokeAllocation';
 import { bestBallForHole } from './bestBall';
 import { parFor } from './parResolver';
@@ -155,6 +156,20 @@ export function compute(ctx: ScoringContext): FourballMatchplayResult {
     buildSide(1, side1Players, ctx.game.mode_config, lowestInMatch, allowancePct),
     buildSide(2, side2Players, ctx.game.mode_config, lowestInMatch, allowancePct),
   ];
+
+  // #2941 (F17): a new match adds each player's difference in par, whole
+  // strokes after the allowance, and the lowest then plays off zero.
+  if (usesParDifference(ctx.game.mode_config)) {
+    const all = [...sides[0].players, ...sides[1].players];
+    const tees = all.map((p) => p.teeGender);
+    const withPar = withParDifference(
+      all.map((p) => p.effectiveHandicap),
+      tees.map((tee) => parDifferenceStrokes(ctx.holes, tee, tees)),
+    );
+    all.forEach((p, i) => {
+      p.effectiveHandicap = withPar[i];
+    });
+  }
 
   // Pre-beregn effektiv HCP per spiller for raskt oppslag under hull-loop.
   const effectiveByUser = new Map<string, number>();

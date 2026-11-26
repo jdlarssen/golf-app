@@ -31,6 +31,7 @@
 
 import { strokeBasis } from '../courseHandicap';
 import { matchDifferenceStrokes } from '../matchStrokes';
+import { parDifferenceStrokes, usesParDifference, withParDifference } from '../parDifference';
 import { strokesForHole } from '../strokeAllocation';
 import { bestBallForHole } from './bestBall';
 import { parFor } from './parResolver';
@@ -310,13 +311,20 @@ export function compute(ctx: ScoringContext): RoundRobinResult {
   // frozen (F16).
   const basisOf = (p: ScoringPlayer) => strokeBasis(p.courseHandicap, p.rawCourseHandicap);
   const lowestInMatch = Math.min(...ctx.players.map(basisOf));
+  // #2941 (F17): a new match adds each player's difference in par, whole
+  // strokes after the allowance, and the lowest then plays off zero.
+  const shares = ctx.players.map((p) =>
+    matchDifferenceStrokes(ctx.game.mode_config, basisOf(p), lowestInMatch, allowancePct),
+  );
+  const tees = ctx.players.map((p) => p.teeGender);
+  const effective = usesParDifference(ctx.game.mode_config)
+    ? withParDifference(
+        shares,
+        tees.map((tee) => parDifferenceStrokes(ctx.holes, tee, tees)),
+      )
+    : shares;
   const effectiveByUser = new Map<string, number>();
-  for (const p of ctx.players) {
-    effectiveByUser.set(
-      p.userId,
-      matchDifferenceStrokes(ctx.game.mode_config, basisOf(p), lowestInMatch, allowancePct),
-    );
-  }
+  ctx.players.forEach((p, i) => effectiveByUser.set(p.userId, effective[i]));
 
   // Bygg gross-lookup
   const grossByKey = new Map<string, number | null>();

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { compute, computeMatchResult } from './singlesMatchplay';
+import { MIXED_PAR_18 } from '../__fixtures__/mixedPar';
 import type {
   ScoringContext,
   ScoringHole,
@@ -889,5 +890,29 @@ describe('compute — slag etter forskjellen (revisjon 20.11, nye matcher)', () 
     expect(extras(ctxWith(legacy, 20, 5))).toEqual(
       Array.from({ length: 18 }, (_, i) => [i + 1, i + 1 <= 2 ? 2 : 1, i + 1 <= 5 ? 1 : 0]),
     );
+  });
+});
+
+describe('compute — ulik par (#2941, F17)', () => {
+  const herre: ScoringPlayer = { userId: 'a', teamNumber: 1, flightNumber: 1, courseHandicap: 0, teeGender: 'mens' };
+  const dame: ScoringPlayer = { userId: 'b', teamNumber: 2, flightNumber: 2, courseHandicap: 0, teeGender: 'ladies' };
+  const withConfig = (extra: object): ScoringContext => ({
+    ...makeCtx({ players: [herre, dame], holes: MIXED_PAR_18, scores: [] }),
+    game: {
+      id: 'g-mp',
+      game_mode: 'singles_matchplay',
+      mode_config: { kind: 'singles_matchplay', team_size: 1, teams_count: 2, match_strokes: 'difference', ...extra },
+    },
+  });
+
+  it('uten par_strokes får ingen slag for forskjellen i par (en match opprettet før)', () => {
+    const result = compute(withConfig({}));
+    expect(result.holes.every((h) => h.side1Extra === 0 && h.side2Extra === 0)).toBe(true);
+  });
+
+  it('med par_strokes får damen på par 74 ett slag på SI 1 og 2', () => {
+    const result = compute(withConfig({ par_strokes: 'difference' }));
+    expect(result.holes.map((h) => h.side2Extra).slice(0, 3)).toEqual([1, 1, 0]);
+    expect(result.holes.every((h) => h.side1Extra === 0)).toBe(true);
   });
 });

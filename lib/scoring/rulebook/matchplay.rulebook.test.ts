@@ -17,6 +17,7 @@
 // docs/regelbok-gjennomgang.md (lib/scoring/AGENTS.md).
 
 import { describe, expect, it } from 'vitest';
+import { MIXED_PAR_18 } from '../__fixtures__/mixedPar';
 import { holesForSegment } from '../holeSegment';
 import { compute as computeFourball } from '../modes/fourballMatchplay';
 import { compute as computeFoursomes } from '../modes/foursomesMatchplay';
@@ -401,25 +402,119 @@ describe('Regel 6.1b: ni hull med 18-hullsindeksen (NGF s. 55)', () => {
   });
 });
 
-describe('Kjent avvik', () => {
+describe('Regel 6.2b(i): ulik par i matchspill gir tilleggsslag (NGF s. 56-57, vedlegg C s. 76)', () => {
   // NGF 6.2b(i) s. 56: in formats where results are gross or net scores (and
   // match play compares net scores, Rules of Golf 3.2c(2)), «En spiller som
   // konkurrerer fra et utslagssted med en høyere par må få tilleggsslag for
-  // runden, lik differansen mellom par». Here the ladies' par is 74 against
-  // the men's 72 (par 5 for her on index 1 and 2), both on banehandicap 0.
-  // The rule gives her two strokes, on index 1 and 2; her 5 on hole 1 is net
-  // 4 and halves his 4. The engine gives no extra strokes (singlesMatchplay.ts
-  // compares net strokes; par is only shown).
-  it.fails('F17: ulik par i matchspill gir tilleggsslag lik forskjellen i par', () => {
-    const holes: ScoringHole[] = PAR4_18.map((h) =>
-      h.strokeIndex <= 2 ? { ...h, parByGender: { mens: 4, ladies: 5, juniors: 4 } } : h,
-    );
+  // runden, lik differansen mellom par», added as «Spillehandicap x
+  // handicapgodtgjørelse + Forskjell i par»: whole strokes, after the
+  // allowance. Vedlegg C s. 76: after the allowance «spiller den spilleren med
+  // det laveste spillehandicapet med null handicapslag». Here the ladies' par
+  // is 74 against the men's 72 (par 5 for her on index 1 and 2). A new match
+  // carries `par_strokes: 'difference'` (#2941); a match created before gives
+  // no extra strokes and is never recalculated.
+  const MIXED = MIXED_PAR_18;
+  const SINGLES_PAR: GameModeConfig = { ...SINGLES, par_strokes: 'difference' } as GameModeConfig;
+  const herre = (userId: string, teamNumber: number, ch: number) => player(userId, teamNumber, ch, 'mens');
+  const dame = (userId: string, teamNumber: number, ch: number) => player(userId, teamNumber, ch, 'ladies');
+
+  // Both on banehandicap 0. The rule gives her two strokes, on index 1 and 2;
+  // her 5 on hole 1 is net 4 and halves his 4.
+  it('F17: ulik par i matchspill gir tilleggsslag lik forskjellen i par', () => {
     const result = computeSingles(
-      ctx('singles_matchplay', SINGLES, [player('herre', 1, 0, 'mens'), player('dame', 2, 0, 'ladies')], holes, [
+      ctx('singles_matchplay', SINGLES_PAR, [herre('herre', 1, 0), dame('dame', 2, 0)], MIXED, [
         { userId: 'herre', holeNumber: 1, gross: 4 },
         { userId: 'dame', holeNumber: 1, gross: 5 },
       ]),
     );
     expect(result.holes[0].result).toBe('tied');
+    expect(result.holes.map((h) => h.side2Extra)).toEqual([...ones(2), ...zeros(16)]);
+    expect(result.holes.every((h) => h.side1Extra === 0)).toBe(true);
+  });
+
+  it('F17: en match opprettet før merket gir ingen tilleggsslag', () => {
+    const result = computeSingles(
+      ctx('singles_matchplay', SINGLES, [herre('herre', 1, 0), dame('dame', 2, 0)], MIXED, [
+        { userId: 'herre', holeNumber: 1, gross: 4 },
+        { userId: 'dame', holeNumber: 1, gross: 5 },
+      ]),
+    );
+    expect(result.holes[0].result).toBe('side1_wins');
+  });
+
+  // Vedlegg C s. 76: the lowest playing handicap plays off zero. Her 10 + 2
+  // = 12 against his 14: she plays off 0, and he gets 2, on index 1 and 2.
+  it('F17: har damen lavest handicap, spiller hun på null og herren får differansen', () => {
+    const result = computeSingles(ctx('singles_matchplay', SINGLES_PAR, [dame('dame', 1, 10), herre('herre', 2, 14)], MIXED));
+    expect(result.holes.map((h) => h.side1Extra)).toEqual(zeros(18));
+    expect(result.holes.map((h) => h.side2Extra)).toEqual([...ones(2), ...zeros(16)]);
+  });
+
+  // C/2 example 2 at 90 %, with D on the ladies' tee: 0, 7, 15 and 26 + 2.
+  // The two strokes are whole strokes after the allowance, not 90 % of 2.
+  it('F17: four-ball ved 90 % gir damen to hele slag utover andelen av differansen', () => {
+    const result = computeFourball(
+      ctx(
+        'fourball_matchplay',
+        { ...fourballNew(90), par_strokes: 'difference' } as GameModeConfig,
+        [herre('A', 1, 10), herre('B', 1, 18), herre('C', 2, 27), dame('D', 2, 39)],
+        MIXED,
+      ),
+    );
+    expect(result.sides.flatMap((s) => s.players.map((p) => p.effectiveHandicap))).toEqual([0, 7, 15, 28]);
+  });
+
+  // Equal sides at 50 %: no strokes from the handicaps. The side's par is its
+  // captain's tee (lex-min userId), as the hole rows show it: C and D on the
+  // ladies' tee get 2 whole strokes, not 50 % of 2.
+  it('F17: foursomes ved 50 % gir damesiden to slag og herresiden null', () => {
+    const result = computeFoursomes(
+      ctx(
+        'foursomes_matchplay',
+        { kind: 'foursomes_matchplay', team_size: 2, teams_count: 2, allowance_pct: 50, par_strokes: 'difference' } as GameModeConfig,
+        [herre('A', 1, 10), herre('B', 1, 10), dame('C', 2, 10), dame('D', 2, 10)],
+        MIXED,
+      ),
+    );
+    expect(result.sides.map((s) => s.effectiveExtraHandicap)).toEqual([0, 2]);
+    expect(result.holes.map((h) => h.side2Extra)).toEqual([...ones(2), ...zeros(16)]);
+  });
+
+  it('F17: Round Robin gir hver dame to slag', () => {
+    const result = computeRoundRobin(
+      ctx(
+        'round_robin',
+        {
+          kind: 'round_robin',
+          team_size: 1,
+          teams_count: 4,
+          allowance_pct: 90,
+          match_strokes: 'difference',
+          par_strokes: 'difference',
+        } as GameModeConfig,
+        [herre('A', 1, 0), dame('B', 2, 0), herre('C', 3, 0), dame('D', 4, 0)],
+        MIXED,
+      ),
+    );
+    const total: Record<string, number> = {};
+    for (const row of result.holes) {
+      for (const cell of [...row.side1Players, ...row.side2Players]) {
+        total[cell.userId] = (total[cell.userId] ?? 0) + cell.extraStrokes;
+      }
+    }
+    expect(total).toEqual({ A: 0, B: 2, C: 0, D: 2 });
+  });
+
+  // Regel 6.1b and 6.2b together: the difference is the par over the nine
+  // holes played. On the back nine both play par 36, so no extra strokes.
+  it('F17: på siste ni teller bare forskjellen i par over hull 10-18', () => {
+    const front = computeSingles(
+      ctx('singles_matchplay', SINGLES_PAR, [herre('herre', 1, 0), dame('dame', 2, 0)], holesForSegment(MIXED, 'front9')),
+    );
+    const back = computeSingles(
+      ctx('singles_matchplay', SINGLES_PAR, [herre('herre', 1, 0), dame('dame', 2, 0)], holesForSegment(MIXED, 'back9')),
+    );
+    expect(front.holes.reduce((sum, h) => sum + h.side2Extra, 0)).toBe(2);
+    expect(back.holes.reduce((sum, h) => sum + h.side2Extra, 0)).toBe(0);
   });
 });
