@@ -252,11 +252,13 @@ describe('F1: netto dobbeltbogey regnes av fullt banehandicap', () => {
   });
 });
 
-describe('Kjent avvik', () => {
+// F2 and F3, fixed in #2939: the hole cap stops at par + 5, and a half
+// rounds up also when the float lands just under it.
+describe('F2 og F3: hulltaket over 54 og 0,5 opp', () => {
   // NGF 3.1b (s. 31): «Når et spillehandicap er beregnet til mer enn 54 og en
   // spiller får 4 eller flere slag på et hull, er maksimal hullscore par + 5».
   // Banehandicap 56 gets four strokes on index 1 and 2; a 12 there counts 9.
-  it.fails('F2: over 54 er hulltaket par + 5 når spilleren får fire slag eller flere', () => {
+  it('F2: over 54 er hulltaket par + 5 når spilleren får fire slag eller flere', () => {
     const holes = roundWithOneHole(4, 1, 12);
     expect(
       computeScoreDifferential({ holes, courseHandicap: 56, slope: 113, courseRating: 72.0 }),
@@ -266,7 +268,7 @@ describe('Kjent avvik', () => {
   // NGF 6.2a (s. 55): «0,5 avrundes oppover». Index 45,0 on 113/72,0/72 is 45
   // exactly and 70 % of it is 31,5, but 45 × 0,7 is 31,499999999999996 in
   // floating point, which rounds down.
-  it.fails('F3: 0,5 avrundes oppover også når flyttallet havner like under', () => {
+  it('F3: 0,5 avrundes oppover også når flyttallet havner like under', () => {
     expect(
       playingHandicap({ hcpIndex: 45.0, slope: 113, courseRating: 72.0, par: 72, allowancePct: 70 }),
     ).toBe(32);

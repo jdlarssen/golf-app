@@ -18,11 +18,15 @@ export type DifferentialInput = {
  *
  * Formula per hole:
  *   received_i = strokesForHole(courseHandicap, strokeIndex_i)
- *   cap_i      = par_i + 2 + received_i        (net double bogey)
+ *   cap_i      = par_i + min(2 + received_i, 5) (net double bogey, at most par + 5)
  *   adj_i      = min(strokes_i, cap_i)          (adjusted hole score)
  *
  * AGS = Σ adj_i  (i = 1..18)
  * differential = round1( (113 / slope) × (AGS − courseRating) )
+ *
+ * #2939 (F2): NGF 3.1b (s. 31) caps the hole at par + 5 when the course
+ * handicap is over 54 and the player gets 4 or more strokes on it. At 54 and
+ * below a hole gets 3 strokes at most, so `min` never moves the cap there.
  *
  * Differentials may be negative (plus-handicap player or easy course) — never clamped.
  */
@@ -48,7 +52,7 @@ export function computeScoreDifferential(input: DifferentialInput): number | nul
   let ags = 0;
   for (const hole of holes) {
     const received = strokesForHole(courseHandicap, hole.strokeIndex);
-    const cap = hole.par + 2 + received;
+    const cap = hole.par + Math.min(2 + received, 5);
     const adj = Math.min(hole.strokes as number, cap);
     ags += adj;
   }
