@@ -1133,3 +1133,49 @@ describe('modified stableford — points only, the legacy net_to_par flag is ign
     expect(withFlag).toStrictEqual(asTeam(computeModified(ctxWith(PLAIN_MOD_TEAM, opts))));
   });
 });
+
+// #2940: a game stamped `countback: 'rulebook'` goes on after hole 18 to
+// holes 4-9, 7-9 and 9 (Committee Procedures 5A(6)(d), F4). W and R are level
+// on points, the last 9, 6, 3 and hole 18; W has more points on holes 4-9.
+describe('compute — countback: rulebook (#2940)', () => {
+  const backNine = Array(9).fill(4);
+  const W = [5, 5, 5, 4, 4, 4, 4, 4, 4, ...backNine];
+  const R = [4, 4, 4, 4, 4, 4, 5, 5, 5, ...backNine];
+  const stamped = (config: GameModeConfig) => ({ ...config, countback: 'rulebook' }) as GameModeConfig;
+  const run = (ctx: ScoringContext) =>
+    ctx.game.mode_config.kind === 'modified_stableford' ? computeModified(ctx) : compute(ctx);
+
+  it.each([PLAIN_SOLO, PLAIN_MOD_SOLO])('solo $kind: shared without the stamp, W on holes 4-9 with it', (config) => {
+    const opts = { players: [soloPlayer('R'), soloPlayer('W')], holes: par4Holes(18), scores: [...card('W', W), ...card('R', R)] };
+    const plain = asSolo(run(ctxWith(config, opts)));
+    const withStamp = asSolo(run(ctxWith(stamped(config), opts)));
+    expect(plain.players.map((p) => [p.rank, p.decidedBy])).toEqual([
+      [1, null],
+      [1, null],
+    ]);
+    expect(withStamp.players.map((p) => [p.userId, p.rank, p.decidedBy])).toEqual([
+      ['W', 1, null],
+      ['R', 2, 'front6'],
+    ]);
+    expect(withStamp.players.map((p) => p.totalPoints)).toEqual(plain.players.map((p) => p.totalPoints));
+  });
+
+  it.each([PLAIN_TEAM, PLAIN_MOD_TEAM])('team $kind: shared without the stamp, team 1 on holes 4-9 with it', (config) => {
+    const opts = {
+      players: pairs([2, 1]),
+      holes: par4Holes(18),
+      scores: [...card('t1a', W), ...card('t1b', W), ...card('t2a', R), ...card('t2b', R)],
+    };
+    const plain = asTeam(run(ctxWith(config, opts)));
+    const withStamp = asTeam(run(ctxWith(stamped(config), opts)));
+    expect(plain.teams.map((t) => [t.rank, t.decidedBy])).toEqual([
+      [1, null],
+      [1, null],
+    ]);
+    expect(withStamp.teams.map((t) => [t.teamNumber, t.rank, t.decidedBy])).toEqual([
+      [1, 1, null],
+      [2, 2, 'front6'],
+    ]);
+    expect(withStamp.teams.map((t) => t.totalPoints)).toEqual(plain.teams.map((t) => t.totalPoints));
+  });
+});

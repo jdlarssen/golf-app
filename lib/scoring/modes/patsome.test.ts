@@ -867,3 +867,34 @@ describe('patsome.compute — points only, the legacy net_to_par flag is ignored
     ]);
   });
 });
+
+// #2940: a game stamped `countback: 'rulebook'` goes on after hole 18 to
+// holes 4-9, 7-9 and 9 (F4). Team 1 and team 2 are level on points and the
+// five old steps; team 1 has more points on holes 4-9.
+describe('patsome.compute — countback: rulebook (#2940)', () => {
+  const PLAIN = { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net' };
+  const players = [2, 1].flatMap((t) => [makePlayer(`t${t}a`, t), makePlayer(`t${t}b`, t)]);
+  const backNine = Array(9).fill(4);
+  const card = (userId: string, gross: number[]): ScoringHoleScore[] =>
+    gross.map((g, i) => makeScore(userId, i + 1, g));
+  const W = [5, 5, 5, 4, 4, 4, 4, 4, 4, ...backNine];
+  const R = [4, 4, 4, 4, 4, 4, 5, 5, 5, ...backNine];
+  const scores = [...card('t1a', W), ...card('t1b', W), ...card('t2a', R), ...card('t2b', R)];
+  const rows = (modeConfigOverride: Record<string, unknown>) =>
+    compute(makeCtx({ players, holes: makeHoles18(), scores, modeConfigOverride })).teams.map((t) => [
+      t.teamNumber,
+      t.rank,
+      t.totalPoints,
+    ]);
+
+  it('shares the place without the stamp, team 1 wins on holes 4-9 with it', () => {
+    expect(rows(PLAIN)).toEqual([
+      [1, 1, 33],
+      [2, 1, 33],
+    ]);
+    expect(rows({ ...PLAIN, countback: 'rulebook' })).toEqual([
+      [1, 1, 33],
+      [2, 2, 33],
+    ]);
+  });
+});

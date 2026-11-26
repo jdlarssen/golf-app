@@ -145,6 +145,10 @@ export const BOARD_APP_TEXT = {
   decidedBack6: 'Likt med {name} · avgjort på siste seks',
   decidedBack3: 'Likt med {name} · avgjort på siste tre',
   decidedHole18: 'Likt med {name} · avgjort på hull 18',
+  /** #2940: regelbokas trinn etter hull 18, på første ni. */
+  decidedFront6: 'Likt med {name} · avgjort på hull 4–9',
+  decidedFront3: 'Likt med {name} · avgjort på hull 7–9',
+  decidedHole9: 'Likt med {name} · avgjort på hull 9',
   /** Tegnforklaringen: «under», «par» (webbens `tone.par`) og «over». */
   legendUnder: 'under',
   legendOver: 'over',

@@ -1039,3 +1039,41 @@ describe('nassau.compute — ranking: net_to_par (#2625)', () => {
     ]);
   });
 });
+
+// #2940: a game stamped `countback: 'rulebook'` goes on after hole 18 to
+// holes 4-9, 7-9 and 9 (F4) in the 18-hole section only. A nine is still
+// decided on its sum, and a level nine is a push (orchestrator 26.11, #2625).
+// W and R are level on total, the five old steps and both nines; W is better
+// on holes 4-9.
+describe('nassau.compute — countback: rulebook (#2940)', () => {
+  const PLAIN = { kind: 'nassau', team_size: 1, nassau_scoring: 'net', ranking: 'net_to_par' };
+  const backNine = Array(9).fill(4);
+  const ctx = (modeConfigOverride: Record<string, unknown>) =>
+    makeCtx({
+      players: [soloPlayer('R'), soloPlayer('W')],
+      holes: par4Holes(18),
+      scores: [
+        ...scoresFor('W', [5, 5, 5, 4, 4, 4, 4, 4, 4, ...backNine]),
+        ...scoresFor('R', [4, 4, 4, 4, 4, 4, 5, 5, 5, ...backNine]),
+      ],
+      modeConfigOverride,
+    });
+  const winners = (r: ReturnType<typeof compute>) => ({
+    front9: [...r.sections.front9.winnerUserIds].sort(),
+    back9: [...r.sections.back9.winnerUserIds].sort(),
+    total18: [...r.sections.total18.winnerUserIds].sort(),
+  });
+
+  it('without the stamp every section is a push', () => {
+    expect(winners(compute(ctx(PLAIN)))).toEqual({ front9: ['R', 'W'], back9: ['R', 'W'], total18: ['R', 'W'] });
+  });
+
+  it('with the stamp W wins the 18 holes on holes 4-9; the level nines stay a push', () => {
+    const result = compute(ctx({ ...PLAIN, countback: 'rulebook' }));
+    expect(winners(result)).toEqual({ front9: ['R', 'W'], back9: ['R', 'W'], total18: ['W'] });
+    expect(result.players.map((p) => [p.userId, p.units])).toEqual([
+      ['W', 1],
+      ['R', 0],
+    ]);
+  });
+});

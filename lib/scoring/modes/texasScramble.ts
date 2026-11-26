@@ -24,7 +24,7 @@
 import { pickTeamCaptain } from '@/lib/games/teamCaptain';
 import { strokesForHole } from '../strokeAllocation';
 import { scrambleTeamHandicap } from '../teamHandicap';
-import { rankingHolesByNumber, rankTeams, ranksByNetToPar, UNPLAYED_PADDING } from '../tiebreaker';
+import { countsBackByRulebook, rankingHolesByNumber, rankTeams, ranksByNetToPar, UNPLAYED_PADDING } from '../tiebreaker';
 import { parFor } from './parResolver';
 import type {
   ScoringContext,
@@ -208,6 +208,7 @@ export function computeScramble(
       }
       return { id: l.teamNumber, holes: arr };
     }),
+    { rulebook: countsBackByRulebook(ctx.game.mode_config) },
   );
   // #1591: returner i rangert rekkefølge (rank 1 først), samme kontrakt som
   // patsome og lag-stableford fikk i #1574 — podium/view-konsumentene plukker

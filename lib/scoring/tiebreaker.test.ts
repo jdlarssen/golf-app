@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { rankTeams, rankingHolesByNumber, ranksByNetToPar, UNPLAYED_PADDING } from './tiebreaker';
+import { countsBackByRulebook, rankTeams, rankingHolesByNumber, ranksByNetToPar, UNPLAYED_PADDING } from './tiebreaker';
 import type { GameModeConfig } from './modes/types';
 
 describe('rankTeams', () => {
@@ -277,5 +277,196 @@ describe('ranksByNetToPar (#2253, #2625, #2738)', () => {
     { kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' },
   ])('$kind: false even with a stray flag', (config) => {
     expect(ranksByNetToPar({ ...config, ranking: 'net_to_par' } as unknown as GameModeConfig)).toBe(false);
+  });
+});
+
+// #2940 F4: Committee Procedures 5A(6)(d) — «If there is still a tie, then the
+// last six holes, three holes and final hole of the first nine holes will be
+// considered in turn.» A game stamped `countback: 'rulebook'` asks
+// `rankTeams` for the three extra steps; a game without the stamp keeps the
+// five steps it was played with.
+describe('rankTeams — the rule book\'s countback (#2940 F4)', () => {
+  const backNine = Array.from({ length: 9 }, () => 4);
+  // Each pair: the row that ends up first, then the one it beat on `step`.
+  // The back nine is the same, so the five old steps are all level.
+  const cases = [
+    ['front6', [5, 5, 5, 4, 4, 4, 4, 4, 4], [4, 4, 4, 4, 4, 4, 5, 5, 5]],
+    ['front3', [4, 4, 4, 5, 5, 5, 3, 3, 3], [4, 4, 4, 3, 3, 3, 5, 5, 5]],
+    ['hole9', [4, 4, 4, 4, 4, 4, 5, 5, 3], [4, 4, 4, 4, 4, 4, 4, 5, 4]],
+  ] as const;
+
+  it.each(cases)('%s: splits the tie the five steps leave', (step, winnerFront, runnerUpFront) => {
+    const result = rankTeams(
+      [
+        { id: 2, holes: [...runnerUpFront, ...backNine] },
+        { id: 1, holes: [...winnerFront, ...backNine] },
+      ],
+      { rulebook: true },
+    );
+    expect(result.map((r) => [r.id, r.rank, r.tiedWith, r.decidedBy])).toEqual([
+      [1, 1, [], null],
+      [2, 2, [], step],
+    ]);
+  });
+
+  it.each(cases)('%s: without the flag the five steps share the place, as before', (_step, winnerFront, runnerUpFront) => {
+    const result = rankTeams([
+      { id: 2, holes: [...runnerUpFront, ...backNine] },
+      { id: 1, holes: [...winnerFront, ...backNine] },
+    ]);
+    expect(result.map((r) => [r.rank, r.tiedWith, r.decidedBy])).toEqual([
+      [1, [1], null],
+      [1, [2], null],
+    ]);
+  });
+
+  it('runs the five old steps first', () => {
+    // Level on total (75); team 1 is better on the last nine, team 2 on holes 4-9.
+    const result = rankTeams(
+      [
+        { id: 2, holes: [4, 4, 4, 3, 3, 3, 3, 3, 3, ...Array(9).fill(5)] },
+        { id: 1, holes: [6, 6, 6, 6, 6, 6, 4, 4, 4, ...Array(9).fill(3)] },
+      ],
+      { rulebook: true },
+    );
+    expect(result.map((r) => [r.id, r.decidedBy])).toEqual([
+      [1, null],
+      [2, 'back9'],
+    ]);
+  });
+
+  it('shares the place when all eight steps are level', () => {
+    const holes = [4, 5, 3, 4, 4, 5, 3, 4, 4, ...backNine];
+    const result = rankTeams(
+      [
+        { id: 1, holes: [...holes] },
+        { id: 2, holes: [...holes] },
+        { id: 3, holes: Array.from({ length: 18 }, () => 5) },
+      ],
+      { rulebook: true },
+    );
+    expect(result.map((r) => [r.id, r.rank, r.tiedWith, r.decidedBy])).toEqual([
+      [1, 1, [2], null],
+      [2, 1, [1], null],
+      [3, 3, [], 'total'],
+    ]);
+  });
+});
+
+// #2940 F5: «For net competitions where the stroke index allocation as set by
+// the Committee is not used, such as individual stroke play, ... one-half,
+// one-third, one-sixth, etc. of the handicaps should be deducted from the
+// score for those holes.» A team that carries `countback` is counted back on
+// those per-hole scores minus k/18 of its handicap; the total stays the sum of
+// `holes`.
+describe('rankTeams — countback with a fraction of the handicap (#2940 F5)', () => {
+  // NGF's example (vedlegg E s. 82): A has banehandicap 9 on the index
+  // 7, 15, 5, 11, 1, 13, 3, 17, 9, 8, 16, 6, 12, 2, 14, 4, 18, 10. B has 0.
+  const aGross = [6, 6, 6, 6, 6, 5, 5, 5, 5, 5, 4, 4, 5, 5, 5, 4, 4, 4];
+  const aNet = [5, 6, 5, 6, 5, 5, 4, 5, 4, 4, 4, 3, 5, 4, 5, 3, 4, 4];
+  const bGross = [...Array(9).fill(5), ...Array(9).fill(4)];
+
+  it('without countback, net hole by hole gives B the last six', () => {
+    const result = rankTeams([
+      { id: 1, holes: aNet },
+      { id: 2, holes: bGross },
+    ]);
+    expect(result.map((r) => [r.id, r.total, r.decidedBy])).toEqual([
+      [2, 81, null],
+      [1, 81, 'back6'],
+    ]);
+  });
+
+  it('with countback, half the handicap on the last nine gives A the place', () => {
+    // Last nine: A 40 − 4,5 = 35,5 against B 36.
+    const result = rankTeams([
+      { id: 2, holes: bGross, countback: { holes: bGross, courseHandicap: 0 } },
+      { id: 1, holes: aNet, countback: { holes: aGross, courseHandicap: 9 } },
+    ]);
+    expect(result.map((r) => [r.id, r.rank, r.total, r.decidedBy])).toEqual([
+      [1, 1, 81, null],
+      [2, 2, 81, 'back9'],
+    ]);
+  });
+
+  it('deducts the fraction on the three rule-book steps too', () => {
+    // A: banehandicap 18 (one stroke a hole), B: 0. Level on net total (75)
+    // and on the five old steps. Holes 4-9: A 30 gross − 6/18 × 18 = 24
+    // against B's 27, so A wins there; without the deduction B would.
+    const back = Array(9).fill(4);
+    const aGrossF6 = [6, 6, 6, 5, 5, 5, 5, 5, 5, ...Array(9).fill(5)];
+    const bGrossF6 = [4, 4, 4, 4, 4, 4, 5, 5, 5, ...back];
+    const result = rankTeams(
+      [
+        { id: 2, holes: bGrossF6, countback: { holes: bGrossF6, courseHandicap: 0 } },
+        { id: 1, holes: aGrossF6.map((g) => g - 1), countback: { holes: aGrossF6, courseHandicap: 18 } },
+      ],
+      { rulebook: true },
+    );
+    expect(result.map((r) => [r.id, r.total, r.decidedBy])).toEqual([
+      [1, 75, null],
+      [2, 75, 'front6'],
+    ]);
+  });
+
+  it('deducts nothing on a step with an unplayed hole', () => {
+    // Hole 18 not played by either: every old step holds slot 17, so both
+    // fall back to the ranking holes (padding included) and stay level. With a
+    // deduction A would win the last nine on 18 × 40 − 9 × 18 against 18 × 32.
+    const played = Array(17).fill(4);
+    const result = rankTeams([
+      { id: 1, holes: [...played, UNPLAYED_PADDING], countback: { holes: [...Array(17).fill(5), null], courseHandicap: 18 } },
+      { id: 2, holes: [...played, UNPLAYED_PADDING], countback: { holes: [...played, null], courseHandicap: 0 } },
+    ]);
+    expect(result.map((r) => [r.rank, r.tiedWith])).toEqual([
+      [1, [2]],
+      [1, [1]],
+    ]);
+  });
+
+  it('throws when only some teams carry countback', () => {
+    expect(() =>
+      rankTeams([
+        { id: 1, holes: aNet, countback: { holes: aGross, courseHandicap: 9 } },
+        { id: 2, holes: bGross },
+      ]),
+    ).toThrow(/countback/);
+  });
+});
+
+describe('countsBackByRulebook (#2940)', () => {
+  const stamped: GameModeConfig[] = [
+    { kind: 'solo_strokeplay', team_size: 1 },
+    { kind: 'stableford', team_size: 1, points_table: 'standard' },
+    { kind: 'stableford', team_size: 2, points_table: 'standard' },
+    { kind: 'modified_stableford', team_size: 1, points_table: 'modified' },
+    { kind: 'modified_stableford', team_size: 2, points_table: 'modified' },
+    { kind: 'best_ball', team_size: 2, teams_count: 2 },
+    { kind: 'texas_scramble', team_size: 4, teams_count: 2, team_handicap_pct: 10 },
+    { kind: 'ambrose', team_size: 4, teams_count: 2, team_handicap_pct: 12.5 },
+    { kind: 'florida_scramble', team_size: 3, teams_count: 2, team_handicap_pct: 15 },
+    {
+      kind: 'shamble',
+      team_size: 4,
+      teams_count: 2,
+      shamble_variant: 'shamble',
+      shamble_count: 2,
+      shamble_scoring: 'net',
+    },
+    { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net' },
+    { kind: 'nassau', team_size: 1, nassau_scoring: 'net' },
+  ];
+
+  it.each(stamped.map((c) => [c.kind, c] as const))('%s: true with the stamp, false without', (_kind, config) => {
+    expect(countsBackByRulebook({ ...config, countback: 'rulebook' } as GameModeConfig)).toBe(true);
+    expect(countsBackByRulebook(config)).toBe(false);
+  });
+
+  it.each([
+    { kind: 'singles_matchplay', team_size: 1, teams_count: 2 },
+    { kind: 'skins', team_size: 1, skins_scoring: 'net' },
+    { kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' },
+  ])('$kind: false even with a stray stamp', (config) => {
+    expect(countsBackByRulebook({ ...config, countback: 'rulebook' } as unknown as GameModeConfig)).toBe(false);
   });
 });

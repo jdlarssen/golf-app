@@ -460,6 +460,17 @@ export function formatCapturesPutts(mode: GameMode): boolean {
  *    laget representeres dette ved at lag-kapteinen (først-i-rekkefølge per
  *    lag) eier scores-radene; andre lag-medlemmer har null på sine egne rader.
  */
+/**
+ * #2940: `'rulebook'` counts a tie back by Committee Procedures 5A(6)(d):
+ * after hole 18 on holes 4-9, 7-9 and 9 (F4), and in solo strokeplay with
+ * one-half, one-third, one-sixth and one-eighteenth of the handicap instead of
+ * net hole by hole (F5). Stamped on NEW games at creation
+ * (`stampNewGameModeConfig`), never added to an existing game. Absent = the
+ * five steps and net hole by hole (`rankTeams`). Asked via
+ * `countsBackByRulebook`.
+ */
+export type CountbackStamp = 'rulebook';
+
 export type GameModeConfig =
   | {
       kind: 'best_ball';
@@ -472,6 +483,8 @@ export type GameModeConfig =
        * the original rule: the sum of played holes (`rankTeams`).
        */
       ranking?: 'net_to_par';
+      /** #2940: see `CountbackStamp`. */
+      countback?: CountbackStamp;
     }
   /*
    * #2738: `ranking: 'net_to_par'` on the stableford configs is a leftover.
@@ -480,10 +493,11 @@ export type GameModeConfig =
    * says no for them) and nothing stamps it any more. Kept in the type because
    * those games' rows still carry it.
    */
-  | { kind: 'stableford'; team_size: 1; points_table: 'standard'; ranking?: 'net_to_par' }
-  | { kind: 'stableford'; team_size: 2; points_table: 'standard'; ranking?: 'net_to_par' }
-  | { kind: 'modified_stableford'; team_size: 1; points_table: 'modified'; ranking?: 'net_to_par' }
-  | { kind: 'modified_stableford'; team_size: 2; points_table: 'modified'; ranking?: 'net_to_par' }
+  // #2940: `countback: 'rulebook'` — see `CountbackStamp`.
+  | { kind: 'stableford'; team_size: 1; points_table: 'standard'; ranking?: 'net_to_par'; countback?: CountbackStamp }
+  | { kind: 'stableford'; team_size: 2; points_table: 'standard'; ranking?: 'net_to_par'; countback?: CountbackStamp }
+  | { kind: 'modified_stableford'; team_size: 1; points_table: 'modified'; ranking?: 'net_to_par'; countback?: CountbackStamp }
+  | { kind: 'modified_stableford'; team_size: 2; points_table: 'modified'; ranking?: 'net_to_par'; countback?: CountbackStamp }
   | {
       kind: 'singles_matchplay';
       team_size: 1;
@@ -510,6 +524,8 @@ export type GameModeConfig =
        * rule: net sum, unplayed holes padded (`soloStrokeplay.ts`).
        */
       ranking?: 'net_to_par';
+      /** #2940: see `CountbackStamp`. */
+      countback?: CountbackStamp;
     }
   | {
       kind: 'texas_scramble';
@@ -529,6 +545,8 @@ export type GameModeConfig =
        * the original rule: the sum of played holes (`rankTeams`).
        */
       ranking?: 'net_to_par';
+      /** #2940: see `CountbackStamp`. */
+      countback?: CountbackStamp;
     }
   | {
       /**
@@ -561,6 +579,8 @@ export type GameModeConfig =
        * the original rule: the sum of played holes (`rankTeams`).
        */
       ranking?: 'net_to_par';
+      /** #2940: see `CountbackStamp`. */
+      countback?: CountbackStamp;
     }
   | {
       /**
@@ -593,6 +613,8 @@ export type GameModeConfig =
        * the original rule: the sum of played holes (`rankTeams`).
        */
       ranking?: 'net_to_par';
+      /** #2940: see `CountbackStamp`. */
+      countback?: CountbackStamp;
     }
   | {
       kind: 'fourball_matchplay';
@@ -756,6 +778,8 @@ export type GameModeConfig =
        * Absent = the original rule: the sum, unplayed holes padded.
        */
       ranking?: 'net_to_par';
+      /** #2940: see `CountbackStamp`. */
+      countback?: CountbackStamp;
     }
   | {
       kind: 'skins';
@@ -863,6 +887,8 @@ export type GameModeConfig =
        * the original rule: the sum of played holes (`rankTeams`).
        */
       ranking?: 'net_to_par';
+      /** #2940: see `CountbackStamp`. */
+      countback?: CountbackStamp;
     }
   | {
       kind: 'patsome';
@@ -880,6 +906,8 @@ export type GameModeConfig =
        * Patsome ranks on points only.
        */
       ranking?: 'net_to_par';
+      /** #2940: see `CountbackStamp`. */
+      countback?: CountbackStamp;
     };
 
 /**

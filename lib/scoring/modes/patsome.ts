@@ -30,7 +30,7 @@
 
 import { pickTeamCaptain } from '@/lib/games/teamCaptain';
 import { strokesForHole } from '../strokeAllocation';
-import { rankTeams } from '../tiebreaker';
+import { countsBackByRulebook, rankTeams } from '../tiebreaker';
 import { parFor } from './parResolver';
 import { computeStablefordPoints } from './stableford';
 import type {
@@ -192,6 +192,7 @@ export function compute(ctx: ScoringContext): PatsomeResult {
       id: l.teamNumber,
       holes: padTo18(l.holes.map((h) => h.teamPoints)).map((pts) => -pts),
     })),
+    { rulebook: countsBackByRulebook(ctx.game.mode_config) },
   );
   // #1574: returner i rangert rekkefølge (rank 1 først), samme kontrakt som
   // solo-stiene — podium/view-konsumentene plukker vinneren på indeks 0.

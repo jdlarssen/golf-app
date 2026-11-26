@@ -885,3 +885,42 @@ describe('shamble.compute — net_to_par tie-break on a part-played round (#2625
     ]);
   });
 });
+
+// #2940: a game stamped `countback: 'rulebook'` goes on after hole 18 to
+// holes 4-9, 7-9 and 9 (F4). Team 1 and team 2 are level on total and the
+// five old steps; team 1 is better on holes 4-9.
+describe('shamble.compute — countback: rulebook (#2940)', () => {
+  const config = (stamped: boolean) => ({
+    kind: 'shamble',
+    team_size: 3,
+    teams_count: 2,
+    shamble_variant: 'champagne',
+    shamble_count: 1,
+    shamble_scoring: 'gross',
+    ranking: 'net_to_par',
+    ...(stamped ? { countback: 'rulebook' } : {}),
+  });
+  const players = ['a1', 'a2', 'a3', 'b1', 'b2', 'b3'].map((id) => makePlayer(id, id.startsWith('a') ? 1 : 2));
+  const backNine = Array(9).fill(4);
+  /** The best ball per hole from hole 1; the other two never count. */
+  const teamCard = (ids: [string, string, string], best: number[]): ScoringHoleScore[] =>
+    best.flatMap((g, i) => holeScores(i + 1, [[ids[0], g], [ids[1], g + 1], [ids[2], 9]]));
+  const scores = [
+    ...teamCard(['b1', 'b2', 'b3'], [4, 4, 4, 4, 4, 4, 5, 5, 5, ...backNine]),
+    ...teamCard(['a1', 'a2', 'a3'], [5, 5, 5, 4, 4, 4, 4, 4, 4, ...backNine]),
+  ];
+  const rows = (stamped: boolean) =>
+    compute(makeCtx({ players, holes: par4Holes(18), scores, modeConfigOverride: config(stamped) }))
+      .teams.map((t) => [t.teamNumber, t.rank, t.totalScore, t.decidedBy]);
+
+  it('shares the place without the stamp, team 1 wins on holes 4-9 with it', () => {
+    expect(rows(false)).toEqual([
+      [1, 1, 75, null],
+      [2, 1, 75, null],
+    ]);
+    expect(rows(true)).toEqual([
+      [1, 1, 75, null],
+      [2, 2, 75, 'front6'],
+    ]);
+  });
+});
