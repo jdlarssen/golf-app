@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildCupMatchEntry, type CupMatchEntryInput } from './cupMatchEntry';
+import { MIXED_PAR_18 } from '@/lib/scoring/__fixtures__/mixedPar';
 
 // Type-A unit-test for én cup-kamps utledning, trukket ut av getCupSnapshot
 // (#1522). Låser wiringen rundt kampen: segment-filtrering (#1441 D1/D2),
@@ -492,5 +493,45 @@ describe('buildCupMatchEntry — four-ball med trukket makker og forskjellen (#2
 
   it('the cup point finds the same lowest as the match page: 3&2', () => {
     expect(buildCupMatchEntry(input).match.result).toEqual({ winnerSide: 2, formatted: '3&2' });
+  });
+});
+
+describe('buildCupMatchEntry — ulik par (#2941, F17)', () => {
+  // The cup point reads the same tees and par per gender as the match page: a
+  // man against a lady, both on 0; her 5 on her par-5 holes 1 and 2 halves his 4.
+  const holes = MIXED_PAR_18.map((h) => h.number);
+  const input = (modeConfig: Record<string, unknown>) =>
+    entryInput({
+      game: {
+        id: 'g-sp',
+        status: 'finished',
+        game_mode: 'singles_matchplay',
+        mode_config: { kind: 'singles_matchplay', team_size: 1, match_strokes: 'difference', ...modeConfig },
+        tournament_match_label: 'Kamp 1',
+        hole_segment: 'full',
+        source_game_id: null,
+        score_visibility: 'live',
+        scheduled_tee_off_at: null,
+      },
+      players: [
+        { user_id: 'a', team_number: 1, course_handicap: 0, users: { name: 'A', nickname: null }, withdrawn_at: null, tee_gender: 'mens' },
+        { user_id: 'b', team_number: 2, course_handicap: 0, users: { name: 'B', nickname: null }, withdrawn_at: null, tee_gender: 'ladies' },
+      ],
+      scores: holes.flatMap((hole) => [
+        { user_id: 'a', hole_number: hole, strokes: 4 },
+        { user_id: 'b', hole_number: hole, strokes: hole <= 2 ? 5 : 4 },
+      ]),
+      courseHoles: MIXED_PAR_18,
+    });
+
+  it('a new cup match gives her the par strokes, as the match page: AS', () => {
+    expect(buildCupMatchEntry(input({ par_strokes: 'difference' })).match.result).toEqual({
+      winnerSide: 'tied',
+      formatted: 'AS',
+    });
+  });
+
+  it('a cup match created before keeps today\'s result: 2&1', () => {
+    expect(buildCupMatchEntry(input({})).match.result).toEqual({ winnerSide: 1, formatted: '2&1' });
   });
 });
