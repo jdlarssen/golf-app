@@ -448,3 +448,49 @@ describe('buildCupMatchEntry — trukne rader og scoring (#1814)', () => {
     expect(match.result?.winnerSide).toBe(1);
   });
 });
+
+// #2997 (F15): a new four-ball match gives the strokes from the lowest in the
+// match. The match's own board leaves a withdrawn player out
+// (`buildUniformContext`), so the cup point must too, or the two find a
+// different lowest. Four-ball has no withdrawal mid-round
+// (`supportsWithdrawal`), so the withdrawn player has no scores to lose.
+describe('buildCupMatchEntry — four-ball med trukket makker og forskjellen (#2997)', () => {
+  // A (withdrawn, CH 0) and B (10) against C (10) and D (13) at 85 %, play on.
+  // Without A the lowest is 10: D gets 85 % of 3 = 2,55 → 3 strokes, SI 1–3,
+  // and side 2 closes it out 3&2. With A the lowest would be 0: B and C 9, D
+  // 11, two holes apart (SI 10–11), 2&1.
+  const holes = Array.from({ length: 18 }, (_, i) => i + 1);
+  const input = entryInput({
+    game: {
+      id: 'g-fb',
+      status: 'finished',
+      game_mode: 'fourball_matchplay',
+      mode_config: {
+        kind: 'fourball_matchplay',
+        team_size: 2,
+        teams_count: 2,
+        allowance_pct: 85,
+        match_strokes: 'difference',
+        withdrawal_play_on: true,
+      },
+      tournament_match_label: 'Kamp 1',
+      hole_segment: 'full',
+      source_game_id: null,
+      score_visibility: 'live',
+      scheduled_tee_off_at: null,
+    },
+    players: [
+      { user_id: 'a', team_number: 1, course_handicap: 0, users: { name: 'A', nickname: null }, withdrawn_at: '2026-11-26T08:00:00Z' },
+      { user_id: 'b', team_number: 1, course_handicap: 10, users: { name: 'B', nickname: null }, withdrawn_at: null },
+      { user_id: 'c', team_number: 2, course_handicap: 10, users: { name: 'C', nickname: null }, withdrawn_at: null },
+      { user_id: 'd', team_number: 2, course_handicap: 13, users: { name: 'D', nickname: null }, withdrawn_at: null },
+    ],
+    scores: holes.flatMap((hole) =>
+      ['b', 'c', 'd'].map((user_id) => ({ user_id, hole_number: hole, strokes: 5 })),
+    ),
+  });
+
+  it('the cup point finds the same lowest as the match page: 3&2', () => {
+    expect(buildCupMatchEntry(input).match.result).toEqual({ winnerSide: 2, formatted: '3&2' });
+  });
+});
