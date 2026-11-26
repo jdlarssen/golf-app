@@ -11,7 +11,7 @@ import { calculateCourseHandicap } from '@/lib/scoring/courseHandicap';
 import { greensomeTeamHandicap } from '@/lib/scoring/modes/greensomeMatchplay';
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
 import type { CupBundleFormat } from './cupPairing';
-import { stampNewSinglesMatchConfig } from '@/lib/games/modeConfigEdit';
+import { stampNewMatchConfig } from '@/lib/games/modeConfigEdit';
 
 /**
  * Innsettings-kjernen for cup-matcher — delt av generer-veiviseren (#219/#1441)
@@ -128,7 +128,8 @@ function greensomeAutoTeamStrokes(
  * Bygger mode_config i samme form som de manuelt opprettede cup-matchene lagrer
  * (verifisert mot prod): singles = `{kind, team_size:1}` (pluss
  * `match_strokes: 'difference'` fra revisjonen 20.11), 2v2-format =
- * `{kind, team_size:2, teams_count:2, allowance_pct}`. best_ball (#1441, D4)
+ * `{kind, team_size:2, teams_count:2, allowance_pct}` (four-ball pluss
+ * `match_strokes: 'difference'` fra #2997). best_ball (#1441, D4)
  * og greensomes `team_strokes_override` (#1441, D10) er splittet-cup-dagens
  * tilskudd.
  *
@@ -145,8 +146,8 @@ export function cupMatchModeConfig(
 ): GameModeConfig {
   if (format === 'singles_matchplay') {
     // Audit 2026-11-20: a new cup singles match gives the higher handicap the
-    // difference, like every new singles match (`stampNewSinglesMatchConfig`).
-    return stampNewSinglesMatchConfig({
+    // difference, like every new singles match (`stampNewMatchConfig`).
+    return stampNewMatchConfig({
       kind: 'singles_matchplay',
       team_size: 1,
     } as GameModeConfig);
@@ -165,7 +166,10 @@ export function cupMatchModeConfig(
       teams_count: 2,
     } as GameModeConfig;
   }
-  return {
+  // #2997: a new cup four-ball match gives the lowest 0 and the others the
+  // share of the difference (`stampNewMatchConfig`); the other 2v2 formats
+  // are returned unchanged by it.
+  return stampNewMatchConfig({
     kind: format,
     team_size: 2,
     teams_count: 2,
@@ -183,7 +187,7 @@ export function cupMatchModeConfig(
             : {}),
         }
       : {}),
-  } as GameModeConfig;
+  } as GameModeConfig);
 }
 
 /** Alt kjernen trenger å vite som IKKE står i selve match-lista. */

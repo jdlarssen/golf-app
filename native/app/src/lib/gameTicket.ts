@@ -191,6 +191,8 @@ export function ticketStrokes(opts: {
   const part = scorecardHandicapPart({
     game,
     courseHandicap,
+    // Null before the start: the pre-start number is computed, not frozen.
+    rawCourseHandicap: me.courseHandicap == null ? null : (me.rawCourseHandicap ?? null),
     teamMode: opts.teamMode,
     teamHandicap: opts.teamHandicap,
     revealActive,

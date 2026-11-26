@@ -103,6 +103,11 @@ export interface PlayerRow {
   team_number: number | null;
   flight_number: number | null;
   course_handicap: number | null;
+  /**
+   * #2997: the unrounded course handicap frozen at start (0258); null = not
+   * frozen. Optional: a bundle cached before the column has none.
+   */
+  raw_course_handicap?: number | null;
   tee_gender: string;
   accepted_at: string | null;
   submitted_at: string | null;
@@ -122,7 +127,7 @@ export interface PlayerRow {
 // submitted_by_user_id), så et bart `users(...)` er tvetydig og feiler. Samme
 // hint som webben bruker.
 export const PLAYER_SELECT =
-  'user_id, team_number, flight_number, course_handicap, tee_gender, accepted_at, submitted_at, submitted_by_user_id, approved_at, approved_by_user_id, marker_user_id, rejection_reason, withdrawn_at, withdrawn_by_user_id, result_summary, users!game_players_user_id_fkey(name, nickname, is_guest)';
+  'user_id, team_number, flight_number, course_handicap, raw_course_handicap, tee_gender, accepted_at, submitted_at, submitted_by_user_id, approved_at, approved_by_user_id, marker_user_id, rejection_reason, withdrawn_at, withdrawn_by_user_id, result_summary, users!game_players_user_id_fkey(name, nickname, is_guest)';
 
 // Bane, tee og hullene rir med på games-raden som embeds. Det gjør hele
 // metadata-hentingen til to spørringer i én Promise.all i stedet for en kjede

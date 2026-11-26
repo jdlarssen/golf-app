@@ -493,6 +493,33 @@ describe('resolveScorecardLayout', () => {
       expect(layout.primaryHandicap).toBe(0);
     });
 
+    it('ny four-ball-match ved 90 %: kolonnene bærer differansen til den laveste, av det urundede tallet (#2997)', () => {
+      const game: GameForHole = {
+        ...baseGame,
+        game_mode: 'fourball_matchplay',
+        mode_config: {
+          kind: 'fourball_matchplay',
+          team_size: 2,
+          teams_count: 2,
+          allowance_pct: 90,
+          match_strokes: 'difference',
+        },
+      };
+      // 90 % of 20,4 − 9,5 = 9,81 → 10 (the integers 20 − 10 give 9). The
+      // lowest of the four plays off 0.
+      const me = player('me', 1, { course_handicap: 10, raw_course_handicap: 9.5 });
+      const partner = player('p', 1, { course_handicap: 20, raw_course_handicap: 20.4 });
+      const opp1 = player('o1', 2, { course_handicap: 10, raw_course_handicap: 9.5 });
+      const opp2 = player('o2', 2, { course_handicap: 27, raw_course_handicap: 27 });
+      const layout = resolveScorecardLayout(game, [me, partner, opp1, opp2], me, false, fmt);
+      expect(Object.fromEntries(layout.columns.map((c) => [c.userId, c.courseHandicap]))).toEqual({
+        me: 0,
+        p: 10,
+        o1: 0,
+        o2: 16,
+      });
+    });
+
     it('best-ball uten partner i samme team → defensiv Layout A fallback', () => {
       const game: GameForHole = {
         ...baseGame,

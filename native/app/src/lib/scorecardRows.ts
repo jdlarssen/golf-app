@@ -60,9 +60,12 @@ export function buildScorecardRows(opts: {
   teamOwnerId: string | null;
   teeGender: ScoringGender;
   courseHandicap: number;
+  /** #2997: det urundede banehandicapet starten frøs, eller null. */
+  rawCourseHandicap?: number | null;
   /**
-   * Hele rosterets banehandicap (`matchCourseHandicaps`): en ny singel-match
-   * gir forskjellen til motstanderen (revisjonen 20.11).
+   * Hele rosterets tall (`matchCourseHandicaps`): en ny singel-, four-ball-
+   * eller Round Robin-match gir forskjellen til den laveste (revisjonen 20.11,
+   * #2997).
    */
   matchCourseHandicaps: readonly number[];
   /** Lagnummeret mitt — nøkkelen motoren kjenner laget på. */
@@ -96,7 +99,7 @@ export function buildScorecardRows(opts: {
         : null
       : playerExtraForHole(
           opts.game,
-          opts.courseHandicap,
+          { courseHandicap: opts.courseHandicap, rawCourseHandicap: opts.rawCourseHandicap },
           hole.strokeIndex,
           opts.matchCourseHandicaps,
         );

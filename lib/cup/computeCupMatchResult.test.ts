@@ -327,3 +327,55 @@ describe('computeCupMatchResult — singles with the difference rule (audit 2026
     expect(computeCupMatchResult(input(null))?.winnerSide).toBe(1);
   });
 });
+
+describe('computeCupMatchResult — four-ball with the difference rule (#2997, F15)', () => {
+  // 1, 1 against 1, 4 at 85 %, everyone 5 on every hole. With the difference
+  // the 4-player gets 85 % of 3 = 2,55 → 3 strokes (SI 1–3) and the others
+  // none: side 2 wins SI 1–3 and closes it out 3&2. Each player's own share
+  // gives the three 1-players a stroke on SI 1 too, so SI 1 is halved: 2&1.
+  const input = (matchStrokes: boolean): CupMatchScoringInput => ({
+    gameMode: 'fourball_matchplay',
+    modeConfig: { allowance_pct: 85, ...(matchStrokes ? { match_strokes: 'difference' as const } : {}) },
+    side1: [
+      { userId: 'a1', courseHandicap: 1 },
+      { userId: 'a2', courseHandicap: 1 },
+    ],
+    side2: [
+      { userId: 'b1', courseHandicap: 1 },
+      { userId: 'b2', courseHandicap: 4 },
+    ],
+    holes: par4Holes(N),
+    scores: par4Holes(N).flatMap((h) =>
+      ['a1', 'a2', 'b1', 'b2'].map((userId) => ({ userId, holeNumber: h.number, gross: 5 })),
+    ),
+  });
+
+  it('a new cup four-ball match is scored with the difference: 3&2', () => {
+    expect(computeCupMatchResult(input(true))).toEqual({ winnerSide: 2, formatted: '3&2' });
+  });
+
+  it('a cup four-ball match created before keeps each player\'s own share: 2&1', () => {
+    expect(computeCupMatchResult(input(false))).toEqual({ winnerSide: 2, formatted: '2&1' });
+  });
+
+  it('takes the share of the unrounded course handicap when the start froze it (F16)', () => {
+    // At 90 %: the integers 5 against 1 give 90 % of 4 = 3,6 → 4 strokes
+    // (SI 1–4, 4&3). The frozen 4,5 against 1,4 give 90 % of 3,1 = 2,79 → 3
+    // strokes (SI 1–3, 3&2).
+    const at90 = (raw: boolean): CupMatchScoringInput => {
+      const base = input(true);
+      const r = (value: number) => (raw ? value : null);
+      return {
+        ...base,
+        modeConfig: { allowance_pct: 90, match_strokes: 'difference' },
+        side1: base.side1.map((p) => ({ ...p, rawCourseHandicap: r(1.4) })),
+        side2: [
+          { userId: 'b1', courseHandicap: 1, rawCourseHandicap: r(1.4) },
+          { userId: 'b2', courseHandicap: 5, rawCourseHandicap: r(4.5) },
+        ],
+      };
+    };
+    expect(computeCupMatchResult(at90(true))).toEqual({ winnerSide: 2, formatted: '3&2' });
+    expect(computeCupMatchResult(at90(false))).toEqual({ winnerSide: 2, formatted: '4&3' });
+  });
+});

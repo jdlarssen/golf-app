@@ -694,9 +694,9 @@ function HoleView({
         const extraOn = (strokeIndex: number) =>
           playerExtraForHole(
             bundle.game,
-            entry.player.courseHandicap,
+            entry.player,
             strokeIndex,
-            matchCourseHandicaps(bundle.players),
+            matchCourseHandicaps(bundle.game, bundle.players),
           );
         return {
           id: entry.user_id,
@@ -1110,7 +1110,7 @@ function HoleView({
               key={entry.user_id}
               entry={entry}
               game={bundle.game}
-              matchChs={matchCourseHandicaps(bundle.players)}
+              matchChs={matchCourseHandicaps(bundle.game, bundle.players)}
               hole={hole}
               score={byUserHole.get(`${entry.user_id}#${holeNumber}`)}
               isMe={entry.user_id === userId}
@@ -1409,7 +1409,7 @@ function PlayerCard({
   const { ui } = useTheme();
   const player: BundlePlayer = entry.player;
   // `null` = configen peker på et annet format: da vises ingen badge.
-  const extra = playerExtraForHole(game, player.courseHandicap, hole.strokeIndex, matchChs);
+  const extra = playerExtraForHole(game, player, hole.strokeIndex, matchChs);
 
   // Kortflaten er selve snarveien til par. Stepperne og «Angre» inni er egne
   // Pressables, og i React Native vinner den innerste berøringen — derfor

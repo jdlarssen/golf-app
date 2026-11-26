@@ -89,8 +89,11 @@ import { fetchSegmentSibling } from './segmentSibling';
  * v15 (#2749): la til `entryFeeKr`, `paymentLink`, `prizes` og `myPaidAt`. En
  * v14-oppføring mangler dem: venterommet ville stått uten kontingentkort og
  * premiebord til neste henting.
+ * v16 (#2997): la til `rawCourseHandicap` per spiller, det urundede
+ * banehandicapet starten fryser. En v15-oppføring mangler det: hullsiden ville
+ * gitt slag av heltallet, ikke regelens tall, til neste henting.
  */
-export const BUNDLE_PAYLOAD_VERSION = 15;
+export const BUNDLE_PAYLOAD_VERSION = 16;
 
 /** Spillet selv. Feltene er nøyaktig de skjermene gater og viser på. */
 export interface BundleGame {
@@ -243,6 +246,12 @@ export interface BundlePlayer {
   teamNumber: number | null;
   flightNumber: number | null;
   courseHandicap: number | null;
+  /**
+   * #2997: det urundede banehandicapet starten frøs (`raw_course_handicap`),
+   * eller null når runden ble startet før kolonnen fantes. Formatene med egen
+   * prosent (four-ball, Round Robin, lagformatene) tar prosenten av det.
+   */
+  rawCourseHandicap?: number | null;
   teeGender: string;
   /**
    * Når spilleren bekreftet at hen blir med (#463), eller null.
@@ -448,6 +457,7 @@ export function toBundle(
       teamNumber: row.team_number,
       flightNumber: row.flight_number,
       courseHandicap: row.course_handicap,
+      rawCourseHandicap: row.raw_course_handicap ?? null,
       teeGender: row.tee_gender,
       acceptedAt: row.accepted_at,
       submittedAt: row.submitted_at,

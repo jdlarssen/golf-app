@@ -37,7 +37,7 @@
 //     tabellen kommer på nettsiden.
 import { computeLeaderboard } from '../../../../lib/scoring';
 import {
-  matchSideCourseHandicaps,
+  matchStrokeBases,
   matchStrokeHandicap,
   playerStrokeHandicap,
 } from '../../../../lib/scoring/allocatedStrokes';
@@ -126,6 +126,8 @@ interface ContextPlayerRow {
   user_id: string;
   team_number: number;
   course_handicap: number | null;
+  /** #2997: det urundede banehandicapet starten frøs, eller null. */
+  raw_course_handicap: number | null;
   tee_gender: ScoringGender;
   withdrawn_at: string | null;
   /**
@@ -251,12 +253,14 @@ export function asModeConfig(mode: GameMode, raw: unknown): GameModeConfig | nul
 /**
  * Slagene én spiller får på ett hull, slik motoren regner dem (#2218):
  * allowance i fourball og round robin, 0 i brutto-valgene, og forskjellen til
- * motstanderen i en ny singel-match (revisjonen 20.11). Regelen bor i den
- * delte `allocatedStrokes.ts` (`matchStrokeHandicap`) — appen skriver den ikke
- * på nytt, den sender bare inn samme config som motoren får (`asModeConfig`).
+ * den laveste i en ny singel-, four-ball- eller Round Robin-match (revisjonen
+ * 20.11, #2997). Regelen bor i den delte `allocatedStrokes.ts`
+ * (`matchStrokeHandicap`) — appen skriver den ikke på nytt, den sender bare
+ * inn samme config som motoren får (`asModeConfig`).
  *
- * `matchCourseHandicaps` er banehandicapet til alle i rosteret
- * ({@link matchCourseHandicaps}); bare singel leser det.
+ * `player` er spillerens frosne heltall og, når starten frøs det, det urundede
+ * banehandicapet. `matchBases` kommer fra {@link matchCourseHandicaps} over
+ * hele rosteret; singel, four-ball og Round Robin leser det.
  *
  * `null` = ukjent: configen peker på et annet format, og motoren ville ikke
  * regnet. Samme «ukjent er null, aldri 0» som lagkortene. Et manglende
@@ -264,40 +268,46 @@ export function asModeConfig(mode: GameMode, raw: unknown): GameModeConfig | nul
  */
 export function playerExtraForHole(
   game: Pick<BundleGame, 'gameMode' | 'modeConfig'>,
-  courseHandicap: number | null,
+  player: Pick<BundlePlayer, 'courseHandicap' | 'rawCourseHandicap'>,
   strokeIndex: number,
-  matchCourseHandicaps: readonly number[],
+  matchBases: readonly number[],
 ): number | null {
   const mode = game.gameMode as GameMode;
   const cfg = asModeConfig(mode, game.modeConfig);
   if (cfg === null) return null;
-  const playing = matchStrokeHandicap(mode, cfg, courseHandicap ?? 0, matchCourseHandicaps);
+  const playing = matchStrokeHandicap(mode, cfg, player, matchBases);
   return strokesForHole(playing, strokeIndex);
 }
 
 /**
- * Banehandicapet til spillerne på side 1 og 2, som {@link playerExtraForHole}
- * trenger for singel-matchens forskjell — samme utvalg som motoren
- * (`matchSideCourseHandicaps`). Et manglende tall regnes som 0, som over.
+ * Tallene den laveste i matchen finnes fra, som {@link playerExtraForHole}
+ * trenger — samme utvalg som motoren (`matchStrokeBases`: side 1 og 2 uten
+ * trukne i singel og four-ball, plass 1–4 i Round Robin). Et manglende tall
+ * regnes som 0, som over.
  */
-export function matchCourseHandicaps(players: readonly BundlePlayer[]): number[] {
-  return matchSideCourseHandicaps(players);
+export function matchCourseHandicaps(
+  game: Pick<BundleGame, 'gameMode'>,
+  players: readonly BundlePlayer[],
+): number[] {
+  return matchStrokeBases(game.gameMode as GameMode, players);
 }
 
 /**
  * Handicapen slagene over er fordelt fra: banehandicapen etter formatets
- * allowance eller brutto-valg. Hodet på scorekortet (#2262) viser den, så
- * tallet i hodet og NETTO-raden kommer fra samme sted. `null` = ukjent config,
- * som {@link playerExtraForHole}.
+ * allowance eller brutto-valg, av det urundede tallet når starten frøs det
+ * (#2997). Hodet på scorekortet (#2262) viser den, så tallet i hodet og
+ * NETTO-raden kommer fra samme sted. `null` = ukjent config, som
+ * {@link playerExtraForHole}.
  */
 export function playerStrokeHandicapFor(
   game: Pick<BundleGame, 'gameMode' | 'modeConfig'>,
   courseHandicap: number,
+  rawCourseHandicap?: number | null,
 ): number | null {
   const mode = game.gameMode as GameMode;
   const cfg = asModeConfig(mode, game.modeConfig);
   if (cfg === null) return null;
-  return playerStrokeHandicap(mode, cfg, courseHandicap);
+  return playerStrokeHandicap(mode, cfg, courseHandicap, rawCourseHandicap);
 }
 
 /**
@@ -314,6 +324,7 @@ export function toPlayerRows(bundle: GameBundle): ContextPlayerRow[] {
     // webbens `buildModeResultFromData` gjør på grensen.
     team_number: player.teamNumber ?? 0,
     course_handicap: player.courseHandicap,
+    raw_course_handicap: player.rawCourseHandicap ?? null,
     tee_gender: asGender(player.teeGender),
     // Den EKTE verdien. Hardkodet `null` her ville gjort WD-filtrene i
     // stableford-, solo- og uniform-byggerne til død kode.

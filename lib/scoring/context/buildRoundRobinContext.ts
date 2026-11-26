@@ -15,6 +15,8 @@ export interface RoundRobinContextPlayerRow {
   /** Round Robin bruker team_number som slot A/B/C/D (1..4) — driver rotasjonen. */
   team_number: number | null;
   course_handicap: number | null;
+  /** #2997: the unrounded course handicap frozen at start; null = not frozen. */
+  raw_course_handicap?: number | null;
   tee_gender: ScoringGender;
   users: { name: string | null; nickname: string | null } | null;
 }
@@ -67,6 +69,7 @@ export function buildRoundRobinContext(opts: {
         teamNumber: p.team_number ?? 0,
         flightNumber: null,
         courseHandicap: p.course_handicap ?? 0,
+        rawCourseHandicap: p.raw_course_handicap ?? null,
         teeGender: p.tee_gender,
       })),
     holes: holesRows.map((h) => ({
