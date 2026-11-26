@@ -124,4 +124,11 @@ describe('bestBallBoardInput', () => {
     ).toBe('net_to_par');
     expect(bestBallBoardInput(base).ranking).toBeUndefined();
   });
+
+  it('hands over the game’s countback (#2940): rulebook when the game is stamped, else none', () => {
+    expect(
+      bestBallBoardInput({ ...base, modeConfig: { ...base.modeConfig, countback: 'rulebook' as const } }).countback,
+    ).toBe('rulebook');
+    expect(bestBallBoardInput(base).countback).toBeUndefined();
+  });
 });

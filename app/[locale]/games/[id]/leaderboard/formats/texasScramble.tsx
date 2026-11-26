@@ -11,7 +11,7 @@ import { renderSideTournamentTabs } from '../sideTournament';
 import { RoundReportCard } from '../RoundReportCard';
 import { RevealBruttoView } from '../RevealBruttoView';
 import { computeLeaderboard } from '@/lib/leaderboard';
-import { ranksByNetToPar } from '@/lib/scoring/tiebreaker';
+import { countsBackByRulebook, ranksByNetToPar } from '@/lib/scoring/tiebreaker';
 import { withCaptainFirst } from '@/lib/games/teamCaptain';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
@@ -135,6 +135,8 @@ export async function renderTexasScramble(opts: {
       }));
     // #2625: a net-to-par game ranks the brutto preview on brutto to par too.
     const ranking = ranksByNetToPar(game.mode_config) ? 'net_to_par' : undefined;
+    // #2940: the game's countback, as the engine counts it.
+    const countback = countsBackByRulebook(game.mode_config) ? 'rulebook' : undefined;
     // The aggregator takes a team's par from its first member; the engine uses
     // the captain's, so the captain goes first (#2625, mixed tees).
     const bruttoLines = computeLeaderboard({
@@ -143,6 +145,7 @@ export async function renderTexasScramble(opts: {
       holes: bruttoHoles,
       scores: bruttoScores,
       ranking,
+      countback,
     });
     const orderedBrutto = [...bruttoLines].sort((a, b) => a.rank - b.rank);
     const holesPlayedForReveal = new Set(rawScoresRows.map((s) => s.hole_number)).size;

@@ -484,6 +484,7 @@ export async function renderLeaderboardContent({
     holes,
     scores,
     ranking,
+    countback,
   } = bestBallBoardInput({
     gameMode: game.game_mode,
     modeConfig: game.mode_config,
@@ -579,7 +580,8 @@ export async function renderLeaderboardContent({
 
   // #2625: the game's ranking rule (net to par for a new game), one source for
   // the board, «Hull for hull», the CSV and the app (`bestBallBoardInput`).
-  const lines = computeLeaderboard({ mode, players, holes, scores, ranking });
+  // #2940: and its countback (the rule book for a new game).
+  const lines = computeLeaderboard({ mode, players, holes, scores, ranking, countback });
   const orderedLines = [...lines].sort((a, b) => a.rank - b.rank);
   const coursePar = holes.reduce((sum, h) => sum + h.par, 0);
   const holesPlayed = new Set(scores.map((s) => s.holeNumber)).size;

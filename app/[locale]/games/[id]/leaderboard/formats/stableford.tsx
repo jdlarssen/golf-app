@@ -17,6 +17,7 @@ import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 import { renderSideTournamentTabs } from '../sideTournament';
 import { RevealBruttoView } from '../RevealBruttoView';
 import { computeLeaderboard } from '@/lib/leaderboard';
+import { countsBackByRulebook } from '@/lib/scoring/tiebreaker';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { computeLiveBoard } from '@/lib/leaderboard/liveBoard';
 import { pointsHeadline } from '@/lib/leaderboard/vsPar';
@@ -218,12 +219,15 @@ export async function renderStableford(opts: {
     // strokes, not points, so it keeps that rule in every stableford game,
     // also now that the points themselves rank on points only.
     const ranking = 'net_to_par' as const;
+    // #2940: the game's countback, as the engine counts it.
+    const countback = countsBackByRulebook(game.mode_config) ? 'rulebook' : undefined;
     const bruttoLines = computeLeaderboard({
       mode: 'brutto',
       players: bruttoPlayers,
       holes: bruttoHoles,
       scores: bruttoScores,
       ranking,
+      countback,
     });
     const orderedBrutto = [...bruttoLines].sort((a, b) => a.rank - b.rank);
     return (

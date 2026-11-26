@@ -16,7 +16,7 @@ import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 import { renderSideTournamentTabs } from '../sideTournament';
 import { RevealBruttoView } from '../RevealBruttoView';
 import { computeLeaderboard } from '@/lib/leaderboard';
-import { ranksByNetToPar } from '@/lib/scoring/tiebreaker';
+import { countsBackByRulebook, ranksByNetToPar } from '@/lib/scoring/tiebreaker';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { computeLiveBoard } from '@/lib/leaderboard/liveBoard';
 import { formatVsPar, headlineUnit } from '@/lib/leaderboard/vsPar';
@@ -152,12 +152,15 @@ export async function renderSoloStrokeplay(opts: {
     // #2625: a net-to-par game ranks the brutto preview on brutto to par too,
     // so a player who has played fewer holes is not placed ahead on the sum.
     const ranking = ranksByNetToPar(game.mode_config) ? 'net_to_par' : undefined;
+    // #2940: the game's countback, as the engine counts it.
+    const countback = countsBackByRulebook(game.mode_config) ? 'rulebook' : undefined;
     const bruttoLines = computeLeaderboard({
       mode: 'brutto',
       players: bruttoPlayers,
       holes: bruttoHoles,
       scores: bruttoScores,
       ranking,
+      countback,
     });
     const orderedBrutto = [...bruttoLines].sort((a, b) => a.rank - b.rank);
     return (

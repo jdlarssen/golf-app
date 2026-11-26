@@ -156,13 +156,15 @@ function bestBallLines(
     scoreRows,
     unknownPlayer: HOLES_TEXT.unknownPlayer,
   });
-  // #2625: spillets rangeringsregel, så plassene er tavlas.
+  // #2625: spillets rangeringsregel, så plassene er tavlas. #2940: og
+  // tilbaketellingen.
   const lines = computeTeamLines({
     mode: 'netto',
     players: input.players,
     holes: input.holes,
     scores: input.scores,
     ranking: input.ranking,
+    countback: input.countback,
   });
   // Tavlas par (#2217): `par_mens` over nøyaktig hullene som ble regnet.
   const coursePar = input.holes.reduce((sum, h) => sum + h.par, 0);

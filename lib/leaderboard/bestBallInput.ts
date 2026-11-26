@@ -1,7 +1,7 @@
 import type { LbHole, LbPlayer, LbScore } from '@/lib/leaderboard';
 import { matchSideCourseHandicaps, matchStrokeHandicap } from '@/lib/scoring/allocatedStrokes';
-import { ranksByNetToPar } from '@/lib/scoring/tiebreaker';
-import type { GameMode, GameModeConfig, ScoringGender } from '@/lib/scoring/modes/types';
+import { countsBackByRulebook, ranksByNetToPar } from '@/lib/scoring/tiebreaker';
+import type { CountbackStamp, GameMode, GameModeConfig, ScoringGender } from '@/lib/scoring/modes/types';
 
 /** The roster fields the best-ball surfaces read. Structural, so `gwp.players` fits. */
 export type BestBallRosterRow = {
@@ -40,6 +40,8 @@ export type BestBallScoreInputRow = {
  * - `ranking`: spillets rangeringsregel (#2625), `'net_to_par'` for et nytt
  *   spill (`ranksByNetToPar`). Sendes rett videre til `computeLeaderboard`, så
  *   tavla, «Hull for hull», CSV-en og appen rangerer likt.
+ * - `countback`: spillets tilbaketelling (#2940), `'rulebook'` for et nytt
+ *   spill (`countsBackByRulebook`). Sendes videre på samme måte.
  *
  * `courseHandicap` følger motoren (`matchStrokeHandicap`, #2218). For best ball
  * er det det rå banehandicapet, som tavla alltid har brukt.
@@ -60,6 +62,7 @@ export function bestBallBoardInput(opts: {
   holes: LbHole[];
   scores: LbScore[];
   ranking: 'net_to_par' | undefined;
+  countback: CountbackStamp | undefined;
 } {
   const { gameMode, modeConfig, roster, holeRows, scoreRows, unknownPlayer } = opts;
 
@@ -110,5 +113,6 @@ export function bestBallBoardInput(opts: {
     holes,
     scores,
     ranking: ranksByNetToPar(modeConfig) ? 'net_to_par' : undefined,
+    countback: countsBackByRulebook(modeConfig) ? 'rulebook' : undefined,
   };
 }
