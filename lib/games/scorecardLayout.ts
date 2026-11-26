@@ -7,7 +7,7 @@ import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { scrambleTeamHandicap, sideHandicap } from '@/lib/scoring/teamHandicap';
 import {
   alternateShotSideExtras,
-  matchStrokeBases,
+  matchStrokeField,
   matchStrokeHandicap,
 } from '@/lib/scoring/allocatedStrokes';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
@@ -21,6 +21,7 @@ import {
   isScrambleFamily,
   isAlternateShotMatchplay,
 } from '@/lib/scoring/modes/types';
+import type { ScoringHole } from '@/lib/scoring/modes/types';
 import type { GameForHole, PlayerForHole } from './getGameWithPlayers';
 import { parForPlayer, type HoleParByGender } from './parDisplay';
 import type { TeeGender } from './teeRating';
@@ -153,6 +154,11 @@ function sidePlayer(p: PlayerForHole): { courseHandicap: number; rawCourseHandic
   return { courseHandicap: p.course_handicap ?? 0, rawCourseHandicap: p.raw_course_handicap ?? null };
 }
 
+/** A side player as `alternateShotSideExtras` reads it: the handicaps, and the id and tee that give the captain's par (#2941). */
+function alternateShotPlayer(p: PlayerForHole) {
+  return { ...sidePlayer(p), userId: p.user_id, teeGender: p.tee_gender };
+}
+
 /**
  * Bestemmer scorekort-layout basert på spillmodus, spillerlista og
  * reveal-state. Ren funksjon (ingen DB-tilgang) — call-site fetcher
@@ -179,6 +185,12 @@ export function resolveScorecardLayout(
   me: PlayerForHole,
   revealActive: boolean,
   fmt: ColumnFormatter,
+  /**
+   * #2941: the holes in scope (`holesForSegment`), with par per tee. A new
+   * match gives the higher par extra strokes over them, as the engine does.
+   * Empty (the default) gives no par strokes.
+   */
+  scopeHoles: readonly ScoringHole[] = [],
 ): ScorecardLayout {
   const mode = game.game_mode;
   const cfg = game.mode_config;
@@ -284,13 +296,15 @@ export function resolveScorecardLayout(
     // `team_strokes_override`, #1441) og allowance kommer fra samme hjem som
     // hull-siden, bundet til motoren med test. Sidene mappes til side 1/2
     // etter team_number, som i motoren.
-    const chs = (sidePlayers: PlayerForHole[]) => sidePlayers.map(sidePlayer);
+    // #2941: with each side's captain tee and the holes in scope, for the par strokes.
+    const chs = (sidePlayers: PlayerForHole[]) => sidePlayers.map(alternateShotPlayer);
     const meIsSide2 = me.team_number === 2;
     const { side1Extra, side2Extra } = alternateShotSideExtras(
       mode,
       cfg,
       meIsSide2 ? chs(oppSidePlayers) : chs(mySidePlayers),
       meIsSide2 ? chs(mySidePlayers) : chs(oppSidePlayers),
+      scopeHoles,
     );
     const mySideExtra = meIsSide2 ? side2Extra : side1Extra;
     const oppSideExtra = meIsSide2 ? side1Extra : side2Extra;
@@ -374,21 +388,28 @@ export function resolveScorecardLayout(
   // fourball/round robin allowance, 0 for the gross options, the difference
   // to the lowest on a new singles, four-ball or Round Robin match (audit
   // 2026-11-20, #2997), raw elsewhere.
-  const matchBases = matchStrokeBases(
+  // #2941: with each tee and the holes in scope, for a new match's par strokes.
+  const matchField = matchStrokeField(
     mode,
     players.map((p) => ({
       teamNumber: p.team_number,
       courseHandicap: p.course_handicap,
       rawCourseHandicap: p.raw_course_handicap ?? null,
       withdrawnAt: p.withdrawn_at,
+      teeGender: p.tee_gender,
     })),
+    scopeHoles,
   );
   const strokeHandicap = (p: PlayerForHole): number =>
     matchStrokeHandicap(
       mode,
       cfg,
-      { courseHandicap: p.course_handicap, rawCourseHandicap: p.raw_course_handicap ?? null },
-      matchBases,
+      {
+        courseHandicap: p.course_handicap,
+        rawCourseHandicap: p.raw_course_handicap ?? null,
+        teeGender: p.tee_gender,
+      },
+      matchField,
     );
 
   if (!isTeamMode || revealActive) {

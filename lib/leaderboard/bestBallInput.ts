@@ -1,5 +1,6 @@
 import type { LbHole, LbPlayer, LbScore } from '@/lib/leaderboard';
-import { matchStrokeBases, matchStrokeHandicap } from '@/lib/scoring/allocatedStrokes';
+import { matchStrokeField, matchStrokeHandicap } from '@/lib/scoring/allocatedStrokes';
+import { toScoringHoles } from '@/lib/scoring/context/scoringHoles';
 import { countsBackByRulebook, ranksByNetToPar } from '@/lib/scoring/tiebreaker';
 import type { CountbackStamp, GameMode, GameModeConfig, ScoringGender } from '@/lib/scoring/modes/types';
 
@@ -76,14 +77,17 @@ export function bestBallBoardInput(opts: {
     }));
   const withdrawnIds = new Set(withdrawn.map((p) => p.user_id));
 
-  const matchBases = matchStrokeBases(
+  // #2941: with each tee and the holes in scope, for a new match's par strokes.
+  const matchField = matchStrokeField(
     gameMode,
     roster.map((p) => ({
       teamNumber: p.team_number,
       courseHandicap: p.course_handicap,
       rawCourseHandicap: p.raw_course_handicap ?? null,
       withdrawnAt: p.withdrawn_at,
+      teeGender: p.tee_gender,
     })),
+    toScoringHoles(holeRows),
   );
   const players: LbPlayer[] = roster
     .filter((p) => p.users != null && p.withdrawn_at == null)
@@ -95,8 +99,12 @@ export function bestBallBoardInput(opts: {
       courseHandicap: matchStrokeHandicap(
         gameMode,
         modeConfig,
-        { courseHandicap: p.course_handicap, rawCourseHandicap: p.raw_course_handicap ?? null },
-        matchBases,
+        {
+          courseHandicap: p.course_handicap,
+          rawCourseHandicap: p.raw_course_handicap ?? null,
+          teeGender: p.tee_gender,
+        },
+        matchField,
       ),
       teeGender: p.tee_gender,
     }));

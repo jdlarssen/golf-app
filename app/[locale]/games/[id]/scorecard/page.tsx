@@ -46,6 +46,9 @@ import { nameInitials } from '@/lib/names/initials';
 import { parForPlayer, type HoleParByGender } from '@/lib/games/parDisplay';
 import type { GameMode, ScoringGender } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
+import { holesForSegment } from '@/lib/scoring/holeSegment';
+import { usesParDifference } from '@/lib/scoring/parDifference';
+import { toScoringHoles } from '@/lib/scoring/context/scoringHoles';
 import {
   isHoleInSegment,
   firstHoleForSegment,
@@ -170,12 +173,25 @@ export default async function ScorecardPage({ params }: { params: Params }) {
   const rating = getRatingForGender(game.tee_box, me.tee_gender);
   const state = revealState(game.score_visibility, game.status);
   const revealActive = state === 'reveal-active';
+  // #2941: a new match with the par rule spreads the extra strokes over the
+  // holes in scope, so the columns need every hole's par per tee. Any other
+  // game skips the read.
+  const parHolesRes =
+    usesParDifference(game.mode_config) && game.course_id
+      ? await scorecardSupabase
+          .from('course_holes')
+          .select(COURSE_HOLES_SELECT)
+          .eq('course_id', game.course_id)
+          .returns<HoleRow[]>()
+      : { data: [] as HoleRow[], error: null };
+  if (parHolesRes.error) throw parHolesRes.error;
   const layout = resolveScorecardLayout(
     game,
     players,
     me,
     revealActive,
     columnFormatter,
+    holesForSegment(toScoringHoles(parHolesRes.data), game.hole_segment),
   );
   const titleKeys = scorecardTitle(game.game_mode, game.mode_config);
   const kickerText = tScorecard(titleKeys.titleKey as Parameters<typeof tScorecard>[0]);

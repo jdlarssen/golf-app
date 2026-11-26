@@ -128,6 +128,8 @@ describe('fetchHolePageData, side-contest reads', () => {
       id: 'g1',
       course_id: 'c1',
       game_mode: 'stableford',
+      // NOT NULL in games, default '{}' (#2941 reads it for the par strokes).
+      mode_config: { kind: 'stableford', team_size: 1, points_table: 'standard' },
       tournament_id: null,
       source_game_id: null,
       side_ld_count: 0,
@@ -206,5 +208,69 @@ describe('fetchHolePageData, side-contest reads', () => {
     expect(data.cupAwardsRes).toMatchObject({ ok: false });
     expect(data.holeClaimsRes).toMatchObject({ ok: false });
     expect(data.hole).toEqual(HOLE_ROW);
+  });
+});
+
+// #2941: a new match with the par rule needs every hole's par per tee for the
+// extra strokes, as the engine sums them; any other game reads only this hole.
+describe('fetchHolePageData, the holes for the par strokes', () => {
+  const HOLE_ROW = { hole_number: 7, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 5 };
+  const ALL_HOLES = [HOLE_ROW, { hole_number: 8, par_mens: 4, par_ladies: 5, par_juniors: 4, stroke_index: 1 }];
+
+  async function run(modeConfig: Record<string, unknown>) {
+    const fake = createAdminClientMock({
+      respond: (op) => {
+        if (op.table === 'course_holes') {
+          const single = op.filters.some((f) => f.column === 'hole_number');
+          return { data: single ? HOLE_ROW : ALL_HOLES };
+        }
+        if (op.table === 'courses') return { data: { name: 'Bane' } };
+        return { data: [] };
+      },
+    });
+    const game = {
+      id: 'g1',
+      course_id: 'c1',
+      game_mode: 'singles_matchplay',
+      mode_config: { kind: 'singles_matchplay', team_size: 1, teams_count: 2, match_strokes: 'difference', ...modeConfig },
+      tournament_id: null,
+      source_game_id: null,
+      side_ld_count: 0,
+      side_ctp_count: 0,
+      side_ld_holes: null,
+      side_ctp_holes: null,
+    } as unknown as GameForHole;
+    const data = await fetchHolePageData({
+      supabase: fake.client as never,
+      gameId: 'g1',
+      holeNumber: 7,
+      userId: 'u1',
+      game,
+      me: { user_id: 'u1', team_number: 1 } as PlayerForHole,
+      playerIds: ['u1'],
+      myTeamScoreOwnerId: null,
+      myFormerTeamRowOwnerIds: [],
+      flightFormerRowOwnerIds: [],
+      siblingMatch: null,
+      modes: { isWolf: false, isSkins: false, isBBB: false, isPatsome: false },
+      canReportSideClaims: false,
+    });
+    return { fake, data };
+  }
+
+  it('reads every hole of the course for a new match with the par rule', async () => {
+    const { fake, data } = await run({ par_strokes: 'difference' });
+    const listReads = fake.ops.filter(
+      (op) => op.table === 'course_holes' && !op.filters.some((f) => f.column === 'hole_number'),
+    );
+    expect(listReads).toHaveLength(1);
+    expect(listReads[0].filters).toEqual([{ op: 'eq', column: 'course_id', value: 'c1' }]);
+    expect(data.parHoles).toEqual(ALL_HOLES);
+  });
+
+  it('reads only this hole for a match created before', async () => {
+    const { fake, data } = await run({});
+    expect(fake.ops.filter((op) => op.table === 'course_holes')).toHaveLength(1);
+    expect(data.parHoles).toEqual([]);
   });
 });

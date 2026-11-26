@@ -16,6 +16,7 @@ import type {
   ScoringHoleScore,
 } from '@/lib/scoring/modes/types';
 import type { GameForHole, PlayerForHole } from './getGameWithPlayers';
+import { MIXED_PAR_18 } from '@/lib/scoring/__fixtures__/mixedPar';
 
 const baseGame: Omit<GameForHole, 'game_mode' | 'mode_config'> = {
   id: 'g1',
@@ -1321,5 +1322,60 @@ describe('resolveScorecardLayout — slag som motoren (#2218)', () => {
       expect([engine.holesUp, engine.holesPlayed]).toEqual([1, 3]);
       expect(totals.matchStatus).toBe(statusFor('Du er', engine.holesUp, engine.holesPlayed));
     });
+  });
+});
+
+describe('resolveScorecardLayout — ulik par (#2941, F17)', () => {
+  // The course has par 5 for ladies on SI 1 and 2 (men 72, ladies 74). The
+  // column's handicap is what the card spreads over SI, so a new match gives
+  // the lady her 2, as the engine does.
+  it('ny singel: damens kolonne bærer de to par-slagene, herrens 0', () => {
+    const game: GameForHole = {
+      ...baseGame,
+      game_mode: 'singles_matchplay',
+      mode_config: {
+        kind: 'singles_matchplay',
+        team_size: 1,
+        teams_count: 2,
+        match_strokes: 'difference',
+        par_strokes: 'difference',
+      },
+    };
+    const me = player('me', 1, { course_handicap: 0 });
+    const opponent = player('opp', 2, { course_handicap: 0, tee_gender: 'ladies' });
+    const layout = resolveScorecardLayout(game, [me, opponent], me, false, fmt, MIXED_PAR_18);
+    expect(layout.columns.map((c) => [c.userId, c.courseHandicap])).toEqual([
+      ['me', 0],
+      ['opp', 2],
+    ]);
+  });
+
+  it('en singel opprettet før gir ingen par-slag', () => {
+    const game: GameForHole = {
+      ...baseGame,
+      game_mode: 'singles_matchplay',
+      mode_config: { kind: 'singles_matchplay', team_size: 1, teams_count: 2, match_strokes: 'difference' },
+    };
+    const me = player('me', 1, { course_handicap: 0 });
+    const opponent = player('opp', 2, { course_handicap: 0, tee_gender: 'ladies' });
+    const layout = resolveScorecardLayout(game, [me, opponent], me, false, fmt, MIXED_PAR_18);
+    expect(layout.columns.map((c) => c.courseHandicap)).toEqual([0, 0]);
+  });
+
+  it('ny foursomes: siden med kapteinen på damenes tee får to lag-slag', () => {
+    const game: GameForHole = {
+      ...baseGame,
+      game_mode: 'foursomes_matchplay',
+      mode_config: { kind: 'foursomes_matchplay', team_size: 2, teams_count: 2, allowance_pct: 50, par_strokes: 'difference' },
+    };
+    const me = player('a1', 1, { course_handicap: 0 });
+    const partner = player('a2', 1, { course_handicap: 0 });
+    const opp1 = player('b1', 2, { course_handicap: 0, tee_gender: 'ladies' });
+    const opp2 = player('b2', 2, { course_handicap: 0 });
+    const layout = resolveScorecardLayout(game, [me, partner, opp1, opp2], me, false, fmt, MIXED_PAR_18);
+    expect(layout.columns.map((c) => [c.userId, c.courseHandicap])).toEqual([
+      ['a1', 0],
+      ['b1', 2],
+    ]);
   });
 });

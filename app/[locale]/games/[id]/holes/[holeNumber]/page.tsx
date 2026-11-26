@@ -28,6 +28,8 @@ import {
   computeSkinsStake,
   computeWolfContext,
 } from './holePageScoring';
+import { holesForSegment } from '@/lib/scoring/holeSegment';
+import { toScoringHoles } from '@/lib/scoring/context/scoringHoles';
 import {
   buildPlayersForClient,
   buildRoundRobinPlayers,
@@ -300,6 +302,8 @@ export default async function HolePage({ params }: { params: Params }) {
     scoresByUser,
     unknownPlayer,
     teamName: (number, names) => tEntry('teamWithNames', { number, names }),
+    // #2941: the holes in scope, for a new match's par strokes.
+    scopeHoles: holesForSegment(toScoringHoles(data.parHoles), game.hole_segment),
   });
 
   // #2283: the side contests on this hole. A failed read is a `failed` marker

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { GameForHole, PlayerForHole } from '@/lib/games/getGameWithPlayers';
+import { MIXED_PAR_18 } from '@/lib/scoring/__fixtures__/mixedPar';
 import { buildPlayersForClient, resolveFlight } from './holePagePlayers';
 
 // #2067 — Type A: lagkortets slag-prikker på hull-siden skal regnes av samme
@@ -352,5 +353,52 @@ describe('buildPlayersForClient — lag på 3 i et 4-mannsspill (#2569)', () => 
   it('laget på 4 (10/20/30/40 → 20) er uendret: slag på SI 17, to på SI 2', () => {
     expect(teamCardStrokes({ game: TEXAS_AT_FOUR, allPlayers: roster, me, strokeIndex: 17 })[1]).toBe(1);
     expect(teamCardStrokes({ game: TEXAS_AT_FOUR, allPlayers: roster, me, strokeIndex: 2 })[1]).toBe(2);
+  });
+});
+
+describe('buildPlayersForClient — ulik par (#2941, F17)', () => {
+  // The course has par 5 for ladies on SI 1 and 2 (men 72, ladies 74). A new
+  // match gives her a dot on SI 1 and 2, as the engine does; a match created
+  // before gives none.
+  const lady = (p: PlayerForHole): PlayerForHole => ({ ...p, tee_gender: 'ladies' });
+  const strokesOn = (g: GameForHole, allPlayers: PlayerForHole[], strokeIndex: number, holeNumber = 1) => {
+    const flight = resolveFlight({ game: g, allPlayers, me: allPlayers[0] });
+    const cards = buildPlayersForClient({
+      game: g,
+      holeNumber,
+      flight,
+      allPlayers,
+      strokeIndex,
+      scoresByUser: {},
+      unknownPlayer: 'Ukjent',
+      scopeHoles: MIXED_PAR_18,
+    });
+    return Object.fromEntries(cards.map((c) => [(c as { teamNumber?: number }).teamNumber ?? c.userId, c.extraStrokes]));
+  };
+  const singles = (extra: object) =>
+    game('singles_matchplay', { kind: 'singles_matchplay', team_size: 1, teams_count: 2, match_strokes: 'difference', ...extra } as GameForHole['mode_config']);
+  const SINGLES_PLAYERS = [player('a', 1, 0), lady(player('b', 2, 0))];
+
+  it('ny singel: damen får en prikk på SI 1 og 2, herren ingen', () => {
+    const g = singles({ par_strokes: 'difference' });
+    expect(strokesOn(g, SINGLES_PLAYERS, 1)).toEqual({ a: 0, b: 1 });
+    expect(strokesOn(g, SINGLES_PLAYERS, 3)).toEqual({ a: 0, b: 0 });
+  });
+
+  it('en singel opprettet før gir ingen par-prikk', () => {
+    expect(strokesOn(singles({}), SINGLES_PLAYERS, 1)).toEqual({ a: 0, b: 0 });
+  });
+
+  it('foursomes: laget med kapteinen på damenes tee får lag-slagene på SI 1 og 2', () => {
+    const g = game('foursomes_matchplay', {
+      kind: 'foursomes_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: 50,
+      par_strokes: 'difference',
+    } as GameForHole['mode_config']);
+    const players = [player('a1', 1, 0), player('a2', 1, 0), lady(player('b1', 2, 0)), player('b2', 2, 0)];
+    expect(strokesOn(g, players, 1)).toEqual({ 1: 0, 2: 1 });
+    expect(strokesOn(g, players, 3)).toEqual({ 1: 0, 2: 0 });
   });
 });
