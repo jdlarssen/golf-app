@@ -112,9 +112,13 @@ describe('stampNewGameModeConfig (#2253)', () => {
 
   it.each<GameModeConfig>([
     { kind: 'skins', team_size: 1, skins_scoring: 'net' },
-    greensome({ team_strokes_override: { team1: 8, team2: 3 } }),
   ])('leaves every other format unchanged ($kind)', (config) => {
     expect(stampNewGameModeConfig(config)).toBe(config);
+  });
+
+  it('gives a new greensome match only the par rule (#2941), and keeps its override', () => {
+    const config = greensome({ team_strokes_override: { team1: 8, team2: 3 } });
+    expect(stampNewGameModeConfig(config)).toEqual({ ...config, par_strokes: 'difference' });
   });
 
   it('an edit of a game without the flag does not add it', () => {
@@ -286,8 +290,9 @@ describe('stampNewGameModeConfig (four-ball og Round Robin, #2997)', () => {
     ['four-ball', fourball],
     ['Round Robin', roundRobin],
   ])('stamps the difference rule on a new %s match', (_label, config) => {
-    expect(stampNewGameModeConfig(config)).toEqual({ ...config, match_strokes: 'difference' });
-    expect(stampNewMatchConfig(config)).toEqual({ ...config, match_strokes: 'difference' });
+    const stamped = { ...config, match_strokes: 'difference', par_strokes: 'difference' };
+    expect(stampNewGameModeConfig(config)).toEqual(stamped);
+    expect(stampNewMatchConfig(config)).toEqual(stamped);
   });
 
   it.each([
@@ -299,9 +304,9 @@ describe('stampNewGameModeConfig (four-ball og Round Robin, #2997)', () => {
     expect(editedModeConfig(flagged, config)).toEqual(flagged);
   });
 
-  it('stampNewMatchConfig leaves every other format unchanged', () => {
-    const foursomes = { kind: 'foursomes_matchplay', team_size: 2, teams_count: 2, allowance_pct: 50 } as GameModeConfig;
-    expect(stampNewMatchConfig(foursomes)).toBe(foursomes);
+  it('stampNewMatchConfig leaves every format outside match play unchanged', () => {
+    const bestBall = { kind: 'best_ball', team_size: 2, teams_count: 2 } as GameModeConfig;
+    expect(stampNewMatchConfig(bestBall)).toBe(bestBall);
   });
 });
 
@@ -309,7 +314,7 @@ describe('stampNewGameModeConfig (singles, audit 2026-11-20)', () => {
   // A new singles match gives the higher handicap the difference; a match
   // created before keeps each side's own handicap and is never recalculated.
   const singles = { kind: 'singles_matchplay', team_size: 1, teams_count: 2 } as GameModeConfig;
-  const flaggedSingles = { ...singles, match_strokes: 'difference' } as GameModeConfig;
+  const flaggedSingles = { ...singles, match_strokes: 'difference', par_strokes: 'difference' } as GameModeConfig;
 
   it('stamps the difference rule on a new singles match', () => {
     expect(stampNewGameModeConfig(singles)).toEqual(flaggedSingles);
@@ -332,5 +337,39 @@ describe('stampNewGameModeConfig (singles, audit 2026-11-20)', () => {
   it('a draft that switches away from singles drops the flag', () => {
     const skins = { kind: 'skins', team_size: 1, skins_scoring: 'net' } as GameModeConfig;
     expect(carryPreservedModeConfigKeys(flaggedSingles, skins)).toEqual(skins);
+  });
+});
+
+describe('stampNewMatchConfig (ulik par, #2941)', () => {
+  // F17: a new match gives the higher par extra strokes; one created before
+  // gives none and is never recalculated.
+  const ALTERNATE_SHOT = [
+    { kind: 'foursomes_matchplay', team_size: 2, teams_count: 2, allowance_pct: 50 },
+    { kind: 'greensome_matchplay', team_size: 2, teams_count: 2, allowance_pct: 100 },
+    { kind: 'chapman_matchplay', team_size: 2, teams_count: 2, allowance_pct: 100 },
+    { kind: 'gruesome_matchplay', team_size: 2, teams_count: 2, allowance_pct: 50 },
+  ] as GameModeConfig[];
+
+  it.each(ALTERNATE_SHOT.map((c) => [c.kind, c] as const))(
+    'a new %s match gets par_strokes and nothing else',
+    (_kind, config) => {
+      expect(stampNewGameModeConfig(config)).toEqual({ ...config, par_strokes: 'difference' });
+      expect(stampNewMatchConfig(config)).toEqual({ ...config, par_strokes: 'difference' });
+    },
+  );
+
+  it.each(ALTERNATE_SHOT.map((c) => [c.kind, c] as const))(
+    'an edit of a %s match without the key does not add it, and one with it keeps it',
+    (_kind, config) => {
+      expect(editedModeConfig(config, config)).not.toHaveProperty('par_strokes');
+      const flagged = { ...config, par_strokes: 'difference' } as GameModeConfig;
+      expect(editedModeConfig(flagged, config)).toEqual(flagged);
+    },
+  );
+
+  it('an edit of a singles match stamped before #2941 keeps match_strokes and gets no par_strokes', () => {
+    const before = { kind: 'singles_matchplay', team_size: 1, teams_count: 2, match_strokes: 'difference' } as GameModeConfig;
+    const formOutput = { kind: 'singles_matchplay', team_size: 1, teams_count: 2 } as GameModeConfig;
+    expect(editedModeConfig(before, formOutput)).toEqual(before);
   });
 });
