@@ -106,7 +106,7 @@ describe('stampNewGameModeConfig (#2253)', () => {
   } as GameModeConfig;
 
   it('stamps net-to-par ranking on a new solo strokeplay game', () => {
-    expect(stampNewGameModeConfig(strokeplay)).toEqual(flagged);
+    expect(stampNewGameModeConfig(strokeplay)).toEqual({ ...flagged, countback: 'rulebook' });
   });
 
   it.each<GameModeConfig>([
@@ -152,7 +152,7 @@ describe('stampNewGameModeConfig (#2625)', () => {
       shamble_scoring: 'net',
     },
   ])('stamps net-to-par ranking on a new $kind game', (config) => {
-    expect(stampNewGameModeConfig(config)).toEqual({ ...config, ranking: 'net_to_par' });
+    expect(stampNewGameModeConfig(config)).toEqual({ ...config, ranking: 'net_to_par', countback: 'rulebook' });
   });
 });
 
@@ -161,21 +161,21 @@ describe('stampNewGameModeConfig (#2625, part 2)', () => {
   // stamped at creation too.
   it('stamps net-to-par ranking on a new nassau game', () => {
     const nassau = { kind: 'nassau', team_size: 1, nassau_scoring: 'gross' } as GameModeConfig;
-    expect(stampNewGameModeConfig(nassau)).toEqual({ ...nassau, ranking: 'net_to_par' });
+    expect(stampNewGameModeConfig(nassau)).toEqual({ ...nassau, ranking: 'net_to_par', countback: 'rulebook' });
   });
 });
 
 describe('stampNewGameModeConfig (#2738)', () => {
   // The points formats rank on points only, so a new points game is never
-  // stamped with the net-to-par flag.
+  // stamped with the net-to-par flag. It counts back by the rule book (#2940).
   it.each<GameModeConfig>([
     { kind: 'stableford', team_size: 1, points_table: 'standard' },
     { kind: 'stableford', team_size: 2, points_table: 'standard' },
     { kind: 'modified_stableford', team_size: 1, points_table: 'modified' },
     { kind: 'modified_stableford', team_size: 2, points_table: 'modified' },
     { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net' },
-  ])('leaves a new $kind game unchanged (team size $team_size)', (config) => {
-    expect(stampNewGameModeConfig(config)).toBe(config);
+  ])('stamps no net-to-par flag on a new $kind game (team size $team_size)', (config) => {
+    expect(stampNewGameModeConfig(config)).toEqual({ ...config, countback: 'rulebook' });
   });
 });
 
@@ -189,7 +189,7 @@ describe('editedModeConfig (#2625)', () => {
   const stableford = { kind: 'stableford', team_size: 1, points_table: 'standard' } as GameModeConfig;
 
   it('a draft that switches format is still a new game: the new format is stamped', () => {
-    expect(editedModeConfig(stableford, texas)).toEqual({ ...texas, ranking: 'net_to_par' });
+    expect(editedModeConfig(stableford, texas)).toEqual({ ...texas, ranking: 'net_to_par', countback: 'rulebook' });
   });
 
   it('the same format keeps the rule the game was created with', () => {
@@ -202,8 +202,8 @@ describe('editedModeConfig (#2625)', () => {
 
   it('a draft that switches to Nassau is stamped too, one that switches to stableford is not (#2738)', () => {
     const nassau = { kind: 'nassau', team_size: 1, nassau_scoring: 'net' } as GameModeConfig;
-    expect(editedModeConfig(texas, nassau)).toEqual({ ...nassau, ranking: 'net_to_par' });
-    expect(editedModeConfig(texas, stableford)).toEqual(stableford);
+    expect(editedModeConfig(texas, nassau)).toEqual({ ...nassau, ranking: 'net_to_par', countback: 'rulebook' });
+    expect(editedModeConfig(texas, stableford)).toEqual({ ...stableford, countback: 'rulebook' });
   });
 
   it('a stableford game created without the flag keeps its rule through an edit', () => {
@@ -212,6 +212,35 @@ describe('editedModeConfig (#2625)', () => {
 
   it('a stored config that is not an object is passed through as before', () => {
     expect(editedModeConfig(null, texas)).toBe(texas);
+  });
+});
+
+describe('stampNewGameModeConfig (#2940)', () => {
+  // A new game of a format that ranks through rankTeams counts a tie back by
+  // the rule book (`countback: 'rulebook'`). An edit carries the stamp and
+  // never adds it, so a game played under the old countback keeps it.
+  const stableford = { kind: 'stableford', team_size: 2, points_table: 'standard' } as GameModeConfig;
+  const stamped = { ...stableford, countback: 'rulebook' } as GameModeConfig;
+
+  it('an edit of a game with the stamp keeps it', () => {
+    expect(editedModeConfig(stamped, stableford)).toEqual(stamped);
+  });
+
+  it('an edit of a game without the stamp does not add it', () => {
+    expect(editedModeConfig(stableford, stableford)).not.toHaveProperty('countback');
+  });
+
+  it('a draft that switches away to a format without the stamp drops it', () => {
+    const skins = { kind: 'skins', team_size: 1, skins_scoring: 'net' } as GameModeConfig;
+    expect(editedModeConfig(stamped, skins)).toEqual(skins);
+  });
+
+  it.each<GameModeConfig>([
+    { kind: 'skins', team_size: 1, skins_scoring: 'net' },
+    { kind: 'singles_matchplay', team_size: 1, teams_count: 2 },
+    { kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' },
+  ])('stamps no countback on a new $kind game', (config) => {
+    expect(stampNewGameModeConfig(config)).not.toHaveProperty('countback');
   });
 });
 

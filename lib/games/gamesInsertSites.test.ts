@@ -6,7 +6,9 @@ import { describe, expect, it } from 'vitest';
  * #2253 / #2625: a new solo strokeplay, team strokeplay or Nassau game ranks
  * on net to par (the points formats rank on points only, #2738). The rule lives in the game's
  * `mode_config` (`ranking: 'net_to_par'`), stamped at creation by
- * `stampNewGameModeConfig`. Every place in app/, lib/
+ * `stampNewGameModeConfig`. #2940: the same stamp adds `countback: 'rulebook'`
+ * to every format that ranks through `rankTeams`, points formats included, so
+ * the list below decides that rule too. Every place in app/, lib/
  * and native/app/src that puts a row in `games` is listed below: it either
  * stamps, or it is exempt by decision and says why. A new insert site turns
  * this red: stamp it, or list why it is exempt.
@@ -41,7 +43,7 @@ const INSERT_SITES: Record<string, { count: number; stamps: boolean; reason: str
     count: 1,
     stamps: true,
     reason:
-      'the app wizard, which can create best ball (stamped) and stableford (left as is, #2738) (APP_SUPPORTED_MODES)',
+      'the app wizard, which can create best ball (stamped) and stableford (no net-to-par flag, #2738; rule-book countback, #2940) (APP_SUPPORTED_MODES)',
   },
 };
 

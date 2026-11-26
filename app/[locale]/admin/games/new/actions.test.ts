@@ -823,7 +823,7 @@ describe('createAndPublishGame', () => {
     ).toBeUndefined();
   });
 
-  it('happy path (stableford publish): inserts solo game with mode_config={team_size:1}, not stamped (#2738)', async () => {
+  it('happy path (stableford publish): inserts solo game with mode_config={team_size:1}, no net-to-par flag (#2738), rule-book countback (#2940)', async () => {
     supabaseMock = buildSupabaseMock(
       [
         { data: { is_admin: true }, error: null }, // gate
@@ -859,11 +859,13 @@ describe('createAndPublishGame', () => {
     expect(insertCall).toBeDefined();
     const insertRow = (insertCall!.args[0] as { game_mode: string; mode_config: unknown });
     expect(insertRow.game_mode).toBe('stableford');
-    // #2738: a new stableford game ranks on points only, so it is not stamped.
+    // #2738: a new stableford game ranks on points only, so it gets no
+    // net-to-par flag. #2940: it counts a tie back by the rule book.
     expect(insertRow.mode_config).toEqual({
       kind: 'stableford',
       team_size: 1,
       points_table: 'standard',
+      countback: 'rulebook',
     });
 
     const playersInsertCall = supabaseMock.__fromCalls.find(
@@ -911,6 +913,7 @@ describe('createAndPublishGame', () => {
       kind: 'solo_strokeplay',
       team_size: 1,
       ranking: 'net_to_par',
+      countback: 'rulebook',
     });
   });
 });
