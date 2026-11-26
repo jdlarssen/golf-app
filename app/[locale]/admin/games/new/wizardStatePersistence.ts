@@ -84,6 +84,7 @@ export type PersistedInitialValues = Pick<
   | 'texas_team_handicap_pct'
   | 'ambrose_team_handicap_pct'
   | 'florida_team_handicap_pct'
+  | 'team_handicap_rule'
   | 'fourball_allowance_pct'
   | 'foursomes_allowance_pct'
   | 'greensome_allowance_pct'
@@ -101,6 +102,7 @@ export type PersistedInitialValues = Pick<
   | 'shamble_scoring'
   | 'min_tee_shots'
   | 'patsome_scoring'
+  | 'patsome_fourball_allowance_pct'
   | 'kr_per_unit'
   | 'entry_fee_kr'
   | 'payment_link'
@@ -283,6 +285,7 @@ export function wizardDraftFromState({
       texas_team_handicap_pct: String(state.texasHandicapPct),
       ambrose_team_handicap_pct: String(state.ambroseHandicapPct),
       florida_team_handicap_pct: String(state.floridaHandicapPct),
+      team_handicap_rule: state.teamHandicapRule,
       fourball_allowance_pct: state.fourballAllowancePct,
       foursomes_allowance_pct: state.foursomesAllowancePct,
       greensome_allowance_pct: state.greensomeAllowancePct,
@@ -300,6 +303,7 @@ export function wizardDraftFromState({
       shamble_scoring: state.shambleScoring,
       min_tee_shots: state.minTeeShots,
       patsome_scoring: state.patsomeScoring,
+      patsome_fourball_allowance_pct: state.patsomeFourballAllowancePct,
       kr_per_unit: numericOrUndefined(state.krPerUnit),
       // Hooken leser bare beløp > 0 (tomt/0 = ingen kontingent), så vi
       // speiler samme grense i stedet for å lagre en 0-er som ikke overlever.

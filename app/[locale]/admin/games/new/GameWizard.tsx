@@ -1411,6 +1411,8 @@ function WizardBody({
                 <PatsomeSetup
                   scoring={state.patsomeScoring}
                   onScoringChange={state.setPatsomeScoring}
+                  fourballAllowancePct={state.patsomeFourballAllowancePct}
+                  onFourballAllowanceChange={state.setPatsomeFourballAllowancePct}
                   disabled={state.lockGameMode}
                 />
               )}
@@ -1616,6 +1618,7 @@ function FormDataInputs({
     texasHandicapPct,
     ambroseHandicapPct,
     floridaHandicapPct,
+    teamHandicapRule,
     fourballAllowancePct,
     foursomesAllowancePct,
     greensomeAllowancePct,
@@ -1641,6 +1644,7 @@ function FormDataInputs({
     shambleScoring,
     minTeeShots,
     patsomeScoring,
+    patsomeFourballAllowancePct,
     orderedPayload,
     unassignedPlayerIds,
     courseId,
@@ -1732,6 +1736,11 @@ function FormDataInputs({
             name="texas_team_handicap_pct"
             value={String(texasHandicapPct)}
           />
+          <input
+            type="hidden"
+            name="texas_team_handicap_rule"
+            value={teamHandicapRule ?? ''}
+          />
         </>
       )}
       {isAmbrose && (
@@ -1742,6 +1751,11 @@ function FormDataInputs({
             name="ambrose_team_handicap_pct"
             value={String(ambroseHandicapPct)}
           />
+          <input
+            type="hidden"
+            name="ambrose_team_handicap_rule"
+            value={teamHandicapRule ?? ''}
+          />
         </>
       )}
       {isFlorida && (
@@ -1751,6 +1765,11 @@ function FormDataInputs({
             type="hidden"
             name="florida_team_handicap_pct"
             value={String(floridaHandicapPct)}
+          />
+          <input
+            type="hidden"
+            name="florida_team_handicap_rule"
+            value={teamHandicapRule ?? ''}
           />
         </>
       )}
@@ -1857,7 +1876,15 @@ function FormDataInputs({
         </>
       )}
       {isPatsome && (
-        <input type="hidden" name="patsome_scoring" value={patsomeScoring} />
+        <>
+          <input type="hidden" name="patsome_scoring" value={patsomeScoring} />
+          {/* #3002 (F24): empty for a stored game without the share, so a save adds no key. */}
+          <input
+            type="hidden"
+            name="patsome_fourball_allowance_pct"
+            value={patsomeFourballAllowancePct ?? ''}
+          />
+        </>
       )}
 
       <input type="hidden" name="course_id" value={courseId} />

@@ -22,6 +22,9 @@ describe('Patsome-oppsettet er nettets', () => {
     expect(PATSOME_TEXT.gross).toBe(patsome.scoringGrossTitle);
     expect(PATSOME_TEXT.netDesc).toBe(patsome.scoringNetDesc);
     expect(PATSOME_TEXT.grossDesc).toBe(patsome.scoringGrossDesc);
+    // #3002 (F24): andelen på hull 1–6.
+    expect(PATSOME_TEXT.fourballAllowanceLabel).toBe(patsome.fourballAllowanceLabel);
+    expect(PATSOME_TEXT.fourballAllowanceHint).toBe(patsome.fourballAllowanceHint);
   });
 
   it.each([0, 1, 2] as const)('segment %i', (i) => {
@@ -78,6 +81,15 @@ describe('scramble-familien og shamble er nettets (D3b)', () => {
     expect(TEAM_HANDICAP_TEXT.inputLabel).toBe(web.inputLabel);
     for (const size of [2, 3, 4] as const) {
       expect(TEAM_HANDICAP_TEXT.nettoHelper[mode][size]).toBe(web[`nettoHelper${size}`]);
+    }
+  });
+
+  it('valgkortene og forbundets tabell (#3002, F23)', () => {
+    const props = wizard.allowanceProps as unknown as Record<string, string>;
+    expect(TEAM_HANDICAP_TEXT.ruleNgfTitle).toBe(props.ruleNgfTitle);
+    expect(TEAM_HANDICAP_TEXT.rulePctTitle).toBe(props.rulePctTitle);
+    for (const size of [2, 3, 4] as const) {
+      expect(TEAM_HANDICAP_TEXT.ngfHelper[size]).toBe(props[`ngfHelper${size}`]);
     }
   });
 

@@ -14,6 +14,8 @@ describe('PatsomeSetup', () => {
       <PatsomeSetup
         scoring="net"
         onScoringChange={onScoringChange}
+        fourballAllowancePct={85}
+        onFourballAllowanceChange={vi.fn()}
       />,
     );
 
@@ -35,5 +37,51 @@ describe('PatsomeSetup', () => {
     // Klikk Brutto → onScoringChange('gross').
     fireEvent.click(bruttoRadio);
     expect(onScoringChange).toHaveBeenCalledWith('gross');
+  });
+});
+
+// #3002 (F24): the share on holes 1–6 sits under Netto, starts on what the
+// parent holds, and hides in Brutto.
+describe('PatsomeSetup — handicap-andel på hull 1–6 (#3002)', () => {
+  it('shows the share under Netto and commits a whole 0–100', () => {
+    const onFourballAllowanceChange = vi.fn();
+    render(
+      <PatsomeSetup
+        scoring="net"
+        onScoringChange={vi.fn()}
+        fourballAllowancePct={85}
+        onFourballAllowanceChange={onFourballAllowanceChange}
+      />,
+    );
+    const input = screen.getByRole('spinbutton', { name: /hull 1–6/ }) as HTMLInputElement;
+    expect(input.value).toBe('85');
+    fireEvent.change(input, { target: { value: '90' } });
+    expect(onFourballAllowanceChange).toHaveBeenLastCalledWith(90);
+    fireEvent.change(input, { target: { value: '101' } });
+    expect(onFourballAllowanceChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('a stored game without the share shows the full handicap, 100', () => {
+    render(
+      <PatsomeSetup
+        scoring="net"
+        onScoringChange={vi.fn()}
+        fourballAllowancePct={null}
+        onFourballAllowanceChange={vi.fn()}
+      />,
+    );
+    expect((screen.getByRole('spinbutton', { name: /hull 1–6/ }) as HTMLInputElement).value).toBe('100');
+  });
+
+  it('hides the share in Brutto', () => {
+    render(
+      <PatsomeSetup
+        scoring="gross"
+        onScoringChange={vi.fn()}
+        fourballAllowancePct={85}
+        onFourballAllowanceChange={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('spinbutton')).toBeNull();
   });
 });

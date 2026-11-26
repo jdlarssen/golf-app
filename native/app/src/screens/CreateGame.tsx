@@ -493,6 +493,13 @@ export function CreateGame({ navigation, route }: ScreenProps<'CreateGame'>) {
         gameMode && isScrambleFamily(gameMode) && setupText.allowance !== ''
           ? averagePctToSumPct(Number(setupText.allowance), effectiveTeamSize(gameMode, setup))
           : undefined,
+      // #3002 (F24): patsome bruker andel-teksten til andelen på hull 1–6.
+      // Den skriver aldri `hcp_allowance_pct`: hull 7–18 regner av fullt
+      // banehandicap. Tomt = 85, formatets start.
+      patsomeFourballAllowancePct:
+        gameMode === 'patsome' && setupText.allowance !== ''
+          ? Number(setupText.allowance)
+          : undefined,
     }),
     [gameMode, setup, setupText],
   );

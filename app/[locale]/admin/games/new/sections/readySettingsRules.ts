@@ -15,7 +15,9 @@ export type HandicapValue =
   | { kind: 'net'; pct: number }
   | { kind: 'gross' }
   /** Scramble family: percent of the team's average handicap. */
-  | { kind: 'teamAverage'; pct: number };
+  | { kind: 'teamAverage'; pct: number }
+  /** Scramble family on NGF's weighting per player (#3002, F23). */
+  | { kind: 'teamNgf' };
 
 export type ReadySettingsValue =
   | { key: 'handicap'; value: HandicapValue }
@@ -74,6 +76,8 @@ export type ReadySettingsInput = {
   texasHandicapPct: number;
   ambroseHandicapPct: number;
   floridaHandicapPct: number;
+  /** The scramble rule (#3002): `'ngf'` = NGF's weighting; `null` = a stored game without one. */
+  teamHandicapRule: 'ngf' | 'pct' | null;
   /** The raw field text, as `entryFeeKr` in the form state. */
   entryFeeKr: string;
   scoreVisibility: 'live' | 'reveal';
@@ -105,6 +109,7 @@ function handicapValue(input: ReadySettingsInput): HandicapValue {
     case 'texas_scramble':
     case 'ambrose':
     case 'florida_scramble': {
+      if (input.teamHandicapRule === 'ngf') return { kind: 'teamNgf' };
       const sumPct =
         gameMode === 'texas_scramble'
           ? input.texasHandicapPct

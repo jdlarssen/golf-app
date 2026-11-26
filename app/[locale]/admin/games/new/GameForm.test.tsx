@@ -2082,14 +2082,18 @@ describe('GameForm — «Rediger spill» på en klubb-turnering (#2433)', () => 
   it('lagret rad uten lag-handicap (4-mannslag): feltet får standarden, ikke «Brutto» (#2566)', () => {
     // Old data without team_handicap_pct: the form seeds the default for the
     // team size (10 % of the sum = 40 % of the average) and shows it in
-    // «Netto», instead of a «Brutto» field that sends NaN and blocks the save.
+    // «Egen prosent», instead of a «Brutto» field that sends NaN and blocks
+    // the save. The row has no rule either (#3002), so the form posts none.
     const { container } = renderTexasEdit(
       { kind: 'texas_scramble', team_size: 4 } as unknown as EditGameRow['mode_config'],
       4,
     );
     expect(
-      container.querySelector<HTMLInputElement>('input[name=texas_team_handicap_pct__scoring_mode]:checked')!.value,
-    ).toBe('netto');
+      container.querySelector<HTMLInputElement>('input[name=texas_team_handicap_rule__choice]:checked')!.value,
+    ).toBe('pct');
+    expect(
+      container.querySelector<HTMLInputElement>('input[type=hidden][name=texas_team_handicap_rule]')!.value,
+    ).toBe('');
     expect(container.querySelector<HTMLInputElement>('#texas_team_handicap_pct__input')!.value).toBe('40');
     expect(
       container.querySelector<HTMLInputElement>('input[type=hidden][name=texas_team_handicap_pct]')!.value,
