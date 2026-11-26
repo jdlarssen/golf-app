@@ -36,6 +36,8 @@ import {
   leagueCardResultLine,
   leagueCardSubtitle,
   nextRoundOf,
+  myRoundCardLabel,
+  myRoundResult,
   openCardLabel,
   nextRoundOpens,
   openRoundOf,
@@ -68,6 +70,8 @@ describe('#2815: kortet bak et resultat i tabellen', () => {
       strokes: leagueCardResultLine({ format: 'stroke', value: 1, playingHandicap: 12 }),
       points: leagueCardResultLine({ format: 'stableford', value: 34, playingHandicap: 12 }),
       aria: openCardLabel('Martin', 'Runde 3'),
+      myUnit: LEAGUE_TEXT.myResultUnit,
+      myAria: myRoundCardLabel('Runde 1', '34 poeng'),
     }).toEqual({
       kicker: card.kicker,
       unknownPlayer: card.unknownPlayer,
@@ -76,6 +80,9 @@ describe('#2815: kortet bak et resultat i tabellen', () => {
       strokes: `${fill(card.result, { value: '+1' })} · ${fill(card.playingHandicap, { hcp: '12' })}`,
       points: `${fill(card.resultPoints, { value: '34' })} · ${fill(card.playingHandicap, { hcp: '12' })}`,
       aria: fill(source.liga.standings.openCardAriaLabel, { name: 'Martin', round: 'Runde 3' }),
+      // #2980: rundelista
+      myUnit: player.myResultUnit,
+      myAria: fill(player.myResultCardAria, { round: 'Runde 1', result: '34 poeng' }),
     });
   });
 
@@ -86,6 +93,24 @@ describe('#2815: kortet bak et resultat i tabellen', () => {
       leagueCardResultLine({ format: 'modified_stableford', value: -3, playingHandicap: null }),
       leagueCardHeading(null),
     ]).toEqual(['Resultat: E', 'Resultat: −2 · Spillehandicap 5', 'Resultat: -3 poeng', 'Kortet til Ukjent spiller']);
+  });
+});
+
+describe('#2980: tallet ditt i rundelista', () => {
+  it('skrives som cella i tabellen: poeng med ordet etter, slag mot par alene', () => {
+    expect([
+      myRoundResult(34, { format: 'stableford', standingsModel: 'best_n' }),
+      myRoundResult(36.5, { format: 'stableford', standingsModel: 'total' }),
+      myRoundResult(3, { format: 'stroke', standingsModel: 'total' }),
+      myRoundResult(0, { format: 'stroke', standingsModel: 'best_n' }),
+      myRoundResult(10, { format: 'stroke', standingsModel: 'points' }),
+    ]).toEqual([
+      { value: '34', unit: 'poeng' },
+      { value: '36,5', unit: 'poeng' },
+      { value: '+3', unit: null },
+      { value: 'E', unit: null },
+      { value: '10', unit: 'poeng' },
+    ]);
   });
 });
 
