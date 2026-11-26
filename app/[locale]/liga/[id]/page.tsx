@@ -32,6 +32,8 @@ import { GetTheApp } from '@/components/app/GetTheApp';
 import { participantShareUrl } from '@/lib/league/joinCode';
 import { roundPlayedBy } from '@/lib/league/roundPlayedBy';
 import { isPointsBasedFormat } from '@/lib/league/flightFormat';
+import { leagueTable, myRoundCell } from '@/lib/league/standingsFormat';
+import { RoundMyResult } from '@/components/league/RoundMyResult';
 import { tableRoundsNow } from '@/lib/league/tableRoundsNow';
 import type { LeagueFormat, LeagueScoring, StandingsModel } from '@/lib/league/types';
 import { leagueFormatLine } from '@/lib/league/leagueFormatLine';
@@ -274,6 +276,10 @@ export default async function LigaPublicPage({
   const openRound = rounds.find((r) => windowStatus(r.opensAt, r.closesAt) === 'open') ?? null;
   // #1378: the table only gets columns for rounds that have opened.
   const table = tableRoundsNow(rounds);
+  // #2980: your number per round in the round list, from the league's own axis
+  // (the app's table reads the same one).
+  const myRows = leagueTable(standings, league.scoring)?.rows ?? [];
+  const pointsBased = isPointsBasedFormat(league.format as LeagueFormat);
 
   const participantNames = participants.map((p) => ({
     userId: p.userId,
@@ -426,7 +432,7 @@ export default async function LigaPublicPage({
             participants={participants}
             standingsModel={league.standings_model}
             bestNCount={league.best_n_count}
-            pointsBased={isPointsBasedFormat(league.format as LeagueFormat)}
+            pointsBased={pointsBased}
             openRoundId={table.openRoundId}
             leagueId={cardLeagueId}
           />
@@ -460,36 +466,16 @@ export default async function LigaPublicPage({
               return (
                 <li key={round.id} data-testid="liga-round">
                   <Card className="p-4 sm:p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-sans text-xs font-semibold text-muted">
-                            {t('roundLabel', { sequence: round.sequence })}
-                          </span>
-                          {/* Window chip */}
-                          <span
-                            className="inline-block rounded-full px-2 py-0.5 font-sans text-xs font-semibold"
-                            style={WINDOW_CHIP_STYLES[ws]}
-                          >
-                            {t(`windowChip.${ws}` as Parameters<typeof t>[0])}
-                          </span>
-                        </div>
-                        <p className="font-serif text-base text-text">
-                          {round.label}
-                        </p>
-                        <p className="mt-0.5 text-xs text-muted">
-                          {fmtWindow(round.opensAt, locale)} – {fmtWindow(round.closesAt, locale)}
-                        </p>
-                        {round.flightCount > 0 && (
-                          <p className="mt-0.5 text-xs text-muted">
-                            {t('roundFlightCount', { count: round.flightCount })}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Action area */}
-                      <div className="shrink-0 self-center">
-                        {myWait ? (
+                    <RoundMyResult
+                      mine={myRoundCell(myRows, currentUserId, round.id, league.standings_model)}
+                      awaiting={myWait !== undefined}
+                      model={league.standings_model}
+                      pointsBased={pointsBased}
+                      leagueId={cardLeagueId}
+                      userId={currentUserId}
+                      roundLabel={round.label}
+                      action={
+                        myWait ? (
                           <span
                             className="block max-w-[140px] text-right text-xs text-muted"
                             data-testid="liga-round-awaiting-marker"
@@ -519,9 +505,35 @@ export default async function LigaPublicPage({
                           <span className="text-xs text-muted">
                             {t('opensOn', { date: fmtWindow(round.opensAt, locale) })}
                           </span>
-                        ) : null}
+                        ) : null
+                      }
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-sans text-xs font-semibold text-muted">
+                            {t('roundLabel', { sequence: round.sequence })}
+                          </span>
+                          {/* Window chip */}
+                          <span
+                            className="inline-block rounded-full px-2 py-0.5 font-sans text-xs font-semibold"
+                            style={WINDOW_CHIP_STYLES[ws]}
+                          >
+                            {t(`windowChip.${ws}` as Parameters<typeof t>[0])}
+                          </span>
+                        </div>
+                        <p className="font-serif text-base text-text">
+                          {round.label}
+                        </p>
+                        <p className="mt-0.5 text-xs text-muted">
+                          {fmtWindow(round.opensAt, locale)} – {fmtWindow(round.closesAt, locale)}
+                        </p>
+                        {round.flightCount > 0 && (
+                          <p className="mt-0.5 text-xs text-muted">
+                            {t('roundFlightCount', { count: round.flightCount })}
+                          </p>
+                        )}
                       </div>
-                    </div>
+                    </RoundMyResult>
                     {ws === 'open' && (
                       <RoundPlayedByList
                         groups={roundPlayedBy(

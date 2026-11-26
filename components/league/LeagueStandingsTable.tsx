@@ -16,7 +16,7 @@ import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
 import { playerName } from '@/lib/names/playerName';
 
 /** The locale's decimal for the shared formatters (`lib/league/standingsFormat`). */
-function localeDecimal(locale: AppLocale): FormatDecimal {
+export function localeDecimal(locale: AppLocale): FormatDecimal {
   return (value, decimals) =>
     formatNumber(value, locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
