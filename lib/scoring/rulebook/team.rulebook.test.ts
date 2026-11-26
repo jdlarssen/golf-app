@@ -103,12 +103,27 @@ describe('Patsome: greensome- og foursomes-delen etter vedlegg C', () => {
   });
 });
 
-describe('Kjent avvik', () => {
+// #3002 rettet F23 og F24. Nye spill får nøklene `team_handicap_rule:
+// 'ngf_weighted'` (Texas og Florida) og `fourball_allowance_pct: 85`
+// (patsome). Et spill uten nøkkel beholder tallene det ble laget med, så hver
+// rad har en søstertest som låser dagens tall.
+describe('Vedlegg C: scramble vekter hver spiller (F23, rettet i #3002)', () => {
   // NGF vedlegg C s. 75, scramble (4 spillere): «25 % / 20 % / 15 % / 10 % fra
   // lavest til høyest spillehandicap». The four from C/2 (10, 18, 27, 39):
-  // 2,5 + 3,6 + 4,05 + 3,9 = 14,05 → 14. Texas takes one share of the sum: its
-  // start value for four is 10 % of 94 = 9,4 → 9 (teamHandicap.ts).
-  it.fails('F23: Texas med fire spillere vekter etter vedlegg C: 10, 18, 27 og 39 gir 14', () => {
+  // 2,5 + 3,6 + 4,05 + 3,9 = 14,05 → 14.
+  it('F23: Texas med fire spillere vekter etter vedlegg C: 10, 18, 27 og 39 gir 14', () => {
+    const result = computeTexas(
+      ctx(
+        'texas_scramble',
+        { kind: 'texas_scramble', team_size: 4, teams_count: 1, team_handicap_pct: 10, team_handicap_rule: 'ngf_weighted' },
+        team(10, 18, 27, 39),
+      ),
+    );
+    expect(result.teams[0].teamHandicap).toBe(14);
+  });
+
+  // A game without the key takes one share of the sum: 10 % of 94 = 9,4 → 9.
+  it('F23: Texas uten nøkkel beholder én andel av summen: 9', () => {
     const result = computeTexas(
       ctx(
         'texas_scramble',
@@ -116,23 +131,47 @@ describe('Kjent avvik', () => {
         team(10, 18, 27, 39),
       ),
     );
-    expect(result.teams[0].teamHandicap).toBe(14);
+    expect(result.teams[0].teamHandicap).toBe(9);
   });
 
   // Scramble (2 spillere): «35 % laveste / 15 % høyeste spillehandicap».
-  // 10 and 18: 3,5 + 2,7 = 6,2 → 6. Ambrose's start value for two is 25 % of
-  // the sum: 7.
-  it.fails('F23: Ambrose med to spillere vekter etter vedlegg C: 10 og 18 gir 6', () => {
+  // 10 and 18: 3,5 + 2,7 = 6,2 → 6. New Ambrose games keep the Ambrose
+  // formula (the owner, 24.11), but an organiser who picks the weighting gets
+  // the table.
+  it('F23: Ambrose med to spillere og vekting etter vedlegg C: 10 og 18 gir 6', () => {
     const result = computeAmbrose(
-      ctx('ambrose', { kind: 'ambrose', team_size: 2, teams_count: 1, team_handicap_pct: 25 }, team(10, 18)),
+      ctx(
+        'ambrose',
+        { kind: 'ambrose', team_size: 2, teams_count: 1, team_handicap_pct: 25, team_handicap_rule: 'ngf_weighted' },
+        team(10, 18),
+      ),
     );
     expect(result.teams[0].teamHandicap).toBe(6);
   });
 
+  // The Ambrose formula, 25 % of the sum for two: 7.
+  it('F23: Ambrose uten nøkkel beholder Ambrose-formelen: 7', () => {
+    const result = computeAmbrose(
+      ctx('ambrose', { kind: 'ambrose', team_size: 2, teams_count: 1, team_handicap_pct: 25 }, team(10, 18)),
+    );
+    expect(result.teams[0].teamHandicap).toBe(7);
+  });
+
   // Scramble (3 spillere): «30 % / 20 % / 10 % fra lavest til høyest». 10, 18
-  // and 27: 3 + 3,6 + 2,7 = 9,3 → 9. Florida's start value for three is 15 %
-  // of 55 = 8,25 → 8.
-  it.fails('F23: Florida med tre spillere vekter etter vedlegg C: 10, 18 og 27 gir 9', () => {
+  // and 27: 3 + 3,6 + 2,7 = 9,3 → 9.
+  it('F23: Florida med tre spillere vekter etter vedlegg C: 10, 18 og 27 gir 9', () => {
+    const result = computeFlorida(
+      ctx(
+        'florida_scramble',
+        { kind: 'florida_scramble', team_size: 3, teams_count: 1, team_handicap_pct: 15, team_handicap_rule: 'ngf_weighted' },
+        team(10, 18, 27),
+      ),
+    );
+    expect(result.teams[0].teamHandicap).toBe(9);
+  });
+
+  // 15 % of 55 = 8,25 → 8.
+  it('F23: Florida uten nøkkel beholder én andel av summen: 8', () => {
     const result = computeFlorida(
       ctx(
         'florida_scramble',
@@ -140,37 +179,48 @@ describe('Kjent avvik', () => {
         team(10, 18, 27),
       ),
     );
-    expect(result.teams[0].teamHandicap).toBe(9);
+    expect(result.teams[0].teamHandicap).toBe(8);
   });
+});
 
+describe('Vedlegg C: patsomes four-ball-del på 85 % (F24, rettet i #3002)', () => {
   // Patsome's holes 1-6 are four-ball stableford: each partner's points, the
   // best counts. Patsome is not in vedlegg C; its four-ball part is the
   // «Four-Ball Stableford 85 %» row, and its greensome and foursomes parts
   // already follow their rows. Banehandicap 20 at 85 % is 17: one stroke on
   // index 1-17 and none on 18, so a 5 on a par 4 is net 4 on index 17 and net
   // 5 on index 18. 80 % (16) would give no stroke on 17 and 90 % (18) one on
-  // 18, so the pair pins 85 %. The engine gives the full 20: net 4 on both.
-  it.fails('F24: patsomes four-ball-del gir 85 % av banehandicapet', () => {
-    const holes = PAR4_18.map((h) =>
-      h.number === 1 ? { ...h, strokeIndex: 17 } : h.number === 2 ? { ...h, strokeIndex: 18 } : h.number === 17 ? { ...h, strokeIndex: 1 } : h.number === 18 ? { ...h, strokeIndex: 2 } : h,
-    );
-    const result = computePatsome(
-      ctx(
-        'patsome',
-        { kind: 'patsome', team_size: 2, teams_count: 1, patsome_scoring: 'net' },
-        team(20, 20),
-        holes,
-        [1, 2].flatMap((holeNumber) => [
-          { userId: 'a', holeNumber, gross: 5 },
-          { userId: 'b', holeNumber, gross: 5 },
-        ]),
-      ),
-    );
+  // 18, so the pair pins 85 %.
+  const holes = PAR4_18.map((h) =>
+    h.number === 1 ? { ...h, strokeIndex: 17 } : h.number === 2 ? { ...h, strokeIndex: 18 } : h.number === 17 ? { ...h, strokeIndex: 1 } : h.number === 18 ? { ...h, strokeIndex: 2 } : h,
+  );
+  const fiveOnHoles1And2 = [1, 2].flatMap((holeNumber) => [
+    { userId: 'a', holeNumber, gross: 5 },
+    { userId: 'b', holeNumber, gross: 5 },
+  ]);
+  const netOnHoles1And2 = (mode_config: GameModeConfig) => {
+    const result = computePatsome(ctx('patsome', mode_config, team(20, 20), holes, fiveOnHoles1And2));
     const net = (holeNumber: number) =>
       result.teams[0].holes.find((h) => h.holeNumber === holeNumber)!.players.map((p) => p.netStrokes);
-    expect([net(1), net(2)]).toEqual([
+    return [net(1), net(2)];
+  };
+
+  it('F24: patsomes four-ball-del gir 85 % av banehandicapet', () => {
+    expect(
+      netOnHoles1And2({ kind: 'patsome', team_size: 2, teams_count: 1, patsome_scoring: 'net', fourball_allowance_pct: 85 }),
+    ).toEqual([
       [4, 4],
       [5, 5],
+    ]);
+  });
+
+  // A game without the key gives the full 20: net 4 on both.
+  it('F24: patsome uten nøkkel beholder hele banehandicapet på hull 1-6', () => {
+    expect(
+      netOnHoles1And2({ kind: 'patsome', team_size: 2, teams_count: 1, patsome_scoring: 'net' }),
+    ).toEqual([
+      [4, 4],
+      [4, 4],
     ]);
   });
 });

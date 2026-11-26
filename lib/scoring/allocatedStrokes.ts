@@ -19,6 +19,7 @@ import { matchDifferenceStrokes } from './matchStrokes';
 import { alternateShotExtras, alternateShotSideStrokes } from './modes/foursomesMatchplay';
 import { readTeamStrokesOverride } from './modes/greensomeMatchplay';
 import { asScoringGender } from './modes/parResolver';
+import { patsomeFourballHandicap, readPatsomeFourballAllowancePct } from './modes/patsome';
 import { singlesStrokeHandicap } from './modes/singlesMatchplay';
 import type { GameMode, GameModeConfig, ScoringGender, ScoringHole } from './modes/types';
 import { parDifferenceStrokes, usesParDifference, withParDifference } from './parDifference';
@@ -51,6 +52,7 @@ type GrossField =
 type StrokeRule =
   | { kind: 'allowance'; configKind: 'fourball_matchplay' | 'round_robin'; fallbackPct: number }
   | { kind: 'gross_option'; field: GrossField }
+  | { kind: 'patsome_fourball' }
   | { kind: 'wolf' }
   | { kind: 'raw' };
 
@@ -75,7 +77,7 @@ function strokeRuleFor(mode: GameMode): StrokeRule {
     case 'shamble':
       return { kind: 'gross_option', field: 'shamble_scoring' };
     case 'patsome':
-      return { kind: 'gross_option', field: 'patsome_scoring' };
+      return { kind: 'patsome_fourball' };
     case 'wolf':
       return { kind: 'wolf' };
     case 'best_ball':
@@ -114,7 +116,9 @@ function strokeRuleFor(mode: GameMode): StrokeRule {
  *   (`fourballMatchplay.ts`). `basis` er det urundede banehandicapet når
  *   starten frøs det, ellers `ch` (`strokeBasis`, #2997).
  * - Round robin: samme, fallback 85 (`roundRobin.ts`).
- * - Skins, nassau, nines, acey deucey, shamble og patsome: 0 i brutto, ellers `ch`.
+ * - Skins, nassau, nines, acey deucey og shamble: 0 i brutto, ellers `ch`.
+ * - Patsome (hull 1–6): 0 i brutto; med `fourball_allowance_pct` den andelen av
+ *   `basis` (#3002, F24), uten nøkkelen `ch` (`patsomeFourballHandicap`).
  * - Wolf: 0 når `wolf_scoring` er brutto, ellers `ch`.
  * - Best ball, stableford-familien, singles, solo slagspill og BBB: `ch` rått.
  *   BBB bruker ikke slag i motoren; kortet beholder fullt banehandicap.
@@ -142,6 +146,14 @@ export function playerStrokeHandicap(
       );
     case 'gross_option':
       return isGross(config, rule.field) ? 0 : courseHandicap;
+    case 'patsome_fourball':
+      // #3002 (F24): holes 1–6 on `fourball_allowance_pct` when the game has it.
+      return patsomeFourballHandicap(
+        courseHandicap,
+        rawCourseHandicap,
+        isGross(config, 'patsome_scoring') ? 'gross' : 'net',
+        readPatsomeFourballAllowancePct(config),
+      );
     case 'wolf':
       return config.kind === 'wolf' && config.wolf_scoring === 'gross' ? 0 : courseHandicap;
     case 'raw':

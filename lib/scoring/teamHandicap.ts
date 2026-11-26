@@ -22,8 +22,14 @@
 // #2997 (F16/F25): `sideHandicap` er lag-tallet i lagformatene med egen
 // prosent (alternate shot, scramble-familien og patsome), regnet av det urundede
 // banehandicapet når starten frøs det (NGF 6.2a, avklaring 6.2a/1, s. 55).
+//
+// #3002 (F23): et nytt Texas- eller Florida-spill vekter hver spiller etter
+// NGF vedlegg C s. 75 (`team_handicap_rule: 'ngf_weighted'`). Et spill uten
+// nøkkelen beholder én prosent av summen over. `scrambleTeamHandicapFor`
+// velger mellom dem, og motoren, scorekortet og hullsiden kaller den.
 
 import { roundHalfUp } from './courseHandicap';
+import type { GameModeConfig } from './modes/types';
 
 /**
  * How a team's (a side's) handicap comes from its players' course handicaps:
@@ -37,6 +43,16 @@ export type SideRule = 'sum' | 'sixtyForty';
 export interface SidePlayer {
   courseHandicap: number;
   rawCourseHandicap?: number | null;
+}
+
+/**
+ * The numbers a team's handicap is taken of: the unrounded course handicaps
+ * when the start froze them for every player (#2997), otherwise the frozen
+ * integers. Same rule as `sideHandicap`.
+ */
+function sideBases(players: readonly SidePlayer[]): number[] {
+  const exact = players.length > 0 && players.every((p) => p.rawCourseHandicap != null);
+  return players.map((p) => (exact ? (p.rawCourseHandicap as number) : p.courseHandicap));
 }
 
 function combine(rule: SideRule, values: readonly number[]): number {
@@ -61,8 +77,8 @@ function combine(rule: SideRule, values: readonly number[]): number {
  */
 export function sideHandicap(rule: SideRule, players: readonly SidePlayer[]): number {
   const exact = players.length > 0 && players.every((p) => p.rawCourseHandicap != null);
-  if (exact) return combine(rule, players.map((p) => p.rawCourseHandicap as number));
-  return roundHalfUp(combine(rule, players.map((p) => p.courseHandicap)));
+  const combined = combine(rule, sideBases(players));
+  return exact ? combined : roundHalfUp(combined);
 }
 
 /**
@@ -85,5 +101,85 @@ export function scrambleTeamHandicap(
   }
   return Math.round(
     (combinedCourseHandicap * sumPct * configuredTeamSize) / (actualTeamSize * 100),
+  );
+}
+
+/**
+ * NGF vedlegg C s. 75, scramble: each player's share, from the lowest to the
+ * highest handicap, per team size (#3002, F23).
+ */
+export const NGF_SCRAMBLE_WEIGHTS: Readonly<Record<2 | 3 | 4, readonly number[]>> = {
+  2: [35, 15],
+  3: [30, 20, 10],
+  4: [25, 20, 15, 10],
+};
+
+/**
+ * The team handicap by NGF's weighting: the handicaps sorted from the lowest,
+ * each times its share, summed and rounded once. 10, 18, 27 and 39 give
+ * 2,5 + 3,6 + 4,05 + 3,9 = 14,05 → 14. A plus handicap counts with its sign.
+ * `null` for a team the table has no row for (one player, or more than four).
+ */
+export function ngfWeightedTeamHandicap(bases: readonly number[]): number | null {
+  const weights =
+    bases.length === 2 || bases.length === 3 || bases.length === 4
+      ? NGF_SCRAMBLE_WEIGHTS[bases.length]
+      : null;
+  if (!weights) return null;
+  const sorted = [...bases].sort((a, b) => a - b);
+  const weighted = sorted.reduce((sum, base, i) => sum + base * weights[i], 0);
+  return roundHalfUp(weighted / 100);
+}
+
+/** The keys of a scramble `mode_config` (Texas, Ambrose, Florida) the team handicap reads. */
+export interface ScrambleHandicapConfig {
+  team_size: number;
+  team_handicap_pct: number;
+  team_handicap_rule?: 'ngf_weighted' | 'sum_pct';
+}
+
+/**
+ * The scramble keys of a game's `mode_config`, for the views. Another kind
+ * reads as gross (0 %), as the engines' `compute` does.
+ */
+export function scrambleHandicapConfig(config: GameModeConfig): ScrambleHandicapConfig {
+  if (
+    config.kind === 'texas_scramble' ||
+    config.kind === 'ambrose' ||
+    config.kind === 'florida_scramble'
+  ) {
+    return {
+      team_size: config.team_size,
+      team_handicap_pct: config.team_handicap_pct,
+      team_handicap_rule: config.team_handicap_rule,
+    };
+  }
+  return { team_size: config.team_size, team_handicap_pct: 0 };
+}
+
+/**
+ * A scramble team's handicap by the rule the game was created with, one home
+ * for the engine, the scorecard and the hole page (#3002, F23):
+ *
+ * - `'ngf_weighted'` and two to four players: NGF's weighting per player
+ *   (`ngfWeightedTeamHandicap`). A team one player short takes the row for its
+ *   own size, so a team of three in a game of four gets 30/20/10 %.
+ * - Otherwise, also with no key (every game created before #3002), or a draft
+ *   team outside the table: the stored share of the sum,
+ *   `scrambleTeamHandicap` (#2569).
+ */
+export function scrambleTeamHandicapFor(
+  config: ScrambleHandicapConfig,
+  members: readonly SidePlayer[],
+): number {
+  if (config.team_handicap_rule === 'ngf_weighted') {
+    const weighted = ngfWeightedTeamHandicap(sideBases(members));
+    if (weighted !== null) return weighted;
+  }
+  return scrambleTeamHandicap(
+    sideHandicap('sum', members),
+    config.team_handicap_pct,
+    config.team_size,
+    members.length,
   );
 }

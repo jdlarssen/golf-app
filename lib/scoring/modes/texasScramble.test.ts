@@ -1119,3 +1119,51 @@ describe('texasScramble.compute — lag-handicap av urundet banehandicap (#2997,
     expect(run(false).teamHandicap).toBe(6);
   });
 });
+
+// #3002 (F23): a new Texas game weighs each player by NGF vedlegg C s. 75
+// (`team_handicap_rule: 'ngf_weighted'`); a game without the key keeps one
+// share of the sum.
+describe('texasScramble.compute — vekting per spiller (#3002, F23)', () => {
+  const weighted: GameModeConfig = {
+    kind: 'texas_scramble',
+    team_size: 4,
+    teams_count: 2,
+    team_handicap_pct: 10,
+    team_handicap_rule: 'ngf_weighted',
+  };
+  const p = (userId: string, teamNumber: number, courseHandicap: number): ScoringPlayer => ({
+    userId,
+    teamNumber,
+    flightNumber: teamNumber,
+    courseHandicap,
+  });
+  const players = [
+    p('a1', 1, 10), p('a2', 1, 18), p('a3', 1, 27), p('a4', 1, 39),
+    // a team of three in a game of four
+    p('b1', 2, 10), p('b2', 2, 18), p('b3', 2, 27),
+  ];
+  const teamHandicaps = (modeConfig: GameModeConfig) =>
+    Object.fromEntries(
+      compute(makeCtx({ players, holes: par4Holes(18), scores: [], modeConfig })).teams.map((t) => [
+        t.teamNumber,
+        t.teamHandicap,
+      ]),
+    );
+
+  it('fire spillere gir 14, laget på tre får trelagsraden: 9', () => {
+    expect(teamHandicaps(weighted)).toEqual({ 1: 14, 2: 9 });
+  });
+
+  it('uten nøkkel: 10 % av summen, og laget på tre får samme prosent av snittet', () => {
+    // 94 × 10 % = 9,4 → 9; 55 × 10 % × 4/3 = 7,33 → 7 (#2569).
+    const { team_handicap_rule: _rule, ...legacy } = weighted as Extract<GameModeConfig, { kind: 'texas_scramble' }>;
+    expect(teamHandicaps(legacy)).toEqual({ 1: 9, 2: 7 });
+  });
+
+  it('slagene fordeles etter hullindeks: 14 gir ett slag på indeks 1–14', () => {
+    const line = compute(makeCtx({ players, holes: par4Holes(18), scores: [], modeConfig: weighted })).teams.find(
+      (t) => t.teamNumber === 1,
+    )!;
+    expect(line.holes.map((h) => h.teamExtraStrokes)).toEqual([...Array(14).fill(1), 0, 0, 0, 0]);
+  });
+});

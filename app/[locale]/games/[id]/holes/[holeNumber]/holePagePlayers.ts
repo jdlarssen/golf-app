@@ -4,7 +4,7 @@
 // lag-kollapsede modusene).
 
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
-import { scrambleTeamHandicap, sideHandicap } from '@/lib/scoring/teamHandicap';
+import { scrambleHandicapConfig, scrambleTeamHandicapFor } from '@/lib/scoring/teamHandicap';
 import { patsomeTeamHandicaps } from '@/lib/scoring/modes/patsome';
 import { modeCollapsesToTeamCard } from '@/lib/scoring/modes/types';
 import {
@@ -92,11 +92,12 @@ function alternateShotPlayer(p: PlayerForHole) {
  * kan taste på begge kortene. Handicap-formlene er identiske med eksisterende
  * logikk: begge lags tall produserer det den andre siden ser i dag.
  *
- * Lag-handicap beregnes etter NGF-konvensjon:
- *   teamHCP = round(combinedCourseHandicap × team_handicap_pct / 100)
- * og fordeles per hull via vanlig SI-allokering (strokesForHole). Et lag med
- * færre enn `team_size` får samme prosent av snittet (`scrambleTeamHandicap`,
- * #2569), som tavla.
+ * Lag-handicapet i scramble kommer fra motorens hjem,
+ * `scrambleTeamHandicapFor`: NGFs vekting per spiller for et spill med
+ * `team_handicap_rule: 'ngf_weighted'` (#3002), ellers
+ *   teamHCP = round(combinedCourseHandicap × team_handicap_pct / 100),
+ * der et lag med færre enn `team_size` får samme prosent av snittet (#2569).
+ * Slagene fordeles per hull via vanlig SI-allokering (strokesForHole), som tavla.
  */
 export function buildPlayersForClient(args: {
   game: GameForHole;
@@ -236,18 +237,11 @@ export function buildPlayersForClient(args: {
       const handicaps = patsomeTeamHandicaps(teamPlayers.map(sidePlayer), patsomeScoring);
       return holeNumber <= 12 ? handicaps.greensome : handicaps.foursomes;
     } else {
-      // Texas/ambrose/florida
-      const handicapPct =
-        game.mode_config.kind === 'texas_scramble' ||
-        game.mode_config.kind === 'ambrose' ||
-        game.mode_config.kind === 'florida_scramble'
-          ? game.mode_config.team_handicap_pct
-          : 0;
-      return scrambleTeamHandicap(
-        sideHandicap('sum', teamPlayers.map(sidePlayer)),
-        handicapPct,
-        game.mode_config.team_size,
-        teamPlayers.length,
+      // Texas/ambrose/florida: the engine's home, NGF's weighting or the
+      // share of the sum by the game's rule (#3002).
+      return scrambleTeamHandicapFor(
+        scrambleHandicapConfig(game.mode_config),
+        teamPlayers.map(sidePlayer),
       );
     }
   }

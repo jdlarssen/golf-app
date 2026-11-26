@@ -8,6 +8,7 @@ import {
 import * as singlesMatchplay from '@/lib/scoring/modes/singlesMatchplay';
 import * as fourballMatchplay from '@/lib/scoring/modes/fourballMatchplay';
 import * as greensomeMatchplay from '@/lib/scoring/modes/greensomeMatchplay';
+import * as texasScramble from '@/lib/scoring/modes/texasScramble';
 import { computeModifiedStablefordPoints } from '@/lib/scoring/modes/modifiedStableford';
 import type {
   ScoringContext,
@@ -1377,5 +1378,54 @@ describe('resolveScorecardLayout — ulik par (#2941, F17)', () => {
       ['a1', 0],
       ['b1', 2],
     ]);
+  });
+});
+
+// #3002 (F23): the scorecard's team handicap is the engine's, for a weighted
+// game (a full team and a team of three in a game of four) and a game
+// without the key.
+describe('resolveScorecardLayout — scramble-vekting som motoren (#3002, F23)', () => {
+  const roster = [
+    player('a1', 1, { course_handicap: 10 }),
+    player('a2', 1, { course_handicap: 18 }),
+    player('a3', 1, { course_handicap: 27 }),
+    player('a4', 1, { course_handicap: 39 }),
+    player('b1', 2, { course_handicap: 10 }),
+    player('b2', 2, { course_handicap: 18 }),
+    player('b3', 2, { course_handicap: 27 }),
+  ];
+  const config = (weighted: boolean) => ({
+    kind: 'texas_scramble' as const,
+    team_size: 4 as const,
+    teams_count: 2,
+    team_handicap_pct: 10,
+    ...(weighted ? { team_handicap_rule: 'ngf_weighted' as const } : {}),
+  });
+
+  it.each([
+    { label: 'med vekting', weighted: true, expected: { 1: 14, 2: 9 } },
+    { label: 'uten nøkkel', weighted: false, expected: { 1: 9, 2: 7 } },
+  ])('$label: primaryHandicap = motorens teamHandicap', ({ weighted, expected }) => {
+    const game = { ...baseGame, game_mode: 'texas_scramble', mode_config: config(weighted) } as GameForHole;
+    const engine = texasScramble.compute({
+      game: { id: 'g1', game_mode: 'texas_scramble', mode_config: config(weighted) },
+      players: roster.map((p) => ({
+        userId: p.user_id,
+        teamNumber: p.team_number,
+        flightNumber: p.flight_number,
+        courseHandicap: p.course_handicap ?? 0,
+      })),
+      holes: [],
+      scores: [],
+    });
+    const fromEngine = Object.fromEntries(engine.teams.map((t) => [t.teamNumber, t.teamHandicap]));
+    const fromCard = Object.fromEntries(
+      [roster[0], roster[4]].map((me) => [
+        me.team_number,
+        resolveScorecardLayout(game, roster, me, false, fmt).primaryHandicap,
+      ]),
+    );
+    expect(fromEngine).toEqual(expected);
+    expect(fromCard).toEqual(expected);
   });
 });

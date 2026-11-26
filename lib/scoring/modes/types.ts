@@ -542,6 +542,14 @@ export type GameModeConfig =
       teams_count: number;
       team_handicap_pct: number;
       /**
+       * #3002 (F23): `'ngf_weighted'` weighs each player by NGF vedlegg C
+       * s. 75 (`scrambleTeamHandicapFor`); `'sum_pct'` takes
+       * `team_handicap_pct` of the sum. Written by the create and edit forms,
+       * never stamped. Absent = `'sum_pct'`: every game created before #3002,
+       * and by an app build from before it, keeps its numbers.
+       */
+      team_handicap_rule?: 'ngf_weighted' | 'sum_pct';
+      /**
        * #2580 «Hvem sitt utslag»: minimum tee shots per player over the round
        * (`lib/games/teeShots.ts`). Absent = off, every older game unchanged.
        * Never read by the scoring.
@@ -576,6 +584,14 @@ export type GameModeConfig =
       teams_count: number;
       team_handicap_pct: number;
       /**
+       * #3002 (F23): `'ngf_weighted'` weighs each player by NGF vedlegg C
+       * s. 75 (`scrambleTeamHandicapFor`); `'sum_pct'` takes
+       * `team_handicap_pct` of the sum. Written by the create and edit forms,
+       * never stamped. Absent = `'sum_pct'`: every game created before #3002,
+       * and by an app build from before it, keeps its numbers.
+       */
+      team_handicap_rule?: 'ngf_weighted' | 'sum_pct';
+      /**
        * #2580 «Hvem sitt utslag»: minimum tee shots per player over the round
        * (`lib/games/teeShots.ts`). Absent = off, every older game unchanged.
        * Never read by the scoring.
@@ -609,6 +625,14 @@ export type GameModeConfig =
       team_size: 3 | 4;
       teams_count: number;
       team_handicap_pct: number;
+      /**
+       * #3002 (F23): `'ngf_weighted'` weighs each player by NGF vedlegg C
+       * s. 75 (`scrambleTeamHandicapFor`); `'sum_pct'` takes
+       * `team_handicap_pct` of the sum. Written by the create and edit forms,
+       * never stamped. Absent = `'sum_pct'`: every game created before #3002,
+       * and by an app build from before it, keeps its numbers.
+       */
+      team_handicap_rule?: 'ngf_weighted' | 'sum_pct';
       /**
        * #2580 «Hvem sitt utslag»: minimum tee shots per player over the round
        * (`lib/games/teeShots.ts`). Absent = off, every older game unchanged.
@@ -979,6 +1003,13 @@ export type GameModeConfig =
        * Default 'net'. Speiler Wolf/Nassau/Skins/Nines-mønstret.
        */
       patsome_scoring: 'gross' | 'net';
+      /**
+       * #3002 (F24): the share of each player's course handicap on holes 1–6
+       * (four-ball stableford, NGF vedlegg C s. 75: 85 %), a whole 0–100.
+       * Written by the create and edit forms, never stamped. Absent = 100:
+       * every game created before #3002 keeps the full course handicap.
+       */
+      fourball_allowance_pct?: number;
       /**
        * #2738: a leftover, ignored like on the stableford configs above.
        * Patsome ranks on points only.

@@ -950,3 +950,66 @@ describe('patsome.compute — foursomes-hullene fordeler det urundede lag-handic
     expect(hole13(false).teamExtraStrokes).toBe(1);
   });
 });
+
+// #3002 (F24): holes 1–6 are four-ball stableford, NGF vedlegg C s. 75: 85 %.
+// A new game carries `fourball_allowance_pct`; a game without it keeps the
+// full course handicap. Hole 1 has index 17 and hole 2 index 18, so 17
+// strokes put one on hole 1 and none on hole 2.
+describe('patsome.compute — handicap-andel på hull 1–6 (#3002, F24)', () => {
+  const holes = makeHoles18().map((h) =>
+    h.number === 1 ? { ...h, strokeIndex: 17 } : h.number === 2 ? { ...h, strokeIndex: 18 } : h.number === 17 ? { ...h, strokeIndex: 1 } : h.number === 18 ? { ...h, strokeIndex: 2 } : h,
+  );
+  const players = (raw: number | null = null): ScoringPlayer[] => [
+    { ...makePlayer('a1', 1, 20), rawCourseHandicap: raw },
+    { ...makePlayer('a2', 1, 20), rawCourseHandicap: raw },
+    makePlayer('b1', 2, 0),
+    makePlayer('b2', 2, 0),
+  ];
+  const scores = [1, 2, 13].flatMap((n) => [makeScore('a1', n, 5), makeScore('a2', n, 5)]);
+  const config = (extra: Record<string, unknown>) => ({
+    kind: 'patsome',
+    team_size: 2,
+    teams_count: 2,
+    patsome_scoring: 'net',
+    ...extra,
+  });
+  const run = (extra: Record<string, unknown>, raw: number | null = null) => {
+    const line = compute(makeCtx({ players: players(raw), holes, scores, modeConfigOverride: config(extra) }))
+      .teams.find((t) => t.teamNumber === 1)!;
+    const net = (n: number) => line.holes.find((h) => h.holeNumber === n)!.players[0].netStrokes;
+    return { line, net };
+  };
+
+  it('85 % av 20 er 17 slag: netto 4 på indeks 17, netto 5 på indeks 18', () => {
+    const { net } = run({ fourball_allowance_pct: 85 });
+    expect([net(1), net(2)]).toEqual([4, 5]);
+  });
+
+  it('uten nøkkel: hele banehandicapet, 20 slag', () => {
+    const { net } = run({});
+    expect([net(1), net(2)]).toEqual([4, 4]);
+  });
+
+  it('100 i nøkkelen gir også 20 slag', () => {
+    const { net } = run({ fourball_allowance_pct: 100 });
+    expect([net(1), net(2)]).toEqual([4, 4]);
+  });
+
+  it('brutto gir 0 slag uansett andel', () => {
+    const { net } = run({ fourball_allowance_pct: 85, patsome_scoring: 'gross' });
+    expect([net(1), net(2)]).toEqual([5, 5]);
+  });
+
+  it('andelen tas av det urundede banehandicapet når starten frøs det', () => {
+    // 85 % av 20,4 = 17,34 → 17; av 21,4 (frosset som 21) = 18,19 → 18, som
+    // gir slag også på indeks 18.
+    expect(run({ fourball_allowance_pct: 85 }, 20.4).net(2)).toBe(5);
+    expect(run({ fourball_allowance_pct: 85 }, 21.4).net(2)).toBe(4);
+  });
+
+  it('hull 7–18 røres ikke: foursomes-hullet får samme lag-slag med og uten andel', () => {
+    const extra13 = (extra: Record<string, unknown>) =>
+      run(extra).line.holes.find((h) => h.holeNumber === 13)!.teamExtraStrokes;
+    expect(extra13({ fourball_allowance_pct: 85 })).toBe(extra13({}));
+  });
+});

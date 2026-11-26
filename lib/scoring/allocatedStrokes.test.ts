@@ -210,6 +210,10 @@ const PARITY_ROWS: Array<{
   { label: 'round robin 85 %, urundet', mode: 'round_robin', config: { ...ROUND_ROBIN, allowance_pct: 85 }, grouping: 'slots', raw: true },
   { label: 'singles matchplay, forskjellen, urundet tall leses ikke', mode: 'singles_matchplay', config: { kind: 'singles_matchplay', team_size: 1, teams_count: 2, match_strokes: 'difference' }, grouping: 'singles', raw: true },
   { label: 'patsome net, urundet', mode: 'patsome', config: { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net' }, grouping: 'sides', raw: true },
+  // #3002 (F24): a new patsome game plays holes 1–6 on 85 %.
+  { label: 'patsome net 85 %', mode: 'patsome', config: { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net', fourball_allowance_pct: 85 }, grouping: 'sides' },
+  { label: 'patsome net 85 %, urundet', mode: 'patsome', config: { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net', fourball_allowance_pct: 85 }, grouping: 'sides', raw: true },
+  { label: 'patsome gross 85 %', mode: 'patsome', config: { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'gross', fourball_allowance_pct: 85 }, grouping: 'sides' },
   { label: 'fourball 85 %', mode: 'fourball_matchplay', config: { ...FOURBALL, allowance_pct: 85 }, grouping: 'sides' },
   { label: 'fourball 0 %', mode: 'fourball_matchplay', config: { ...FOURBALL, allowance_pct: 0 }, grouping: 'sides' },
   { label: 'fourball 100 %', mode: 'fourball_matchplay', config: { ...FOURBALL, allowance_pct: 100 }, grouping: 'sides' },

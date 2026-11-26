@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { scrambleTeamHandicap, sideHandicap } from './teamHandicap';
+import {
+  NGF_SCRAMBLE_WEIGHTS,
+  ngfWeightedTeamHandicap,
+  scrambleTeamHandicap,
+  scrambleTeamHandicapFor,
+  sideHandicap,
+} from './teamHandicap';
 import { ambroseDefaultPct } from './modes/ambrose';
 
 // `team_handicap_pct` is stored as a percentage of the SUM, worked out for
@@ -122,5 +128,98 @@ describe('scrambleTeamHandicap on the unrounded sum (#2997, F25)', () => {
     const team = [{ courseHandicap: 10, rawCourseHandicap: 9.6 }, { courseHandicap: 12, rawCourseHandicap: 11.5 }];
     expect(scrambleTeamHandicap(sideHandicap('sum', team), 25, 2, 2)).toBe(5);
     expect(scrambleTeamHandicap(22, 25, 2, 2)).toBe(6);
+  });
+});
+
+// #3002 (F23): NGF vedlegg C s. 75 weighs each scramble player, from the
+// lowest to the highest handicap: four players 25/20/15/10 %, three 30/20/10 %,
+// two 35/15 %. Rounded once, at the end.
+describe('ngfWeightedTeamHandicap — NGF vedlegg C, scramble (#3002, F23)', () => {
+  it('holds the three rows of the table', () => {
+    expect(NGF_SCRAMBLE_WEIGHTS).toEqual({ 2: [35, 15], 3: [30, 20, 10], 4: [25, 20, 15, 10] });
+  });
+
+  it.each([
+    // 2,5 + 3,6 + 4,05 + 3,9 = 14,05
+    { bases: [10, 18, 27, 39], expected: 14 },
+    // the order the players come in does not matter
+    { bases: [39, 10, 27, 18], expected: 14 },
+    // 3 + 3,6 + 2,7 = 9,3
+    { bases: [10, 18, 27], expected: 9 },
+    // 3,5 + 2,7 = 6,2
+    { bases: [10, 18], expected: 6 },
+    // four on 20: 20 × 70 % = 14
+    { bases: [20, 20, 20, 20], expected: 14 },
+    // a plus handicap counts with its sign: −0,7 + 1,5 = 0,8
+    { bases: [-2, 10], expected: 1 },
+  ])('$bases → $expected', ({ bases, expected }) => {
+    expect(ngfWeightedTeamHandicap(bases)).toBe(expected);
+  });
+
+  it('rounds half up once: 10 and 11 give 3,5 + 1,65 = 5,15 → 5, 11 and 11 give 5,5 → 6', () => {
+    expect(ngfWeightedTeamHandicap([10, 11])).toBe(5);
+    expect(ngfWeightedTeamHandicap([11, 11])).toBe(6);
+  });
+
+  it('has no row for one player or for five: null', () => {
+    expect(ngfWeightedTeamHandicap([10])).toBeNull();
+    expect(ngfWeightedTeamHandicap([10, 12, 14, 16, 18])).toBeNull();
+    expect(ngfWeightedTeamHandicap([])).toBeNull();
+  });
+});
+
+describe('scrambleTeamHandicapFor — the rule the game was created with (#3002, F23)', () => {
+  const p = (courseHandicap: number, rawCourseHandicap?: number | null) => ({
+    courseHandicap,
+    rawCourseHandicap,
+  });
+  const four = [p(10), p(18), p(27), p(39)];
+
+  it("'ngf_weighted' weighs each player: 10, 18, 27 and 39 give 14", () => {
+    expect(
+      scrambleTeamHandicapFor({ team_size: 4, team_handicap_pct: 10, team_handicap_rule: 'ngf_weighted' }, four),
+    ).toBe(14);
+  });
+
+  it('without the key: today’s share of the sum, 10 % of 94 = 9', () => {
+    expect(scrambleTeamHandicapFor({ team_size: 4, team_handicap_pct: 10 }, four)).toBe(9);
+    expect(
+      scrambleTeamHandicapFor({ team_size: 4, team_handicap_pct: 10, team_handicap_rule: 'sum_pct' }, four),
+    ).toBe(9);
+  });
+
+  it('a team of three in a game of four takes the row for three: 30/20/10', () => {
+    expect(
+      scrambleTeamHandicapFor(
+        { team_size: 4, team_handicap_pct: 10, team_handicap_rule: 'ngf_weighted' },
+        [p(10), p(18), p(27)],
+      ),
+    ).toBe(9);
+  });
+
+  it('a team of two in a game of three takes the row for two: 35/15', () => {
+    expect(
+      scrambleTeamHandicapFor(
+        { team_size: 3, team_handicap_pct: 15, team_handicap_rule: 'ngf_weighted' },
+        [p(10), p(18)],
+      ),
+    ).toBe(6);
+  });
+
+  it('weighs the unrounded course handicaps when the start froze them', () => {
+    // 9,6 and 19,6: 3,36 + 2,94 = 6,3 → 6. The integers 10 and 20 the start
+    // froze give 3,5 + 3 = 6,5 → 7.
+    const rule = { team_size: 2, team_handicap_pct: 25, team_handicap_rule: 'ngf_weighted' as const };
+    expect(scrambleTeamHandicapFor(rule, [p(10, 9.6), p(20, 19.6)])).toBe(6);
+    expect(scrambleTeamHandicapFor(rule, [p(10), p(20)])).toBe(7);
+  });
+
+  it('a team outside 2–4 (a draft) keeps the stored share, never divides by zero', () => {
+    const rule = { team_size: 4, team_handicap_pct: 10, team_handicap_rule: 'ngf_weighted' as const };
+    expect(scrambleTeamHandicapFor(rule, [])).toBe(0);
+    expect(scrambleTeamHandicapFor(rule, [p(20)])).toBe(Math.round((20 * 10 * 4) / (1 * 100)));
+    expect(scrambleTeamHandicapFor(rule, [p(10), p(10), p(10), p(10), p(10)])).toBe(
+      scrambleTeamHandicap(50, 10, 4, 5),
+    );
   });
 });
