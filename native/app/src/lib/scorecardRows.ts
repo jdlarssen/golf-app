@@ -13,6 +13,7 @@ import { scoreOwnerForHole } from '../../../../lib/games/scoreOwner';
 import { parForPlayer } from '../../../../lib/games/parDisplay';
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
 import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
+import type { MatchStrokeInput } from '../../../../lib/scoring/allocatedStrokes';
 import type { LocalScore } from '../data/db';
 import type { BundleGame, BundleHole } from '../data/gameBundle';
 import { playerExtraForHole, type LeaderboardOutcome } from './scoringContext';
@@ -63,11 +64,11 @@ export function buildScorecardRows(opts: {
   /** #2997: det urundede banehandicapet starten frøs, eller null. */
   rawCourseHandicap?: number | null;
   /**
-   * Hele rosterets tall (`matchCourseHandicaps`): en ny singel-, four-ball-
+   * Hele rosteret (`matchCourseHandicaps`): en ny singel-, four-ball-
    * eller Round Robin-match gir forskjellen til den laveste (revisjonen 20.11,
-   * #2997).
+   * #2997), og en ny match tilleggsslag ved ulik par (#2941).
    */
-  matchCourseHandicaps: readonly number[];
+  matchCourseHandicaps: MatchStrokeInput;
   /** Lagnummeret mitt — nøkkelen motoren kjenner laget på. */
   teamNumber: number | null;
   /** Motor-resultatet, eller `null` når runden ikke er et lagkort. */
@@ -99,7 +100,11 @@ export function buildScorecardRows(opts: {
         : null
       : playerExtraForHole(
           opts.game,
-          { courseHandicap: opts.courseHandicap, rawCourseHandicap: opts.rawCourseHandicap },
+          {
+            courseHandicap: opts.courseHandicap,
+            rawCourseHandicap: opts.rawCourseHandicap,
+            teeGender: opts.teeGender,
+          },
           hole.strokeIndex,
           opts.matchCourseHandicaps,
         );

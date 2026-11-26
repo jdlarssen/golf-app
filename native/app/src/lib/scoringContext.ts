@@ -37,10 +37,13 @@
 //     tabellen kommer på nettsiden.
 import { computeLeaderboard } from '../../../../lib/scoring';
 import {
-  matchStrokeBases,
+  matchStrokeField,
   matchStrokeHandicap,
   playerStrokeHandicap,
+  type MatchStrokeField,
+  type MatchStrokeInput,
 } from '../../../../lib/scoring/allocatedStrokes';
+import { toScoringHoles } from '../../../../lib/scoring/context/scoringHoles';
 import { strokesForHole } from '../../../../lib/scoring/strokeAllocation';
 import { buildContextForMode } from '../../../../lib/scoring/buildModeResultFromData';
 import type {
@@ -259,8 +262,10 @@ export function asModeConfig(mode: GameMode, raw: unknown): GameModeConfig | nul
  * inn samme config som motoren får (`asModeConfig`).
  *
  * `player` er spillerens frosne heltall og, når starten frøs det, det urundede
- * banehandicapet. `matchBases` kommer fra {@link matchCourseHandicaps} over
- * hele rosteret; singel, four-ball og Round Robin leser det.
+ * banehandicapet, og teen (#2941). `matchBases` kommer fra
+ * {@link matchCourseHandicaps} over hele rosteret og hullene i spillets
+ * segment; singel, four-ball og Round Robin leser det, og en ny match legger
+ * til forskjellen i par.
  *
  * `null` = ukjent: configen peker på et annet format, og motoren ville ikke
  * regnet. Samme «ukjent er null, aldri 0» som lagkortene. Et manglende
@@ -268,9 +273,9 @@ export function asModeConfig(mode: GameMode, raw: unknown): GameModeConfig | nul
  */
 export function playerExtraForHole(
   game: Pick<BundleGame, 'gameMode' | 'modeConfig'>,
-  player: Pick<BundlePlayer, 'courseHandicap' | 'rawCourseHandicap'>,
+  player: Pick<BundlePlayer, 'courseHandicap' | 'rawCourseHandicap'> & { teeGender?: string | null },
   strokeIndex: number,
-  matchBases: readonly number[],
+  matchBases: MatchStrokeInput,
 ): number | null {
   const mode = game.gameMode as GameMode;
   const cfg = asModeConfig(mode, game.modeConfig);
@@ -280,16 +285,20 @@ export function playerExtraForHole(
 }
 
 /**
- * Tallene den laveste i matchen finnes fra, som {@link playerExtraForHole}
- * trenger — samme utvalg som motoren (`matchStrokeBases`: side 1 og 2 uten
- * trukne i singel og four-ball, plass 1–4 i Round Robin). Et manglende tall
- * regnes som 0, som over.
+ * Spillerne den laveste i matchen finnes fra, som {@link playerExtraForHole}
+ * trenger — samme utvalg som motoren (`matchStrokeField`: side 1 og 2 uten
+ * trukne i singel og four-ball, plass 1–4 i Round Robin), med teen og hullene
+ * i spillets segment for tilleggsslagene ved ulik par (#2941). Et manglende
+ * tall regnes som 0, som over.
  */
 export function matchCourseHandicaps(
-  game: Pick<BundleGame, 'gameMode'>,
-  players: readonly BundlePlayer[],
-): number[] {
-  return matchStrokeBases(game.gameMode as GameMode, players);
+  bundle: Pick<GameBundle, 'game' | 'players' | 'holes'>,
+): MatchStrokeField {
+  return matchStrokeField(
+    bundle.game.gameMode as GameMode,
+    bundle.players,
+    toScoringHoles(toHoleRows(bundle)),
+  );
 }
 
 /**
@@ -337,7 +346,7 @@ export function toPlayerRows(bundle: GameBundle): ContextPlayerRow[] {
  * Hullene i spillets segment (#2752), samme klipp som webbens tavle
  * (`leaderboardContent.tsx`): en halvdel av en delt cup-dag er 9 hull for motoren.
  */
-export function toHoleRows(bundle: GameBundle): ContextHoleRow[] {
+export function toHoleRows(bundle: Pick<GameBundle, 'game' | 'holes'>): ContextHoleRow[] {
   return gameHoles(bundle).map((hole) => ({
     hole_number: hole.holeNumber,
     par_mens: hole.parMens,

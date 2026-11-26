@@ -264,7 +264,7 @@ export function matchStrokeHandicap(
   mode: GameMode,
   config: GameModeConfig,
   player: MatchStrokePlayer,
-  match: readonly number[] | MatchStrokeField,
+  match: MatchStrokeInput,
 ): number {
   const ch = player.courseHandicap ?? 0;
   if (!isDifferenceMatch(mode)) {
@@ -294,7 +294,10 @@ export function matchStrokeHandicap(
   )[0];
 }
 
-function isMatchStrokeField(match: readonly number[] | MatchStrokeField): match is MatchStrokeField {
+/** What {@link matchStrokeHandicap} reads the match from: a field with tees and holes, or the bare numbers. */
+export type MatchStrokeInput = readonly number[] | MatchStrokeField;
+
+function isMatchStrokeField(match: MatchStrokeInput): match is MatchStrokeField {
   return !Array.isArray(match);
 }
 

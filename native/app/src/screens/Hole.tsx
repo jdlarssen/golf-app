@@ -88,6 +88,7 @@ import {
 } from '../../../../lib/scorecard/strokeEntry';
 import { deliveryCoversWholeTeam } from '../../../../lib/games/teamDelivery';
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
+import type { MatchStrokeField } from '../../../../lib/scoring/allocatedStrokes';
 import {
   formatCapturesPutts,
   isStablefordFamily,
@@ -696,7 +697,7 @@ function HoleView({
             bundle.game,
             entry.player,
             strokeIndex,
-            matchCourseHandicaps(bundle.game, bundle.players),
+            matchCourseHandicaps(bundle),
           );
         return {
           id: entry.user_id,
@@ -1110,7 +1111,7 @@ function HoleView({
               key={entry.user_id}
               entry={entry}
               game={bundle.game}
-              matchChs={matchCourseHandicaps(bundle.game, bundle.players)}
+              matchChs={matchCourseHandicaps(bundle)}
               hole={hole}
               score={byUserHole.get(`${entry.user_id}#${holeNumber}`)}
               isMe={entry.user_id === userId}
@@ -1394,8 +1395,8 @@ function PlayerCard({
   entry: RosterEntry;
   /** Formatet og configen — badgen viser slagene motoren regner med (#2218). */
   game: Pick<BundleGame, 'gameMode' | 'modeConfig'>;
-  /** Hele rosterets banehandicap — singel-matchens forskjell (revisjonen 20.11). */
-  matchChs: readonly number[];
+  /** Hele rosteret med tee og hull — matchens forskjell (revisjonen 20.11) og tilleggsslag ved ulik par (#2941). */
+  matchChs: MatchStrokeField;
   hole: BundleHole;
   score: LocalScore | undefined;
   isMe: boolean;
