@@ -92,6 +92,7 @@ export async function DrilldownBody({
     holes: scopedHoles,
     scores: scopedScores,
     ranking,
+    countback,
   } = bestBallBoardInput({
     gameMode: gwp.game.game_mode,
     modeConfig: gwp.game.mode_config,
@@ -119,7 +120,8 @@ export async function DrilldownBody({
     : scopedScores;
 
   // #2625: the game's ranking rule, so the leader and the places match the board.
-  const lines = computeLeaderboard({ mode, players, holes, scores, ranking });
+  // #2940: its countback too.
+  const lines = computeLeaderboard({ mode, players, holes, scores, ranking, countback });
   // Same par as the board (#2217): `par_mens` over exactly the holes sent to
   // computeLeaderboard — clipped to the first half in an active round.
   const coursePar = holes.reduce((sum, h) => sum + h.par, 0);

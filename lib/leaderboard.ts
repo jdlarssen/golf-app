@@ -2,7 +2,7 @@ import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { playerFirstName } from '@/lib/names/playerName';
 import { bestBallForHole } from '@/lib/scoring/modes/bestBall';
 import { parFor } from '@/lib/scoring/modes/parResolver';
-import type { ScoringGender, ScoringHole } from '@/lib/scoring/modes/types';
+import type { CountbackStamp, ScoringGender, ScoringHole } from '@/lib/scoring/modes/types';
 import { rankTeams, rankingHolesByNumber, type RankedTeam } from '@/lib/scoring/tiebreaker';
 
 export type LeaderboardMode = 'netto' | 'brutto';
@@ -100,6 +100,9 @@ export type TeamLine = {
  * #2625: with `ranking: 'net_to_par'` (the game's `mode_config`, asked via
  * `ranksByNetToPar` — `bestBallBoardInput` hands it over) the teams rank on
  * teamNet − par over the holes each has played instead, like the engine.
+ *
+ * #2940: with `countback: 'rulebook'` (asked via `countsBackByRulebook`,
+ * handed over the same way) a tie goes on to holes 4-9, 7-9 and 9.
  */
 export function computeLeaderboard(opts: {
   mode: LeaderboardMode;
@@ -107,8 +110,9 @@ export function computeLeaderboard(opts: {
   holes: LbHole[];
   scores: LbScore[];
   ranking?: 'net_to_par';
+  countback?: CountbackStamp;
 }): TeamLine[] {
-  const { mode, players, holes, scores, ranking } = opts;
+  const { mode, players, holes, scores, ranking, countback } = opts;
 
   // Index gross strokes by (userId, holeNumber).
   const grossKey = (userId: string, holeNumber: number) =>
@@ -228,7 +232,7 @@ export function computeLeaderboard(opts: {
     ),
   }));
 
-  const ranked: RankedTeam[] = rankTeams(teamsForRanking);
+  const ranked: RankedTeam[] = rankTeams(teamsForRanking, { rulebook: countback === 'rulebook' });
   const rankById = new Map(ranked.map((r) => [r.id, r]));
 
   return lines.map((l) => {

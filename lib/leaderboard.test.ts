@@ -142,6 +142,39 @@ describe('computeLeaderboard — ranking: net_to_par (#2625)', () => {
   });
 });
 
+// #2940: a game stamped `countback: 'rulebook'` goes on after hole 18 to
+// holes 4-9, 7-9 and 9, like the engine. Pair 1 and pair 2 are level on total
+// and the five old steps; pair 1 is better on holes 4-9.
+describe('computeLeaderboard — countback: rulebook (#2940)', () => {
+  const players = [player('a1', 1), player('a2', 1), player('b1', 2), player('b2', 2)];
+  const backNine = Array(9).fill(4);
+  /** The partner always takes one more, so the first card is the best ball. */
+  const pairCards = (best: string, partner: string, gross: number[]): LbScore[] =>
+    gross.flatMap((g, i) => [
+      { userId: best, holeNumber: i + 1, strokes: g },
+      { userId: partner, holeNumber: i + 1, strokes: g + 1 },
+    ]);
+  const scores = [
+    ...pairCards('a1', 'a2', [5, 5, 5, 4, 4, 4, 4, 4, 4, ...backNine]),
+    ...pairCards('b1', 'b2', [4, 4, 4, 4, 4, 4, 5, 5, 5, ...backNine]),
+  ];
+  const byTeam = (lines: ReturnType<typeof computeLeaderboard>) =>
+    lines.map((l) => [l.teamNumber, l.rank, l.total, l.tiedWith]);
+
+  it.each(['netto', 'brutto'] as const)('%s: shares the place without the stamp, pair 1 on holes 4-9 with it', (mode) => {
+    expect(byTeam(computeLeaderboard({ mode, players, holes, scores, ranking: 'net_to_par' }))).toEqual([
+      [1, 1, 75, [2]],
+      [2, 1, 75, [1]],
+    ]);
+    expect(
+      byTeam(computeLeaderboard({ mode, players, holes, scores, ranking: 'net_to_par', countback: 'rulebook' })),
+    ).toEqual([
+      [1, 1, 75, []],
+      [2, 2, 75, []],
+    ]);
+  });
+});
+
 describe('computeLeaderboard — net_to_par tie-break on a part-played round (#2625)', () => {
   // The engine's shape (bestBall.test.ts), through the board's aggregator.
   const PARS = [5, 3, 4, 4, 4, 3, 5, 3, 4, 5, 4, 4, 3, 4, 5, 4, 4, 4];

@@ -167,7 +167,7 @@ export async function GET(
 
   // WD (#386, #2217): same input as the board — a withdrawn player is out of
   // the member list and their strokes out of the team's best ball.
-  const { players, holes, scores, ranking } = bestBallBoardInput({
+  const { players, holes, scores, ranking, countback } = bestBallBoardInput({
     gameMode: game.game_mode,
     modeConfig: game.mode_config,
     roster: gwp.players,
@@ -178,13 +178,15 @@ export async function GET(
 
   // Beregn både brutto og netto. Begge totaler er nyttige på klubbhus-veggen
   // — brutto for «hvor mange slag», netto for «hvem vant».
-  // #2625: the game's ranking rule, so the order is the board's.
+  // #2625: the game's ranking rule, so the order is the board's. #2940: and
+  // its countback.
   const nettoLines = computeLeaderboard({
     mode: 'netto',
     players,
     holes,
     scores,
     ranking,
+    countback,
   });
   const bruttoLines = computeLeaderboard({
     mode: 'brutto',
@@ -192,6 +194,7 @@ export async function GET(
     holes,
     scores,
     ranking,
+    countback,
   });
 
   const bruttoByTeam = new Map(
