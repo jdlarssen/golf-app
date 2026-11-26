@@ -6,6 +6,7 @@ import type {
   ScoringPlayer,
   ScoringHoleScore,
   ScoringGender,
+  GameModeConfig,
 } from './types';
 
 function par4Holes(count: number): ScoringHole[] {
@@ -815,5 +816,43 @@ describe('soloStrokeplay.compute — ranking: net_to_par (#2253)', () => {
     ]);
     expect(flaggedHoles[2].perPlayer.map((c) => c.toPar)).toEqual([null, null]);
     expect(compute(makeCtx(opts)).holes[0].bestUserIds).toEqual(['M', 'L']);
+  });
+});
+
+// #2940: a game stamped `countback: 'rulebook'` counts back by Committee
+// Procedures 5A(6)(d). W and R are level on total, the last 9, 6, 3 and hole
+// 18; W is better on holes 4-9 (F4).
+describe('soloStrokeplay.compute — countback: rulebook (#2940)', () => {
+  const backNine = Array(9).fill(4);
+  const W = [5, 5, 5, 4, 4, 4, 4, 4, 4, ...backNine];
+  const R = [4, 4, 4, 4, 4, 4, 5, 5, 5, ...backNine];
+  const scores = [W, R].flatMap((gross, p) =>
+    gross.map((g, i) => ({ userId: p === 0 ? 'W' : 'R', holeNumber: i + 1, gross: g })),
+  );
+  const ctx = (mode_config: GameModeConfig): ScoringContext => ({
+    game: { id: 'g1', game_mode: 'solo_strokeplay', mode_config },
+    players: ['R', 'W'].map((userId) => ({ userId, teamNumber: null, flightNumber: null, courseHandicap: 0 })),
+    holes: par4Holes(18),
+    scores,
+  });
+  const PLAIN: GameModeConfig = { kind: 'solo_strokeplay', team_size: 1 };
+  const line = (r: ReturnType<typeof compute>) =>
+    r.players.map((p) => [p.userId, p.rank, p.totalNetStrokes, p.netToPar, p.tiedWith, p.decidedBy]);
+
+  it('without the stamp the two share the place, as before', () => {
+    expect(line(compute(ctx(PLAIN)))).toEqual([
+      ['R', 1, 75, 3, ['W'], null],
+      ['W', 1, 75, 3, ['R'], null],
+    ]);
+  });
+
+  it.each([
+    ['net total', { ...PLAIN, countback: 'rulebook' }],
+    ['net to par', { ...PLAIN, ranking: 'net_to_par', countback: 'rulebook' }],
+  ] as const)('with the stamp (%s) W wins on holes 4-9, the totals unchanged', (_label, config) => {
+    expect(line(compute(ctx(config as GameModeConfig)))).toEqual([
+      ['W', 1, 75, 3, [], null],
+      ['R', 2, 75, 3, [], 'front6'],
+    ]);
   });
 });

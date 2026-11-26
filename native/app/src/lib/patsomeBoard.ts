@@ -17,7 +17,7 @@ import { boardRowSrParts, boardShowsRank, isBoardLeader, sentenceName, totalLabe
 import { showHolesColumn } from '../../../../lib/leaderboard/holesColumn';
 import { medalRank } from '../../../../lib/leaderboard/podium';
 import type { PatsomeHoleRow, PatsomeTeamLine, ScoringGender } from '../../../../lib/scoring/modes/types';
-import { rankTeams } from '../../../../lib/scoring/tiebreaker';
+import { countsBackByRulebook, rankTeams } from '../../../../lib/scoring/tiebreaker';
 import type { LocalScore } from '../data/db';
 import type { BundleGame, GameBundle } from '../data/gameBundle';
 import { BOARD_APP_TEXT, BOARD_COMMON_TEXT, BOARD_PATSOME_TEXT, BOARD_TEAM_TEXT, BOARD_TEXT } from './boardCopy';
@@ -25,7 +25,7 @@ import { gateReason } from './formatGate';
 import { heroAction } from './homeHero';
 import { formatMessage } from './kavalkadeCopy';
 import { hasAnyStroke, leaderboardVisibility } from './leaderboardModel';
-import { computeGameLeaderboard } from './scoringContext';
+import { asModeConfig, computeGameLeaderboard } from './scoringContext';
 import { DECIDED_TEXT, placeText, srPartText, stripAction, stripPlace } from './soloBoard';
 import { teamMembers, type TeamBoardStrip } from './teamBoard';
 
@@ -117,13 +117,18 @@ function holePlayed(hole: PatsomeHoleRow): boolean {
 /**
  * Trinnet som skilte radene fra hverandre. Motorens lag-linje har ikke feltet,
  * så samme `rankTeams` spørres med de samme poengene, i motorens rekkefølge.
+ * #2940: med motorens trinn også, så et nytt spill teller videre på første ni.
  */
-function decidedByTeam(teams: readonly PatsomeTeamLine[]): Map<number, ReturnType<typeof rankTeams>[number]['decidedBy']> {
+function decidedByTeam(
+  teams: readonly PatsomeTeamLine[],
+  rulebook: boolean,
+): Map<number, ReturnType<typeof rankTeams>[number]['decidedBy']> {
   const ranked = rankTeams(
     teams.map((team) => ({
       id: team.teamNumber,
       holes: Array.from({ length: 18 }, (_, index) => -(team.holes[index]?.teamPoints ?? 0)),
     })),
+    { rulebook },
   );
   return new Map(ranked.map((team) => [team.id, team.decidedBy]));
 }
@@ -185,7 +190,8 @@ export function patsomeBoardFor(opts: {
   const roundHoles = Math.max(0, ...lines.map((line) => line.holesPlayed));
   const showRank = boardShowsRank(roundHoles);
   const viewerTeam = userId ? (lines.find((line) => line.team.playerIds.includes(userId))?.teamNumber ?? null) : null;
-  const decidedBy = finished ? decidedByTeam(teams) : null;
+  const modeConfig = asModeConfig('patsome', game.modeConfig);
+  const decidedBy = finished ? decidedByTeam(teams, modeConfig !== null && countsBackByRulebook(modeConfig)) : null;
   const finishedShowsHoles = finished && showHolesColumn('finished', lines.map((line) => line.holesPlayed));
 
   const rows = lines.map((line, index): PatsomeBoardRow => {

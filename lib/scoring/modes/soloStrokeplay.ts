@@ -13,9 +13,14 @@
 // #2253: games with `mode_config.ranking === 'net_to_par'` rank on net strokes
 // against each player's OWN par over the holes they have played («thru»)
 // instead. Games without the flag keep the rule above, byte for byte.
+//
+// #2940 F5: games stamped `countback: 'rulebook'` count a tie back on gross
+// per hole minus one-half, one-third, one-sixth ... of the handicap
+// (Committee Procedures 5A(6)(d)), not on net hole by hole. The total is the
+// same either way.
 
 import { strokesForHole } from '../strokeAllocation';
-import { rankingHolesByNumber, rankTeams, ranksByNetToPar, UNPLAYED_PADDING } from '../tiebreaker';
+import { countsBackByRulebook, rankingHolesByNumber, rankTeams, ranksByNetToPar, UNPLAYED_PADDING } from '../tiebreaker';
 import { parFor } from './parResolver';
 import type {
   ScoringContext,
@@ -37,6 +42,10 @@ interface PlayerHoleStrokes {
   perHoleNetForRanking: number[];
   /** #2253: net − own par per hole in scope; `null` for an unplayed hole. */
   netToParByHole: { holeNumber: number; teamNet: number | null }[];
+  /** #2940: gross per hole, in `holesSorted` order; `null` for an unplayed hole. */
+  perHoleGross: (number | null)[];
+  /** #2940: gross − own par per hole, in `holesSorted` order; `null` for an unplayed hole. */
+  perHoleGrossToPar: (number | null)[];
   /** #2253: Σ net − own par over played holes; `null` when none is played. */
   netToPar: number | null;
   /** Faktisk netto-slag for spilte hull (sum). */
@@ -53,6 +62,8 @@ function computePlayerHoleStrokes(
 ): PlayerHoleStrokes {
   const perHoleNetForRanking: number[] = [];
   const netToParByHole: PlayerHoleStrokes['netToParByHole'] = [];
+  const perHoleGross: (number | null)[] = [];
+  const perHoleGrossToPar: (number | null)[] = [];
   let totalNetStrokes = 0;
   let totalGrossStrokes = 0;
   let netToPar = 0;
@@ -64,13 +75,18 @@ function computePlayerHoleStrokes(
       // Ikke spilt — padding for ranking, ingen bidrag til total.
       perHoleNetForRanking.push(UNPLAYED_PADDING);
       netToParByHole.push({ holeNumber: hole.number, teamNet: null });
+      perHoleGross.push(null);
+      perHoleGrossToPar.push(null);
       continue;
     }
     const extra = strokesForHole(player.courseHandicap, hole.strokeIndex);
     const net = gross - extra;
-    const toPar = net - parFor(hole, player.teeGender);
+    const par = parFor(hole, player.teeGender);
+    const toPar = net - par;
     perHoleNetForRanking.push(net);
     netToParByHole.push({ holeNumber: hole.number, teamNet: toPar });
+    perHoleGross.push(gross);
+    perHoleGrossToPar.push(gross - par);
     totalNetStrokes += net;
     totalGrossStrokes += gross;
     netToPar += toPar;
@@ -81,6 +97,8 @@ function computePlayerHoleStrokes(
     userId: player.userId,
     perHoleNetForRanking,
     netToParByHole,
+    perHoleGross,
+    perHoleGrossToPar,
     netToPar: holesPlayed > 0 ? netToPar : null,
     totalNetStrokes,
     totalGrossStrokes,
@@ -100,6 +118,23 @@ function padTo18(perHoleNet: number[]): number[] {
     ...perHoleNet,
     ...Array(18 - perHoleNet.length).fill(UNPLAYED_PADDING),
   ];
+}
+
+/**
+ * #2940 F5: the per-hole scores `rankTeams` counts back on, in the slots of
+ * the ranking array: by position (`padTo18`) in an older game, by hole number
+ * (`rankingHolesByNumber`) in a net-to-par game, where they are gross − own
+ * par so F5 and #2253 use the same unit. An unplayed hole, and a slot with no
+ * hole, is `null`: no handicap is deducted on a step that holds one.
+ */
+function countbackHoles(
+  p: PlayerHoleStrokes,
+  holesSorted: ScoringHole[],
+  netToParRanking: boolean,
+): (number | null)[] {
+  if (!netToParRanking) return Array.from({ length: 18 }, (_, i) => p.perHoleGross[i] ?? null);
+  const byHoleNumber = new Map(holesSorted.map((h, i) => [h.number, p.perHoleGrossToPar[i]]));
+  return Array.from({ length: 18 }, (_, i) => byHoleNumber.get(i + 1) ?? null);
 }
 
 /**
@@ -181,15 +216,26 @@ export function compute(ctx: ScoringContext): SoloStrokeplayResult {
   // (`rankingHolesByNumber`): an unplayed hole counts 0 («thru»), a hole
   // outside the segment counts 0, and a player without a single hole gets
   // UNPLAYED_PADDING and ranks last. Without the flag: today's rule.
+  // #2940: a game stamped `countback: 'rulebook'` counts back with k/18 of
+  // the handicap (F5) and goes on to holes 4-9, 7-9 and 9 (F4).
   const netToParRanking = ranksByNetToPar(ctx.game.mode_config);
+  const rulebook = countsBackByRulebook(ctx.game.mode_config);
   const teamsForRanking = playerStrokes.map((p, i) => ({
     id: i,
     holes: netToParRanking
       ? rankingHolesByNumber(p.netToParByHole)
       : padTo18(p.perHoleNetForRanking),
+    ...(rulebook
+      ? {
+          countback: {
+            holes: countbackHoles(p, holesSorted, netToParRanking),
+            courseHandicap: ctx.players[i].courseHandicap,
+          },
+        }
+      : {}),
   }));
 
-  const ranked = rankTeams(teamsForRanking);
+  const ranked = rankTeams(teamsForRanking, { rulebook });
 
   const players: SoloStrokeplayPlayerLine[] = ranked.map((r) => {
     const source = playerStrokes[r.id];

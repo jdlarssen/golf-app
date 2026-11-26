@@ -1053,3 +1053,41 @@ describe('texasScramble.compute — net_to_par tie-break on a part-played round 
     ]);
   });
 });
+
+// #2940: a game stamped `countback: 'rulebook'` goes on after hole 18 to
+// holes 4-9, 7-9 and 9 (F4). Lag 1 and Lag 2 are level on total and the five
+// old steps; Lag 1 is better on holes 4-9. Ambrose and Florida run here too.
+describe('texasScramble.compute — countback: rulebook (#2940)', () => {
+  const PLAIN: GameModeConfig = { kind: 'texas_scramble', team_size: 2, teams_count: 2, team_handicap_pct: 0, ranking: 'net_to_par' };
+  const players: ScoringPlayer[] = ['a1', 'a2', 'b1', 'b2'].map((userId) => ({
+    userId,
+    teamNumber: userId.startsWith('a') ? 1 : 2,
+    flightNumber: userId.startsWith('a') ? 1 : 2,
+    courseHandicap: 0,
+  }));
+  const backNine = Array(9).fill(4);
+  const captainCard = (userId: string, gross: number[]): ScoringHoleScore[] =>
+    gross.map((g, i) => ({ userId, holeNumber: i + 1, gross: g }));
+  const scores = [
+    ...captainCard('b1', [4, 4, 4, 4, 4, 4, 5, 5, 5, ...backNine]),
+    ...captainCard('a1', [5, 5, 5, 4, 4, 4, 4, 4, 4, ...backNine]),
+  ];
+  const rows = (modeConfig: GameModeConfig) =>
+    compute(makeCtx({ players, holes: par4Holes(18), scores, modeConfig })).teams.map((t) => [
+      t.teamNumber,
+      t.rank,
+      t.totalNet,
+      t.decidedBy,
+    ]);
+
+  it('shares the place without the stamp, Lag 1 wins on holes 4-9 with it', () => {
+    expect(rows(PLAIN)).toEqual([
+      [1, 1, 75, null],
+      [2, 1, 75, null],
+    ]);
+    expect(rows({ ...PLAIN, countback: 'rulebook' } as GameModeConfig)).toEqual([
+      [1, 1, 75, null],
+      [2, 2, 75, 'front6'],
+    ]);
+  });
+});

@@ -26,7 +26,7 @@
 // as before. Games without the flag keep the rule above, byte for byte.
 
 import { strokesForHole } from '../strokeAllocation';
-import { rankTeams, ranksByNetToPar, UNPLAYED_PADDING } from '../tiebreaker';
+import { countsBackByRulebook, rankTeams, ranksByNetToPar, UNPLAYED_PADDING } from '../tiebreaker';
 import { parFor } from './parResolver';
 import type {
   NassauHoleRow,
@@ -145,6 +145,7 @@ function computeSection(
   grossByKey: Map<string, number | null>,
   scoringMode: 'gross' | 'net',
   netToParRanking: boolean,
+  rulebook: boolean,
 ): NassauSection {
   const holeNumbers = sectionHoles.map((h) => h.number);
   const expectedHoleCount = sectionHoles.length;
@@ -158,7 +159,7 @@ function computeSection(
     holes: netToParRanking ? toParRankingHoles(p) : padTo18(p.perHoleEffectiveForRanking),
   }));
 
-  const ranked = rankTeams(teamsForRanking);
+  const ranked = rankTeams(teamsForRanking, { rulebook });
 
   const sectionPlayers: NassauSectionLine[] = ranked.map((r) => {
     const source = playerStrokes[r.id];
@@ -281,6 +282,10 @@ export function compute(ctx: ScoringContext): NassauResult {
   );
   const total18Holes = holesSorted;
   const netToParRanking = ranksByNetToPar(ctx.game.mode_config);
+  // #2940 F4: a game stamped `countback: 'rulebook'` goes on to holes 4-9,
+  // 7-9 and 9 in the 18-hole section only. A nine is decided on its sum and a
+  // level nine stays a push (#2625; orchestrator 26.11). Nassau keeps the net
+  // hole-by-hole countback (no F5, the owner 24.11: «Nei, som i dag»).
 
   const front9 = computeSection(
     'front9',
@@ -289,6 +294,7 @@ export function compute(ctx: ScoringContext): NassauResult {
     grossByKey,
     scoringMode,
     netToParRanking,
+    false,
   );
   const back9 = computeSection(
     'back9',
@@ -297,6 +303,7 @@ export function compute(ctx: ScoringContext): NassauResult {
     grossByKey,
     scoringMode,
     netToParRanking,
+    false,
   );
   const total18 = computeSection(
     'total18',
@@ -305,6 +312,7 @@ export function compute(ctx: ScoringContext): NassauResult {
     grossByKey,
     scoringMode,
     netToParRanking,
+    countsBackByRulebook(ctx.game.mode_config),
   );
 
   // Aggregate units. En spiller får 1 unit per seksjon hvor de står alene

@@ -26,7 +26,7 @@
 
 import { strokesForHole } from '../strokeAllocation';
 import { parFor } from './parResolver';
-import { rankingHolesByNumber, rankTeams, ranksByNetToPar, UNPLAYED_PADDING } from '../tiebreaker';
+import { countsBackByRulebook, rankingHolesByNumber, rankTeams, ranksByNetToPar, UNPLAYED_PADDING } from '../tiebreaker';
 import type {
   ScoringContext,
   ScoringHole,
@@ -266,6 +266,7 @@ export function compute(ctx: ScoringContext): ShambleResult {
       }
       return { id: tn, holes: arr };
     }),
+    { rulebook: countsBackByRulebook(ctx.game.mode_config) },
   );
   const rankById = new Map(ranked.map((r) => [r.id, r]));
 

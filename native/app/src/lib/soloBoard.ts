@@ -169,6 +169,9 @@ export const DECIDED_TEXT: Record<Exclude<TieDecider, 'total'>, string> = {
   back6: BOARD_APP_TEXT.decidedBack6,
   back3: BOARD_APP_TEXT.decidedBack3,
   hole18: BOARD_APP_TEXT.decidedHole18,
+  front6: BOARD_APP_TEXT.decidedFront6,
+  front3: BOARD_APP_TEXT.decidedFront3,
+  hole9: BOARD_APP_TEXT.decidedHole9,
 };
 
 /**

@@ -3,13 +3,29 @@ import type { GameModeConfig } from './modes/types';
 export interface TeamForRanking {
   id: number;
   holes: number[];  // length 18 expected
+  /**
+   * #2940 F5: count back on these per-hole scores minus a fraction of the
+   * handicap (Committee Procedures 5A(6)(d)). Slot i is the same hole as in
+   * `holes`; `null` = not played. The total is always the sum of `holes`.
+   */
+  countback?: { holes: (number | null)[]; courseHandicap: number };
 }
 
 /**
  * The tie-break step that split a row from the row directly above it (#2579).
- * The finished board says «avgjort på siste ni» from it.
+ * The finished board says «avgjort på siste ni» from it. `front6`, `front3`
+ * and `hole9` are holes 4-9, 7-9 and 9, the rule book's steps after hole 18
+ * (#2940).
  */
-export type TieDecider = 'total' | 'back9' | 'back6' | 'back3' | 'hole18';
+export type TieDecider =
+  | 'total'
+  | 'back9'
+  | 'back6'
+  | 'back3'
+  | 'hole18'
+  | 'front6'
+  | 'front3'
+  | 'hole9';
 
 export interface RankedTeam {
   id: number;
@@ -25,61 +41,102 @@ export interface RankedTeam {
   decidedBy: TieDecider | null;
 }
 
-const TIE_STEPS: readonly TieDecider[] = ['total', 'back9', 'back6', 'back3', 'hole18'];
+/** A step reads slots `from` up to, not including, `to` (slot i is hole i+1). */
+interface TieStep {
+  decider: TieDecider;
+  from: number;
+  to: number;
+}
+
+const TIE_STEPS: readonly TieStep[] = [
+  { decider: 'total', from: 0, to: 18 },
+  { decider: 'back9', from: 9, to: 18 },
+  { decider: 'back6', from: 12, to: 18 },
+  { decider: 'back3', from: 15, to: 18 },
+  { decider: 'hole18', from: 17, to: 18 },
+];
+
+/**
+ * #2940 F4: Committee Procedures 5A(6)(d) goes on after hole 18 — «the last
+ * six holes, three holes and final hole of the first nine holes».
+ */
+const RULEBOOK_TIE_STEPS: readonly TieStep[] = [
+  ...TIE_STEPS,
+  { decider: 'front6', from: 3, to: 9 },
+  { decider: 'front3', from: 6, to: 9 },
+  { decider: 'hole9', from: 8, to: 9 },
+];
 
 function sum(xs: number[]): number {
   return xs.reduce((a, b) => a + b, 0);
 }
 
-export function rankTeams(teams: TeamForRanking[]): RankedTeam[] {
-  const withTotals = teams.map((t) => ({
-    ...t,
+/**
+ * The value a team has on one step, lower is better.
+ *
+ * Without `countback`: the sum of `holes` over the step's slots, as always.
+ * With it (#2940 F5) a countback step of k slots is 18 × Σ countback.holes −
+ * k × courseHandicap, k/18 of the handicap in whole numbers so `===` holds.
+ * A step with an unplayed hole falls back to 18 × Σ holes over the same
+ * slots, so the padding of an unplayed hole is never split on handicap. The
+ * total is the sum of `holes` either way.
+ */
+function stepValue(team: TeamForRanking, step: TieStep): number {
+  const slots = team.holes.slice(step.from, step.to);
+  if (step.decider === 'total' || team.countback === undefined) return sum(slots);
+  const { holes, courseHandicap } = team.countback;
+  const k = step.to - step.from;
+  let gross = 0;
+  for (let i = step.from; i < step.to; i += 1) {
+    const score = holes[i];
+    if (score == null) return 18 * sum(slots);
+    gross += score;
+  }
+  return 18 * gross - k * courseHandicap;
+}
+
+/**
+ * Ranks lowest first: on the total, then back 9, back 6, back 3 and hole 18.
+ * `opts.rulebook` (#2940 F4, a game stamped `countback: 'rulebook'`) goes on
+ * to holes 4-9, 7-9 and 9. Rows level on every step share the place.
+ */
+export function rankTeams(teams: TeamForRanking[], opts?: { rulebook?: boolean }): RankedTeam[] {
+  const withCountback = teams.filter((t) => t.countback !== undefined).length;
+  if (withCountback !== 0 && withCountback !== teams.length) {
+    throw new Error('rankTeams: every team carries countback, or none does (#2940)');
+  }
+  const steps = opts?.rulebook ? RULEBOOK_TIE_STEPS : TIE_STEPS;
+  const withValues = teams.map((t) => ({
+    team: t,
     total: sum(t.holes),
-    back9: sum(t.holes.slice(9, 18)),
-    back6: sum(t.holes.slice(12, 18)),
-    back3: sum(t.holes.slice(15, 18)),
-    hole18: t.holes[17],
+    values: steps.map((step) => stepValue(t, step)),
   }));
 
-  withTotals.sort(
-    (a, b) =>
-      a.total - b.total ||
-      a.back9 - b.back9 ||
-      a.back6 - b.back6 ||
-      a.back3 - b.back3 ||
-      a.hole18 - b.hole18,
-  );
+  const compare = (a: (typeof withValues)[number], b: (typeof withValues)[number]) => {
+    for (let s = 0; s < steps.length; s += 1) {
+      const diff = a.values[s] - b.values[s];
+      if (diff !== 0) return diff;
+    }
+    return 0;
+  };
+  withValues.sort(compare);
 
-  return withTotals.map((t, i) => {
-    const tiedWith = withTotals
-      .filter(
-        (other, j) =>
-          j !== i &&
-          other.total === t.total &&
-          other.back9 === t.back9 &&
-          other.back6 === t.back6 &&
-          other.back3 === t.back3 &&
-          other.hole18 === t.hole18,
-      )
-      .map((o) => o.id);
-    // Shared rank for ties: find the first index in withTotals whose all 5 tier
-    // values match this team's. That index + 1 is the rank.
-    const firstTiedIndex = withTotals.findIndex(
-      (other) =>
-        other.total === t.total &&
-        other.back9 === t.back9 &&
-        other.back6 === t.back6 &&
-        other.back3 === t.back3 &&
-        other.hole18 === t.hole18,
-    );
-    const above = i > 0 ? withTotals[i - 1] : null;
+  return withValues.map((t, i) => {
+    const tiedWith = withValues
+      .filter((other, j) => j !== i && compare(other, t) === 0)
+      .map((o) => o.team.id);
+    // Shared rank for ties: find the first index in withValues whose every
+    // step value matches this team's. That index + 1 is the rank.
+    const firstTiedIndex = withValues.findIndex((other) => compare(other, t) === 0);
+    const above = i > 0 ? withValues[i - 1] : null;
+    const splitAt = above ? steps.findIndex((_, s) => above.values[s] !== t.values[s]) : -1;
     return {
-      id: t.id,
-      holes: t.holes,
+      id: t.team.id,
+      holes: t.team.holes,
       total: t.total,
       rank: firstTiedIndex + 1,
       tiedWith,
-      decidedBy: above ? (TIE_STEPS.find((step) => above[step] !== t[step]) ?? null) : null,
+      decidedBy: splitAt === -1 ? null : steps[splitAt].decider,
     };
   });
 }
@@ -164,4 +221,41 @@ export function supportsNetToParRanking(modeConfig: GameModeConfig): modeConfig 
  */
 export function ranksByNetToPar(modeConfig: GameModeConfig): boolean {
   return supportsNetToParRanking(modeConfig) && modeConfig.ranking === 'net_to_par';
+}
+
+/**
+ * #2940: the formats that rank through `rankTeams`. New games of these kinds
+ * are stamped with `countback: 'rulebook'` (`stampNewGameModeConfig`).
+ */
+const COUNTBACK_KINDS = [
+  'solo_strokeplay',
+  'stableford',
+  'modified_stableford',
+  'best_ball',
+  'texas_scramble',
+  'ambrose',
+  'florida_scramble',
+  'shamble',
+  'patsome',
+  'nassau',
+] as const satisfies readonly GameModeConfig['kind'][];
+
+export type CountbackModeConfig = Extract<
+  GameModeConfig,
+  { kind: (typeof COUNTBACK_KINDS)[number] }
+>;
+
+/** True for a format that can carry the countback stamp. */
+export function supportsRulebookCountback(modeConfig: GameModeConfig): modeConfig is CountbackModeConfig {
+  return (COUNTBACK_KINDS as readonly string[]).includes(modeConfig.kind);
+}
+
+/**
+ * #2940: true when the game counts back by Committee Procedures 5A(6)(d)
+ * (`mode_config.countback`). The one home for the question, like
+ * `ranksByNetToPar`. A game without the stamp keeps the five steps and the
+ * net hole-by-hole countback it was played with.
+ */
+export function countsBackByRulebook(modeConfig: GameModeConfig): boolean {
+  return supportsRulebookCountback(modeConfig) && modeConfig.countback === 'rulebook';
 }

@@ -166,6 +166,38 @@ describe('soloBoardFor — names, as the web board writes them', () => {
   });
 });
 
+describe('soloBoardFor — regelbokas tilbaketelling (#2940)', () => {
+  // Sigrid og Jonas har 33 poeng hver og er like på siste ni, seks, tre og
+  // hull 18. Sigrid tar flere poeng på hull 4–9.
+  const scores = [
+    ...holeScores('g-live', ME, 3, 5),
+    ...holeScores('g-live', ME, 18, 4, 4),
+    ...holeScores('g-live', 'jonas', 6, 4),
+    ...holeScores('g-live', 'jonas', 9, 5, 7),
+    ...holeScores('g-live', 'jonas', 18, 4, 10),
+  ];
+  const finished = (modeConfig: Record<string, unknown>) =>
+    soloBoardFor({
+      bundle: homeBundle({ game: { status: 'finished', modeConfig }, players: players.slice(1) }),
+      scores,
+      userId: ME,
+    })!;
+  const config = { kind: 'stableford', team_size: 1, points_table: 'standard' };
+
+  it('names holes 4–9 under the lower row on a stamped game', () => {
+    expect(finished({ ...config, countback: 'rulebook' }).rows.map((r) => [r.userId, r.place, r.total, r.note])).toEqual([
+      [ME, '1', '33', null],
+      ['jonas', '2', '33', 'Likt med Sigrid · avgjort på hull 4–9'],
+    ]);
+  });
+
+  it('shares the place without a note on a game without the stamp', () => {
+    const rows = finished(config).rows;
+    expect(rows.map((r) => r.note)).toEqual([null, null]);
+    expect(rows[0]!.place).toBe(rows[1]!.place);
+  });
+});
+
 describe('soloBoardFor — finished', () => {
   // Marte 54 poeng. Sigrid og Jonas har 36 hver; Jonas tok sine på siste ni.
   const scores = [

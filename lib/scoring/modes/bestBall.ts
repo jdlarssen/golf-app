@@ -68,7 +68,7 @@ export function teamTotal(holes: HoleTeamScore[]): { total: number; missingHoles
 // -----------------------------------------------------------------------------
 
 import { strokesForHole } from '../strokeAllocation';
-import { rankTeams, rankingHolesByNumber, ranksByNetToPar } from '../tiebreaker';
+import { countsBackByRulebook, rankTeams, rankingHolesByNumber, ranksByNetToPar } from '../tiebreaker';
 import { parFor } from './parResolver';
 import type {
   ScoringContext,
@@ -188,6 +188,7 @@ export function compute(ctx: ScoringContext): BestBallResult {
           : l.holes,
       ),
     })),
+    { rulebook: countsBackByRulebook(ctx.game.mode_config) },
   );
   const rankById = new Map(ranked.map((r) => [r.id, r]));
 

@@ -279,9 +279,10 @@ describe('Like plasseringer: tilbaketelling, Committee Procedures 5A(6)(d)', () 
     expect(result.players[1].decidedBy).toBe('back9');
   });
 
-  // The engine counts back on net hole scores, strokes given by stroke index.
-  // For individual stroke play the rule deducts one-half of the handicap from
-  // the last nine instead (F5 under «Kjent avvik»). Here both methods agree.
+  // A game without the stamp counts back on net hole scores, strokes given by
+  // stroke index. For individual stroke play the rule deducts one-half of the
+  // handicap from the last nine instead (F5, rettet i #2940 for nye spill).
+  // Here both methods agree, so the result holds with and without the stamp.
   it('netto slagspill: lik netto sum avgjøres på de siste ni hullene', () => {
     // A: banehandicap 9 (strokes on index 1-9 = holes 1-9), 5 on every hole:
     // net 4 on 1-9, 5 on 10-18 = 81. B: banehandicap 0, 5 on 1-9, 4 on
@@ -306,11 +307,12 @@ describe('Like plasseringer: tilbaketelling, Committee Procedures 5A(6)(d)', () 
   });
 });
 
-describe('Kjent avvik', () => {
+describe('Rettet i #2940: tilbaketellingen i nye spill', () => {
   // 5A(6)(d): «If there is still a tie, then the last six holes, three holes and
-  // final hole of the first nine holes will be considered in turn.» The engine
-  // stops after hole 18 (tiebreaker.ts) and calls it a tie.
-  it.fails('F4: står det likt etter hull 18, teller regelen videre på de siste seks hullene av første ni', () => {
+  // final hole of the first nine holes will be considered in turn.» A game
+  // stamped `countback: 'rulebook'` goes on there; a game without the stamp
+  // stops after hole 18 and shares the place, as before.
+  it('F4: står det likt etter hull 18, teller regelen videre på de siste seks hullene av første ni', () => {
     // Banehandicap 0, the same back nine (par everywhere, 18 points). A: 5 on
     // 1-3, par on 4-9 (3 + 12 = 15). B: par on 1-3, then 4, 4, 4, 5, 5, 5 on
     // 4-9 (6 + 9 = 15). Equal on total, last 9, 6, 3 and hole 18; A is better
@@ -319,7 +321,7 @@ describe('Kjent avvik', () => {
     const result = computeStableford(
       ctx(
         'stableford',
-        STABLEFORD_SOLO,
+        { ...STABLEFORD_SOLO, countback: 'rulebook' },
         [solo('B', 0), solo('A', 0)],
         PAR4_18,
         [
@@ -332,27 +334,30 @@ describe('Kjent avvik', () => {
       ['A', 1],
       ['B', 2],
     ]);
+    expect(result.players[1].decidedBy).toBe('front6');
   });
 
   // 5A(6)(d): «For net competitions where the stroke index allocation as set by
   // the Committee is not used, such as individual stroke play, if the last
   // nine, last six, last three holes scenario is used, one-half, one-third,
   // one-sixth, etc. of the handicaps should be deducted from the score for
-  // those holes.» The engine counts back on net hole scores instead
-  // (soloStrokeplay.ts → tiebreaker.ts).
-  it.fails('F5: solo slagspill teller tilbake med halve handicapet på siste ni, ikke netto per hull', () => {
+  // those holes.» A game stamped `countback: 'rulebook'` deducts k/18 of the
+  // handicap (soloStrokeplay.ts → tiebreaker.ts); a game without the stamp
+  // counts back on net hole scores, as before.
+  it('F5: solo slagspill teller tilbake med halve handicapet på siste ni, ikke netto per hull', () => {
     // Stroke index from NGF's example, vedlegg E s. 82 (odd in front, even
     // behind). A: banehandicap 9, which is 5 strokes in front and 4 behind
     // (holes 10, 12, 14 and 16). B: banehandicap 0. Both net 81.
     // Last nine: A 40 gross. Hole by hole A has 36 net against B's 36; the
     // rule's half gives A 40 − 4,5 = 35,5, better than 36, so A wins there.
-    // The engine goes on to the last six: A 27 − 2 = 25 against B 24, B wins.
+    // Without the stamp the engine goes on to the last six: A 27 − 2 = 25
+    // against B 24, B wins.
     const ngfIndex = [7, 15, 5, 11, 1, 13, 3, 17, 9, 8, 16, 6, 12, 2, 14, 4, 18, 10];
     const holes: ScoringHole[] = ngfIndex.map((strokeIndex, i) => ({ number: i + 1, par: 4, strokeIndex }));
     const result = computeSoloStrokeplay(
       ctx(
         'solo_strokeplay',
-        { kind: 'solo_strokeplay', team_size: 1, ranking: 'net_to_par' },
+        { kind: 'solo_strokeplay', team_size: 1, ranking: 'net_to_par', countback: 'rulebook' },
         [solo('A', 9), solo('B', 0)],
         holes,
         [
@@ -361,9 +366,10 @@ describe('Kjent avvik', () => {
         ],
       ),
     );
-    expect(result.players.map((p) => [p.userId, p.rank])).toEqual([
-      ['A', 1],
-      ['B', 2],
+    expect(result.players.map((p) => [p.userId, p.rank, p.totalNetStrokes])).toEqual([
+      ['A', 1, 81],
+      ['B', 2, 81],
     ]);
+    expect(result.players[1].decidedBy).toBe('back9');
   });
 });

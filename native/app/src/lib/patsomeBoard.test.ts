@@ -172,6 +172,21 @@ describe('patsomeBoardFor, grensetilfeller', () => {
     expect(live.rows.every((r) => r.note === null)).toBe(true);
   });
 
+  it('#2940: et nytt spill teller videre på første ni og skiller Lag 2 og 4 på hull 7–9', () => {
+    // Lag 2 og 4 er like på sum, siste ni, seks, tre, hull 18 og hull 4–9.
+    // På hull 7–9 tar Lag 4 seks poeng mot Lag 2s fem.
+    const stamped = bundle('finished', {
+      modeConfig: { kind: 'patsome', team_size: 2, teams_count: 4, patsome_scoring: 'net', countback: 'rulebook' },
+    });
+    const model = patsomeBoardFor({ bundle: stamped, scores: FINISHED_SCORES, userId: 'me' })!;
+    expect(model.rows.map((r) => [r.name, r.place, r.total, r.note])).toEqual([
+      ['Lag 3', '1', '41', null],
+      ['Lag 4', '2', '37', null],
+      ['Lag 2', '3', '37', 'Likt med Lag 4 · avgjort på hull 7–9'],
+      ['Lag 1', '4', '32', null],
+    ]);
+  });
+
   it('et lag uten hull har «—» som sum, og «—» på alle delene', () => {
     const model = patsomeBoardFor({ bundle: bundle('active'), scores: teamScores(2, 3), userId: 'me' })!;
     const empty = model.rows.find((r) => r.name === 'Lag 1')!;

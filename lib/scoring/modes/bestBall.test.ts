@@ -632,3 +632,46 @@ describe('compute — net_to_par tie-break on a part-played round (#2625)', () =
     ]);
   });
 });
+
+// #2940: a game stamped `countback: 'rulebook'` goes on after hole 18 to
+// holes 4-9, 7-9 and 9 (F4). Pair 1 and pair 2 are level on total and the
+// five old steps; pair 1 is better on holes 4-9.
+describe('compute — countback: rulebook (#2940)', () => {
+  const PLAIN: GameModeConfig = { kind: 'best_ball', team_size: 2, teams_count: 2, ranking: 'net_to_par' };
+  const players: ScoringContext['players'] = ['a1', 'a2', 'b1', 'b2'].map((userId) => ({
+    userId,
+    teamNumber: userId.startsWith('a') ? 1 : 2,
+    flightNumber: userId.startsWith('a') ? 1 : 2,
+    courseHandicap: 0,
+  }));
+  const backNine = Array(9).fill(4);
+  /** The partner always takes one more, so the first card is the best ball. */
+  const pairCards = (best: string, partner: string, gross: number[]): ScoringHoleScore[] =>
+    gross.flatMap((g, i) => [
+      { userId: best, holeNumber: i + 1, gross: g },
+      { userId: partner, holeNumber: i + 1, gross: g + 1 },
+    ]);
+  const scores = [
+    ...pairCards('b1', 'b2', [4, 4, 4, 4, 4, 4, 5, 5, 5, ...backNine]),
+    ...pairCards('a1', 'a2', [5, 5, 5, 4, 4, 4, 4, 4, 4, ...backNine]),
+  ];
+  const ctx = (mode_config: GameModeConfig): ScoringContext => ({
+    game: { id: 'g1', game_mode: 'best_ball', mode_config },
+    players,
+    holes: Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4, strokeIndex: i + 1 })),
+    scores,
+  });
+  const rows = (r: ReturnType<typeof compute>) =>
+    [...r.teams].sort((a, b) => a.rank - b.rank || a.teamNumber - b.teamNumber).map((t) => [t.teamNumber, t.rank, t.total, t.decidedBy]);
+
+  it('shares the place without the stamp, pair 1 wins on holes 4-9 with it', () => {
+    expect(rows(compute(ctx(PLAIN)))).toEqual([
+      [1, 1, 75, null],
+      [2, 1, 75, null],
+    ]);
+    expect(rows(compute(ctx({ ...PLAIN, countback: 'rulebook' } as GameModeConfig)))).toEqual([
+      [1, 1, 75, null],
+      [2, 2, 75, 'front6'],
+    ]);
+  });
+});
