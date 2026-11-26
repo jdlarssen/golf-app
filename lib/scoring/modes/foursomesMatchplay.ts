@@ -39,8 +39,10 @@ import {
   detectMatEm,
 } from './singlesMatchplay';
 import type {
+  GameModeConfig,
   ScoringContext,
   ScoringGender,
+  ScoringHole,
   ScoringPlayer,
   FoursomesMatchplayResult,
   FoursomesHoleRow,
@@ -155,16 +157,17 @@ export function alternateShotExtras(
  * (`alternateShotSideExtras`) call it too.
  */
 export function alternateShotSideStrokes(
-  ctx: Pick<ScoringContext, 'game' | 'holes'>,
+  config: GameModeConfig,
+  holes: readonly ScoringHole[],
   extras: { side1Extra: number; side2Extra: number },
   side1Tee: ScoringGender | undefined,
   side2Tee: ScoringGender | undefined,
 ): { side1Extra: number; side2Extra: number } {
-  if (!usesParDifference(ctx.game.mode_config)) return extras;
+  if (!usesParDifference(config)) return extras;
   const tees = [side1Tee, side2Tee];
   const [side1Extra, side2Extra] = withParDifference(
     [extras.side1Extra, extras.side2Extra],
-    tees.map((tee) => parDifferenceStrokes(ctx.holes, tee, tees)),
+    tees.map((tee) => parDifferenceStrokes(holes, tee, tees)),
   );
   return { side1Extra, side2Extra };
 }
@@ -230,7 +233,8 @@ export function computeFoursomesCore(
   // #2941 (F17): en ny match legger til forskjellen i par for siden, hele slag
   // etter andelen, også over greensomens overstyring.
   const { side1Extra, side2Extra } = alternateShotSideStrokes(
-    ctx,
+    ctx.game.mode_config,
+    ctx.holes,
     alternateShotExtras(side1Combined, side2Combined, allowancePct),
     side1CaptainPlayer?.teeGender,
     side2CaptainPlayer?.teeGender,

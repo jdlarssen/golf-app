@@ -13,12 +13,15 @@
 // de ekte motorene og binder hjelperne her til dem: endrer en motor hvordan den
 // leser allowance eller brutto, blir paritetstesten rød (AGENTS.md trap 4).
 
+import { pickTeamCaptain } from '@/lib/games/teamCaptain';
 import { applyAllowance, strokeBasis } from './courseHandicap';
 import { matchDifferenceStrokes } from './matchStrokes';
-import { alternateShotExtras } from './modes/foursomesMatchplay';
+import { alternateShotExtras, alternateShotSideStrokes } from './modes/foursomesMatchplay';
 import { readTeamStrokesOverride } from './modes/greensomeMatchplay';
+import { asScoringGender } from './modes/parResolver';
 import { singlesStrokeHandicap } from './modes/singlesMatchplay';
-import type { GameMode, GameModeConfig } from './modes/types';
+import type { GameMode, GameModeConfig, ScoringGender, ScoringHole } from './modes/types';
+import { parDifferenceStrokes, usesParDifference, withParDifference } from './parDifference';
 import { sideHandicap, type SidePlayer, type SideRule } from './teamHandicap';
 
 /** `allowance_pct` for `kind`, or the engine's fallback when the kind differs or the field is missing. */
@@ -150,6 +153,23 @@ export function playerStrokeHandicap(
 export interface MatchStrokePlayer {
   courseHandicap: number | null;
   rawCourseHandicap?: number | null;
+  /**
+   * `game_players.tee_gender`: the par the player plays to, for the extra
+   * strokes on a higher par (#2941). Absent or unknown reads men's par.
+   */
+  teeGender?: string | null;
+}
+
+/**
+ * Everyone in the match as {@link matchStrokeHandicap} reads them, with the
+ * holes in scope (#2941): each player's basis and tee, so a new match can add
+ * the difference in par (`par_strokes`) and let the lowest play off zero, as
+ * the engine does. Built by {@link matchStrokeField}.
+ */
+export interface MatchStrokeField {
+  players: readonly { basis: number; teeGender: ScoringGender | undefined }[];
+  /** The holes in scope (`holesForSegment`), the par is summed over them. */
+  holes: readonly ScoringHole[];
 }
 
 /** A roster row for {@link matchStrokeBases}. */
@@ -193,14 +213,34 @@ export function matchStrokeBases(
   mode: GameMode,
   players: readonly MatchRosterRow[],
 ): number[] {
+  return inMatchRows(mode, players).map((p) => matchBasis(mode, p));
+}
+
+/** The roster rows the engine reads in a difference match (see {@link matchStrokeBases}); `[]` for other formats. */
+function inMatchRows(mode: GameMode, players: readonly MatchRosterRow[]): MatchRosterRow[] {
   if (!isDifferenceMatch(mode)) return [];
-  const inMatch =
-    mode === 'round_robin'
-      ? players.filter((p) => p.teamNumber != null && p.teamNumber >= 1 && p.teamNumber <= 4)
-      : players.filter(
-          (p) => (p.teamNumber === 1 || p.teamNumber === 2) && p.withdrawnAt == null,
-        );
-  return inMatch.map((p) => matchBasis(mode, p));
+  return mode === 'round_robin'
+    ? players.filter((p) => p.teamNumber != null && p.teamNumber >= 1 && p.teamNumber <= 4)
+    : players.filter((p) => (p.teamNumber === 1 || p.teamNumber === 2) && p.withdrawnAt == null);
+}
+
+/**
+ * {@link matchStrokeBases} with each player's tee and the holes in scope
+ * (#2941): what {@link matchStrokeHandicap} needs to add the difference in
+ * par. The same players as the engine reads; other formats give no players.
+ */
+export function matchStrokeField(
+  mode: GameMode,
+  players: readonly MatchRosterRow[],
+  holes: readonly ScoringHole[],
+): MatchStrokeField {
+  return {
+    players: inMatchRows(mode, players).map((p) => ({
+      basis: matchBasis(mode, p),
+      teeGender: asScoringGender(p.teeGender),
+    })),
+    holes,
+  };
 }
 
 /**
@@ -209,32 +249,53 @@ export function matchStrokeBases(
  * strokes the player gets on the hole — what the hole page's dots, the
  * scorecard and the app show.
  *
- * `matchBases` comes from {@link matchStrokeBases} over the whole roster (the
- * player's own may be included). Singles, four-ball and Round Robin read it:
- * on a new match the lowest plays off 0 and the others get the share of the
- * difference (`matchDifferenceStrokes`; singles at 100 %, owner-ordered audit
- * 2026-11-20; four-ball and Round Robin #2997). Every other mode returns
+ * `match` is everyone in the match over the whole roster (the player's own
+ * may be included): a {@link MatchStrokeField} from {@link matchStrokeField},
+ * or the bare numbers from {@link matchStrokeBases}. Singles, four-ball and
+ * Round Robin read it: on a new match the lowest plays off 0 and the others
+ * get the share of the difference (`matchDifferenceStrokes`; singles at
+ * 100 %, owner-ordered audit 2026-11-20; four-ball and Round Robin #2997).
+ * With `par_strokes` (#2941) the field adds each player's difference in par
+ * and the lowest then plays off zero (`withParDifference`); the bare numbers
+ * carry no tees and give no par strokes. Every other mode returns
  * {@link playerStrokeHandicap}.
  */
 export function matchStrokeHandicap(
   mode: GameMode,
   config: GameModeConfig,
   player: MatchStrokePlayer,
-  matchBases: readonly number[],
+  match: readonly number[] | MatchStrokeField,
 ): number {
   const ch = player.courseHandicap ?? 0;
   if (!isDifferenceMatch(mode)) {
     return playerStrokeHandicap(mode, config, ch, player.rawCourseHandicap);
   }
-  const basis = matchBasis(mode, player);
-  const lowestInMatch = Math.min(basis, ...matchBases);
-  if (mode === 'singles_matchplay') return singlesStrokeHandicap(config, ch, lowestInMatch);
+  const field = isMatchStrokeField(match) ? match : null;
+  const own = { basis: matchBasis(mode, player), teeGender: asScoringGender(player.teeGender) };
+  const others = isMatchStrokeField(match)
+    ? match.players
+    : match.map((basis) => ({ basis, teeGender: undefined }));
+  const lowestInMatch = Math.min(own.basis, ...others.map((p) => p.basis));
   const rule = strokeRuleFor(mode);
   const pct =
     rule.kind === 'allowance'
       ? readAllowancePct(config, rule.configKind, rule.fallbackPct)
       : 100;
-  return matchDifferenceStrokes(config, basis, lowestInMatch, pct);
+  const strokesOf = (basis: number): number =>
+    mode === 'singles_matchplay'
+      ? singlesStrokeHandicap(config, basis, lowestInMatch)
+      : matchDifferenceStrokes(config, basis, lowestInMatch, pct);
+  if (!field || !usesParDifference(config)) return strokesOf(own.basis);
+  const all = [own, ...others];
+  const tees = all.map((p) => p.teeGender);
+  return withParDifference(
+    all.map((p) => strokesOf(p.basis)),
+    tees.map((tee) => parDifferenceStrokes(field.holes, tee, tees)),
+  )[0];
+}
+
+function isMatchStrokeField(match: readonly number[] | MatchStrokeField): match is MatchStrokeField {
+  return !Array.isArray(match);
 }
 
 interface AlternateShotRule {
@@ -280,12 +341,19 @@ function alternateShotRule(mode: GameMode, config: GameModeConfig): AlternateSho
  * Har en side ikke nøyaktig to spillere (utkast), brukes sum eller 60/40 over
  * min og maks, og en tom side gir 0 — motoren gir da et tomt skall. Andre
  * format enn alternate shot gir 0 slag til begge.
+ *
+ * #2941 (F17): med `par_strokes` legges sidens forskjell i par til, som i
+ * motoren (`alternateShotSideStrokes`). Sidens par er kapteinens tee
+ * (`pickTeamCaptain` over `userId`), og `holes` er hullene i scope. Uten
+ * `holes`, eller uten `userId` og `teeGender` på spillerne, gis ingen
+ * par-slag.
  */
 export function alternateShotSideExtras(
   mode: GameMode,
   config: GameModeConfig,
-  side1: readonly SidePlayer[],
-  side2: readonly SidePlayer[],
+  side1: readonly AlternateShotSidePlayer[],
+  side2: readonly AlternateShotSidePlayer[],
+  holes: readonly ScoringHole[] = [],
 ): { side1Extra: number; side2Extra: number } {
   const rule = alternateShotRule(mode, config);
   if (!rule) return { side1Extra: 0, side2Extra: 0 };
@@ -295,5 +363,22 @@ export function alternateShotSideExtras(
     mode === 'greensome_matchplay' ? readTeamStrokesOverride(config) : undefined;
   const side1Combined = override?.side1 ?? sideHandicap(rule.sideRule, side1);
   const side2Combined = override?.side2 ?? sideHandicap(rule.sideRule, side2);
-  return alternateShotExtras(side1Combined, side2Combined, rule.allowancePct);
+  return alternateShotSideStrokes(
+    config,
+    holes,
+    alternateShotExtras(side1Combined, side2Combined, rule.allowancePct),
+    captainTee(side1),
+    captainTee(side2),
+  );
+}
+
+/** A side player for {@link alternateShotSideExtras}: `userId` and `teeGender` give the captain's par (#2941). */
+export type AlternateShotSidePlayer = SidePlayer & { userId?: string; teeGender?: string | null };
+
+/** The tee of the side's captain (lex-min `userId`, as the engine picks it), or undefined. */
+function captainTee(side: readonly AlternateShotSidePlayer[]): ScoringGender | undefined {
+  const ids = side.flatMap((p) => (p.userId ? [p.userId] : []));
+  if (ids.length === 0) return undefined;
+  const captainId = pickTeamCaptain(ids);
+  return asScoringGender(side.find((p) => p.userId === captainId)?.teeGender);
 }
