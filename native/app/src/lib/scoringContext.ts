@@ -216,6 +216,10 @@ function asGender(raw: string): ScoringGender {
  * Det er ikke en feil her: det er nøyaktig det tornygolf.no viser for samme
  * rad i dag, og paritet er hele poenget. Skal defaulten endres, endres den på
  * webben først.
+ *
+ * #3002: `team_handicap_rule` (scramble) og `fourball_allowance_pct` (patsome)
+ * trenger ingen rad her. Motoren leser en manglende nøkkel som den gamle
+ * regelen, både på webben og i appen.
  */
 const MODE_CONFIG_FALLBACK_FIELDS: Partial<Record<GameMode, Record<string, unknown>>> = {
   wolf: { wolf_scoring: 'net' },

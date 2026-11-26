@@ -6,7 +6,8 @@
 // (greensome/foursomes) samt pickups/uspilte hull (→ 0 poeng).
 //
 //   Hull 1–6:   4BBB       — begge spiller, teamPoints = MAX av partner-poeng.
-//                            Allowance: full individuell CH per spiller.
+//                            Allowance: full individuell CH per spiller, eller
+//                            `fourball_allowance_pct` av den (#3002, F24).
 //   Hull 7–12:  Greensome  — én lagball, kaptein-eide scores-rad.
 //                            Allowance (net): round(0.6×minCH + 0.4×maxCH).
 //   Hull 13–18: Foursomes  — én lagball, kaptein-eide scores-rad.
@@ -31,7 +32,7 @@
 // publish; scoring-laget forsvarer seg mot draft-state (n≠2, null-team).
 
 import { pickTeamCaptain } from '@/lib/games/teamCaptain';
-import { roundHalfUp } from '../courseHandicap';
+import { applyAllowance, roundHalfUp, strokeBasis } from '../courseHandicap';
 import { strokesForHole } from '../strokeAllocation';
 import { sideHandicap, type SidePlayer } from '../teamHandicap';
 import { countsBackByRulebook, rankTeams } from '../tiebreaker';
@@ -78,6 +79,31 @@ function segmentFor(holeNumber: number): PatsomeSegment {
 }
 
 /**
+ * The handicap a player plays holes 1–6 (four-ball stableford) off, one home
+ * for the engine and the views (#3002, F24). Gross gives 0. A game with
+ * `fourball_allowance_pct` (new games, NGF vedlegg C s. 75: 85 %) takes that
+ * share of the unrounded course handicap when the start froze it, rounded
+ * once (`applyAllowance(strokeBasis(...))`). A game without the key keeps the
+ * frozen course handicap, so a round played before keeps its numbers.
+ */
+export function patsomeFourballHandicap(
+  courseHandicap: number,
+  rawCourseHandicap: number | null | undefined,
+  scoring: 'gross' | 'net',
+  allowancePct: number | undefined,
+): number {
+  if (scoring === 'gross') return 0;
+  if (allowancePct === undefined) return courseHandicap;
+  return applyAllowance(strokeBasis(courseHandicap, rawCourseHandicap), allowancePct);
+}
+
+/** `mode_config.fourball_allowance_pct` when it is a number, else undefined (no key). */
+export function readPatsomeFourballAllowancePct(config: unknown): number | undefined {
+  const raw = (config as { fourball_allowance_pct?: unknown } | null)?.fourball_allowance_pct;
+  return typeof raw === 'number' ? raw : undefined;
+}
+
+/**
  * The team handicaps of the one-ball holes, one home for the engine and the
  * hole page (#2997): greensome (holes 7–12) 60/40 of the course handicaps,
  * foursomes (holes 13–18) 50 % of the sum. Taken of the unrounded course
@@ -120,6 +146,7 @@ export function compute(ctx: ScoringContext): PatsomeResult {
     cfg.patsome_scoring === 'gross' || cfg.patsome_scoring === 'net'
       ? cfg.patsome_scoring
       : 'net';
+  const fourballAllowancePct = readPatsomeFourballAllowancePct(cfg);
 
   const holesSorted = [...ctx.holes].sort((a, b) => a.number - b.number);
 
@@ -166,6 +193,7 @@ export function compute(ctx: ScoringContext): PatsomeResult {
               members,
               grossByKey,
               scoring,
+              fourballAllowancePct,
             );
           } else {
             // greensome eller foursomes: én lagball, kaptein-eid rad.
@@ -232,6 +260,7 @@ function computeFourballHole(
   members: ScoringPlayer[],
   grossByKey: Map<string, number | null>,
   scoring: 'gross' | 'net',
+  allowancePct: number | undefined,
 ): PatsomeHoleRow {
   const players: PatsomePlayerCell[] = members.map((p): PatsomePlayerCell => {
     const gross = grossByKey.get(`${p.userId}#${hole.number}`) ?? null;
@@ -240,7 +269,13 @@ function computeFourballHole(
     if (gross === null) {
       netStrokes = null;
     } else if (scoring === 'net') {
-      netStrokes = gross - strokesForHole(p.courseHandicap, hole.strokeIndex);
+      const handicap = patsomeFourballHandicap(
+        p.courseHandicap,
+        p.rawCourseHandicap,
+        scoring,
+        allowancePct,
+      );
+      netStrokes = gross - strokesForHole(handicap, hole.strokeIndex);
     } else {
       netStrokes = gross;
     }
