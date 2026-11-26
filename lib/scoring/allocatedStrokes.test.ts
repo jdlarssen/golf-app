@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { computeLeaderboard } from '@/lib/scoring';
 import { strokesForHole } from './strokeAllocation';
+import { MIXED_PAR_18 } from './__fixtures__/mixedPar';
 import {
   alternateShotSideExtras,
   matchStrokeBases,
+  matchStrokeField,
   matchStrokeHandicap,
   playerStrokeHandicap,
 } from './allocatedStrokes';
@@ -398,5 +400,132 @@ describe('alternateShotSideExtras — paritet mot motorene', () => {
       side1Extra: 2,
       side2Extra: 0,
     });
+  });
+});
+
+describe('ulik par: visningene gir de samme tilleggsslagene som motorene (#2941, F17)', () => {
+  // p3 (4) is the lowest and plays from the ladies' tee, so the views must
+  // also let the lowest playing handicap play off zero once her two par
+  // strokes are in (vedlegg C s. 76). p2 is a lady too.
+  const TEES: Record<string, 'mens' | 'ladies'> = { p1: 'mens', p2: 'ladies', p3: 'ladies', p4: 'mens' };
+  const roster = (grouping: Grouping): ScoringPlayer[] =>
+    playersFor(grouping).map((p) => ({ ...p, teeGender: TEES[p.userId] }));
+  const SINGLES = { kind: 'singles_matchplay', team_size: 1, teams_count: 2, match_strokes: 'difference' } as const;
+  const PAR = { par_strokes: 'difference' } as const;
+
+  const ROWS: Array<{ label: string; mode: GameMode; config: GameModeConfig; grouping: Grouping }> = [
+    { label: 'singles med merket', mode: 'singles_matchplay', config: { ...SINGLES, ...PAR }, grouping: 'singles' },
+    { label: 'singles uten merket', mode: 'singles_matchplay', config: SINGLES, grouping: 'singles' },
+    { label: 'four-ball 90 % med merket', mode: 'fourball_matchplay', config: { ...FOURBALL, allowance_pct: 90, match_strokes: 'difference', ...PAR }, grouping: 'sides' },
+    { label: 'four-ball 90 % uten merket', mode: 'fourball_matchplay', config: { ...FOURBALL, allowance_pct: 90, match_strokes: 'difference' }, grouping: 'sides' },
+    { label: 'four-ball 90 % med par_strokes, men uten forskjellen', mode: 'fourball_matchplay', config: { ...FOURBALL, allowance_pct: 90, ...PAR } as GameModeConfig, grouping: 'sides' },
+    { label: 'Round Robin 90 % med merket', mode: 'round_robin', config: { ...ROUND_ROBIN, allowance_pct: 90, match_strokes: 'difference', ...PAR }, grouping: 'slots' },
+    { label: 'Round Robin 90 % uten merket', mode: 'round_robin', config: { ...ROUND_ROBIN, allowance_pct: 90, match_strokes: 'difference' }, grouping: 'slots' },
+  ];
+
+  it.each(ROWS)('$label: kortets slag = motorens slag i hver celle', ({ mode, config, grouping }) => {
+    const players = roster(grouping);
+    const result = computeLeaderboard({
+      game: { id: 'g-2941', game_mode: mode, mode_config: config },
+      players,
+      holes: MIXED_PAR_18,
+      scores: players.flatMap((p) => MIXED_PAR_18.map((h) => ({ userId: p.userId, holeNumber: h.number, gross: GROSS }))),
+    });
+    const field = matchStrokeField(mode, players, MIXED_PAR_18);
+    const byUser = new Map(players.map((p) => [p.userId, p]));
+    const compared = cellsOf(result).filter((c) => c.gross !== null && c.effective !== null);
+    expect(compared.length).toBeGreaterThan(0);
+
+    for (const c of compared) {
+      const expected = strokesForHole(matchStrokeHandicap(mode, config, byUser.get(c.userId)!, field), c.strokeIndex);
+      expect({ userId: c.userId, si: c.strokeIndex, strokes: c.gross! - c.effective! }).toEqual({
+        userId: c.userId,
+        si: c.strokeIndex,
+        strokes: expected,
+      });
+    }
+  });
+
+  it('singles: damen (4) spiller på null etter sine to par-slag, og herren (20) får 14', () => {
+    const players = roster('singles');
+    const field = matchStrokeField('singles_matchplay', players, MIXED_PAR_18);
+    const strokes = players.map((p) => matchStrokeHandicap('singles_matchplay', { ...SINGLES, ...PAR }, p, field));
+    expect(strokes).toEqual([14, 0]);
+    // Without the key: 16 and 0, as before.
+    expect(players.map((p) => matchStrokeHandicap('singles_matchplay', SINGLES, p, field))).toEqual([16, 0]);
+  });
+
+  it('matchStrokeField tar spillerne motoren leser, med teen, og tomt for andre format', () => {
+    const players = roster('sides');
+    expect(matchStrokeField('fourball_matchplay', players, MIXED_PAR_18).players).toEqual([
+      { basis: 20, teeGender: 'mens' },
+      { basis: 10, teeGender: 'ladies' },
+      { basis: 4, teeGender: 'ladies' },
+      { basis: 8, teeGender: 'mens' },
+    ]);
+    expect(matchStrokeField('stableford', players, MIXED_PAR_18).players).toEqual([]);
+  });
+
+  type AsPlayer = { userId: string; courseHandicap: number; teeGender: 'mens' | 'ladies' };
+  const AS_PAR_ROWS: Array<{ label: string; mode: GameMode; config: GameModeConfig; side1: AsPlayer[]; side2: AsPlayer[] }> = [
+    {
+      label: 'foursomes 50 %, damesiden med merket',
+      mode: 'foursomes_matchplay',
+      config: { kind: 'foursomes_matchplay', team_size: 2, teams_count: 2, allowance_pct: 50, ...PAR },
+      side1: [{ userId: 'a1', courseHandicap: 20, teeGender: 'mens' }, { userId: 'a2', courseHandicap: 10, teeGender: 'mens' }],
+      side2: [{ userId: 'b1', courseHandicap: 4, teeGender: 'ladies' }, { userId: 'b2', courseHandicap: 8, teeGender: 'mens' }],
+    },
+    {
+      label: 'foursomes 50 %, damesiden uten merket',
+      mode: 'foursomes_matchplay',
+      config: { kind: 'foursomes_matchplay', team_size: 2, teams_count: 2, allowance_pct: 50 },
+      side1: [{ userId: 'a1', courseHandicap: 20, teeGender: 'mens' }, { userId: 'a2', courseHandicap: 10, teeGender: 'mens' }],
+      side2: [{ userId: 'b1', courseHandicap: 4, teeGender: 'ladies' }, { userId: 'b2', courseHandicap: 8, teeGender: 'mens' }],
+    },
+    {
+      label: 'greensome med overstyring {8, 3} og merket',
+      mode: 'greensome_matchplay',
+      config: { kind: 'greensome_matchplay', team_size: 2, teams_count: 2, allowance_pct: 100, team_strokes_override: { team1: 8, team2: 3 }, ...PAR },
+      side1: [{ userId: 'a1', courseHandicap: 12, teeGender: 'ladies' }, { userId: 'a2', courseHandicap: 20, teeGender: 'mens' }],
+      side2: [{ userId: 'b1', courseHandicap: 5, teeGender: 'mens' }, { userId: 'b2', courseHandicap: 8, teeGender: 'mens' }],
+    },
+    {
+      label: 'chapman 100 %, kapteinen er ikke damen',
+      mode: 'chapman_matchplay',
+      config: { kind: 'chapman_matchplay', team_size: 2, teams_count: 2, allowance_pct: 100, ...PAR },
+      side1: [{ userId: 'a1', courseHandicap: 12, teeGender: 'mens' }, { userId: 'a2', courseHandicap: 20, teeGender: 'ladies' }],
+      side2: [{ userId: 'b1', courseHandicap: 5, teeGender: 'mens' }, { userId: 'b2', courseHandicap: 8, teeGender: 'mens' }],
+    },
+    {
+      label: 'gruesome 50 % med merket',
+      mode: 'gruesome_matchplay',
+      config: { kind: 'gruesome_matchplay', team_size: 2, teams_count: 2, allowance_pct: 50, ...PAR },
+      side1: [{ userId: 'a1', courseHandicap: 10, teeGender: 'mens' }, { userId: 'a2', courseHandicap: 10, teeGender: 'mens' }],
+      side2: [{ userId: 'b1', courseHandicap: 10, teeGender: 'ladies' }, { userId: 'b2', courseHandicap: 10, teeGender: 'ladies' }],
+    },
+  ];
+
+  it.each(AS_PAR_ROWS)('$label: lag-slagene = motorens effectiveExtraHandicap', ({ mode, config, side1, side2 }) => {
+    const players: ScoringPlayer[] = [
+      ...side1.map((p) => ({ ...p, teamNumber: 1, flightNumber: 1 })),
+      ...side2.map((p) => ({ ...p, teamNumber: 2, flightNumber: 1 })),
+    ];
+    const result = computeLeaderboard({
+      game: { id: 'g-2941', game_mode: mode, mode_config: config },
+      players,
+      holes: MIXED_PAR_18,
+      scores: [],
+    });
+    if (result.kind !== 'foursomes_matchplay') throw new Error(`unexpected kind ${result.kind}`);
+    expect(result.sides[0].captainUserId).toBe('a1');
+    expect(alternateShotSideExtras(mode, config, side1, side2, MIXED_PAR_18)).toEqual({
+      side1Extra: result.sides[0].effectiveExtraHandicap,
+      side2Extra: result.sides[1].effectiveExtraHandicap,
+    });
+  });
+
+  it('foursomes 50 %: 30 mot 12 gir 9 slag, og damesidens 2 par-slag gjør det til 7', () => {
+    const [row] = AS_PAR_ROWS;
+    expect(alternateShotSideExtras(row.mode, row.config, row.side1, row.side2, MIXED_PAR_18)).toEqual({ side1Extra: 7, side2Extra: 0 });
   });
 });
