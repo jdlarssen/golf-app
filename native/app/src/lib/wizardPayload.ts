@@ -24,7 +24,9 @@ import {
 import {
   DEFAULT_SHAMBLE_SETUP,
   defaultHcpAllowancePct,
+  defaultPatsomeFourballAllowancePct,
   defaultTeamHandicapPct,
+  defaultTeamHandicapRule,
   defaultTeamSizeForMode,
 } from '../../../../lib/games/formatSetupDefaults';
 import { defaultFlightForTeam } from '../../../../lib/games/teamFormatLimits';
@@ -94,6 +96,18 @@ export interface ModeSetup {
    * (`defaultTeamHandicapPct`). 0 er brutto.
    */
   teamHandicapSumPct?: number;
+  /**
+   * #3002 (F23): hvordan lag-handicapet regnes. `'ngf'` = forbundets vekting
+   * per spiller, `'pct'` = arrangørens prosent (og brutto). Utelatt = `'pct'`
+   * når `teamHandicapSumPct` er satt, ellers formatets start
+   * (`defaultTeamHandicapRule`): Texas og Florida `'ngf'`, Ambrose `'pct'`.
+   */
+  teamHandicapRule?: 'ngf' | 'pct';
+  /**
+   * #3002 (F24): patsomes andel på hull 1–6, 0–100. Utelatt = 85
+   * (`defaultPatsomeFourballAllowancePct`).
+   */
+  patsomeFourballAllowancePct?: number;
   /** shamble: varianten, antall som teller (champagne) og tellemåten. */
   shambleVariant?: 'shamble' | 'champagne';
   shambleCount?: 1 | 2 | 3;
@@ -448,6 +462,13 @@ export function draftToFormData(draft: GameDraft): WizardFormData {
   form.set('nassau_scoring', setup.nassauScoring ?? null);
   form.set('kr_per_unit', setup.krPerUnit ?? null);
   form.set('patsome_scoring', setup.patsomeScoring ?? null);
+  // #3002 (F24): et nytt patsome-spill sender alltid andelen på hull 1–6.
+  if (draft.gameMode === 'patsome') {
+    form.set(
+      'patsome_fourball_allowance_pct',
+      setup.patsomeFourballAllowancePct ?? defaultPatsomeFourballAllowancePct(),
+    );
+  }
   // #2753 D3b: scramble-familien og shamble, med nettets standarder der
   // arrangøren ikke har valgt. Lag-handicapet MÅ være satt for scramble: tomt
   // felt gir `bad_allowance` fra den delte byggeren.
@@ -458,6 +479,14 @@ export function draftToFormData(draft: GameDraft): WizardFormData {
     form.set(
       `${prefix}_team_handicap_pct`,
       setup.teamHandicapSumPct ?? defaultTeamHandicapPct(draft.gameMode, size),
+    );
+    // #3002 (F23): regelen sendes alltid for et nytt spill, så validatoren
+    // skriver den (`team_handicap_rule`). En valgt prosent (også brutto, 0)
+    // finnes bare under «Egen prosent», så den betyr `pct` når regelen mangler.
+    form.set(
+      `${prefix}_team_handicap_rule`,
+      setup.teamHandicapRule ??
+        (setup.teamHandicapSumPct !== undefined ? 'pct' : defaultTeamHandicapRule(draft.gameMode)),
     );
   }
   if (draft.gameMode === 'shamble') {

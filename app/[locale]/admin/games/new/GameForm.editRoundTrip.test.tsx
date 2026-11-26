@@ -288,3 +288,38 @@ describe('«Rediger spill» keeps a scheduled game as it is (audit 20.11, p11)',
     },
   );
 });
+
+// #3002: a stored rule and share come back from the form itself, not only
+// through the carry (`PRESERVED_MODE_CONFIG_KEYS`), so the edit shows what it
+// writes. A game without them posts neither (the fixtures above).
+describe('GameForm edit round trip — scramble rule and patsome share (#3002)', () => {
+  const FIXTURES_3002: Fixture[] = [
+    {
+      mode: 'texas_scramble',
+      config: { kind: 'texas_scramble', team_size: 4, teams_count: 2, team_handicap_pct: 10, team_handicap_rule: 'ngf_weighted' },
+      hcp: 100,
+      teams: [1, 1, 1, 1, 2, 2, 2, 2],
+    },
+    {
+      mode: 'florida_scramble',
+      config: { kind: 'florida_scramble', team_size: 3, teams_count: 2, team_handicap_pct: 20, team_handicap_rule: 'sum_pct' },
+      hcp: 100,
+      teams: [1, 1, 1, 2, 2, 2],
+    },
+    {
+      mode: 'patsome',
+      config: { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net', fourball_allowance_pct: 85 },
+      hcp: 100,
+      teams: [1, 1, 2, 2],
+    },
+  ];
+
+  it.each(FIXTURES_3002.map((f) => [f.mode, f] as const))(
+    '%s: the form posts the stored keys itself',
+    (_label, f) => {
+      const { row, payload } = saveAsItStands(f);
+      expect(payload.errorCode).toBeUndefined();
+      expect(payload.mode_config).toEqual(row.mode_config);
+    },
+  );
+});

@@ -36,6 +36,8 @@ export function HandicapSettings({ state }: { state: GameFormState }) {
     setHcpAllowance,
     texasHandicapPct,
     setTexasHandicapPct,
+    teamHandicapRule,
+    setTeamHandicapRule,
     ambroseHandicapPct,
     setAmbroseHandicapPct,
     floridaHandicapPct,
@@ -162,6 +164,8 @@ export function HandicapSettings({ state }: { state: GameFormState }) {
           teamSize={teamSize}
           sumPct={texasHandicapPct}
           onSumPctChange={setTexasHandicapPct}
+          rule={teamHandicapRule}
+          onRuleChange={setTeamHandicapRule}
         />
       )}
       {isAmbrose && (
@@ -171,6 +175,8 @@ export function HandicapSettings({ state }: { state: GameFormState }) {
           teamSize={teamSize}
           sumPct={ambroseHandicapPct}
           onSumPctChange={setAmbroseHandicapPct}
+          rule={teamHandicapRule}
+          onRuleChange={setTeamHandicapRule}
         />
       )}
       {isFlorida && (
@@ -180,6 +186,8 @@ export function HandicapSettings({ state }: { state: GameFormState }) {
           teamSize={teamSize}
           sumPct={floridaHandicapPct}
           onSumPctChange={setFloridaHandicapPct}
+          rule={teamHandicapRule}
+          onRuleChange={setTeamHandicapRule}
         />
       )}
     </>
