@@ -8,6 +8,10 @@
 // én spiller mindre enn `team_size` (#2569) får samme prosent av snittet:
 // `scrambleTeamHandicap` i `../teamHandicap.ts`.
 //
+// #3002 (F23): et spill med `team_handicap_rule: 'ngf_weighted'` vekter hver
+// spiller etter NGF vedlegg C (`scrambleTeamHandicapFor`). Uten nøkkelen
+// gjelder prosenten av summen over, så et spill fra før beholder tallene sine.
+//
 // Lag-score-lagring: en lexicographically utvalgt «kaptein» (minste userId
 // per lag) eier scores-radene. Andre lag-medlemmer kan taste i UI; tap fra
 // hvem som helst skriver til kaptein-raden (entered_by = den som tastet).
@@ -24,7 +28,7 @@
 
 import { pickTeamCaptain } from '@/lib/games/teamCaptain';
 import { strokesForHole } from '../strokeAllocation';
-import { scrambleTeamHandicap, sideHandicap } from '../teamHandicap';
+import { scrambleTeamHandicapFor, sideHandicap } from '../teamHandicap';
 import { countsBackByRulebook, rankingHolesByNumber, rankTeams, ranksByNetToPar, UNPLAYED_PADDING } from '../tiebreaker';
 import { parFor } from './parResolver';
 import type {
@@ -86,6 +90,12 @@ export function computeScramble(
   handicapPct: number,
 ): TexasScrambleResult {
   const configuredTeamSize = ctx.game.mode_config.team_size;
+  const config = ctx.game.mode_config as { team_handicap_rule?: 'ngf_weighted' | 'sum_pct' };
+  const handicapConfig = {
+    team_size: configuredTeamSize,
+    team_handicap_pct: handicapPct,
+    team_handicap_rule: config.team_handicap_rule,
+  };
   const netToParRanking = ranksByNetToPar(ctx.game.mode_config);
   const holesSorted = [...ctx.holes].sort((a, b) => a.number - b.number);
   const grossByKey = new Map<string, number | null>();
@@ -122,14 +132,10 @@ export function computeScramble(
       }));
 
       // #2997 (F25): the sum of the unrounded course handicaps when the start
-      // froze them, so `scrambleTeamHandicap` rounds once (WHS 6.2a/1).
+      // froze them, rounded once (WHS 6.2a/1). #3002 (F23): the game's rule,
+      // NGF's weighting or the share of the sum (`scrambleTeamHandicapFor`).
       const combinedCourseHandicap = sideHandicap('sum', groupMembers);
-      const teamHandicap = scrambleTeamHandicap(
-        combinedCourseHandicap,
-        handicapPct,
-        configuredTeamSize,
-        members.length,
-      );
+      const teamHandicap = scrambleTeamHandicapFor(handicapConfig, groupMembers);
 
       // Kapteinen eier scores-raden, og siden Texas-laget spiller én ball
       // bruker vi kapteinens teeGender som lag-referanse for par-display.

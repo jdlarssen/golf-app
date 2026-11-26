@@ -4,7 +4,7 @@ import {
   teamScoreOwnerId,
 } from './teamCaptain';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
-import { scrambleTeamHandicap, sideHandicap } from '@/lib/scoring/teamHandicap';
+import { scrambleHandicapConfig, scrambleTeamHandicapFor } from '@/lib/scoring/teamHandicap';
 import {
   alternateShotSideExtras,
   matchStrokeBases,
@@ -160,10 +160,10 @@ function sidePlayer(p: PlayerForHole): { courseHandicap: number; rawCourseHandic
  *
  * Regler:
  *  - Texas scramble: Layout A med lagets rad-eier (lex-min aktive) som primær.
- *    Lag-handicap = round(sum(member.course_handicap) × team_handicap_pct / 100),
- *    over hele laget, også et trukket medlem (#2067, som scoring-motoren). Et
- *    lag med færre enn `team_size` får samme prosent av snittet
- *    (`scrambleTeamHandicap`, #2569).
+ *    Lag-handicapet kommer fra motorens hjem, `scrambleTeamHandicapFor`, over
+ *    hele laget, også et trukket medlem (#2067): NGFs vekting per spiller med
+ *    `team_handicap_rule: 'ngf_weighted'` (#3002), ellers prosenten av summen,
+ *    der et lag med færre enn `team_size` får samme prosent av snittet (#2569).
  *  - Reveal-active (visibility=reveal + status=active): Layout A med me,
  *    uansett modus. Beholder reveal-prinsippet om å skjule andres data.
  *  - Solo-modi (stableford team_size=1, solo strokeplay): Layout A med me.
@@ -190,16 +190,10 @@ export function resolveScorecardLayout(
         ? teamRowOwners(teamMembers)
         : { ownerId: me.user_id, formerOwnerIds: [] };
     // #2997 (F25): the unrounded course handicaps when the start froze them.
-    const combinedCH = sideHandicap('sum', teamMembers.map(sidePlayer));
-    const pct =
-      cfg.kind === 'texas_scramble' || cfg.kind === 'ambrose' || cfg.kind === 'florida_scramble'
-        ? cfg.team_handicap_pct
-        : 0;
-    const teamHandicap = scrambleTeamHandicap(
-      combinedCH,
-      pct,
-      cfg.team_size,
-      teamMembers.length,
+    // #3002 (F23): the game's rule, from the engine's home.
+    const teamHandicap = scrambleTeamHandicapFor(
+      scrambleHandicapConfig(cfg),
+      teamMembers.map(sidePlayer),
     );
     return {
       variant: 'a',

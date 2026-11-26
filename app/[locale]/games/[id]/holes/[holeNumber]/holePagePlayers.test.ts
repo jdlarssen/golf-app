@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { GameForHole, PlayerForHole } from '@/lib/games/getGameWithPlayers';
+import { compute as computeTexas } from '@/lib/scoring/modes/texasScramble';
+import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { buildPlayersForClient, resolveFlight } from './holePagePlayers';
 
 // #2067 — Type A: lagkortets slag-prikker på hull-siden skal regnes av samme
@@ -352,5 +354,52 @@ describe('buildPlayersForClient — lag på 3 i et 4-mannsspill (#2569)', () => 
   it('laget på 4 (10/20/30/40 → 20) er uendret: slag på SI 17, to på SI 2', () => {
     expect(teamCardStrokes({ game: TEXAS_AT_FOUR, allPlayers: roster, me, strokeIndex: 17 })[1]).toBe(1);
     expect(teamCardStrokes({ game: TEXAS_AT_FOUR, allPlayers: roster, me, strokeIndex: 2 })[1]).toBe(2);
+  });
+});
+
+// #3002 (F23): a new Texas game weighs each player (NGF vedlegg C). The hole
+// page reads the same home as the engine (`scrambleTeamHandicapFor`), so the
+// team card gives the strokes the board counts on every index: a full team of
+// four, a team of three in a game of four, and a game without the key.
+describe('buildPlayersForClient — scramble-vekting som tavla (#3002, F23)', () => {
+  const me = player('b1', 2, 10);
+  const roster = [
+    player('a1', 1, 10),
+    player('a2', 1, 18),
+    player('a3', 1, 27),
+    player('a4', 1, 39),
+    me,
+    player('b2', 2, 18),
+    player('b3', 2, 27),
+  ];
+  const config = (weighted: boolean) => ({
+    kind: 'texas_scramble' as const,
+    team_size: 4 as const,
+    teams_count: 2,
+    team_handicap_pct: 10,
+    ...(weighted ? { team_handicap_rule: 'ngf_weighted' as const } : {}),
+  });
+
+  it.each([
+    { label: 'med vekting', weighted: true, expected: { 1: 14, 2: 9 } },
+    { label: 'uten nøkkel', weighted: false, expected: { 1: 9, 2: 7 } },
+  ])('$label: kortets slag = motorens slag på hver hullindeks', ({ weighted, expected }) => {
+    const engine = computeTexas({
+      game: { id: 'g1', game_mode: 'texas_scramble', mode_config: config(weighted) },
+      players: roster.map((p) => ({
+        userId: p.user_id,
+        teamNumber: p.team_number,
+        flightNumber: p.flight_number,
+        courseHandicap: p.course_handicap ?? 0,
+      })),
+      holes: [],
+      scores: [],
+    });
+    const byTeam = Object.fromEntries(engine.teams.map((t) => [t.teamNumber, t.teamHandicap]));
+    expect(byTeam).toEqual(expected);
+    for (let si = 1; si <= 18; si++) {
+      const strokes = teamCardStrokes({ game: game('texas_scramble', config(weighted)), allPlayers: roster, me, strokeIndex: si });
+      expect(strokes).toEqual({ 1: strokesForHole(byTeam[1], si), 2: strokesForHole(byTeam[2], si) });
+    }
   });
 });
