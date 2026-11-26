@@ -200,7 +200,8 @@ describe('publishGame', () => {
         course_id: 'course-1',
         tee_box_id: 'tee-1',
         game_mode: 'stableford',
-        mode_config: { kind: 'stableford', team_size: 1, points_table: 'standard' },
+        // #2940: nye spill teller tilbake etter regelboka.
+        mode_config: { kind: 'stableford', team_size: 1, points_table: 'standard', countback: 'rulebook' },
         // Publisering gir 'scheduled', aldri 'active' — runden startes for seg.
         status: 'scheduled',
         created_by: ME,
@@ -382,7 +383,7 @@ describe('publishGame', () => {
       const row = stepArgs(gameInsert, 'insert')[0]![0] as Record<string, unknown>;
       expect(row).toMatchObject({
         game_mode: 'nassau',
-        mode_config: { kind: 'nassau', team_size: 1, nassau_scoring: scoring, ranking: 'net_to_par' },
+        mode_config: { kind: 'nassau', team_size: 1, nassau_scoring: scoring, ranking: 'net_to_par', countback: 'rulebook' },
       });
     });
 

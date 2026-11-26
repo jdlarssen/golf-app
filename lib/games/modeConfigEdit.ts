@@ -1,5 +1,5 @@
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
-import { supportsNetToParRanking } from '@/lib/scoring/tiebreaker';
+import { supportsNetToParRanking, supportsRulebookCountback } from '@/lib/scoring/tiebreaker';
 
 /**
  * `mode_config`-nøkler som IKKE eies av redigeringsskjemaet.
@@ -30,6 +30,9 @@ import { supportsNetToParRanking } from '@/lib/scoring/tiebreaker';
  * `match_strokes` (owner-ordered audit 2026-11-20) too: stamped on a new
  * singles match (`stampNewSinglesMatchConfig`), carried through an edit, and
  * never added to a match created before.
+ *
+ * `countback` (#2940) the same way: stamped on a new game that ranks through
+ * `rankTeams`, carried through an edit, never added to a game created before.
  */
 export const PRESERVED_MODE_CONFIG_KEYS = [
   'team_strokes_override',
@@ -38,6 +41,7 @@ export const PRESERVED_MODE_CONFIG_KEYS = [
   'ranking',
   'wolf_rotation',
   'match_strokes',
+  'countback',
 ] as const;
 
 /**
@@ -54,8 +58,8 @@ export function stampNewSinglesMatchConfig(config: GameModeConfig): GameModeConf
 }
 
 /**
- * #2253 / #2625 / #2314: stamps the rules a NEW game is created with onto its
- * `mode_config`. Today there are three:
+ * #2253 / #2625 / #2314 / #2940: stamps the rules a NEW game is created with
+ * onto its `mode_config`. Today there are four:
  *  - solo strokeplay, the team strokeplay formats (best ball,
  *    Texas/Ambrose/Florida scramble, shamble) and Nassau rank on net to par
  *    (`ranking: 'net_to_par'`, read by `ranksByNetToPar` in the scoring
@@ -65,7 +69,10 @@ export function stampNewSinglesMatchConfig(config: GameModeConfig): GameModeConf
  *    n points (`wolf_rotation: 'catch_up'`, read by `wolfForHole` in
  *    `lib/scoring/modes/wolfTurn.ts`);
  *  - singles matchplay gives the higher handicap the difference
- *    (`stampNewSinglesMatchConfig`, audit 2026-11-20).
+ *    (`stampNewSinglesMatchConfig`, audit 2026-11-20);
+ *  - every format that ranks through `rankTeams` (the strokeplay formats
+ *    above, stableford, modified stableford and patsome) counts a tie back by
+ *    the rule book (`countback: 'rulebook'`, read by `countsBackByRulebook`).
  * Every other config is returned unchanged.
  *
  * Called at every insert site that can create one of those formats — the
@@ -77,8 +84,10 @@ export function stampNewSinglesMatchConfig(config: GameModeConfig): GameModeConf
 export function stampNewGameModeConfig(config: GameModeConfig): GameModeConfig {
   if (config.kind === 'wolf') return { ...config, wolf_rotation: 'catch_up' };
   if (config.kind === 'singles_matchplay') return stampNewSinglesMatchConfig(config);
-  if (!supportsNetToParRanking(config)) return config;
-  return { ...config, ranking: 'net_to_par' };
+  if (!supportsRulebookCountback(config)) return config;
+  const stamped: GameModeConfig = { ...config, countback: 'rulebook' };
+  if (!supportsNetToParRanking(stamped)) return stamped;
+  return { ...stamped, ranking: 'net_to_par' };
 }
 
 /**
