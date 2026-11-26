@@ -702,3 +702,40 @@ describe('compute — trukket kaptein (#2067)', () => {
     expect(after.holesUp).toBe(3);
   });
 });
+
+// ---------------------------------------------------------------------------
+// #2997 (F16): the share is taken of the unrounded course handicaps when the
+// start froze them, and rounded once (NGF 6.2a, avklaring 6.2a/1, s. 55).
+// ---------------------------------------------------------------------------
+
+describe('compute — én avrunding av urundet banehandicap (#2997, F16)', () => {
+  const p = (
+    userId: string,
+    teamNumber: number,
+    courseHandicap: number,
+    rawCourseHandicap?: number | null,
+  ): ScoringPlayer => ({ userId, teamNumber, flightNumber: 1, courseHandicap, rawCourseHandicap });
+
+  it('ved 50 %: 9,513 + 11,394 mot 0 gir 10 slag (heltallene gir 11)', () => {
+    const withRaw = compute(
+      makeCtx({
+        players: [p('a1', 1, 10, 9.513), p('a2', 1, 11, 11.394), p('b1', 2, 0, 0), p('b2', 2, 0, 0)],
+        holes: par4Holes(18),
+        scores: [],
+        allowancePct: 50,
+      }),
+    );
+    expect(withRaw.sides.map((s) => s.effectiveExtraHandicap)).toEqual([10, 0]);
+    expect(withRaw.holes.reduce((sum, h) => sum + h.side1Extra, 0)).toBe(10);
+
+    const integersOnly = compute(
+      makeCtx({
+        players: [p('a1', 1, 10), p('a2', 1, 11), p('b1', 2, 0), p('b2', 2, 0)],
+        holes: par4Holes(18),
+        scores: [],
+        allowancePct: 50,
+      }),
+    );
+    expect(integersOnly.sides.map((s) => s.effectiveExtraHandicap)).toEqual([11, 0]);
+  });
+});

@@ -5,6 +5,7 @@ import {
   applyAllowance,
   playingHandicapFromRaw,
   playingHandicap,
+  strokeBasis,
 } from './courseHandicap';
 
 describe('calculateCourseHandicap', () => {
@@ -275,5 +276,21 @@ describe('0,5 rounds up also when the float lands just under (#2939, F3)', () =>
     }
     expect(checked).toBe(83 * 101);
     expect(mismatches).toBe(0);
+  });
+});
+
+describe('strokeBasis: the unrounded course handicap when it is frozen (#2997, F16/F25)', () => {
+  it('is the unrounded value when the start froze it', () => {
+    expect(strokeBasis(21, 20.907)).toBe(20.907);
+  });
+
+  it('is the integer when the round was started before the column existed', () => {
+    expect(strokeBasis(21, null)).toBe(21);
+    expect(strokeBasis(21, undefined)).toBe(21);
+  });
+
+  it('keeps a plus handicap and 0 as they are', () => {
+    expect(strokeBasis(-4, -3.6)).toBe(-3.6);
+    expect(strokeBasis(0, 0)).toBe(0);
   });
 });

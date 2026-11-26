@@ -431,3 +431,52 @@ describe('compute — lukk-ute-form fryses gjennom greensome-delegeringen (#1458
     expect(r.result!.marginUp).toBe(5);
   });
 });
+
+// ---------------------------------------------------------------------------
+// #2997 (F16): 60/40 of the unrounded course handicaps, no rounding per side,
+// one rounding of the difference (NGF 6.2a, avklaring 6.2a/1, s. 55).
+// ---------------------------------------------------------------------------
+
+describe('compute — 60/40 uten mellomavrunding (#2997, F16)', () => {
+  const p = (
+    userId: string,
+    teamNumber: number,
+    courseHandicap: number,
+    rawCourseHandicap?: number | null,
+  ): ScoringPlayer => ({ userId, teamNumber, flightNumber: 1, courseHandicap, rawCourseHandicap });
+
+  // Frozen 8/14 and 15/29: per side 10,4 → 10 and 20,6 → 21, so 11 at 100 %.
+  // The unrounded 10,408 and 20,608 give 10,2 → 10.
+  it('gir ett slag mindre enn når hver side rundes først', () => {
+    const withRaw = compute(
+      makeCtx({
+        players: [p('a1', 1, 8, 8.04), p('a2', 1, 14, 13.96), p('b1', 2, 15, 15.04), p('b2', 2, 29, 28.96)],
+        holes: par4Holes(18),
+        scores: [],
+      }),
+    );
+    expect(withRaw.sides.map((s) => s.effectiveExtraHandicap)).toEqual([0, 10]);
+
+    const integersOnly = compute(
+      makeCtx({
+        players: [p('a1', 1, 8), p('a2', 1, 14), p('b1', 2, 15), p('b2', 2, 29)],
+        holes: par4Holes(18),
+        scores: [],
+      }),
+    );
+    expect(integersOnly.sides.map((s) => s.combinedCourseHandicap)).toEqual([10, 21]);
+    expect(integersOnly.sides.map((s) => s.effectiveExtraHandicap)).toEqual([0, 11]);
+  });
+
+  it('arrangørens lag-slag (team_strokes_override) brukes som før, også med urundet tall', () => {
+    const result = compute(
+      makeCtx({
+        players: [p('a1', 1, 8, 8.04), p('a2', 1, 14, 13.96), p('b1', 2, 15, 15.04), p('b2', 2, 29, 28.96)],
+        holes: par4Holes(18),
+        scores: [],
+        teamStrokesOverride: { team1: 4, team2: 9 },
+      }),
+    );
+    expect(result.sides.map((s) => s.effectiveExtraHandicap)).toEqual([0, 5]);
+  });
+});

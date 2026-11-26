@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { compute } from './chapmanMatchplay';
-import { chapmanSideHandicap } from './foursomesMatchplay';
+import { sideHandicap } from '../teamHandicap';
 import type {
   GameModeConfig,
   ScoringContext,
@@ -52,7 +52,7 @@ function makeCtx(opts: {
 // 60/40-side-handicap-formel
 // ---------------------------------------------------------------------------
 
-describe('chapmanSideHandicap — WHS 60/40', () => {
+describe("sideHandicap('sixtyForty') på hele tall — WHS 60/40, rundet per side", () => {
   it.each([
     // [lav, høy, forventet] — round(0.6×lav + 0.4×høy)
     [10, 20, 14], // USGA-eksempel
@@ -62,8 +62,8 @@ describe('chapmanSideHandicap — WHS 60/40', () => {
     [8, 14, 10], // round(0.6×8 + 0.4×14) = round(4.8+5.6) = round(10.4) = 10
     [3, 8, 5], // round(1.8 + 3.2) = round(5.0) = 5
     [7, 12, 9], // round(4.2 + 4.8) = round(9.0) = 9
-  ])('chapmanSideHandicap(%i, %i) = %i', (a, b, expected) => {
-    expect(chapmanSideHandicap(a, b)).toBe(expected);
+  ])("sideHandicap('sixtyForty', %i, %i) = %i", (a, b, expected) => {
+    expect(sideHandicap('sixtyForty', [{ courseHandicap: a }, { courseHandicap: b }])).toBe(expected);
   });
 });
 
@@ -179,5 +179,18 @@ describe('compute — Chapman matchplay', () => {
     expect(r.kind).toBe('foursomes_matchplay');
     expect(r.holes).toEqual([]);
     expect(r.result).toBeNull();
+  });
+});
+
+describe('compute — Chapman 60/40 av urundet banehandicap (#2997, F16)', () => {
+  it('runder ikke hver side først: 10,408 mot 20,608 gir 10, ikke 11', () => {
+    const players: ScoringPlayer[] = [
+      { userId: 'a1', teamNumber: 1, flightNumber: 1, courseHandicap: 8, rawCourseHandicap: 8.04 },
+      { userId: 'a2', teamNumber: 1, flightNumber: 1, courseHandicap: 14, rawCourseHandicap: 13.96 },
+      { userId: 'b1', teamNumber: 2, flightNumber: 1, courseHandicap: 15, rawCourseHandicap: 15.04 },
+      { userId: 'b2', teamNumber: 2, flightNumber: 1, courseHandicap: 29, rawCourseHandicap: 28.96 },
+    ];
+    const result = compute(makeCtx({ players, holes: par4Holes(18), scores: [] }));
+    expect(result.sides.map((s) => s.effectiveExtraHandicap)).toEqual([0, 10]);
   });
 });

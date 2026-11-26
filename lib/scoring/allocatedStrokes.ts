@@ -3,20 +3,23 @@
 //
 // Det frosne banehandicapet (`game_players.course_handicap`) er rått. Noen
 // format fordeler et annet tall over SI: fourball og round robin tar allowance
-// fra `mode_config.allowance_pct`, og brutto-valget i pott- og lagformatene gir
-// 0 slag. Visningene leste før det rå tallet, så kortet ga slag motoren ikke
+// fra `mode_config.allowance_pct` (i en ny match av differansen til den
+// laveste, #2997), og brutto-valget i pott- og lagformatene gir 0 slag. Formatene
+// med egen prosent tar den av det urundede banehandicapet når starten frøs det
+// (`raw_course_handicap`, `strokeBasis`). Visningene leste før det rå tallet, så kortet ga slag motoren ikke
 // regnet med, og flighten trodde et hull var delt som tavla ga bort.
 //
 // Motorfilene eier fortsatt sin egen lesing. `allocatedStrokes.test.ts` kjører
 // de ekte motorene og binder hjelperne her til dem: endrer en motor hvordan den
 // leser allowance eller brutto, blir paritetstesten rød (AGENTS.md trap 4).
 
-import { applyAllowance } from './courseHandicap';
-import { chapmanSideHandicap, combinedSideHandicap } from './modes/foursomesMatchplay';
-import type { SideHandicapFn } from './modes/foursomesMatchplay';
-import { greensomeTeamHandicap, readTeamStrokesOverride } from './modes/greensomeMatchplay';
+import { applyAllowance, strokeBasis } from './courseHandicap';
+import { matchDifferenceStrokes } from './matchStrokes';
+import { alternateShotExtras } from './modes/foursomesMatchplay';
+import { readTeamStrokesOverride } from './modes/greensomeMatchplay';
 import { singlesStrokeHandicap } from './modes/singlesMatchplay';
 import type { GameMode, GameModeConfig } from './modes/types';
+import { sideHandicap, type SidePlayer, type SideRule } from './teamHandicap';
 
 /** `allowance_pct` for `kind`, or the engine's fallback when the kind differs or the field is missing. */
 function readAllowancePct(
@@ -104,7 +107,9 @@ function strokeRuleFor(mode: GameMode): StrokeRule {
  * Handicapet motoren fordeler over SI for én spiller i formatene med ett kort
  * per spiller (unntatt singles med `match_strokes: 'difference'`).
  *
- * - Fourball: `applyAllowance(ch, allowance_pct)`, fallback 100 (`fourballMatchplay.ts`).
+ * - Fourball: `applyAllowance(basis, allowance_pct)`, fallback 100
+ *   (`fourballMatchplay.ts`). `basis` er det urundede banehandicapet når
+ *   starten frøs det, ellers `ch` (`strokeBasis`, #2997).
  * - Round robin: samme, fallback 85 (`roundRobin.ts`).
  * - Skins, nassau, nines, acey deucey, shamble og patsome: 0 i brutto, ellers `ch`.
  * - Wolf: 0 når `wolf_scoring` er brutto, ellers `ch`.
@@ -122,12 +127,14 @@ export function playerStrokeHandicap(
   mode: GameMode,
   config: GameModeConfig,
   courseHandicap: number,
+  rawCourseHandicap?: number | null,
 ): number {
   const rule = strokeRuleFor(mode);
   switch (rule.kind) {
     case 'allowance':
+      // #2997 (F16): the share of the unrounded course handicap when frozen.
       return applyAllowance(
-        courseHandicap,
+        strokeBasis(courseHandicap, rawCourseHandicap),
         readAllowancePct(config, rule.configKind, rule.fallbackPct),
       );
     case 'gross_option':
@@ -139,19 +146,61 @@ export function playerStrokeHandicap(
   }
 }
 
+/** One player as {@link matchStrokeHandicap} reads them: the frozen integer and, when the start froze it, the unrounded course handicap. */
+export interface MatchStrokePlayer {
+  courseHandicap: number | null;
+  rawCourseHandicap?: number | null;
+}
+
+/** A roster row for {@link matchStrokeBases}. */
+export interface MatchRosterRow extends MatchStrokePlayer {
+  teamNumber: number | null;
+  /** `game_players.withdrawn_at`; absent counts as still playing. */
+  withdrawnAt?: string | null;
+}
+
+/** True for the match formats where the strokes come from the lowest in the match. */
+function isDifferenceMatch(mode: GameMode): boolean {
+  return mode === 'singles_matchplay' || mode === 'fourball_matchplay' || mode === 'round_robin';
+}
+
 /**
- * The course handicaps {@link matchStrokeHandicap} compares against: the
- * players on side 1 and side 2 only, as the singles engine reads them
- * (`teamNumber === 1` / `=== 2`). A roster row on no side, or another team,
- * can then never move the lowest handicap the views use away from the
- * engine's. A missing course handicap counts as 0, as everywhere in the views.
+ * What one player's strokes are taken of in a match format: the frozen
+ * playing handicap in singles (the general percentage is already in it), the
+ * unrounded course handicap in four-ball and Round Robin when the start froze
+ * it (`strokeBasis`, #2997). A missing course handicap counts as 0, as
+ * everywhere in the views.
  */
-export function matchSideCourseHandicaps(
-  players: readonly { teamNumber: number | null; courseHandicap: number | null }[],
+function matchBasis(mode: GameMode, player: MatchStrokePlayer): number {
+  const ch = player.courseHandicap ?? 0;
+  return mode === 'singles_matchplay' ? ch : strokeBasis(ch, player.rawCourseHandicap);
+}
+
+/**
+ * The numbers {@link matchStrokeHandicap} finds the lowest in the match from,
+ * from exactly the players the engine reads:
+ *
+ * - Singles and four-ball: side 1 and side 2 (`teamNumber === 1` / `=== 2`),
+ *   without the withdrawn, as `buildUniformContext` builds the engine's
+ *   context (a four-ball side can play on with one ball, #1814).
+ * - Round Robin: the four slots 1–4, the withdrawn included, as
+ *   `buildRoundRobinContext` keeps them.
+ *
+ * A roster row on no side, or another team, can then never move the lowest
+ * handicap the views use away from the engine's. Other formats give `[]`.
+ */
+export function matchStrokeBases(
+  mode: GameMode,
+  players: readonly MatchRosterRow[],
 ): number[] {
-  return players
-    .filter((p) => p.teamNumber === 1 || p.teamNumber === 2)
-    .map((p) => p.courseHandicap ?? 0);
+  if (!isDifferenceMatch(mode)) return [];
+  const inMatch =
+    mode === 'round_robin'
+      ? players.filter((p) => p.teamNumber != null && p.teamNumber >= 1 && p.teamNumber <= 4)
+      : players.filter(
+          (p) => (p.teamNumber === 1 || p.teamNumber === 2) && p.withdrawnAt == null,
+        );
+  return inMatch.map((p) => matchBasis(mode, p));
 }
 
 /**
@@ -160,62 +209,59 @@ export function matchSideCourseHandicaps(
  * strokes the player gets on the hole — what the hole page's dots, the
  * scorecard and the app show.
  *
- * `matchCourseHandicaps` is the raw frozen course handicap of every player in
- * the match (the player's own may be included) — build it with
- * {@link matchSideCourseHandicaps}. Only singles reads it: on a
- * new match the higher handicap gets the difference and the lower none
- * (`singlesStrokeHandicap`, owner-ordered audit 2026-11-20). Every other mode
- * returns {@link playerStrokeHandicap}.
+ * `matchBases` comes from {@link matchStrokeBases} over the whole roster (the
+ * player's own may be included). Singles, four-ball and Round Robin read it:
+ * on a new match the lowest plays off 0 and the others get the share of the
+ * difference (`matchDifferenceStrokes`; singles at 100 %, owner-ordered audit
+ * 2026-11-20; four-ball and Round Robin #2997). Every other mode returns
+ * {@link playerStrokeHandicap}.
  */
 export function matchStrokeHandicap(
   mode: GameMode,
   config: GameModeConfig,
-  courseHandicap: number,
-  matchCourseHandicaps: readonly number[],
+  player: MatchStrokePlayer,
+  matchBases: readonly number[],
 ): number {
-  if (mode === 'singles_matchplay') {
-    const lowestInMatch = Math.min(courseHandicap, ...matchCourseHandicaps);
-    return singlesStrokeHandicap(config, courseHandicap, lowestInMatch);
+  const ch = player.courseHandicap ?? 0;
+  if (!isDifferenceMatch(mode)) {
+    return playerStrokeHandicap(mode, config, ch, player.rawCourseHandicap);
   }
-  return playerStrokeHandicap(mode, config, courseHandicap);
+  const basis = matchBasis(mode, player);
+  const lowestInMatch = Math.min(basis, ...matchBases);
+  if (mode === 'singles_matchplay') return singlesStrokeHandicap(config, ch, lowestInMatch);
+  const rule = strokeRuleFor(mode);
+  const pct =
+    rule.kind === 'allowance'
+      ? readAllowancePct(config, rule.configKind, rule.fallbackPct)
+      : 100;
+  return matchDifferenceStrokes(config, basis, lowestInMatch, pct);
 }
 
 interface AlternateShotRule {
-  sideHcp: SideHandicapFn;
-  /** Same combination over any number of players — draft state, where a side is not yet 2. */
-  sideHcpAny: (chs: readonly number[]) => number;
+  sideRule: SideRule;
   allowancePct: number;
 }
-
-const sum = (chs: readonly number[]): number => chs.reduce((s, ch) => s + ch, 0);
-
-const sixtyForty = (chs: readonly number[]): number =>
-  chs.length === 0 ? 0 : Math.round(0.6 * Math.min(...chs) + 0.4 * Math.max(...chs));
 
 function alternateShotRule(mode: GameMode, config: GameModeConfig): AlternateShotRule | null {
   switch (mode) {
     case 'foursomes_matchplay':
       return {
-        sideHcp: combinedSideHandicap,
-        sideHcpAny: sum,
+        sideRule: 'sum',
         allowancePct: readAllowancePct(config, 'foursomes_matchplay', 100),
       };
     case 'greensome_matchplay':
       return {
-        sideHcp: greensomeTeamHandicap,
-        sideHcpAny: sixtyForty,
+        sideRule: 'sixtyForty',
         allowancePct: readAllowancePct(config, 'greensome_matchplay', 100),
       };
     case 'chapman_matchplay':
       return {
-        sideHcp: chapmanSideHandicap,
-        sideHcpAny: sixtyForty,
+        sideRule: 'sixtyForty',
         allowancePct: readAllowancePct(config, 'chapman_matchplay', 100),
       };
     case 'gruesome_matchplay':
       return {
-        sideHcp: combinedSideHandicap,
-        sideHcpAny: sum,
+        sideRule: 'sum',
         allowancePct: readAllowancePct(config, 'gruesome_matchplay', 50),
       };
     default:
@@ -225,10 +271,11 @@ function alternateShotRule(mode: GameMode, config: GameModeConfig): AlternateSho
 
 /**
  * Lag-slagene i alternate shot (foursomes, greensome, chapman og gruesome),
- * regnet som `computeFoursomesCore`: sidens lag-handicap (sum eller 60/40),
- * erstattet av arrangørens `team_strokes_override` når den er satt (greensome,
- * #1441), så `round(|diff| × allowance_pct / 100)` til høylaget og 0 til
- * lavlaget. `side1`/`side2` er banehandicapene på lag 1 og lag 2.
+ * regnet som `computeFoursomesCore`: sidens lag-handicap (`sideHandicap`, sum
+ * eller 60/40, urundet når starten frøs de urundede tallene, #2997), erstattet
+ * av arrangørens `team_strokes_override` når den er satt (greensome, #1441),
+ * så `round(|diff| × allowance_pct / 100)` til høylaget og 0 til lavlaget
+ * (`alternateShotExtras`). `side1`/`side2` er spillerne på lag 1 og lag 2.
  *
  * Har en side ikke nøyaktig to spillere (utkast), brukes sum eller 60/40 over
  * min og maks, og en tom side gir 0 — motoren gir da et tomt skall. Andre
@@ -237,27 +284,16 @@ function alternateShotRule(mode: GameMode, config: GameModeConfig): AlternateSho
 export function alternateShotSideExtras(
   mode: GameMode,
   config: GameModeConfig,
-  side1: readonly number[],
-  side2: readonly number[],
+  side1: readonly SidePlayer[],
+  side2: readonly SidePlayer[],
 ): { side1Extra: number; side2Extra: number } {
   const rule = alternateShotRule(mode, config);
   if (!rule) return { side1Extra: 0, side2Extra: 0 };
 
-  const sideHandicap = (chs: readonly number[]): number =>
-    chs.length === 2 ? rule.sideHcp(chs[0], chs[1]) : rule.sideHcpAny(chs);
-
   // Only greensome passes the override to the core; the other three never do.
   const override =
     mode === 'greensome_matchplay' ? readTeamStrokesOverride(config) : undefined;
-  const side1Combined = override?.side1 ?? sideHandicap(side1);
-  const side2Combined = override?.side2 ?? sideHandicap(side2);
-
-  const highSideExtra = Math.round(
-    (Math.abs(side1Combined - side2Combined) * rule.allowancePct) / 100,
-  );
-  const highSide: 1 | 2 = side2Combined > side1Combined ? 2 : 1;
-  return {
-    side1Extra: highSide === 1 ? highSideExtra : 0,
-    side2Extra: highSide === 2 ? highSideExtra : 0,
-  };
+  const side1Combined = override?.side1 ?? sideHandicap(rule.sideRule, side1);
+  const side2Combined = override?.side2 ?? sideHandicap(rule.sideRule, side2);
+  return alternateShotExtras(side1Combined, side2Combined, rule.allowancePct);
 }

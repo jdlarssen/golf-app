@@ -4,7 +4,10 @@
 // netto av de to partnerne, deretter sammenlikner vi side 1-best mot
 // side 2-best som matchplay. Algoritmen er en composition av:
 //
-//   - `applyAllowance(ch, mode_config.allowance_pct)`  → per-spiller effektiv HCP
+//   - `matchDifferenceStrokes(config, basis, lowest, allowance_pct)`
+//                                                       → per-spiller effektiv HCP
+//     (#2997: en ny match gir den laveste 0 og de andre andelen av
+//     differansen; en match opprettet før gir hver sin egen andel)
 //   - `strokesForHole(effective, hole.SI)`             → per-spiller per-hull extra
 //   - `bestBallForHole(players)`                       → lag-best netto + contributors
 //   - `classifyMatchplayHole(side1Best, side2Best)`    → 'side1_wins'|'side2_wins'|'tied'|'unplayed'
@@ -14,7 +17,8 @@
 // Eneste reelle forskjell fra singles er aggregeringen per side (2 partnere
 // → best netto) og at empty-shell-stien sjekker 2+2-fordeling i stedet for 1+1.
 
-import { applyAllowance } from '../courseHandicap';
+import { strokeBasis } from '../courseHandicap';
+import { matchDifferenceStrokes } from '../matchStrokes';
 import { strokesForHole } from '../strokeAllocation';
 import { bestBallForHole } from './bestBall';
 import { parFor } from './parResolver';
@@ -100,12 +104,19 @@ function readAllowancePct(ctx: ScoringContext): number {
 function buildSide(
   sideNumber: 1 | 2,
   partners: ScoringPlayer[],
+  config: ScoringContext['game']['mode_config'],
+  lowestInMatch: number,
   allowancePct: number,
 ): FourballSide {
   const players: FourballSidePlayer[] = partners.map((p) => ({
     userId: p.userId,
     courseHandicap: p.courseHandicap,
-    effectiveHandicap: applyAllowance(p.courseHandicap, allowancePct),
+    effectiveHandicap: matchDifferenceStrokes(
+      config,
+      strokeBasis(p.courseHandicap, p.rawCourseHandicap),
+      lowestInMatch,
+      allowancePct,
+    ),
     teeGender: p.teeGender,
   }));
   return { sideNumber, players };
@@ -132,10 +143,17 @@ export function compute(ctx: ScoringContext): FourballMatchplayResult {
   }
 
   const allowancePct = readAllowancePct(ctx);
+  // #2997 (F15): the lowest of everyone on side 1 and 2 plays off 0 in a new
+  // match. The basis is the unrounded course handicap when frozen (F16).
+  const lowestInMatch = Math.min(
+    ...[...side1Players, ...side2Players].map((p) =>
+      strokeBasis(p.courseHandicap, p.rawCourseHandicap),
+    ),
+  );
 
   const sides: [FourballSide, FourballSide] = [
-    buildSide(1, side1Players, allowancePct),
-    buildSide(2, side2Players, allowancePct),
+    buildSide(1, side1Players, ctx.game.mode_config, lowestInMatch, allowancePct),
+    buildSide(2, side2Players, ctx.game.mode_config, lowestInMatch, allowancePct),
   ];
 
   // Pre-beregn effektiv HCP per spiller for raskt oppslag under hull-loop.

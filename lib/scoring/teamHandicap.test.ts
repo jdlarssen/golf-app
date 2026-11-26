@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scrambleTeamHandicap } from './teamHandicap';
+import { scrambleTeamHandicap, sideHandicap } from './teamHandicap';
 import { ambroseDefaultPct } from './modes/ambrose';
 
 // `team_handicap_pct` is stored as a percentage of the SUM, worked out for
@@ -73,5 +73,54 @@ describe('scrambleTeamHandicap — defensive input', () => {
 
   it('falls back to the plain expression when the configured size is missing/invalid', () => {
     expect(scrambleTeamHandicap(60, 20, 0, 3)).toBe(12);
+  });
+});
+
+// #2997 (F16/F25): a team's handicap is taken of the unrounded course
+// handicaps when the start froze them for every player, and rounded once at
+// the end (NGF 6.2a, avklaring 6.2a/1, s. 55). A team with an integer only
+// keeps today's rule.
+describe('sideHandicap — unrounded when every player has the frozen value (#2997)', () => {
+  const p = (courseHandicap: number, rawCourseHandicap?: number | null) => ({
+    courseHandicap,
+    rawCourseHandicap,
+  });
+
+  it('sums the unrounded values without rounding: 9,513 + 11,394', () => {
+    expect(sideHandicap('sum', [p(10, 9.513), p(11, 11.394)])).toBeCloseTo(20.907, 9);
+  });
+
+  it('takes 60/40 of the unrounded values without rounding: 8,4 and 14,4 give 10,8', () => {
+    expect(sideHandicap('sixtyForty', [p(8, 8.4), p(14, 14.4)])).toBeCloseTo(10.8, 9);
+  });
+
+  it('rounds 60/40 of the integers when a player has no frozen value (today)', () => {
+    // 0,6 × 8 + 0,4 × 14 = 10,4 → 10, as before the column.
+    expect(sideHandicap('sixtyForty', [p(8, 8.4), p(14, null)])).toBe(10);
+    expect(sideHandicap('sixtyForty', [p(8), p(14)])).toBe(10);
+  });
+
+  it('sums the integers when a player has no frozen value (today)', () => {
+    expect(sideHandicap('sum', [p(10, 9.513), p(11)])).toBe(21);
+  });
+
+  it('is 0 for an empty team, and takes 60/40 over the lowest and highest of a draft team', () => {
+    expect(sideHandicap('sum', [])).toBe(0);
+    expect(sideHandicap('sixtyForty', [])).toBe(0);
+    expect(sideHandicap('sixtyForty', [p(10), p(30), p(20)])).toBe(18);
+  });
+
+  it('keeps a plus handicap negative', () => {
+    expect(sideHandicap('sum', [p(-4, -4.2), p(16, 16.1)])).toBeCloseTo(11.9, 9);
+  });
+});
+
+describe('scrambleTeamHandicap on the unrounded sum (#2997, F25)', () => {
+  // Texas, two players at 25 %: 9,6 and 11,5 are frozen as 10 and 12. The
+  // integers give 25 % of 22 = 5,5 → 6; the rule gives 25 % of 21,1 = 5,275 → 5.
+  it('gives the rule’s number for a pair where the integer and the unrounded differ', () => {
+    const team = [{ courseHandicap: 10, rawCourseHandicap: 9.6 }, { courseHandicap: 12, rawCourseHandicap: 11.5 }];
+    expect(scrambleTeamHandicap(sideHandicap('sum', team), 25, 2, 2)).toBe(5);
+    expect(scrambleTeamHandicap(22, 25, 2, 2)).toBe(6);
   });
 });

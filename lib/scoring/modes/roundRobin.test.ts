@@ -809,3 +809,69 @@ describe('roundRobinConstellationForHole', () => {
     expect(roundRobinConstellationForHole(1, bad, 'A')).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// #2997 (F15/F16): a new Round Robin (`match_strokes: 'difference'`) is
+// four-ball match play with rotating partners, so the lowest of the four
+// plays off 0 and the others get the share of the difference (NGF vedlegg C
+// s. 76). The share is taken of the unrounded course handicap when frozen.
+// ---------------------------------------------------------------------------
+
+describe('compute — slag etter differansen til den laveste (#2997, F15)', () => {
+  function newCtx(players: ScoringPlayer[], allowancePct: number): ScoringContext {
+    return {
+      game: {
+        id: 'g-rr-diff',
+        game_mode: 'round_robin',
+        mode_config: {
+          kind: 'round_robin',
+          team_size: 1,
+          teams_count: 4,
+          allowance_pct: allowancePct,
+          match_strokes: 'difference',
+        },
+      },
+      players,
+      holes: makeHoles(18),
+      scores: [],
+    };
+  }
+  const p = (
+    userId: string,
+    teamNumber: number,
+    courseHandicap: number,
+    rawCourseHandicap?: number | null,
+  ): ScoringPlayer => ({ userId, teamNumber, flightNumber: null, courseHandicap, rawCourseHandicap });
+  const totalStrokes = (ctx: ScoringContext) => {
+    const out: Record<string, number> = {};
+    for (const row of compute(ctx).holes) {
+      for (const c of [...row.side1Players, ...row.side2Players]) {
+        out[c.userId] = (out[c.userId] ?? 0) + c.extraStrokes;
+      }
+    }
+    return out;
+  };
+
+  it('10, 18, 27 og 39 ved 90 % gir 0, 7, 15 og 26 slag, som four-ball', () => {
+    const ctx = newCtx([p('a', 1, 10), p('b', 2, 18), p('c', 3, 27), p('d', 4, 39)], 90);
+    expect(totalStrokes(ctx)).toEqual({ a: 0, b: 7, c: 15, d: 26 });
+  });
+
+  it('regner av det urundede banehandicapet og runder én gang (F16)', () => {
+    // 90 % of 20,4 − 9,5 = 9,81 → 10. Rounded first: 90 % of 10 = 9.
+    const ctx = newCtx(
+      [p('a', 1, 10, 9.5), p('b', 2, 20, 20.4), p('c', 3, 10, 9.5), p('d', 4, 10, 9.5)],
+      90,
+    );
+    expect(totalStrokes(ctx)).toEqual({ a: 0, b: 10, c: 0, d: 0 });
+  });
+
+  it('uten flagget (spill opprettet før): egne slag, 9, 16, 24 og 35 ved 90 %', () => {
+    const ctx = makeCtx(
+      [p('a', 1, 10), p('b', 2, 18), p('c', 3, 27), p('d', 4, 39)],
+      [],
+      90,
+    );
+    expect(totalStrokes(ctx)).toEqual({ a: 9, b: 16, c: 24, d: 35 });
+  });
+});

@@ -2,7 +2,8 @@
 // derfra — én ball per lag, én score per lag per hull.
 //
 // Lag-handicap: NGF-aggregat. teamHandicap = round(combinedCourseHandicap ×
-// team_handicap_pct / 100). Default fra validator: 25 % for 2-mannslag,
+// team_handicap_pct / 100). #2997: summen er av de urundede banehandicapene når
+// starten frøs dem (`sideHandicap`), så prosenten rundes én gang. Default fra validator: 25 % for 2-mannslag,
 // 10 % for 4-mannslag. Allokeres per hull via vanlig SI-allokering. Et lag med
 // én spiller mindre enn `team_size` (#2569) får samme prosent av snittet:
 // `scrambleTeamHandicap` i `../teamHandicap.ts`.
@@ -23,7 +24,7 @@
 
 import { pickTeamCaptain } from '@/lib/games/teamCaptain';
 import { strokesForHole } from '../strokeAllocation';
-import { scrambleTeamHandicap } from '../teamHandicap';
+import { scrambleTeamHandicap, sideHandicap } from '../teamHandicap';
 import { countsBackByRulebook, rankingHolesByNumber, rankTeams, ranksByNetToPar, UNPLAYED_PADDING } from '../tiebreaker';
 import { parFor } from './parResolver';
 import type {
@@ -120,10 +121,9 @@ export function computeScramble(
         isCaptain: m.userId === captainUserId,
       }));
 
-      const combinedCourseHandicap = members.reduce(
-        (sum, m) => sum + m.courseHandicap,
-        0,
-      );
+      // #2997 (F25): the sum of the unrounded course handicaps when the start
+      // froze them, so `scrambleTeamHandicap` rounds once (WHS 6.2a/1).
+      const combinedCourseHandicap = sideHandicap('sum', groupMembers);
       const teamHandicap = scrambleTeamHandicap(
         combinedCourseHandicap,
         handicapPct,

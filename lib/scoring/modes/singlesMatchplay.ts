@@ -11,6 +11,7 @@
 //   - 'Nup'  — N hull foran etter 18 hull spilt
 //   - 'N&M'  — N hull foran med M hull igjen (mat-em før hull 18)
 
+import { matchDifferenceStrokes } from '../matchStrokes';
 import { strokesForHole } from '../strokeAllocation';
 import { parFor } from './parResolver';
 import type {
@@ -284,32 +285,29 @@ export function computeMatchplayRunningStatus(
 }
 
 /**
- * The handicap one side spreads over SI in a singles match — the one home of
- * the rule (AGENTS.md trap 4). The engine below, the hole page, the scorecard
- * and the app all read it (the views via `matchStrokeHandicap` in
- * `lib/scoring/allocatedStrokes.ts`).
+ * The handicap one side spreads over SI in a singles match. The rule's home is
+ * `matchDifferenceStrokes` (`lib/scoring/matchStrokes.ts`), shared with
+ * four-ball and Round Robin (#2997); singles plays at 100 % of the frozen
+ * playing handicap.
  *
  * - `match_strokes: 'difference'` (new matches, owner-ordered audit
- *   2026-11-20): the player gets `courseHandicap − lowestInMatch`. The higher
- *   handicap gets the difference, the lower gets 0 — as the alternate shot
- *   formats already do (`computeFoursomesCore`). 20 against 5 gives one stroke
- *   on SI 1–15 to the 20-player and none to the 5-player. A plus handicap
- *   gives no strokes back: +2 against 10 gives the 10-player 12.
+ *   2026-11-20): the player gets `courseHandicap − lowestInMatch`. 20 against
+ *   5 gives one stroke on SI 1–15 to the 20-player and none to the 5-player.
+ *   A plus handicap gives no strokes back: +2 against 10 gives the 10-player 12.
  * - Key absent (matches created before): the player's own full handicap,
  *   unchanged, so a finished match is never recalculated.
  *
  * `lowestInMatch` is the lowest course handicap of the two players (the
- * player's own included).
+ * player's own included). Singles takes the general percentage
+ * (`games.hcp_allowance_pct`), so `courseHandicap` here is the playing
+ * handicap, and the unrounded course handicap is not its basis.
  */
 export function singlesStrokeHandicap(
   config: GameModeConfig,
   courseHandicap: number,
   lowestInMatch: number,
 ): number {
-  const difference =
-    config.kind === 'singles_matchplay' && config.match_strokes === 'difference';
-  if (!difference) return courseHandicap;
-  return courseHandicap - Math.min(courseHandicap, lowestInMatch);
+  return matchDifferenceStrokes(config, courseHandicap, lowestInMatch, 100);
 }
 
 /**
