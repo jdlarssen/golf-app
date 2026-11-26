@@ -237,6 +237,7 @@ export function deriveAssignmentsFromInitial(initial: InitialValues | undefined)
 import {
   DEFAULT_SHAMBLE_SETUP,
   defaultHcpAllowancePct,
+  defaultMatchAllowancePct,
   defaultTeamSizeForMode,
   defaultTexasHandicapPct,
 } from '@/lib/games/formatSetupDefaults';
@@ -613,17 +614,18 @@ export function useGameFormState({
   );
   // Fourball matchplay (#217): allowance-prosent (0 = brutto, 1..100 = netto).
   // Pre-fylles fra cup-radens fourball_allowance_pct via initialValues; ellers
-  // default 85 (WHS-standard). Validator-en (`validateFourballMatchplay`) leser
-  // dette ved publish og avviser verdier utenfor 0..100.
+  // NGF-standarden 90 (#2997, `defaultMatchAllowancePct`). Validator-en
+  // (`validateFourballMatchplay`) leser dette ved publish og avviser verdier
+  // utenfor 0..100.
   const [fourballAllowancePct, setFourballAllowancePct] = useState<number>(
-    initialValues?.fourball_allowance_pct ?? 85,
+    initialValues?.fourball_allowance_pct ?? defaultMatchAllowancePct('fourball_matchplay'),
   );
   // Round Robin (#280): allowance-prosent (0 = brutto, 1..100 = netto).
-  // Speiler fourball-mønsteret — WHS-standard for matchplay er 85 %.
+  // Speiler fourball-mønsteret: 90 % som four-ball matchspill (#2997).
   // Validator-en (`validateRoundRobin`) leser dette ved publish og avviser
   // verdier utenfor 0..100.
   const [roundRobinAllowancePct, setRoundRobinAllowancePct] = useState<number>(
-    initialValues?.round_robin_allowance_pct ?? 85,
+    initialValues?.round_robin_allowance_pct ?? defaultMatchAllowancePct('round_robin'),
   );
   // Foursomes matchplay (#218): allowance-prosent (0 = brutto, 1..100 = netto).
   // Pre-fylles fra cup-radens foursomes_allowance_pct via initialValues; ellers
@@ -631,7 +633,7 @@ export function useGameFormState({
   // (`validateFoursomesMatchplay`) leser dette ved publish og avviser verdier
   // utenfor 0..100.
   const [foursomesAllowancePct, setFoursomesAllowancePct] = useState<number>(
-    initialValues?.foursomes_allowance_pct ?? 50,
+    initialValues?.foursomes_allowance_pct ?? defaultMatchAllowancePct('foursomes_matchplay'),
   );
   // Greensome matchplay (#289): allowance-prosent (0 = brutto, 1..100 = netto).
   // Pre-fylles fra cup-radens greensome_allowance_pct via initialValues; ellers
@@ -639,21 +641,21 @@ export function useGameFormState({
   // 60/40-blandede enkelt-tall). Validator-en (`validateGreensomeMatchplay`)
   // leser dette ved publish og avviser verdier utenfor 0..100.
   const [greensomeAllowancePct, setGreensomeAllowancePct] = useState<number>(
-    initialValues?.greensome_allowance_pct ?? 100,
+    initialValues?.greensome_allowance_pct ?? defaultMatchAllowancePct('greensome_matchplay'),
   );
   // Chapman matchplay (#290): allowance-prosent (0 = brutto, 1..100 = netto).
   // Samme 60/40-handicap som greensome; default 100 (full diff). Pre-fylles fra
   // cup-radens chapman_allowance_pct via initialValues. Validatoren
   // (`validateChapmanMatchplay`) leser dette ved publish.
   const [chapmanAllowancePct, setChapmanAllowancePct] = useState<number>(
-    initialValues?.chapman_allowance_pct ?? 100,
+    initialValues?.chapman_allowance_pct ?? defaultMatchAllowancePct('chapman_matchplay'),
   );
   // Gruesome matchplay (#291): allowance-prosent (0 = brutto, 1..100 = netto).
   // Bruker sum-handicap som foursomes; default 50 (WHS foursomes-standard).
   // Pre-fylles fra cup-radens gruesome_allowance_pct via initialValues.
   // Validatoren (`validateGruesomeMatchplay`) leser dette ved publish.
   const [gruesomeAllowancePct, setGruesomeAllowancePct] = useState<number>(
-    initialValues?.gruesome_allowance_pct ?? 50,
+    initialValues?.gruesome_allowance_pct ?? defaultMatchAllowancePct('gruesome_matchplay'),
   );
   // Wolf (#274): brutto vs netto-toggle. Default 'net' speiler Tørny's
   // ethos. Validatoren (`validateWolf`) leser feltet og faller defensivt

@@ -1411,8 +1411,8 @@
       "saveDraftButton": "Lagre utkast",
       "fourball": {
         "legend": "Scoring for fourball-matcher",
-        "description": "Styrer handicap for fourball-matcher. Netto bruker en andel av hver spillers handicap, brutto teller laveste bruttoscore per hull per side.",
-        "nettoHelper": "Andel av hver spillers handicap som teller. Tørny foreslår 85, mens WHS anbefaler 90 for four-ball matchplay. Du velger selv.",
+        "description": "Styrer handicap for fourball-matcher. Med netto spiller den laveste i matchen på null, og de andre får en andel av differansen. Brutto teller laveste bruttoscore per hull per side.",
+        "nettoHelper": "Andelen av differansen til den laveste i matchen som gir slag. NGF anbefaler 90 for four-ball matchplay. Du velger selv.",
         "bruttoHelper": "Ingen handicap — laveste bruttoscore per hull per side vinner. Vanlig format på ekte Ryder Cup."
       },
       "foursomes": {
@@ -1446,8 +1446,8 @@
       },
       "roundRobin": {
         "legend": "Scoring for Round Robin",
-        "description": "Styrer handicap for Round Robin-matchplay. Netto bruker en andel av hver spillers handicap per hull, brutto teller laveste bruttoscore per side.",
-        "nettoHelper": "Andel av hver spillers handicap som teller. Tørny foreslår 85, mens WHS anbefaler 90 for four-ball matchplay. Du velger selv.",
+        "description": "Styrer handicap for Round Robin-matchplay. Med netto spiller den laveste av de fire på null, og de andre får en andel av differansen. Brutto teller laveste bruttoscore per side.",
+        "nettoHelper": "Andelen av differansen til den laveste i matchen som gir slag. NGF anbefaler 90 for four-ball matchplay, og Round Robin følger samme tall. Du velger selv.",
         "bruttoHelper": "Ingen handicap — laveste bruttoscore per hull per side avgjør. Ren brutto-runde."
       },
       "missing": {
@@ -1576,8 +1576,8 @@
     "allowanceProps": {
       "fourball": {
         "legend": "Scoring for fourball-matcher",
-        "description": "Styrer handicap for fourball-matcher. Netto bruker en andel av hver spillers handicap, brutto teller laveste bruttoscore per hull per side.",
-        "nettoHelper": "Andel av hver spillers handicap som teller. Tørny foreslår 85, mens WHS anbefaler 90 for four-ball matchplay. Du velger selv.",
+        "description": "Styrer handicap for fourball-matcher. Med netto spiller den laveste i matchen på null, og de andre får en andel av differansen. Brutto teller laveste bruttoscore per hull per side.",
+        "nettoHelper": "Andelen av differansen til den laveste i matchen som gir slag. NGF anbefaler 90 for four-ball matchplay. Du velger selv.",
         "bruttoHelper": "Ingen handicap — laveste bruttoscore per hull per side vinner. Vanlig format på ekte Ryder Cup."
       },
       "foursomes": {
@@ -1606,8 +1606,8 @@
       },
       "roundRobin": {
         "legend": "Scoring for Round Robin",
-        "description": "Styrer handicap for Round Robin-matchplay. Netto bruker en andel av hver spillers handicap per hull, brutto teller laveste bruttoscore per side.",
-        "nettoHelper": "Andel av hver spillers handicap som teller. Tørny foreslår 85, mens WHS anbefaler 90 for four-ball matchplay. Du velger selv.",
+        "description": "Styrer handicap for Round Robin-matchplay. Med netto spiller den laveste av de fire på null, og de andre får en andel av differansen. Brutto teller laveste bruttoscore per side.",
+        "nettoHelper": "Andelen av differansen til den laveste i matchen som gir slag. NGF anbefaler 90 for four-ball matchplay, og Round Robin følger samme tall. Du velger selv.",
         "bruttoHelper": "Ingen handicap — laveste bruttoscore per hull per side avgjør. Ren brutto-runde."
       },
       "scoring": {

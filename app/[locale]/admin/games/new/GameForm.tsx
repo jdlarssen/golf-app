@@ -7,7 +7,7 @@ import type { SideCategoryId } from '@/lib/scoring/sideTournamentConfig';
 import { isScrambleFamily, isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { MIN_TEE_SHOTS_FIELD, formatTracksTeeShots, type MinTeeShots } from '@/lib/games/teeShots';
 import { hcpAllowanceInPlay, showsGeneralAllowanceField } from '@/lib/games/hcpAllowance';
-import { defaultHcpAllowancePct } from '@/lib/games/formatSetupDefaults';
+import { defaultHcpAllowancePct, defaultMatchAllowancePct } from '@/lib/games/formatSetupDefaults';
 import { PRIZE_SLOTS, prizeFieldName, type GamePrize } from '@/lib/games/prizes';
 import type { TeeBoxRatings } from '@/lib/games/teeRating';
 import type {
@@ -1046,7 +1046,7 @@ export function GameForm({
         {gameMode === 'fourball_matchplay' && (
           <AllowanceField
             fieldName="fourball_allowance_pct"
-            defaultPct={85}
+            defaultPct={defaultMatchAllowancePct('fourball_matchplay')}
             legend={t('fourball.legend')}
             description={t('fourball.description')}
             nettoHelperText={t('fourball.nettoHelper')}
@@ -1059,7 +1059,7 @@ export function GameForm({
         {gameMode === 'foursomes_matchplay' && (
           <AllowanceField
             fieldName="foursomes_allowance_pct"
-            defaultPct={50}
+            defaultPct={defaultMatchAllowancePct('foursomes_matchplay')}
             legend={t('foursomes.legend')}
             description={t('foursomes.description')}
             nettoHelperText={t('foursomes.nettoHelper')}
@@ -1072,7 +1072,7 @@ export function GameForm({
         {gameMode === 'greensome_matchplay' && (
           <AllowanceField
             fieldName="greensome_allowance_pct"
-            defaultPct={100}
+            defaultPct={defaultMatchAllowancePct('greensome_matchplay')}
             legend={t('greensome.legend')}
             description={t('greensome.description')}
             nettoHelperText={t('greensome.nettoHelper')}
@@ -1085,7 +1085,7 @@ export function GameForm({
         {gameMode === 'chapman_matchplay' && (
           <AllowanceField
             fieldName="chapman_allowance_pct"
-            defaultPct={100}
+            defaultPct={defaultMatchAllowancePct('chapman_matchplay')}
             legend={t('chapman.legend')}
             description={t('chapman.description')}
             nettoHelperText={t('chapman.nettoHelper')}
@@ -1098,7 +1098,7 @@ export function GameForm({
         {gameMode === 'gruesome_matchplay' && (
           <AllowanceField
             fieldName="gruesome_allowance_pct"
-            defaultPct={50}
+            defaultPct={defaultMatchAllowancePct('gruesome_matchplay')}
             legend={t('gruesome.legend')}
             description={t('gruesome.description')}
             nettoHelperText={t('gruesome.nettoHelper')}
@@ -1181,7 +1181,7 @@ export function GameForm({
           <>
             <AllowanceField
               fieldName="round_robin_allowance_pct"
-              defaultPct={85}
+              defaultPct={defaultMatchAllowancePct('round_robin')}
               legend={t('roundRobin.legend')}
               description={t('roundRobin.description')}
               nettoHelperText={t('roundRobin.nettoHelper')}

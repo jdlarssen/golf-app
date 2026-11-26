@@ -38,11 +38,10 @@ export type CupAllowancePcts = {
    * #1441 (D4/D11) ASSUMPTION: `tournaments` har ingen egen
    * `best_ball_allowance_pct`-kolonne (ingen migrasjon la til én — 0153/0154
    * dekker kun win/tie-poeng + sidepoeng) — og best_ball ER fourball spilt
-   * som slagspill, med samme WHS-default (85 %, `ALLOWANCE_DEFAULTS.fourball
-   * === ALLOWANCE_DEFAULTS.bestBall`). Kilde, i prioritert rekkefølge (F3c
-   * → #1472): planens lagrede `best_ball_allowance_pct` (splittet-cup-dag-
-   * feltet i Oppsett-rommet) → cupens `fourball_allowance_pct`-override
-   * (default 85 når cupen ikke har satt en). Splittet-cup-dag-bunten bruker ALDRI
+   * som slagspill. Kilde, i prioritert rekkefølge (F3c → #1472): planens
+   * lagrede `best_ball_allowance_pct` (splittet-cup-dag-feltet i
+   * Oppsett-rommet, som skjemaene fyller med 85) → cupens
+   * `fourball_allowance_pct` (90 i nye cuper fra #2997; før 85). Splittet-cup-dag-bunten bruker ALDRI
    * `fourball_matchplay` som eget sesjonsformat (bunten er
    * greensome+best_ball+singles, se `cupTemplates.ts`), så gjenbruket
    * kolliderer aldri med en faktisk fourball-matches egen allowance i samme

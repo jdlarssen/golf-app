@@ -4,6 +4,7 @@ import { defaultFloridaHandicapPct } from '@/lib/scoring/modes/floridaScramble';
 import {
   DEFAULT_SHAMBLE_SETUP,
   defaultHcpAllowancePct,
+  defaultMatchAllowancePct,
   defaultTeamHandicapPct,
   defaultTeamSizeForMode,
   defaultTexasHandicapPct,
@@ -50,5 +51,22 @@ describe('formatSetupDefaults', () => {
 
   it('shamble starter som shamble, to teller, netto', () => {
     expect(DEFAULT_SHAMBLE_SETUP).toEqual({ variant: 'shamble', count: 2, scoring: 'net' });
+  });
+});
+
+// #2997 (F18): the share a match format with its own field starts on. NGF
+// vedlegg C s. 75: four-ball match play 90 %; Round Robin is four-ball with
+// rotating partners and follows it. The owner, 23.11: «det starter på 90% i
+// stedet for 85%, så kan arrangør alltids gjøre endringer.»
+describe('defaultMatchAllowancePct (#2997, F18)', () => {
+  it.each([
+    ['fourball_matchplay', 90],
+    ['round_robin', 90],
+    ['foursomes_matchplay', 50],
+    ['greensome_matchplay', 100],
+    ['chapman_matchplay', 100],
+    ['gruesome_matchplay', 50],
+  ] as const)('%s starts on %i %%', (mode, pct) => {
+    expect(defaultMatchAllowancePct(mode)).toBe(pct);
   });
 });

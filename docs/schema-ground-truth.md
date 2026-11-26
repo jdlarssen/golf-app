@@ -57,6 +57,14 @@ Typed clients (#672) make wrong column names a compile error — treat a red squ
   non-null value on INSERT and any change unless the round is `scheduled` (a league flight
   starts with the player's own client).
 
+- **`raw_course_handicap`** (nullable `double precision`, migration 0258, #2997 F16/F25): the
+  unrounded course handicap (100 %, before share and cap), frozen at start next to the two
+  integers; `full_course_handicap = round(raw_course_handicap)`. The formats with their own
+  percentage in `mode_config` (four-ball, Round Robin, the foursomes family, the scramble family,
+  patsome) take it of this number and round once (`strokeBasis`, `sideHandicap`); null = not
+  frozen, the engines use `course_handicap`. Same two guard checks as `full_course_handicap`.
+  Every select that feeds an engine reads it (`lib/games/gamePlayersScoringSelects.test.ts`).
+
 - **Guard trigger `guard_game_players_self_update`** (migrations 0103/0106, #670/#704):
   - A player cannot self-approve their own scorecard or change their own `course_handicap` post-start.
   - A peer may only touch approval columns on another player's row. Since 0191 the peer allowlist
@@ -145,6 +153,12 @@ Do **not** assume one shape across the three. `games.status` is a typed enum; th
   works it out (the cup's 10-minute stagger goes through the same rule). The creator/admin
   UPDATE policies cover it. The same migration adds `tee_time_changed` to
   `notifications_kind_check`.
+
+## `tournaments` — allowance defaults
+
+- **`fourball_allowance_pct`**: `NOT NULL smallint`, default **90** since migration 0258 (#2997
+  F18, NGF vedlegg C s. 75; 85 before). A cup keeps the share it was created with. The app code's
+  mirror is `ALLOWANCE_DEFAULTS.fourball` in `lib/cup/allowance.ts`.
 
 ## `format_intent_mapping` — operational data, drift from the snapshot is expected
 
