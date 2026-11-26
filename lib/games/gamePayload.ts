@@ -15,7 +15,7 @@ import { parseStartType, type StartType } from './startType';
 import { organizerCapBounds } from '@/lib/wizard/fitsPlayerCount';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { hcpAllowanceInPlay } from './hcpAllowance';
-import { defaultMatchAllowancePct } from './formatSetupDefaults';
+import { defaultMatchAllowancePct, defaultTeamHandicapPct } from './formatSetupDefaults';
 import {
   MAX_TEAM_FORMAT_PLAYERS,
   MAX_TEAM_NUMBER,
@@ -1086,6 +1086,50 @@ function withMinTeeShots(value: MinTeeShots | null): { [MIN_TEE_SHOTS_FIELD]?: M
   return value === null ? {} : { [MIN_TEE_SHOTS_FIELD]: value };
 }
 
+/** The team handicap keys a scramble validator writes (#3002). */
+type ScrambleHandicapFields = {
+  team_handicap_pct: number;
+  team_handicap_rule?: 'ngf_weighted' | 'sum_pct';
+};
+
+const SCRAMBLE_FIELD_PREFIX = {
+  texas_scramble: 'texas',
+  ambrose: 'ambrose',
+  florida_scramble: 'florida',
+} as const;
+
+/**
+ * #3002 (F23): how the form says the team handicap is taken,
+ * `<prefix>_team_handicap_rule`:
+ *  - `ngf`: NGF's weighting per player (`team_handicap_rule: 'ngf_weighted'`).
+ *    The stored share is the format's start value for the team size
+ *    (`defaultTeamHandicapPct`), so an app build from before #3002 shows a
+ *    known number; the engine does not read it for this rule.
+ *  - `pct`: the organiser's share (`'sum_pct'`), parsed by `parsePct`.
+ *  - no field (an app build from before #3002): the share, and NO key, so the
+ *    engine keeps the share of the sum.
+ *  - anything else: null (bad_allowance).
+ */
+function parseScrambleHandicap(
+  formData: FormData,
+  mode: keyof typeof SCRAMBLE_FIELD_PREFIX,
+  teamSize: 2 | 3 | 4,
+  parsePct: (formData: FormData, teamSize: number) => number | null,
+): ScrambleHandicapFields | null {
+  const raw = String(formData.get(`${SCRAMBLE_FIELD_PREFIX[mode]}_team_handicap_rule`) ?? '').trim();
+  if (raw === 'ngf') {
+    const startPct = defaultTeamHandicapPct(mode, teamSize);
+    if (startPct === null) return null;
+    return { team_handicap_pct: startPct, team_handicap_rule: 'ngf_weighted' };
+  }
+  if (raw !== '' && raw !== 'pct') return null;
+  const pct = parsePct(formData, teamSize);
+  if (pct === null) return null;
+  return raw === 'pct'
+    ? { team_handicap_pct: pct, team_handicap_rule: 'sum_pct' }
+    : { team_handicap_pct: pct };
+}
+
 /**
  * Texas scramble-validator (issue #44).
  *
@@ -1117,7 +1161,7 @@ function withMinTeeShots(value: MinTeeShots | null): { [MIN_TEE_SHOTS_FIELD]?: M
  * i draft siden de er konfig-felt som må være korrekte før noe annet gir
  * mening.
  *
- * Mode_config-output: `{kind, team_size, teams_count, team_handicap_pct}`.
+ * Mode_config-output: `{kind, team_size, teams_count, team_handicap_pct, team_handicap_rule?}` (`parseScrambleHandicap`, #3002).
  */
 function validateTexasScramble(
   formData: FormData,
@@ -1128,8 +1172,8 @@ function validateTexasScramble(
     return { ok: false, errorCode: 'unsupported_mode_size_combo' };
   }
 
-  const handicapPct = parseTexasHandicapPct(formData, teamSize);
-  if (handicapPct === null) {
+  const handicap = parseScrambleHandicap(formData, 'texas_scramble', teamSize, parseTexasHandicapPct);
+  if (handicap === null) {
     return { ok: false, errorCode: 'bad_allowance' };
   }
 
@@ -1173,7 +1217,7 @@ function validateTexasScramble(
       kind: 'texas_scramble',
       team_size: teamSize,
       teams_count,
-      team_handicap_pct: handicapPct,
+      ...handicap,
       ...withMinTeeShots(minTeeShots.value),
     },
   };
@@ -1237,7 +1281,7 @@ function parseTexasHandicapPct(
  * fullt lag (`allowedTeamSizes`, #2569; team_balance), team_number ≥ 1
  * (bad_team). flight_number = team_number oppfyller DB-CHECK
  * `game_players_team_flight_consistency`. Draft tolererer partial state.
- * Mode_config-output: `{kind: 'ambrose', team_size, teams_count, team_handicap_pct}`.
+ * Mode_config-output: `{kind: 'ambrose', team_size, teams_count, team_handicap_pct, team_handicap_rule?}`.
  */
 function validateAmbrose(
   formData: FormData,
@@ -1248,8 +1292,8 @@ function validateAmbrose(
     return { ok: false, errorCode: 'unsupported_mode_size_combo' };
   }
 
-  const handicapPct = parseAmbroseHandicapPct(formData, teamSize);
-  if (handicapPct === null) {
+  const handicap = parseScrambleHandicap(formData, 'ambrose', teamSize, parseAmbroseHandicapPct);
+  if (handicap === null) {
     return { ok: false, errorCode: 'bad_allowance' };
   }
 
@@ -1293,7 +1337,7 @@ function validateAmbrose(
       kind: 'ambrose',
       team_size: teamSize,
       teams_count,
-      team_handicap_pct: handicapPct,
+      ...handicap,
       ...withMinTeeShots(minTeeShots.value),
     },
   };
@@ -1351,7 +1395,7 @@ function parseAmbroseHandicapPct(
  * (too_many_players_for_mode), team_size per lag, à 4 også lag på 3, og minst
  * ett fullt lag (`allowedTeamSizes`, #2569; team_balance), team_number ≥ 1
  * (bad_team). flight_number = team_number oppfyller DB-CHECK.
- * Mode_config-output: `{kind: 'florida_scramble', team_size, teams_count, team_handicap_pct}`.
+ * Mode_config-output: `{kind: 'florida_scramble', team_size, teams_count, team_handicap_pct, team_handicap_rule?}`.
  */
 function validateFloridaScramble(
   formData: FormData,
@@ -1362,8 +1406,8 @@ function validateFloridaScramble(
     return { ok: false, errorCode: 'unsupported_mode_size_combo' };
   }
 
-  const handicapPct = parseFloridaHandicapPct(formData, teamSize);
-  if (handicapPct === null) {
+  const handicap = parseScrambleHandicap(formData, 'florida_scramble', teamSize, parseFloridaHandicapPct);
+  if (handicap === null) {
     return { ok: false, errorCode: 'bad_allowance' };
   }
 
@@ -1407,7 +1451,7 @@ function validateFloridaScramble(
       kind: 'florida_scramble',
       team_size: teamSize,
       teams_count,
-      team_handicap_pct: handicapPct,
+      ...handicap,
       ...withMinTeeShots(minTeeShots.value),
     },
   };
@@ -2317,13 +2361,35 @@ function validateShamble(
  * Scoring-toggle: form-feltet `patsome_scoring` ('gross' | 'net'). Default
  * 'net'. Speiler Wolf/Nassau/Skins/Nines-mønstret.
  *
- * Mode_config-output: `{kind: 'patsome', team_size: 2, teams_count, patsome_scoring}`.
+ * Andel på hull 1–6 (#3002, F24): form-feltet `patsome_fourball_allowance_pct`,
+ * heltall 0–100 (ellers bad_allowance). Mangler feltet, får configen ingen nøkkel.
+ *
+ * Mode_config-output: `{kind: 'patsome', team_size: 2, teams_count, patsome_scoring, fourball_allowance_pct?}`.
  */
+/**
+ * #3002 (F24): `patsome_fourball_allowance_pct`, the share of each player's
+ * course handicap on holes 1–6, a whole 0–100. No field (an app build from
+ * before #3002) gives no key, so the engine keeps the full course handicap.
+ */
+function parsePatsomeFourballAllowancePct(
+  formData: FormData,
+): { ok: true; value?: number } | { ok: false } {
+  const raw = String(formData.get('patsome_fourball_allowance_pct') ?? '').trim();
+  if (raw === '') return { ok: true };
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0 || n > 100) return { ok: false };
+  return { ok: true, value: n };
+}
+
 function validatePatsome(
   formData: FormData,
   mode: PayloadMode,
 ): ModeValidationResult {
   const patsomeScoring = parseScoringToggle(formData, 'patsome_scoring');
+  const fourballAllowance = parsePatsomeFourballAllowancePct(formData);
+  if (!fourballAllowance.ok) {
+    return { ok: false, errorCode: 'bad_allowance' };
+  }
 
   const playersResult = parseTeamSlotPlayers(formData);
   if (!playersResult.ok) {
@@ -2355,6 +2421,9 @@ function validatePatsome(
       team_size: 2,
       teams_count,
       patsome_scoring: patsomeScoring,
+      ...(fourballAllowance.value !== undefined && {
+        fourball_allowance_pct: fourballAllowance.value,
+      }),
     },
   };
 }

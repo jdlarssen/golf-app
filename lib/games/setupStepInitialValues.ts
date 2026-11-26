@@ -32,6 +32,11 @@ export type SetupStepInitialValues = {
   /** Audit 20.11 (p11): without these, an edit saved gross as net. */
   acey_deucey_scoring?: 'gross' | 'net';
   patsome_scoring?: 'gross' | 'net';
+  /**
+   * #3002 (F24): the share on holes 1–6. `null` = the game has no key (created
+   * before #3002): the form shows the full handicap and posts no share.
+   */
+  patsome_fourball_allowance_pct?: number | null;
 };
 
 /**
@@ -79,7 +84,10 @@ export function buildSetupStepInitialValues(
       };
 
     case 'patsome':
-      return { patsome_scoring: modeConfig.patsome_scoring };
+      return {
+        patsome_scoring: modeConfig.patsome_scoring,
+        patsome_fourball_allowance_pct: modeConfig.fourball_allowance_pct ?? null,
+      };
 
     case 'nines':
       return {

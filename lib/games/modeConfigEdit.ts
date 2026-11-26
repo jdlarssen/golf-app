@@ -37,6 +37,12 @@ import { supportsNetToParRanking, supportsRulebookCountback } from '@/lib/scorin
  * `par_strokes` (#2941) too: stamped on every new match play game
  * (`stampNewMatchConfig`), carried through an edit, never added to a match
  * created before.
+ *
+ * `team_handicap_rule` (scramble) and `fourball_allowance_pct` (patsome,
+ * #3002) are written by the create and edit forms, never stamped. They are
+ * here for a client without the field (an app build from before #3002): its
+ * edit must not drop the organiser's choice. A form that sends the field wins,
+ * and a game created without the key never gets it from an edit.
  */
 export const PRESERVED_MODE_CONFIG_KEYS = [
   'team_strokes_override',
@@ -47,6 +53,8 @@ export const PRESERVED_MODE_CONFIG_KEYS = [
   'match_strokes',
   'countback',
   'par_strokes',
+  'team_handicap_rule',
+  'fourball_allowance_pct',
 ] as const;
 
 /**

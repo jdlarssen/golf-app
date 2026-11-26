@@ -228,3 +228,24 @@ describe('buildEditInitialValues — tid mellom flightene', () => {
     expect(values.tee_interval_linked).toBe(linked);
   });
 });
+
+// #3002 (F23): «Rediger spill» shows the stored rule. A game without the key
+// (created before #3002) reads as null: the field shows «Egen prosent» and
+// posts no rule, so a save never adds the key to it.
+describe('buildEditInitialValues — team_handicap_rule (#3002)', () => {
+  const texas = { kind: 'texas_scramble', team_size: 4, teams_count: 2, team_handicap_pct: 10 } as const;
+  it.each([
+    [{ ...texas, team_handicap_rule: 'ngf_weighted' }, 'ngf'],
+    [{ ...texas, team_handicap_rule: 'sum_pct' }, 'pct'],
+    [texas, null],
+    [{ kind: 'ambrose', team_size: 2, teams_count: 2, team_handicap_pct: 25, team_handicap_rule: 'sum_pct' }, 'pct'],
+    [{ kind: 'florida_scramble', team_size: 3, teams_count: 2, team_handicap_pct: 15, team_handicap_rule: 'ngf_weighted' }, 'ngf'],
+  ] as const)('%o → %s', (config, expected) => {
+    expect(buildEditInitialValues(row(config as GameModeConfig), []).team_handicap_rule).toBe(expected);
+  });
+
+  it('a format without a team handicap has no rule', () => {
+    const values = buildEditInitialValues(row({ kind: 'best_ball', team_size: 2, teams_count: 2 }), []);
+    expect(values.team_handicap_rule).toBeUndefined();
+  });
+});
