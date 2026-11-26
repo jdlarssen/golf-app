@@ -5142,3 +5142,90 @@ describe('buildGameInsertPayload — tee_interval_minutes (#2451)', () => {
     ).toBeNull();
   });
 });
+
+// #3002 (F23): the scramble form says how the team handicap is taken,
+// `<prefix>_team_handicap_rule`: `ngf` = NGF's weighting per player, `pct` =
+// the organiser's share. An app build from before #3002 sends no field: no
+// key, so the engine keeps the share of the sum.
+describe('buildGameInsertPayload — scramble team_handicap_rule (#3002, F23)', () => {
+  const FORMATS = [
+    { mode: 'texas_scramble', prefix: 'texas', size: '4', pct: '10', ngfPct: 10 },
+    { mode: 'ambrose', prefix: 'ambrose', size: '2', pct: '25', ngfPct: 25 },
+    { mode: 'florida_scramble', prefix: 'florida', size: '3', pct: '15', ngfPct: 15 },
+  ] as const;
+  const form = (f: (typeof FORMATS)[number], extras: Record<string, string>) =>
+    fd({
+      name: 'Scramble',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: f.mode,
+      [`${f.prefix}_team_size`]: f.size,
+      [`${f.prefix}_team_handicap_pct`]: f.pct,
+      ...extras,
+    });
+
+  it.each(FORMATS)('$mode: ngf → ngf_weighted, with the start value for the team size as the share', (f) => {
+    // The organiser's typed share is not the rule here; the stored share is
+    // the format's start value, so an older app build shows a known number.
+    const result = buildGameInsertPayload(
+      form(f, { [`${f.prefix}_team_handicap_rule`]: 'ngf', [`${f.prefix}_team_handicap_pct`]: '0' }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.mode_config).toMatchObject({ team_handicap_rule: 'ngf_weighted', team_handicap_pct: f.ngfPct });
+  });
+
+  it.each(FORMATS)('$mode: pct → sum_pct with the typed share', (f) => {
+    const result = buildGameInsertPayload(form(f, { [`${f.prefix}_team_handicap_rule`]: 'pct' }), 'draft');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.mode_config).toMatchObject({ team_handicap_rule: 'sum_pct', team_handicap_pct: Number(f.pct) });
+  });
+
+  it.each(FORMATS)('$mode: no field (an older app build) → no key, the share as before', (f) => {
+    const result = buildGameInsertPayload(form(f, {}), 'draft');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.mode_config).not.toHaveProperty('team_handicap_rule');
+    expect(result.mode_config).toMatchObject({ team_handicap_pct: Number(f.pct) });
+  });
+
+  it.each(FORMATS)('$mode: an unknown rule → bad_allowance', (f) => {
+    const result = buildGameInsertPayload(form(f, { [`${f.prefix}_team_handicap_rule`]: 'snitt' }), 'draft');
+    expect(result.errorCode).toBe('bad_allowance');
+  });
+
+  it('pct with a share outside the limit is still bad_allowance', () => {
+    const result = buildGameInsertPayload(
+      form(FORMATS[0], { texas_team_handicap_rule: 'pct', texas_team_handicap_pct: '40' }),
+      'draft',
+    );
+    expect(result.errorCode).toBe('bad_allowance');
+  });
+});
+
+// #3002 (F24): patsome's share on holes 1–6, `patsome_fourball_allowance_pct`,
+// a whole 0–100. No field (an older app build) → no key, full handicap.
+describe('buildGameInsertPayload — patsome_fourball_allowance_pct (#3002, F24)', () => {
+  const form = (extras: Record<string, string>) =>
+    fd({ name: 'Patsome', course_id: 'c1', tee_box_id: 't1', game_mode: 'patsome', ...extras });
+
+  it.each([
+    { raw: '85', expected: 85 },
+    { raw: '0', expected: 0 },
+    { raw: '100', expected: 100 },
+  ])('$raw → fourball_allowance_pct $expected', ({ raw, expected }) => {
+    const result = buildGameInsertPayload(form({ patsome_fourball_allowance_pct: raw }), 'draft');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.mode_config).toMatchObject({ fourball_allowance_pct: expected });
+  });
+
+  it('no field → no key', () => {
+    const result = buildGameInsertPayload(form({}), 'draft');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.mode_config).not.toHaveProperty('fourball_allowance_pct');
+  });
+
+  it.each(['101', '-1', '85.5', 'åtti'])('%s → bad_allowance', (raw) => {
+    const result = buildGameInsertPayload(form({ patsome_fourball_allowance_pct: raw }), 'draft');
+    expect(result.errorCode).toBe('bad_allowance');
+  });
+});

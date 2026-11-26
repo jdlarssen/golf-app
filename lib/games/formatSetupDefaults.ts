@@ -91,6 +91,29 @@ export function defaultTeamHandicapPct(mode: GameMode, teamSize: FormatTeamSize)
 }
 
 /**
+ * How a new scramble game takes its team handicap (#3002, F23): `'ngf'` =
+ * NGF vedlegg C s. 75, each player weighted from the lowest to the highest;
+ * `'pct'` = a share of the team's average (`defaultTeamHandicapPct`). Texas
+ * and Florida start on NGF's weighting; Ambrose keeps its formula, half the
+ * average (the owner, 24.11.2026). The validator stores the choice as
+ * `team_handicap_rule`. `null` for formats without a team handicap.
+ */
+export function defaultTeamHandicapRule(mode: GameMode): 'ngf' | 'pct' | null {
+  if (mode === 'texas_scramble' || mode === 'florida_scramble') return 'ngf';
+  if (mode === 'ambrose') return 'pct';
+  return null;
+}
+
+/**
+ * The share of each player's course handicap a new patsome game plays holes
+ * 1–6 (four-ball stableford) off: NGF vedlegg C s. 75, 85 % (#3002, F24).
+ * The organiser can pick another share.
+ */
+export function defaultPatsomeFourballAllowancePct(): number {
+  return 85;
+}
+
+/**
  * The handicap share a format with the general field (`hcp_allowance_pct`)
  * starts on. NGF vedlegg C, s. 75: 85 % for four-ball stroke play and
  * four-ball stableford (best ball, and stableford or modified stableford in

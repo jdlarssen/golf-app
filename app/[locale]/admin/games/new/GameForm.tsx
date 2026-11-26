@@ -220,6 +220,19 @@ export type InitialValues = {
    */
   florida_team_handicap_pct?: string;
   /**
+   * #3002 (F23): how the scramble team handicap is taken. `'ngf'` = NGF's
+   * weighting per player, `'pct'` = the organiser's share. `null` = a stored
+   * game without the key (created before #3002): the field shows «Egen
+   * prosent» and posts no rule. Absent = a new game, which starts on
+   * `defaultTeamHandicapRule`.
+   */
+  team_handicap_rule?: 'ngf' | 'pct' | null;
+  /**
+   * #3002 (F24): patsome's share on holes 1–6. `null` = a stored game without
+   * the key (the full handicap, no share posted). Absent = a new game, 85.
+   */
+  patsome_fourball_allowance_pct?: number | null;
+  /**
    * Cup-link (#47): kobler spillet til en parent tournament-rad. Settes når
    * admin lander på `/admin/games/new?tournament_id=...` fra cup-detalj-
    * siden. Rendres som hidden inputs på form-en og leses i actions.ts.

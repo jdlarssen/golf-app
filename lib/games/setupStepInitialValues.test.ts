@@ -205,6 +205,26 @@ describe('buildSetupStepInitialValues', () => {
       patsome_scoring: 'gross',
     } satisfies GameModeConfig;
 
-    expect(buildSetupStepInitialValues(config)).toEqual({ patsome_scoring: 'gross' });
+    // #3002: a game without `fourball_allowance_pct` reads as null, so the
+    // edit form posts no share and the game keeps the full course handicap.
+    expect(buildSetupStepInitialValues(config)).toEqual({
+      patsome_scoring: 'gross',
+      patsome_fourball_allowance_pct: null,
+    });
+  });
+
+  it('patsome: returnerer andelen på hull 1–6 fra config (#3002, F24)', () => {
+    const config = {
+      kind: 'patsome',
+      team_size: 2,
+      teams_count: 2,
+      patsome_scoring: 'net',
+      fourball_allowance_pct: 85,
+    } satisfies GameModeConfig;
+
+    expect(buildSetupStepInitialValues(config)).toEqual({
+      patsome_scoring: 'net',
+      patsome_fourball_allowance_pct: 85,
+    });
   });
 });

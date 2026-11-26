@@ -143,6 +143,24 @@ function storedTeamHandicapPct(value: unknown): string | undefined {
 }
 
 /**
+ * #3002 (F23): the stored scramble rule as the form's choice. `null` = the
+ * game has no key (created before #3002): the field shows «Egen prosent» and
+ * posts no rule, so a save never adds the key. Undefined for other formats.
+ */
+function storedTeamHandicapRule(config: GameModeConfig): 'ngf' | 'pct' | null | undefined {
+  if (
+    config.kind !== 'texas_scramble' &&
+    config.kind !== 'ambrose' &&
+    config.kind !== 'florida_scramble'
+  ) {
+    return undefined;
+  }
+  if (config.team_handicap_rule === 'ngf_weighted') return 'ngf';
+  if (config.team_handicap_rule === 'sum_pct') return 'pct';
+  return null;
+}
+
+/**
  * `datetime-local` inputs want 'YYYY-MM-DDTHH:mm' in browser-local time, but
  * the DB stores `timestamptz` (UTC instant). We pre-format the value in
  * Europe/Oslo wall-clock so the input shows the same time the admin originally
@@ -321,6 +339,7 @@ export function buildEditInitialValues(
       game.mode_config.kind === 'florida_scramble'
         ? storedTeamHandicapPct(game.mode_config.team_handicap_pct)
         : undefined,
+    team_handicap_rule: storedTeamHandicapRule(game.mode_config),
     // Round Robin (#337) and the matchplay formats (#2444): the allowance
     // lives in mode_config.allowance_pct. Without pre-fill, an edit save
     // silently resets it to the form's default.
