@@ -12,6 +12,7 @@
 //   - 'N&M'  — N hull foran med M hull igjen (mat-em før hull 18)
 
 import { matchDifferenceStrokes } from '../matchStrokes';
+import { parDifferenceStrokes, usesParDifference, withParDifference } from '../parDifference';
 import { strokesForHole } from '../strokeAllocation';
 import { parFor } from './parResolver';
 import type {
@@ -359,17 +360,26 @@ export function compute(ctx: ScoringContext): SinglesMatchplayResult {
 
   // The handicap each side spreads over SI: the difference on a new match,
   // each side's own on a match created before (`singlesStrokeHandicap`).
+  // #2941 (F17): a new match adds the difference in par, and the lowest then
+  // plays off zero (`withParDifference`).
   const lowestInMatch = Math.min(side1Player.courseHandicap, side2Player.courseHandicap);
-  const side1StrokeHcp = singlesStrokeHandicap(
+  let side1StrokeHcp = singlesStrokeHandicap(
     ctx.game.mode_config,
     side1Player.courseHandicap,
     lowestInMatch,
   );
-  const side2StrokeHcp = singlesStrokeHandicap(
+  let side2StrokeHcp = singlesStrokeHandicap(
     ctx.game.mode_config,
     side2Player.courseHandicap,
     lowestInMatch,
   );
+  if (usesParDifference(ctx.game.mode_config)) {
+    const tees = [side1Player.teeGender, side2Player.teeGender];
+    [side1StrokeHcp, side2StrokeHcp] = withParDifference(
+      [side1StrokeHcp, side2StrokeHcp],
+      tees.map((tee) => parDifferenceStrokes(ctx.holes, tee, tees)),
+    );
+  }
 
   let side1Wins = 0;
   let side2Wins = 0;

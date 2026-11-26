@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { compute } from './fourballMatchplay';
+import { MIXED_PAR_18 } from '../__fixtures__/mixedPar';
 import type {
   GameModeConfig,
   ScoringContext,
@@ -911,5 +912,35 @@ describe('compute — slag etter differansen til den laveste (#2997, F15)', () =
       allowancePct: 90,
     });
     expect(effective(ctx).a).toBe(18);
+  });
+});
+
+describe('compute — ulik par (#2941, F17)', () => {
+  const players = (): ScoringPlayer[] =>
+    fourSides().map((p) => ({ ...p, teeGender: p.userId === 'b2' ? 'ladies' : 'mens' }));
+  const withConfig = (extra: object): ScoringContext => ({
+    ...makeCtx({ players: players(), holes: MIXED_PAR_18, scores: [], allowancePct: 90 }),
+    game: {
+      id: 'g-4b',
+      game_mode: 'fourball_matchplay',
+      mode_config: {
+        kind: 'fourball_matchplay',
+        team_size: 2,
+        teams_count: 2,
+        allowance_pct: 90,
+        match_strokes: 'difference',
+        ...extra,
+      } as GameModeConfig,
+    },
+  });
+  const effective = (ctx: ScoringContext) =>
+    compute(ctx).sides.flatMap((s) => s.players.map((p) => p.effectiveHandicap));
+
+  it('uten par_strokes er alle på 0 (en match opprettet før)', () => {
+    expect(effective(withConfig({}))).toEqual([0, 0, 0, 0]);
+  });
+
+  it('med par_strokes får damen to hele slag ved 90 %', () => {
+    expect(effective(withConfig({ par_strokes: 'difference' }))).toEqual([0, 0, 0, 2]);
   });
 });

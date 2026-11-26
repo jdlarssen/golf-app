@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { compute } from './foursomesMatchplay';
+import { MIXED_PAR_18 } from '../__fixtures__/mixedPar';
 import type {
   GameModeConfig,
   ScoringContext,
@@ -737,5 +738,27 @@ describe('compute — én avrunding av urundet banehandicap (#2997, F16)', () =>
       }),
     );
     expect(integersOnly.sides.map((s) => s.effectiveExtraHandicap)).toEqual([11, 0]);
+  });
+});
+
+describe('compute — ulik par (#2941, F17)', () => {
+  // Side 2's captain (b1, lex-min) plays from the ladies' tee: the side's par.
+  const players = (): ScoringPlayer[] =>
+    fourSides().map((p) => ({ ...p, teeGender: p.userId === 'b1' ? 'ladies' : 'mens' }));
+  const withConfig = (extra: object): ScoringContext => ({
+    ...makeCtx({ players: players(), holes: MIXED_PAR_18, scores: [], allowancePct: 50 }),
+    game: {
+      id: 'g-foursomes',
+      game_mode: 'foursomes_matchplay',
+      mode_config: { kind: 'foursomes_matchplay', team_size: 2, teams_count: 2, allowance_pct: 50, ...extra } as GameModeConfig,
+    },
+  });
+
+  it('uten par_strokes får ingen side slag (en match opprettet før)', () => {
+    expect(compute(withConfig({})).sides.map((s) => s.effectiveExtraHandicap)).toEqual([0, 0]);
+  });
+
+  it('med par_strokes får siden med kapteinen på damenes tee to hele slag ved 50 %', () => {
+    expect(compute(withConfig({ par_strokes: 'difference' })).sides.map((s) => s.effectiveExtraHandicap)).toEqual([0, 2]);
   });
 });

@@ -512,6 +512,15 @@ export type GameModeConfig =
        * never recalculated.
        */
       match_strokes?: 'difference';
+      /**
+       * #2941 (F17): `'difference'` gives the player on the higher par extra
+       * strokes equal to the difference in par over the holes in scope, after the
+       * allowance, and the lowest then plays off zero (NGF 6.2b(i) s. 56, vedlegg C
+       * s. 76; `parDifferenceStrokes` and `withParDifference`). Stamped on NEW
+       * matches only (`stampNewMatchConfig`); absent = no extra strokes, so a
+       * match created before is never recalculated.
+       */
+      par_strokes?: 'difference';
     }
   | {
       kind: 'solo_strokeplay';
@@ -648,6 +657,15 @@ export type GameModeConfig =
        * gets `allowance_pct` of their own handicap.
        */
       match_strokes?: 'difference';
+      /**
+       * #2941 (F17): `'difference'` gives the player on the higher par extra
+       * strokes equal to the difference in par over the holes in scope, after the
+       * allowance, and the lowest then plays off zero (NGF 6.2b(i) s. 56, vedlegg C
+       * s. 76; `parDifferenceStrokes` and `withParDifference`). Stamped on NEW
+       * matches only (`stampNewMatchConfig`); absent = no extra strokes, so a
+       * match created before is never recalculated.
+       */
+      par_strokes?: 'difference';
     }
   | {
       kind: 'foursomes_matchplay';
@@ -663,6 +681,15 @@ export type GameModeConfig =
        * defensivt tilbake til 100 hvis feltet mangler i draft-state.
        */
       allowance_pct: number;
+      /**
+       * #2941 (F17): `'difference'` gives the player on the higher par extra
+       * strokes equal to the difference in par over the holes in scope, after the
+       * allowance, and the lowest then plays off zero (NGF 6.2b(i) s. 56, vedlegg C
+       * s. 76; `parDifferenceStrokes` and `withParDifference`). Stamped on NEW
+       * matches only (`stampNewMatchConfig`); absent = no extra strokes, so a
+       * match created before is never recalculated.
+       */
+      par_strokes?: 'difference';
     }
   | {
       /**
@@ -708,6 +735,15 @@ export type GameModeConfig =
        * re-derivering, bit for bit som før.
        */
       team_strokes_override_auto?: { team1: number; team2: number };
+      /**
+       * #2941 (F17): `'difference'` gives the player on the higher par extra
+       * strokes equal to the difference in par over the holes in scope, after the
+       * allowance, and the lowest then plays off zero (NGF 6.2b(i) s. 56, vedlegg C
+       * s. 76; `parDifferenceStrokes` and `withParDifference`). Stamped on NEW
+       * matches only (`stampNewMatchConfig`); absent = no extra strokes, so a
+       * match created before is never recalculated.
+       */
+      par_strokes?: 'difference';
     }
   | {
       kind: 'chapman_matchplay';
@@ -723,6 +759,15 @@ export type GameModeConfig =
        * håndhever range; scoring-laget faller defensivt tilbake til 100.
        */
       allowance_pct: number;
+      /**
+       * #2941 (F17): `'difference'` gives the player on the higher par extra
+       * strokes equal to the difference in par over the holes in scope, after the
+       * allowance, and the lowest then plays off zero (NGF 6.2b(i) s. 56, vedlegg C
+       * s. 76; `parDifferenceStrokes` and `withParDifference`). Stamped on NEW
+       * matches only (`stampNewMatchConfig`); absent = no extra strokes, so a
+       * match created before is never recalculated.
+       */
+      par_strokes?: 'difference';
     }
   | {
       /**
@@ -741,6 +786,15 @@ export type GameModeConfig =
       team_size: 2;
       teams_count: 2;
       allowance_pct: number;
+      /**
+       * #2941 (F17): `'difference'` gives the player on the higher par extra
+       * strokes equal to the difference in par over the holes in scope, after the
+       * allowance, and the lowest then plays off zero (NGF 6.2b(i) s. 56, vedlegg C
+       * s. 76; `parDifferenceStrokes` and `withParDifference`). Stamped on NEW
+       * matches only (`stampNewMatchConfig`); absent = no extra strokes, so a
+       * match created before is never recalculated.
+       */
+      par_strokes?: 'difference';
     }
   | {
       kind: 'wolf';
@@ -858,6 +912,15 @@ export type GameModeConfig =
        * lowest. Stamped on NEW games only; absent = each player's own share.
        */
       match_strokes?: 'difference';
+      /**
+       * #2941 (F17): `'difference'` gives the player on the higher par extra
+       * strokes equal to the difference in par over the holes in scope, after the
+       * allowance, and the lowest then plays off zero (NGF 6.2b(i) s. 56, vedlegg C
+       * s. 76; `parDifferenceStrokes` and `withParDifference`). Stamped on NEW
+       * matches only (`stampNewMatchConfig`); absent = no extra strokes, so a
+       * match created before is never recalculated.
+       */
+      par_strokes?: 'difference';
     }
   | {
       /**

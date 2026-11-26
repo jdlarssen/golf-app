@@ -10,6 +10,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { compute, roundRobinConstellationForHole } from './roundRobin';
+import { MIXED_PAR_18 } from '../__fixtures__/mixedPar';
 import type { RoundRobinConstellationPlayer } from './roundRobin';
 import type { ScoringContext, ScoringPlayer, ScoringHole, ScoringHoleScore } from './types';
 
@@ -873,5 +874,36 @@ describe('compute — slag etter differansen til den laveste (#2997, F15)', () =
       90,
     );
     expect(totalStrokes(ctx)).toEqual({ a: 9, b: 16, c: 24, d: 35 });
+  });
+});
+
+describe('compute — ulik par (#2941, F17)', () => {
+  const withConfig = (extra: object): ScoringContext => ({
+    ...makeCtx(makePlayers([{}, { teeGender: 'ladies' }, {}, {}]), [], 90),
+    game: {
+      id: 'g1',
+      game_mode: 'round_robin',
+      mode_config: {
+        kind: 'round_robin',
+        team_size: 1,
+        teams_count: 4,
+        allowance_pct: 90,
+        match_strokes: 'difference',
+        ...extra,
+      } as ScoringContext['game']['mode_config'],
+    },
+    holes: MIXED_PAR_18,
+  });
+  const strokesOnSi1 = (ctx: ScoringContext) => {
+    const row = compute(ctx).holes.find((h) => h.holeNumber === 1)!;
+    return Object.fromEntries([...row.side1Players, ...row.side2Players].map((c) => [c.userId, c.extraStrokes]));
+  };
+
+  it('uten par_strokes får ingen slag på hull 1 (en match opprettet før)', () => {
+    expect(strokesOnSi1(withConfig({}))).toEqual({ A: 0, B: 0, C: 0, D: 0 });
+  });
+
+  it('med par_strokes får damen B ett slag på hull 1', () => {
+    expect(strokesOnSi1(withConfig({ par_strokes: 'difference' }))).toEqual({ A: 0, B: 1, C: 0, D: 0 });
   });
 });

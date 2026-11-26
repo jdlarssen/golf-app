@@ -29,6 +29,7 @@
 
 import { pickTeamCaptain } from '@/lib/games/teamCaptain';
 import { roundHalfUp } from '../courseHandicap';
+import { parDifferenceStrokes, usesParDifference, withParDifference } from '../parDifference';
 import { strokesForHole } from '../strokeAllocation';
 import { sideHandicap, type SideRule } from '../teamHandicap';
 import { parFor } from './parResolver';
@@ -39,6 +40,7 @@ import {
 } from './singlesMatchplay';
 import type {
   ScoringContext,
+  ScoringGender,
   ScoringPlayer,
   FoursomesMatchplayResult,
   FoursomesHoleRow,
@@ -145,6 +147,29 @@ export function alternateShotExtras(
 }
 
 /**
+ * The side strokes once the par difference is in (#2941, F17): with
+ * `par_strokes`, each side's captain tee (the par the hole rows show) gives
+ * the side's difference in par over the holes in scope, added as whole strokes
+ * to `extras`, and the lower side then plays off zero (`withParDifference`).
+ * Without the key the strokes are returned unchanged. The views
+ * (`alternateShotSideExtras`) call it too.
+ */
+export function alternateShotSideStrokes(
+  ctx: Pick<ScoringContext, 'game' | 'holes'>,
+  extras: { side1Extra: number; side2Extra: number },
+  side1Tee: ScoringGender | undefined,
+  side2Tee: ScoringGender | undefined,
+): { side1Extra: number; side2Extra: number } {
+  if (!usesParDifference(ctx.game.mode_config)) return extras;
+  const tees = [side1Tee, side2Tee];
+  const [side1Extra, side2Extra] = withParDifference(
+    [extras.side1Extra, extras.side2Extra],
+    tees.map((tee) => parDifferenceStrokes(ctx.holes, tee, tees)),
+  );
+  return { side1Extra, side2Extra };
+}
+
+/**
  * Manuell overstyring av en sides lag-CH (#1441, D10 — greensomes
  * `team_strokes_override`). Når satt, ERSTATTER `side1`/`side2` den
  * `sideHcp(...)`-beregnede kombinerte CH-en for hhv. side 1 og 2 — resten av
@@ -195,17 +220,21 @@ export function computeFoursomesCore(
   const side1Combined = override?.side1 ?? sideHandicap(rule, side1Players);
   const side2Combined = override?.side2 ?? sideHandicap(rule, side2Players);
 
-  // WHS-diff-formel: høylaget får (diff × allowance_pct/100) strokes via SI.
-  // Lavlaget får 0. Ved tie i lag-HCP får begge 0 — gross-only matchplay.
-  const { side1Extra, side2Extra } = alternateShotExtras(
-    side1Combined,
-    side2Combined,
-    allowancePct,
-  );
-
-  // Kaptein-spiller for par-display (parFor via teeGender).
+  // Kaptein-spiller for par-display (parFor via teeGender), og sidens par
+  // for tilleggsslagene (#2941).
   const side1CaptainPlayer = side1Players.find((p) => p.userId === side1CaptainId);
   const side2CaptainPlayer = side2Players.find((p) => p.userId === side2CaptainId);
+
+  // WHS-diff-formel: høylaget får (diff × allowance_pct/100) strokes via SI.
+  // Lavlaget får 0. Ved tie i lag-HCP får begge 0 — gross-only matchplay.
+  // #2941 (F17): en ny match legger til forskjellen i par for siden, hele slag
+  // etter andelen, også over greensomens overstyring.
+  const { side1Extra, side2Extra } = alternateShotSideStrokes(
+    ctx,
+    alternateShotExtras(side1Combined, side2Combined, allowancePct),
+    side1CaptainPlayer?.teeGender,
+    side2CaptainPlayer?.teeGender,
+  );
 
   const sides: [FoursomesSide, FoursomesSide] = [
     {

@@ -4,6 +4,7 @@ import {
   greensomeTeamHandicap,
   readTeamStrokesOverride,
 } from './greensomeMatchplay';
+import { MIXED_PAR_18 } from '../__fixtures__/mixedPar';
 import type {
   GameModeConfig,
   ScoringContext,
@@ -478,5 +479,36 @@ describe('compute — 60/40 uten mellomavrunding (#2997, F16)', () => {
       }),
     );
     expect(result.sides.map((s) => s.effectiveExtraHandicap)).toEqual([0, 5]);
+  });
+});
+
+describe('compute — ulik par (#2941, F17)', () => {
+  // The par strokes come on top of the organiser's own team strokes: 3 against
+  // 0 from the override, plus 2 for side 2's captain on the ladies' tee, gives
+  // side 1 3 + 0 and side 2 0 + 2, so side 1 plays 1 stroke and side 2 none.
+  const players = (): ScoringPlayer[] =>
+    fourSides().map((p) => ({ ...p, teeGender: p.userId === 'b1' ? 'ladies' : 'mens' }));
+  const withConfig = (extra: object): ScoringContext => ({
+    ...makeCtx({ players: players(), holes: MIXED_PAR_18, scores: [] }),
+    game: {
+      id: 'g-greensome',
+      game_mode: 'greensome_matchplay',
+      mode_config: {
+        kind: 'greensome_matchplay',
+        team_size: 2,
+        teams_count: 2,
+        allowance_pct: 100,
+        team_strokes_override: { team1: 3, team2: 0 },
+        ...extra,
+      } as GameModeConfig,
+    },
+  });
+
+  it('uten par_strokes gir overstyringen side 1 tre slag (en match opprettet før)', () => {
+    expect(compute(withConfig({})).sides.map((s) => s.effectiveExtraHandicap)).toEqual([3, 0]);
+  });
+
+  it('med par_strokes legges forskjellen i par til også over overstyringen', () => {
+    expect(compute(withConfig({ par_strokes: 'difference' })).sides.map((s) => s.effectiveExtraHandicap)).toEqual([1, 0]);
   });
 });
