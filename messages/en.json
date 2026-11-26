@@ -5933,6 +5933,8 @@
       "opensOn": "Opens {date}",
       "delivered": "Delivered",
       "deliveredAria": "You delivered this round",
+      "myResultUnit": "points",
+      "myResultCardAria": "See your card from {round}, {result}",
       "playButton": "Play",
       "playedBy": {
         "delivered": "Played",

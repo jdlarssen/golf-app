@@ -5933,6 +5933,8 @@
       "opensOn": "Åpner {date}",
       "delivered": "Levert",
       "deliveredAria": "Du har levert denne runden",
+      "myResultUnit": "poeng",
+      "myResultCardAria": "Se kortet ditt fra {round}, {result}",
       "playButton": "Spill",
       "playedBy": {
         "delivered": "Har spilt",
