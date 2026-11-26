@@ -96,6 +96,23 @@ describe('planHandicapRecompute (#1176)', () => {
     ).toEqual([{ gameId: 'g-active', courseHandicap: 9, fullCourseHandicap: 11 }]);
   });
 
+  it('#2939 (F3): 0,5 rounds up in both numbers, also when the float lands just under', () => {
+    // 45 × 70 % = 31,5 → 32 (31,499999999999996 in floating point).
+    expect(planHandicapRecompute([activeRow({ allowancePct: 70 })], 45)).toEqual([
+      { gameId: 'g-active', courseHandicap: 32, fullCourseHandicap: 45 },
+    ]);
+    // 33,9 × 85/113 + (70 − 72) = 23,5 exactly, 23,499999999999996 in floating point.
+    const halfTee: TeeBoxRatings = {
+      ...TEE,
+      slope_mens: 85,
+      course_rating_mens: 70,
+      par_total_mens: 72,
+    };
+    expect(planHandicapRecompute([activeRow({ teeRatings: halfTee })], 33.9)).toEqual([
+      { gameId: 'g-active', courseHandicap: 24, fullCourseHandicap: 24 },
+    ]);
+  });
+
   it.each([
     ['finished', 'finished' as const],
     ['scheduled', 'scheduled' as const],

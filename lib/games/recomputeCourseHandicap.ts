@@ -3,6 +3,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import {
   rawCourseHandicap,
   playingHandicapFromRaw,
+  roundHalfUp,
 } from '@/lib/scoring/courseHandicap';
 import { greensomeTeamHandicap } from '@/lib/scoring/modes/greensomeMatchplay';
 import {
@@ -88,7 +89,7 @@ export function planHandicapRecompute(
     updates.push({
       gameId: row.gameId,
       courseHandicap: playingHandicapFromRaw(raw, row.allowancePct, row.maxStrokes),
-      fullCourseHandicap: Math.round(raw),
+      fullCourseHandicap: roundHalfUp(raw),
     });
   }
   return updates;

@@ -1982,3 +1982,51 @@ describe('startScheduledGame — shamble med handicapprosent (#2570)', () => {
     });
   });
 });
+
+// ─── #2939 (F3): both frozen numbers round 0,5 up ────────────────────────────
+
+describe('startScheduledGame — 0,5 rounds up in both frozen numbers (#2939, F3)', () => {
+  it('index 33,9 on 85/70,0/72 freezes 24 and 24, not a full course handicap of 23', async () => {
+    // raw = 33,9 × 85/113 + (70 − 72) = 23,5 exactly (28 815 / 1 130 − 2), but
+    // 23,499999999999996 in floating point. NGF 6.2a rounds 0,5 up: 24.
+    const tee = { ...REAL_TEE, slope_mens: 85, course_rating_mens: 70, par_total_mens: 72 };
+    const supabase = buildSupabaseMock([
+      {
+        data: {
+          id: 'game-id',
+          status: 'scheduled',
+          hcp_allowance_pct: 100,
+          tee_box_id: 'tee-id',
+          game_mode: 'stableford',
+          mode_config: { kind: 'stableford', team_size: 1 },
+          tee_boxes: tee,
+        },
+        error: null,
+      },
+      {
+        data: [
+          {
+            user_id: 'user-1',
+            tee_gender: 'mens',
+            team_number: null,
+            withdrawn_at: null,
+            users: { hcp_index: 33.9 },
+          },
+        ],
+        error: null,
+      },
+      WROTE_ROW,
+      { data: [{ id: 'game-id' }], error: null },
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: true });
+
+    const chUpdate = (
+      supabase as unknown as {
+        __fromCalls: Array<{ table: string; method: string; args: unknown[] }>;
+      }
+    ).__fromCalls.find((c) => c.table === 'game_players' && c.method === 'update');
+    expect(chUpdate?.args[0]).toEqual({ course_handicap: 24, full_course_handicap: 24 });
+  });
+});
