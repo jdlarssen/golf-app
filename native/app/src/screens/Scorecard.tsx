@@ -408,7 +408,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     teeGender: me.player.teeGender as ScoringGender,
     courseHandicap,
     rawCourseHandicap: me.player.rawCourseHandicap ?? null,
-    matchCourseHandicaps: matchCourseHandicaps(bundle.game, bundle.players),
+    matchCourseHandicaps: matchCourseHandicaps(bundle),
     teamNumber: myTeamCard?.teamNumber ?? me.player.teamNumber,
     leaderboard,
   });

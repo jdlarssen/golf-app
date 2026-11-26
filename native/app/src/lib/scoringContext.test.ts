@@ -547,12 +547,16 @@ describe('playerExtraForHole', () => {
     };
     // A row on no side (CH 0) must not move the lowest handicap: the engine
     // reads sides 1 and 2 only.
-    const roster = matchCourseHandicaps(game, [
-      { teamNumber: 1, courseHandicap: 20, withdrawnAt: null },
-      { teamNumber: 2, courseHandicap: 5, withdrawnAt: null },
-      { teamNumber: null, courseHandicap: 0, withdrawnAt: null },
-    ] as unknown as Parameters<typeof matchCourseHandicaps>[1]);
-    expect(roster).toEqual([20, 5]);
+    const roster = matchCourseHandicaps({
+      game: { ...game, holeSegment: 'full' },
+      players: [
+        { teamNumber: 1, courseHandicap: 20, withdrawnAt: null },
+        { teamNumber: 2, courseHandicap: 5, withdrawnAt: null },
+        { teamNumber: null, courseHandicap: 0, withdrawnAt: null },
+      ],
+      holes: [],
+    } as unknown as Parameters<typeof matchCourseHandicaps>[0]);
+    expect(roster.players.map((p) => p.basis)).toEqual([20, 5]);
     expect(playerExtraForHole(game, ch(20), 15, roster)).toBe(1);
     expect(playerExtraForHole(game, ch(20), 16, roster)).toBe(0);
     expect(playerExtraForHole(game, ch(5), 1, roster)).toBe(0);
@@ -573,12 +577,58 @@ describe('playerExtraForHole', () => {
       { teamNumber: 1, courseHandicap: 20, rawCourseHandicap: 20.4, withdrawnAt: null },
       { teamNumber: 2, courseHandicap: 10, rawCourseHandicap: 9.5, withdrawnAt: null },
       { teamNumber: 2, courseHandicap: 10, rawCourseHandicap: 9.5, withdrawnAt: null },
-    ] as unknown as Parameters<typeof matchCourseHandicaps>[1];
-    const bases = matchCourseHandicaps(game, players);
+    ];
+    const bases = matchCourseHandicaps({ game: { ...game, holeSegment: 'full' }, players, holes: [] } as unknown as Parameters<
+      typeof matchCourseHandicaps
+    >[0]);
     // 90 % of 20,4 − 9,5 = 9,81 → 10: one stroke on SI 1–10, none on SI 11.
     expect(playerExtraForHole(game, ch(20, 20.4), 10, bases)).toBe(1);
     expect(playerExtraForHole(game, ch(20, 20.4), 11, bases)).toBe(0);
     // The lowest plays off 0.
     expect(playerExtraForHole(game, ch(10, 9.5), 1, bases)).toBe(0);
+  });
+});
+
+// #2941 (F17): en ny match gir spilleren med høyest par tilleggsslag, over
+// hullene i spillets segment, som motoren og webben.
+describe('playerExtraForHole — ulik par', () => {
+  // Damene har par 5 på SI 1 og 2 (herrene 72, damene 74).
+  const holes = Array.from({ length: 18 }, (_, i) => ({
+    holeNumber: i + 1,
+    parMens: 4,
+    parLadies: i < 2 ? 5 : 4,
+    parJuniors: 4,
+    strokeIndex: i + 1,
+  }));
+  const singles = (extra: object) => ({
+    id: 'g',
+    gameMode: 'singles_matchplay',
+    holeSegment: 'full',
+    modeConfig: { kind: 'singles_matchplay', team_size: 1, teams_count: 2, match_strokes: 'difference', ...extra },
+  });
+  const players = [
+    { teamNumber: 1, courseHandicap: 0, rawCourseHandicap: null, withdrawnAt: null, teeGender: 'mens' },
+    { teamNumber: 2, courseHandicap: 0, rawCourseHandicap: null, withdrawnAt: null, teeGender: 'ladies' },
+  ];
+  const field = (game: object, holeSegment = 'full') =>
+    matchCourseHandicaps({ game: { ...game, holeSegment }, players, holes } as unknown as Parameters<
+      typeof matchCourseHandicaps
+    >[0]);
+
+  it('ny singel: damen får ett slag på SI 1 og 2, herren ingen', () => {
+    const game = singles({ par_strokes: 'difference' });
+    expect(playerExtraForHole(game, players[1], 1, field(game))).toBe(1);
+    expect(playerExtraForHole(game, players[1], 3, field(game))).toBe(0);
+    expect(playerExtraForHole(game, players[0], 1, field(game))).toBe(0);
+  });
+
+  it('en singel opprettet før gir ingen par-slag', () => {
+    const game = singles({});
+    expect(playerExtraForHole(game, players[1], 1, field(game))).toBe(0);
+  });
+
+  it('på siste ni teller bare hull 10–18, der parene er like', () => {
+    const game = singles({ par_strokes: 'difference' });
+    expect(playerExtraForHole(game, players[1], 1, field(game, 'back9'))).toBe(0);
   });
 });
