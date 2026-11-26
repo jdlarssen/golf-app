@@ -413,7 +413,13 @@ export async function startScheduledGameCore(
           .from('game_players')
           // F1 (WHS 3.1b): the score differential's net double bogey uses
           // the full course handicap, so it is frozen next to the playing one.
-          .update({ course_handicap: allowed, full_course_handicap: fullCourseHandicap })
+          // #2997 (F16/F25): the formats with their own percentage take it of
+          // the unrounded value, frozen here too (full = round(raw)).
+          .update({
+            course_handicap: allowed,
+            full_course_handicap: fullCourseHandicap,
+            raw_course_handicap: raw,
+          })
           .eq('game_id', gameId)
           .eq('user_id', row.user_id)
           .select('user_id'),

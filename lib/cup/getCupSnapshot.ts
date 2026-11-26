@@ -217,7 +217,7 @@ export async function getCupSnapshot(
             supabase
               .from('game_players')
               .select(
-                'game_id, user_id, team_number, course_handicap, submitted_at, withdrawn_at, tee_gender, users!game_players_user_id_fkey(name, nickname)',
+                'game_id, user_id, team_number, course_handicap, raw_course_handicap, submitted_at, withdrawn_at, tee_gender, users!game_players_user_id_fkey(name, nickname)',
               )
               .in('game_id', gameIds)
               .order('game_id')

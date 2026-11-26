@@ -407,7 +407,8 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     teamOwnerId: myCaptainId,
     teeGender: me.player.teeGender as ScoringGender,
     courseHandicap,
-    matchCourseHandicaps: matchCourseHandicaps(bundle.players),
+    rawCourseHandicap: me.player.rawCourseHandicap ?? null,
+    matchCourseHandicaps: matchCourseHandicaps(bundle.game, bundle.players),
     teamNumber: myTeamCard?.teamNumber ?? me.player.teamNumber,
     leaderboard,
   });
@@ -442,6 +443,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     handicapPart: scorecardHandicapPart({
       game: bundle.game,
       courseHandicap: me.player.courseHandicap,
+      rawCourseHandicap: me.player.rawCourseHandicap ?? null,
       teamMode,
       teamHandicap:
         leaderboard != null && teamNumber != null ? teamHandicapFor(leaderboard, teamNumber) : null,

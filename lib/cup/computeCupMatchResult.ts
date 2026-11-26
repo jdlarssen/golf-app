@@ -106,7 +106,12 @@ const MATCHPLAY_CONFIG_BY_MODE: ReadonlyMap<string, MatchplayConfig> = new Map(
   Object.entries(MATCHPLAY_CONFIG),
 );
 
-export type CupMatchSidePlayer = { userId: string; courseHandicap: number };
+export type CupMatchSidePlayer = {
+  userId: string;
+  courseHandicap: number;
+  /** #2997: the unrounded course handicap frozen at start; null = not frozen. */
+  rawCourseHandicap?: number | null;
+};
 
 export type CupMatchScoringInput = {
   gameId?: string;
@@ -117,8 +122,9 @@ export type CupMatchScoringInput = {
    * greensome-lag-slag) leses KUN videre når `gameMode ===
    * 'greensome_matchplay'`; feltet ignoreres for øvrige moduser (samme
    * bevisste smalhet som `allowance_pct` alt hadde).
-   * `match_strokes` (revisjonen 20.11) leses KUN for `singles_matchplay`: en
-   * ny singel-match gir forskjellen i slag (`singlesStrokeHandicap`).
+   * `match_strokes` (revisjonen 20.11) leses for `singles_matchplay` og
+   * `fourball_matchplay` (#2997): en ny match gir forskjellen til den laveste
+   * (`matchDifferenceStrokes`).
    */
   modeConfig: {
     allowance_pct?: number;
@@ -162,9 +168,10 @@ export function computeCupMatchResult(input: CupMatchScoringInput): CupMatchInpu
 
   // Audit 2026-11-20: a new singles match carries `match_strokes`; without
   // it here the cup points scored the match on full handicaps while the
-  // match page used the difference.
+  // match page used the difference. #2997: a new four-ball match too.
   const matchStrokes =
-    input.gameMode === 'singles_matchplay' && input.modeConfig?.match_strokes === 'difference'
+    (input.gameMode === 'singles_matchplay' || input.gameMode === 'fourball_matchplay') &&
+    input.modeConfig?.match_strokes === 'difference'
       ? input.modeConfig.match_strokes
       : undefined;
 
@@ -182,6 +189,7 @@ export function computeCupMatchResult(input: CupMatchScoringInput): CupMatchInpu
           teams_count: 2,
           allowance_pct: allowancePct,
           ...(teamStrokesOverride ? { team_strokes_override: teamStrokesOverride } : {}),
+          ...(matchStrokes ? { match_strokes: matchStrokes } : {}),
         }
   ) as GameModeConfig;
 
@@ -197,12 +205,14 @@ export function computeCupMatchResult(input: CupMatchScoringInput): CupMatchInpu
         teamNumber: 1,
         flightNumber: null,
         courseHandicap: p.courseHandicap,
+        rawCourseHandicap: p.rawCourseHandicap ?? null,
       })),
       ...input.side2.map((p) => ({
         userId: p.userId,
         teamNumber: 2,
         flightNumber: null,
         courseHandicap: p.courseHandicap,
+        rawCourseHandicap: p.rawCourseHandicap ?? null,
       })),
     ],
     holes: input.holes.map((h) => ({ number: h.number, par: h.par, strokeIndex: h.strokeIndex })),

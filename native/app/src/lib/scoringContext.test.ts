@@ -142,10 +142,11 @@ describe('buildScoringContext', () => {
     );
 
     expect(ctx.players).toEqual([
-      { userId: 'a', teamNumber: 1, flightNumber: null, courseHandicap: 7, teeGender: 'mens' },
+      // #2997: no unrounded value in the bundle = null, the integer path.
+      { userId: 'a', teamNumber: 1, flightNumber: null, courseHandicap: 7, rawCourseHandicap: null, teeGender: 'mens' },
       // Banehandicap null = spilleren har ikke fått et frosset tall ennå.
       // Motoren regner med 0, den gjetter aldri.
-      { userId: 'b', teamNumber: 2, flightNumber: null, courseHandicap: 0, teeGender: 'ladies' },
+      { userId: 'b', teamNumber: 2, flightNumber: null, courseHandicap: 0, rawCourseHandicap: null, teeGender: 'ladies' },
     ]);
   });
 
@@ -509,29 +510,33 @@ describe('wolf og bingo bango bongo', () => {
 // sender inn samme config som motoren får, og at ukjent er `null`, aldri 0.
 describe('playerExtraForHole', () => {
   const fourball = (modeConfig: unknown) => ({ gameMode: 'fourball_matchplay', modeConfig });
+  const ch = (courseHandicap: number | null, rawCourseHandicap: number | null = null) => ({
+    courseHandicap,
+    rawCourseHandicap,
+  });
 
   it('fourball 85 %: banehandicap 20 blir 17 — ingen slag på SI 18', () => {
     const game = fourball({ kind: 'fourball_matchplay', team_size: 2, teams_count: 2, allowance_pct: 85 });
-    expect(playerExtraForHole(game, 20, 18, [])).toBe(0);
-    expect(playerExtraForHole(game, 20, 1, [])).toBe(1);
+    expect(playerExtraForHole(game, ch(20), 18, [])).toBe(0);
+    expect(playerExtraForHole(game, ch(20), 1, [])).toBe(1);
   });
 
   it('skins brutto gir 0 slag', () => {
     const game = { gameMode: 'skins', modeConfig: { kind: 'skins', team_size: 1, skins_scoring: 'gross' } };
-    expect(playerExtraForHole(game, 18, 1, [])).toBe(0);
+    expect(playerExtraForHole(game, ch(18), 1, [])).toBe(0);
   });
 
   it('en config for et annet format er ukjent — null, ikke 0', () => {
     const game = fourball({ kind: 'skins', team_size: 1, skins_scoring: 'gross' });
-    expect(playerExtraForHole(game, 20, 1, [])).toBeNull();
+    expect(playerExtraForHole(game, ch(20), 1, [])).toBeNull();
   });
 
   it('modeConfig null (DB-default) følger motorens fallback: fourball 100 %', () => {
-    expect(playerExtraForHole(fourball(null), 20, 18, [])).toBe(1);
+    expect(playerExtraForHole(fourball(null), ch(20), 18, [])).toBe(1);
   });
 
   it('manglende banehandicap regnes som 0, som webben', () => {
-    expect(playerExtraForHole(fourball(null), null, 1, [])).toBe(0);
+    expect(playerExtraForHole(fourball(null), ch(null), 1, [])).toBe(0);
   });
 
   // Revisjonen 20.11: en ny singel-match gir forskjellen til motstanderen.
@@ -542,14 +547,38 @@ describe('playerExtraForHole', () => {
     };
     // A row on no side (CH 0) must not move the lowest handicap: the engine
     // reads sides 1 and 2 only.
-    const roster = matchCourseHandicaps([
-      { teamNumber: 1, courseHandicap: 20 },
-      { teamNumber: 2, courseHandicap: 5 },
-      { teamNumber: null, courseHandicap: 0 },
-    ] as unknown as Parameters<typeof matchCourseHandicaps>[0]);
+    const roster = matchCourseHandicaps(game, [
+      { teamNumber: 1, courseHandicap: 20, withdrawnAt: null },
+      { teamNumber: 2, courseHandicap: 5, withdrawnAt: null },
+      { teamNumber: null, courseHandicap: 0, withdrawnAt: null },
+    ] as unknown as Parameters<typeof matchCourseHandicaps>[1]);
     expect(roster).toEqual([20, 5]);
-    expect(playerExtraForHole(game, 20, 15, roster)).toBe(1);
-    expect(playerExtraForHole(game, 20, 16, roster)).toBe(0);
-    expect(playerExtraForHole(game, 5, 1, roster)).toBe(0);
+    expect(playerExtraForHole(game, ch(20), 15, roster)).toBe(1);
+    expect(playerExtraForHole(game, ch(20), 16, roster)).toBe(0);
+    expect(playerExtraForHole(game, ch(5), 1, roster)).toBe(0);
+  });
+
+  // #2997 (F15/F16): en ny four-ball-match gir den laveste 0 og de andre
+  // andelen av differansen, av det urundede banehandicapet når starten frøs det.
+  it('four-ball 90 % med forskjellen og urundet tall: 20,4 mot 9,5 gir 10 slag', () => {
+    const game = fourball({
+      kind: 'fourball_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: 90,
+      match_strokes: 'difference',
+    });
+    const players = [
+      { teamNumber: 1, courseHandicap: 10, rawCourseHandicap: 9.5, withdrawnAt: null },
+      { teamNumber: 1, courseHandicap: 20, rawCourseHandicap: 20.4, withdrawnAt: null },
+      { teamNumber: 2, courseHandicap: 10, rawCourseHandicap: 9.5, withdrawnAt: null },
+      { teamNumber: 2, courseHandicap: 10, rawCourseHandicap: 9.5, withdrawnAt: null },
+    ] as unknown as Parameters<typeof matchCourseHandicaps>[1];
+    const bases = matchCourseHandicaps(game, players);
+    // 90 % of 20,4 − 9,5 = 9,81 → 10: one stroke on SI 1–10, none on SI 11.
+    expect(playerExtraForHole(game, ch(20, 20.4), 10, bases)).toBe(1);
+    expect(playerExtraForHole(game, ch(20, 20.4), 11, bases)).toBe(0);
+    // The lowest plays off 0.
+    expect(playerExtraForHole(game, ch(10, 9.5), 1, bases)).toBe(0);
   });
 });

@@ -51,6 +51,8 @@ export async function renderTexasScramble(opts: {
       team_number: number;
       users: { name: string | null; nickname: string | null } | null;
       course_handicap: number | null;
+      /** #2997: read by the engine (`ScoringPlayer.rawCourseHandicap`). */
+      raw_course_handicap?: number | null;
       tee_gender: TeeGender;
       withdrawn_at: string | null;
       /** #2316: the live board's strip reads these. */

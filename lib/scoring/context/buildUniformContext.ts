@@ -20,6 +20,11 @@ export interface UniformContextPlayerRow {
   user_id: string;
   team_number: number;
   course_handicap: number | null;
+  /**
+   * #2997: the unrounded course handicap frozen at start; null = not frozen.
+   * Optional so a row from before the column reads as null.
+   */
+  raw_course_handicap?: number | null;
   tee_gender: ScoringGender;
   withdrawn_at: string | null;
   users: { name: string | null; nickname: string | null } | null;
@@ -126,6 +131,7 @@ export function buildUniformContext(opts: {
         teamNumber: p.team_number,
         flightNumber: null,
         courseHandicap: p.course_handicap ?? 0,
+        rawCourseHandicap: p.raw_course_handicap ?? null,
         teeGender: p.tee_gender,
       })),
     holes: holesRows.map((h) => ({

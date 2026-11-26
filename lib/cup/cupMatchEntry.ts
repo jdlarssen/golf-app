@@ -20,6 +20,8 @@ import type { MatchSubmissionStatus } from './matchSubmissionStatus';
 
 export type CupMatchPlayerRow = CupNamedPlayerRow & {
   course_handicap: number | null;
+  /** #2997: the unrounded course handicap frozen at start; null = not frozen. */
+  raw_course_handicap?: number | null;
   /** `game_players.withdrawn_at` — input til konvoluttregelen (#1814). */
   withdrawn_at: string | null;
   /** Teen spilleren spiller fra — «dro ned mest» leser hennes eget par. */
@@ -139,7 +141,8 @@ export function buildCupMatchEntry(input: CupMatchEntryInput): CupMatchEntry {
   // dens allowance bor på `games.hcp_allowance_pct` og er alt anvendt i det
   // frosne banehandicapet, slik at kampens egen tavle og cup-poenget regner
   // med samme tall. Se `lib/cup/cupMatchAllowance.ts`.
-  // `match_strokes`: forskjellen i en ny singel-match (revisjonen 20.11).
+  // `match_strokes`: forskjellen til den laveste i en ny singel- eller
+  // four-ball-match (revisjonen 20.11, #2997).
   const modeConfig = (game.mode_config ?? null) as {
     allowance_pct?: number;
     team_strokes_override?: { team1: number; team2: number };
@@ -204,10 +207,12 @@ export function buildCupMatchEntry(input: CupMatchEntryInput): CupMatchEntry {
     side1: side1Players.map((p) => ({
       userId: p.user_id,
       courseHandicap: p.course_handicap ?? 0,
+      rawCourseHandicap: p.raw_course_handicap ?? null,
     })),
     side2: side2Players.map((p) => ({
       userId: p.user_id,
       courseHandicap: p.course_handicap ?? 0,
+      rawCourseHandicap: p.raw_course_handicap ?? null,
     })),
     holes,
     scores: scores.map((s) => ({

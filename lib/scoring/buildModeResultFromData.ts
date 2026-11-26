@@ -56,6 +56,12 @@ export interface GamePlayerRow {
   team_number: number | null;
   flight_number: number | null;
   course_handicap: number | null;
+  /**
+   * #2997: the unrounded course handicap frozen at start; null = not frozen.
+   * `buildModeResultForGame` always selects it (`gamePlayersScoringSelects.test.ts`);
+   * optional so a hand-built row reads as «not frozen».
+   */
+  raw_course_handicap?: number | null;
   tee_gender: ScoringGender;
   withdrawn_at: string | null;
   users: { name: string | null; nickname: string | null } | null;
@@ -72,6 +78,8 @@ export interface ModeContextPlayerRow {
   user_id: string;
   team_number: number;
   course_handicap: number | null;
+  /** #2997: the unrounded course handicap frozen at start; null = not frozen. */
+  raw_course_handicap?: number | null;
   tee_gender: ScoringGender;
   withdrawn_at: string | null;
   users: { name: string | null; nickname: string | null } | null;

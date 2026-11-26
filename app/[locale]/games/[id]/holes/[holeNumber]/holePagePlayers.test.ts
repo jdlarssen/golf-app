@@ -204,6 +204,48 @@ describe('buildPlayersForClient — per-spiller-slag som motoren (#2218)', () =>
     expect(perPlayerStrokes({ game: SINGLES, allPlayers: players, strokeIndex: 16 })).toEqual({ a: 0, b: 0 });
   });
 
+  it('ny four-ball-match ved 90 %: 10, 18, 27 og 39 gir 0, 7, 15 og 26 slag, som motoren (#2997, F15)', () => {
+    const FOURBALL_NEW = game('fourball_matchplay', {
+      kind: 'fourball_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: 90,
+      match_strokes: 'difference',
+    });
+    const players = [player('a', 1, 10), player('b', 1, 18), player('c', 2, 27), player('d', 2, 39)];
+    // SI 7: B's 7th stroke; SI 8: none for B. D has 26: two on SI 1–8.
+    expect(perPlayerStrokes({ game: FOURBALL_NEW, allPlayers: players, strokeIndex: 7 })).toEqual({ a: 0, b: 1, c: 1, d: 2 });
+    expect(perPlayerStrokes({ game: FOURBALL_NEW, allPlayers: players, strokeIndex: 8 })).toEqual({ a: 0, b: 0, c: 1, d: 2 });
+  });
+
+  it('ny four-ball-match tar andelen av det urundede banehandicapet (#2997, F16)', () => {
+    const FOURBALL_NEW = game('fourball_matchplay', {
+      kind: 'fourball_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: 90,
+      match_strokes: 'difference',
+    });
+    const raw = (p: PlayerForHole, r: number): PlayerForHole => ({ ...p, raw_course_handicap: r });
+    // 90 % of 20,4 − 9,5 = 9,81 → 10: a dot on SI 10. The integers 20 − 10 give 9.
+    const players = [raw(player('a', 1, 10), 9.5), raw(player('b', 1, 20), 20.4), raw(player('c', 2, 10), 9.5), raw(player('d', 2, 10), 9.5)];
+    expect(perPlayerStrokes({ game: FOURBALL_NEW, allPlayers: players, strokeIndex: 10 }).b).toBe(1);
+  });
+
+  it('foursomes ved 50 % med urundet tall: 9,513 + 11,394 mot 0 gir 10 slag, ikke 11 (#2997, F16)', () => {
+    const FOURSOMES = game('foursomes_matchplay', {
+      kind: 'foursomes_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: 50,
+    });
+    const raw = (p: PlayerForHole, r: number): PlayerForHole => ({ ...p, raw_course_handicap: r });
+    const me = raw(player('a', 1, 10), 9.513);
+    const allPlayers = [me, raw(player('a2', 1, 11), 11.394), raw(player('b', 2, 0), 0), raw(player('b2', 2, 0), 0)];
+    expect(teamCardStrokes({ game: FOURSOMES, allPlayers, me, strokeIndex: 10 })).toEqual({ 1: 1, 2: 0 });
+    expect(teamCardStrokes({ game: FOURSOMES, allPlayers, me, strokeIndex: 11 })).toEqual({ 1: 0, 2: 0 });
+  });
+
   it('greensome med egne lag-slag {8, 3}: lag 1 får slag på SI 5, ikke på SI 6 (#1447 holder)', () => {
     const GREENSOME = game('greensome_matchplay', {
       kind: 'greensome_matchplay',

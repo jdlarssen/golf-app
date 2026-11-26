@@ -61,7 +61,7 @@ describe('planHandicapRecompute (#1176)', () => {
   it('active game with a frozen CH → one recomputed update', () => {
     // hcpIndex 12 on the trivial tee, 100% allowance → CH 12.
     expect(planHandicapRecompute([activeRow()], 12)).toEqual([
-      { gameId: 'g-active', courseHandicap: 12, fullCourseHandicap: 12 },
+      { gameId: 'g-active', courseHandicap: 12, fullCourseHandicap: 12, rawCourseHandicap: 12 },
     ]);
   });
 
@@ -69,14 +69,14 @@ describe('planHandicapRecompute (#1176)', () => {
     // hcpIndex 20 → raw 20; 75% allowance → round(15) = 15.
     expect(
       planHandicapRecompute([activeRow({ allowancePct: 75 })], 20),
-    ).toEqual([{ gameId: 'g-active', courseHandicap: 15, fullCourseHandicap: 20 }]);
+    ).toEqual([{ gameId: 'g-active', courseHandicap: 15, fullCourseHandicap: 20, rawCourseHandicap: 20 }]);
   });
 
   it('#2660: caps the strokes after the percentage, as the freeze does', () => {
     // hcpIndex 54 → raw 54; 75 % = 40.5 → 41; the cap makes it 32.
     expect(
       planHandicapRecompute([activeRow({ allowancePct: 75, maxStrokes: 32 })], 54),
-    ).toEqual([{ gameId: 'g-active', courseHandicap: 32, fullCourseHandicap: 54 }]);
+    ).toEqual([{ gameId: 'g-active', courseHandicap: 32, fullCourseHandicap: 54, rawCourseHandicap: 54 }]);
   });
 
   it('#2924: takes the share of the unrounded course handicap, as the freeze does', () => {
@@ -93,13 +93,20 @@ describe('planHandicapRecompute (#1176)', () => {
         [activeRow({ teeRatings: leagueTee, allowancePct: 75, maxStrokes: 32 })],
         12.1,
       ),
-    ).toEqual([{ gameId: 'g-active', courseHandicap: 9, fullCourseHandicap: 11 }]);
+    ).toEqual([
+      {
+        gameId: 'g-active',
+        courseHandicap: 9,
+        fullCourseHandicap: 11,
+        rawCourseHandicap: 12.1 * (125 / 113) + (70 - 72),
+      },
+    ]);
   });
 
   it('#2939 (F3): 0,5 rounds up in both numbers, also when the float lands just under', () => {
     // 45 × 70 % = 31,5 → 32 (31,499999999999996 in floating point).
     expect(planHandicapRecompute([activeRow({ allowancePct: 70 })], 45)).toEqual([
-      { gameId: 'g-active', courseHandicap: 32, fullCourseHandicap: 45 },
+      { gameId: 'g-active', courseHandicap: 32, fullCourseHandicap: 45, rawCourseHandicap: 45 },
     ]);
     // 33,9 × 85/113 + (70 − 72) = 23,5 exactly, 23,499999999999996 in floating point.
     const halfTee: TeeBoxRatings = {
@@ -109,7 +116,12 @@ describe('planHandicapRecompute (#1176)', () => {
       par_total_mens: 72,
     };
     expect(planHandicapRecompute([activeRow({ teeRatings: halfTee })], 33.9)).toEqual([
-      { gameId: 'g-active', courseHandicap: 24, fullCourseHandicap: 24 },
+      {
+        gameId: 'g-active',
+        courseHandicap: 24,
+        fullCourseHandicap: 24,
+        rawCourseHandicap: 33.9 * (85 / 113) + (70 - 72),
+      },
     ]);
   });
 
@@ -165,7 +177,14 @@ describe('planHandicapRecompute (#1176)', () => {
         [activeRow({ courseHandicap: 3, teeRatings: mensII })],
         -2.2,
       ),
-    ).toEqual([{ gameId: 'g-active', courseHandicap: -2, fullCourseHandicap: -2 }]);
+    ).toEqual([
+      {
+        gameId: 'g-active',
+        courseHandicap: -2,
+        fullCourseHandicap: -2,
+        rawCourseHandicap: -2.2 * (140 / 113) + (71.5 - 71),
+      },
+    ]);
   });
 
   it('mixed rows → only active + frozen + resolvable are updated', () => {
@@ -178,8 +197,8 @@ describe('planHandicapRecompute (#1176)', () => {
       activeRow({ gameId: 'a4' }), // update
     ];
     expect(planHandicapRecompute(rows, 12)).toEqual([
-      { gameId: 'a1', courseHandicap: 12, fullCourseHandicap: 12 },
-      { gameId: 'a4', courseHandicap: 12, fullCourseHandicap: 12 },
+      { gameId: 'a1', courseHandicap: 12, fullCourseHandicap: 12, rawCourseHandicap: 12 },
+      { gameId: 'a4', courseHandicap: 12, fullCourseHandicap: 12, rawCourseHandicap: 12 },
     ]);
   });
 });
@@ -647,7 +666,11 @@ describe('recomputeCourseHandicapForUser — handicapprosenten følger formatet 
     const write = client.__fromCalls.find(
       (c) => c.table === 'game_players' && c.method === 'update',
     );
-    expect(write?.args[0]).toEqual({ course_handicap: 12, full_course_handicap: 12 });
+    expect(write?.args[0]).toEqual({
+      course_handicap: 12,
+      full_course_handicap: 12,
+      raw_course_handicap: 12,
+    });
   });
 });
 
@@ -690,7 +713,11 @@ describe('recomputeCourseHandicapForUser — ligaens tak på slag (#2660)', () =
     const write = client.__fromCalls.find(
       (c) => c.table === 'game_players' && c.method === 'update',
     );
-    expect(write?.args[0]).toEqual({ course_handicap: 32, full_course_handicap: 54 });
+    expect(write?.args[0]).toEqual({
+      course_handicap: 32,
+      full_course_handicap: 54,
+      raw_course_handicap: 54,
+    });
     const gamesSelect = client.__fromCalls.find(
       (c) => c.table === 'games' && c.method === 'select',
     );

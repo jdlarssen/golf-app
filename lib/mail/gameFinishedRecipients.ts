@@ -58,6 +58,8 @@ type RecipientPlayerRow = {
   team_number: number | null;
   tee_gender: ScoringGender;
   course_handicap: number | null;
+  /** #2997: the unrounded course handicap frozen at start; null = not frozen. */
+  raw_course_handicap: number | null;
   withdrawn_at: string | null;
   users: { email: string | null; name: string | null; locale: string | null } | null;
 };
@@ -221,7 +223,7 @@ export async function buildGameFinishedRecipients(
   const { data: rosterRows, error: playerErr } = await supabase
     .from('game_players')
     .select(
-      'user_id, team_number, tee_gender, course_handicap, withdrawn_at, users!game_players_user_id_fkey(name, locale, is_guest)',
+      'user_id, team_number, tee_gender, course_handicap, raw_course_handicap, withdrawn_at, users!game_players_user_id_fkey(name, locale, is_guest)',
     )
     .eq('game_id', gameId)
     .returns<
@@ -230,6 +232,7 @@ export async function buildGameFinishedRecipients(
         team_number: number | null;
         tee_gender: ScoringGender;
         course_handicap: number | null;
+        raw_course_handicap: number | null;
         withdrawn_at: string | null;
         users: {
           name: string | null;
@@ -683,6 +686,7 @@ async function buildTexasScrambleRecipients(
         user_id: row.user_id,
         team_number: row.team_number ?? 0,
         course_handicap: row.course_handicap,
+        raw_course_handicap: row.raw_course_handicap,
         tee_gender: row.tee_gender,
         withdrawn_at: row.withdrawn_at,
         users: row.users ? { name: row.users.name, nickname: null } : null,
