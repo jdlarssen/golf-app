@@ -11,18 +11,26 @@
 //   Lavlaget får 0 strokes; høylaget får highSideExtraHCP strokes allokert
 //   via SI (hardeste hull først). WHS-default pct = 50. 0 % = brutto-matchplay.
 //
-// Side-handicapet (`side1Hcp`/`side2Hcp`) regnes via en `SideHandicapFn`-strategi
-// slik at Chapman (#290) kan gjenbruke hele kjernen med 60/40-formel i stedet for
-// summen: `computeFoursomesCore(ctx, pct, chapmanSideHandicap)` returnerer fortsatt
+// Side-handicapet (`side1Hcp`/`side2Hcp`) regnes via en `SideRule` (`'sum'` eller
+// `'sixtyForty'`, `sideHandicap` i `../teamHandicap.ts`) slik at Chapman (#290)
+// kan gjenbruke hele kjernen med 60/40-formel i stedet for summen:
+// `computeFoursomesCore(ctx, pct, 'sixtyForty')` returnerer fortsatt
 // `kind: 'foursomes_matchplay'` → all leaderboard-/scorekort-/mail-visning deles
 // (Ambrose-mønsteret, #284).
+//
+// #2997 (F16): sidens tall regnes av det urundede banehandicapet når starten
+// frøs det, uten avrunding, og prosenten av differansen rundes én gang (NGF
+// 6.2a, avklaring 6.2a/1, s. 55). En runde startet før kolonnen fantes, får
+// dagens tall.
 //
 // Gjenbruker singles-helpers:
 //   - `classifyMatchplayHole(side1Net, side2Net)` → per-hull-utfall
 //   - `computeMatchResult(holesUp, holesPlayed, holesRemaining)` → format-streng
 
 import { pickTeamCaptain } from '@/lib/games/teamCaptain';
+import { roundHalfUp } from '../courseHandicap';
 import { strokesForHole } from '../strokeAllocation';
+import { sideHandicap, type SideRule } from '../teamHandicap';
 import { parFor } from './parResolver';
 import {
   classifyMatchplayHole,
@@ -109,26 +117,31 @@ function buildSidePlayers(
   return [players[0], players[1]];
 }
 
-/**
- * Strategi for å regne en sides lag-handicap fra de to partnernes Course
- * Handicap. Order-independent. Foursomes bruker summen; Chapman (#290) bruker
- * WHS 60/40 (60 % av laveste + 40 % av høyeste).
- */
-export type SideHandicapFn = (ch1: number, ch2: number) => number;
-
-/** Foursomes: sum av begge partneres CH (uendret oppførsel). */
-export const combinedSideHandicap: SideHandicapFn = (a, b) => a + b;
-
-/**
- * Chapman/Pinehurst (#290): WHS-allowance = 60 % av laveste + 40 % av høyeste,
- * rundet til heltall FØR diff (per WHS: rund hver sides playing handicap, så ta
- * differansen). Eks: 10 + 20 → round(0.6×10 + 0.4×20) = round(14) = 14.
- */
-export const chapmanSideHandicap: SideHandicapFn = (a, b) =>
-  Math.round(0.6 * Math.min(a, b) + 0.4 * Math.max(a, b));
-
 export function compute(ctx: ScoringContext): FoursomesMatchplayResult {
-  return computeFoursomesCore(ctx, readAllowancePct(ctx), combinedSideHandicap);
+  return computeFoursomesCore(ctx, readAllowancePct(ctx), 'sum');
+}
+
+/**
+ * The strokes in the alternate shot formats, one home for the core below and
+ * the views (`alternateShotSideExtras`): the high side gets
+ * `round(|side1 − side2| × pct / 100)`, the low side 0. Equal sides give both
+ * 0. One rounding, 0.5 up, of the sides' handicaps as `sideHandicap` gives
+ * them (unrounded when the start froze the raw numbers, #2997).
+ */
+export function alternateShotExtras(
+  side1Handicap: number,
+  side2Handicap: number,
+  allowancePct: number,
+): { side1Extra: number; side2Extra: number } {
+  const highSideExtra = roundHalfUp(
+    (Math.abs(side1Handicap - side2Handicap) * allowancePct) / 100,
+  );
+  // Når lag-HCP er like: highSide er irrelevant (begge får 0). Default 1.
+  const highSide: 1 | 2 = side2Handicap > side1Handicap ? 2 : 1;
+  return {
+    side1Extra: highSide === 1 ? highSideExtra : 0,
+    side2Extra: highSide === 2 ? highSideExtra : 0,
+  };
 }
 
 /**
@@ -147,16 +160,16 @@ export interface SideHandicapOverride {
 
 /**
  * Delt matchplay-kjerne for alternate-shot-familien. `allowancePct` styrer hvor
- * mye av lag-HCP-differansen høylaget får; `sideHcp` styrer hvordan en sides
- * lag-handicap regnes (sum for foursomes, 60/40 for Chapman). `override`
- * (D10) bytter ut det `sideHcp`-beregnede tallet direkte når satt — se
+ * mye av lag-HCP-differansen høylaget får; `rule` styrer hvordan en sides
+ * lag-handicap regnes (sum for foursomes, 60/40 for Chapman, `sideHandicap`).
+ * `override` (D10) bytter ut det beregnede tallet direkte når satt — se
  * `SideHandicapOverride`-doc-kommentaren. Returnerer alltid
  * `kind: 'foursomes_matchplay'` slik at alle view-/mail-konsumenter deles.
  */
 export function computeFoursomesCore(
   ctx: ScoringContext,
   allowancePct: number,
-  sideHcp: SideHandicapFn,
+  rule: SideRule,
   override?: SideHandicapOverride,
 ): FoursomesMatchplayResult {
   const side1Players = ctx.players
@@ -176,25 +189,19 @@ export function computeFoursomesCore(
   const side1CaptainId = pickTeamCaptain(side1Players.map((p) => p.userId));
   const side2CaptainId = pickTeamCaptain(side2Players.map((p) => p.userId));
 
-  // Lag-handicap per side via strategi (sum for foursomes, 60/40 for Chapman)
-  // — eller `override` (D10) direkte når satt, se `SideHandicapOverride`.
-  const side1Combined =
-    override?.side1 ??
-    sideHcp(side1Players[0].courseHandicap, side1Players[1].courseHandicap);
-  const side2Combined =
-    override?.side2 ??
-    sideHcp(side2Players[0].courseHandicap, side2Players[1].courseHandicap);
+  // Lag-handicap per side via regelen (sum for foursomes, 60/40 for Chapman),
+  // urundet når starten frøs de urundede tallene (#2997) — eller `override`
+  // (D10) direkte når satt, se `SideHandicapOverride`.
+  const side1Combined = override?.side1 ?? sideHandicap(rule, side1Players);
+  const side2Combined = override?.side2 ?? sideHandicap(rule, side2Players);
 
   // WHS-diff-formel: høylaget får (diff × allowance_pct/100) strokes via SI.
   // Lavlaget får 0. Ved tie i lag-HCP får begge 0 — gross-only matchplay.
-  const teamDiff = Math.abs(side1Combined - side2Combined);
-  const highSideExtraHCP = Math.round((teamDiff * allowancePct) / 100);
-  // Når lag-HCP er like (teamDiff === 0): highSideNumber er irrelevant
-  // (begge sider får 0 strokes uansett). Default til 1 for determinisme.
-  const highSideNumber: 1 | 2 = side2Combined > side1Combined ? 2 : 1;
-
-  const side1Extra = highSideNumber === 1 ? highSideExtraHCP : 0;
-  const side2Extra = highSideNumber === 2 ? highSideExtraHCP : 0;
+  const { side1Extra, side2Extra } = alternateShotExtras(
+    side1Combined,
+    side2Combined,
+    allowancePct,
+  );
 
   // Kaptein-spiller for par-display (parFor via teeGender).
   const side1CaptainPlayer = side1Players.find((p) => p.userId === side1CaptainId);

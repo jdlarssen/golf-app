@@ -7,7 +7,9 @@
 //   Seg3 (hull 13–18): side1 = [slot1, slot4]   vs side2 = [slot2, slot3]
 //
 // Per hull: samme 4BBB-matchplay-motor som fourball_matchplay:
-//   - `applyAllowance(courseHandicap, allowance_pct)` → effektiv HCP per spiller
+//   - `matchDifferenceStrokes(config, basis, lowest, allowance_pct)` → effektiv
+//     HCP per spiller (#2997: en ny Round Robin gir den laveste av de fire 0 og
+//     de andre andelen av differansen; et spill opprettet før gir egne andeler)
 //   - `strokesForHole(effective, SI)` → extra strokes per spiller per hull
 //   - `bestBallForHole(side)` → lag-best netto + contributors
 //   - `classifyMatchplayHole(side1Net, side2Net)` → 'side1_wins' | 'side2_wins' | 'tied' | 'unplayed'
@@ -27,7 +29,8 @@
 // men `compute()` er en tynn rotasjons-+aggregerings-wrapper rundt fourball-motoren.
 // Se «Key Architectural Decision 2» i .forge/contracts/280-round-robin.md.
 
-import { applyAllowance } from '../courseHandicap';
+import { strokeBasis } from '../courseHandicap';
+import { matchDifferenceStrokes } from '../matchStrokes';
 import { strokesForHole } from '../strokeAllocation';
 import { bestBallForHole } from './bestBall';
 import { parFor } from './parResolver';
@@ -302,10 +305,17 @@ export function compute(ctx: ScoringContext): RoundRobinResult {
     slotToUserId.set(slot, player.userId);
   }
 
-  // Pre-beregn effektiv HCP per spiller
+  // Pre-beregn effektiv HCP per spiller. #2997 (F15): the lowest of the four
+  // plays off 0 in a new game; the basis is the unrounded course handicap when
+  // frozen (F16).
+  const basisOf = (p: ScoringPlayer) => strokeBasis(p.courseHandicap, p.rawCourseHandicap);
+  const lowestInMatch = Math.min(...ctx.players.map(basisOf));
   const effectiveByUser = new Map<string, number>();
   for (const p of ctx.players) {
-    effectiveByUser.set(p.userId, applyAllowance(p.courseHandicap, allowancePct));
+    effectiveByUser.set(
+      p.userId,
+      matchDifferenceStrokes(ctx.game.mode_config, basisOf(p), lowestInMatch, allowancePct),
+    );
   }
 
   // Bygg gross-lookup

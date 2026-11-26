@@ -23,6 +23,8 @@ import { compute as computeFoursomes } from '../modes/foursomesMatchplay';
 import { compute as computeGreensome } from '../modes/greensomeMatchplay';
 import { compute as computeRoundRobin } from '../modes/roundRobin';
 import { compute as computeSingles } from '../modes/singlesMatchplay';
+import { compute as computeTexas } from '../modes/texasScramble';
+import { patsomeTeamHandicaps } from '../modes/patsome';
 import type {
   FourballMatchplayResult,
   GameMode,
@@ -80,6 +82,18 @@ const fourball = (allowance_pct: number): GameModeConfig => ({
   team_size: 2,
   teams_count: 2,
   allowance_pct,
+});
+/**
+ * A four-ball match as created today (#2997): the lowest plays off 0 and the
+ * others get the share of the difference (`match_strokes: 'difference'`). A
+ * match created before keeps each player's own share.
+ */
+const fourballNew = (allowance_pct: number): GameModeConfig => ({
+  kind: 'fourball_matchplay',
+  team_size: 2,
+  teams_count: 2,
+  allowance_pct,
+  match_strokes: 'difference',
 });
 
 /** Strokes per player on stroke index 1..18 (holes ordered by stroke index). */
@@ -202,6 +216,171 @@ describe('Vedlegg C: foursomes og greensome i matchspill (NGF s. 75-78)', () => 
   });
 });
 
+describe('Vedlegg C: four-ball og Round Robin i matchspill (NGF s. 75-78, s. 8)', () => {
+  // C/2 eksempel 2, four-ball at 90 %: «Spiller A får null (0) slag, spiller B
+  // får 7 slag (90 % av differansen i Spillehandicap fra spiller A), spiller C
+  // får 15 slag (90 % av 17) og spiller D får 26 slag (90 % av 29).» Fixed in
+  // #2997; a match created before keeps 9, 16, 24 and 35.
+  it('F15: four-ball gir 90 % av differansen til den laveste (C/2 eksempel 2)', () => {
+    const result = computeFourball(
+      ctx(
+        'fourball_matchplay',
+        fourballNew(90),
+        [player('A', 1, 10), player('B', 1, 18), player('C', 2, 27), player('D', 2, 39)],
+        PAR4_18,
+      ),
+    );
+    expect(fourballStrokesBySi(result)).toEqual({
+      A: zeros(18),
+      B: [...ones(7), ...zeros(11)],
+      C: [...ones(15), ...zeros(3)],
+      D: [...Array(8).fill(2), ...ones(10)],
+    });
+  });
+
+  // C/3, four-ball match play with a plus handicap: «spiller A får null (0)
+  // slag, spiller B får 18 slag (90 % av differansen i Spillehandicap fra
+  // spiller A), spiller C får 10 slag (90 % av 11) og spiller D får 27 slag
+  // (90 % av 30).» Before #2997 the engine had A give 4 strokes back.
+  it('F15: four-ball med plusshandicap: den laveste spiller på null (C/3)', () => {
+    const result = computeFourball(
+      ctx(
+        'fourball_matchplay',
+        fourballNew(90),
+        [player('A', 1, -4), player('B', 1, 16), player('C', 2, 7), player('D', 2, 26)],
+        PAR4_18,
+      ),
+    );
+    expect(fourballStrokesBySi(result)).toEqual({
+      A: zeros(18),
+      B: ones(18),
+      C: [...ones(10), ...zeros(8)],
+      D: [...Array(9).fill(2), ...ones(9)],
+    });
+  });
+
+  // The share goes on the difference, not on each player's own handicap (NGF
+  // s. 8, 2024: «prosentandelen blir anvendt på differansen, i stedet for på
+  // enkeltspillerne»). At 85 % with 1 and 4, 85 % of 3 is 2,55, so B gets 3.
+  // Each player's own share gives round(3,4) − round(0,85) = 3 − 1 = 2: a fix
+  // that only subtracts the lowest player's strokes still fails here.
+  it('F15: four-ball tar andelen av differansen, ikke forskjellen mellom egne andeler', () => {
+    const result = computeFourball(
+      ctx(
+        'fourball_matchplay',
+        fourballNew(85),
+        [player('A', 1, 1), player('B', 1, 4), player('C', 2, 1), player('D', 2, 1)],
+        PAR4_18,
+      ),
+    );
+    expect(fourballStrokesBySi(result)).toEqual({
+      A: zeros(18),
+      B: [...ones(3), ...zeros(15)],
+      C: zeros(18),
+      D: zeros(18),
+    });
+  });
+
+  // Round Robin is four-ball match play in three six-hole segments with
+  // rotating partners. Appendix C has no row for it; the four-ball rule above
+  // is the closest («den laveste ... med null handicapslag», the others the
+  // share of the difference). C/2 eksempel 2's four at 90 %: 0, 7, 15 and 26.
+  // Fixed in #2997 for a new Round Robin.
+  it('F15: Round Robin gir andelen av differansen til den laveste, ikke egne slag', () => {
+    const result = computeRoundRobin(
+      ctx(
+        'round_robin',
+        { kind: 'round_robin', team_size: 1, teams_count: 4, allowance_pct: 90, match_strokes: 'difference' },
+        [player('A', 1, 10), player('B', 2, 18), player('C', 3, 27), player('D', 4, 39)],
+        PAR4_18,
+      ),
+    );
+    const bySi: Record<string, number[]> = {};
+    for (const row of [...result.holes].sort((a, b) => a.strokeIndex - b.strokeIndex)) {
+      for (const cell of [...row.side1Players, ...row.side2Players]) {
+        (bySi[cell.userId] ??= []).push(cell.extraStrokes);
+      }
+    }
+    expect(bySi).toEqual({
+      A: zeros(18),
+      B: [...ones(7), ...zeros(11)],
+      C: [...ones(15), ...zeros(3)],
+      D: [...Array(8).fill(2), ...ones(10)],
+    });
+  });
+});
+
+describe('Regel 6.2a, avklaring 6.2a/1: prosenten av det urundede banehandicapet (NGF s. 55)', () => {
+  // «For å unngå dobbel avrunding ... legges prosentandelen til det
+  // uavrundede tallet.» The start freezes the unrounded course handicap next
+  // to the integer (#2997), and the team formats round once. Index 8,6 and
+  // 10,3 on a tee where they give 9,513 and 11,394 (frozen as 10 and 11).
+  const rawPlayer = (userId: string, teamNumber: number, ch: number, raw: number): ScoringPlayer => ({
+    ...player(userId, teamNumber, ch),
+    rawCourseHandicap: raw,
+  });
+  const pair = [rawPlayer('A', 1, 10, 9.513), rawPlayer('B', 1, 11, 11.394)];
+  const scratch = [rawPlayer('C', 2, 0, 0), rawPlayer('D', 2, 0, 0)];
+
+  it('F16: foursomes ved 50 %: 50 % av 20,907 er 10,45, altså 10 slag', () => {
+    const result = computeFoursomes(
+      ctx(
+        'foursomes_matchplay',
+        { kind: 'foursomes_matchplay', team_size: 2, teams_count: 2, allowance_pct: 50 },
+        [...pair, ...scratch],
+        PAR4_18,
+      ),
+    );
+    expect(result.sides.map((s) => s.effectiveExtraHandicap)).toEqual([10, 0]);
+  });
+
+  it('F16: greensome tar 60/40 uten å runde hver side først', () => {
+    // 8,04/13,96 against 15,04/28,96: 10,408 and 20,608, a difference of
+    // 10,2, so 10. Rounding each side first (10 and 21) gave 11.
+    const result = computeGreensome(
+      ctx(
+        'greensome_matchplay',
+        { kind: 'greensome_matchplay', team_size: 2, teams_count: 2, allowance_pct: 100 },
+        [rawPlayer('A', 1, 8, 8.04), rawPlayer('B', 1, 14, 13.96), rawPlayer('C', 2, 15, 15.04), rawPlayer('D', 2, 29, 28.96)],
+        PAR4_18,
+      ),
+    );
+    expect(result.sides.map((s) => s.effectiveExtraHandicap)).toEqual([0, 10]);
+  });
+
+  it('F16: four-ball ved 90 % runder differansen av de urundede tallene én gang', () => {
+    // 90 % of 20,4 − 9,5 = 9,81 → 10. The integers 20 and 10 gave 9.
+    const result = computeFourball(
+      ctx(
+        'fourball_matchplay',
+        fourballNew(90),
+        [rawPlayer('A', 1, 10, 9.5), rawPlayer('B', 1, 20, 20.4), rawPlayer('C', 2, 10, 9.5), rawPlayer('D', 2, 10, 9.5)],
+        PAR4_18,
+      ),
+    );
+    expect(result.sides[0].players.map((p) => p.effectiveHandicap)).toEqual([0, 10]);
+  });
+
+  it('F25: patsome-foursomes: 50 % av 20,907 gir 10, og greensome 60/40 av 8,4 og 14,4 gir 11', () => {
+    expect(patsomeTeamHandicaps(pair, 'net').foursomes).toBe(10);
+    expect(
+      patsomeTeamHandicaps([rawPlayer('A', 1, 8, 8.4), rawPlayer('B', 1, 14, 14.4)], 'net').greensome,
+    ).toBe(11);
+  });
+
+  it('F25: Texas med to ved 25 %: 25 % av 9,6 + 11,5 er 5,275, altså 5 slag', () => {
+    const result = computeTexas(
+      ctx(
+        'texas_scramble',
+        { kind: 'texas_scramble', team_size: 2, teams_count: 1, team_handicap_pct: 25 },
+        [rawPlayer('A', 1, 10, 9.6), rawPlayer('B', 1, 12, 11.5)],
+        PAR4_18,
+      ),
+    );
+    expect(result.teams[0].teamHandicap).toBe(5);
+  });
+});
+
 describe('Regel 6.1b: ni hull med 18-hullsindeksen (NGF s. 55)', () => {
   // «Spillehandicapet beregnet for en 18-hulls runde ... fordeles på alle de
   // 18 hullene ... Handicapslag gis eller fås i henhold til hvordan de er
@@ -223,98 +402,6 @@ describe('Regel 6.1b: ni hull med 18-hullsindeksen (NGF s. 55)', () => {
 });
 
 describe('Kjent avvik', () => {
-  // C/2 eksempel 2, four-ball at 90 %: «Spiller A får null (0) slag, spiller B
-  // får 7 slag (90 % av differansen i Spillehandicap fra spiller A), spiller C
-  // får 15 slag (90 % av 17) og spiller D får 26 slag (90 % av 29).» The engine
-  // gives each player 90 % of their own: 9, 16, 24 and 35 (fourballMatchplay.ts).
-  it.fails('F15: four-ball gir 90 % av differansen til den laveste (C/2 eksempel 2)', () => {
-    const result = computeFourball(
-      ctx(
-        'fourball_matchplay',
-        fourball(90),
-        [player('A', 1, 10), player('B', 1, 18), player('C', 2, 27), player('D', 2, 39)],
-        PAR4_18,
-      ),
-    );
-    expect(fourballStrokesBySi(result)).toEqual({
-      A: zeros(18),
-      B: [...ones(7), ...zeros(11)],
-      C: [...ones(15), ...zeros(3)],
-      D: [...Array(8).fill(2), ...ones(10)],
-    });
-  });
-
-  // C/3, four-ball match play with a plus handicap: «spiller A får null (0)
-  // slag, spiller B får 18 slag (90 % av differansen i Spillehandicap fra
-  // spiller A), spiller C får 10 slag (90 % av 11) og spiller D får 27 slag
-  // (90 % av 30).» The engine has A give 4 strokes back on index 15-18.
-  it.fails('F15: four-ball med plusshandicap: den laveste spiller på null (C/3)', () => {
-    const result = computeFourball(
-      ctx(
-        'fourball_matchplay',
-        fourball(90),
-        [player('A', 1, -4), player('B', 1, 16), player('C', 2, 7), player('D', 2, 26)],
-        PAR4_18,
-      ),
-    );
-    expect(fourballStrokesBySi(result)).toEqual({
-      A: zeros(18),
-      B: ones(18),
-      C: [...ones(10), ...zeros(8)],
-      D: [...Array(9).fill(2), ...ones(9)],
-    });
-  });
-
-  // The share goes on the difference, not on each player's own handicap (NGF
-  // s. 8, 2024: «prosentandelen blir anvendt på differansen, i stedet for på
-  // enkeltspillerne»). At 85 % with 1 and 4, 85 % of 3 is 2,55, so B gets 3.
-  // Each player's own share gives round(3,4) − round(0,85) = 3 − 1 = 2: a fix
-  // that only subtracts the lowest player's strokes still fails here.
-  it.fails('F15: four-ball tar andelen av differansen, ikke forskjellen mellom egne andeler', () => {
-    const result = computeFourball(
-      ctx(
-        'fourball_matchplay',
-        fourball(85),
-        [player('A', 1, 1), player('B', 1, 4), player('C', 2, 1), player('D', 2, 1)],
-        PAR4_18,
-      ),
-    );
-    expect(fourballStrokesBySi(result)).toEqual({
-      A: zeros(18),
-      B: [...ones(3), ...zeros(15)],
-      C: zeros(18),
-      D: zeros(18),
-    });
-  });
-
-  // Round Robin is four-ball match play in three six-hole segments with
-  // rotating partners. Appendix C has no row for it; the four-ball rule above
-  // is the closest («den laveste ... med null handicapslag», the others the
-  // share of the difference). C/2 eksempel 2's four at 90 %: 0, 7, 15 and 26.
-  // The engine gives each player 90 % of their own (roundRobin.ts).
-  it.fails('F15: Round Robin gir andelen av differansen til den laveste, ikke egne slag', () => {
-    const result = computeRoundRobin(
-      ctx(
-        'round_robin',
-        { kind: 'round_robin', team_size: 1, teams_count: 4, allowance_pct: 90 },
-        [player('A', 1, 10), player('B', 2, 18), player('C', 3, 27), player('D', 4, 39)],
-        PAR4_18,
-      ),
-    );
-    const bySi: Record<string, number[]> = {};
-    for (const row of [...result.holes].sort((a, b) => a.strokeIndex - b.strokeIndex)) {
-      for (const cell of [...row.side1Players, ...row.side2Players]) {
-        (bySi[cell.userId] ??= []).push(cell.extraStrokes);
-      }
-    }
-    expect(bySi).toEqual({
-      A: zeros(18),
-      B: [...ones(7), ...zeros(11)],
-      C: [...ones(15), ...zeros(3)],
-      D: [...Array(8).fill(2), ...ones(10)],
-    });
-  });
-
   // NGF 6.2b(i) s. 56: in formats where results are gross or net scores (and
   // match play compares net scores, Rules of Golf 3.2c(2)), «En spiller som
   // konkurrerer fra et utslagssted med en høyere par må få tilleggsslag for

@@ -18,6 +18,52 @@
 // det får arrangørens prosent av snittet, som alle andre lag.
 //
 // Motoren (`computeScramble`), scorekortet og hullsiden leser alle herfra.
+//
+// #2997 (F16/F25): `sideHandicap` er lag-tallet i lagformatene med egen
+// prosent (alternate shot, scramble-familien og patsome), regnet av det urundede
+// banehandicapet når starten frøs det (NGF 6.2a, avklaring 6.2a/1, s. 55).
+
+import { roundHalfUp } from './courseHandicap';
+
+/**
+ * How a team's (a side's) handicap comes from its players' course handicaps:
+ * the sum (foursomes, gruesome, the scramble family, patsome holes 13–18) or
+ * 60 % of the lowest plus 40 % of the highest (greensome, chapman, patsome
+ * holes 7–12).
+ */
+export type SideRule = 'sum' | 'sixtyForty';
+
+/** The two course handicaps `sideHandicap` reads from one player. */
+export interface SidePlayer {
+  courseHandicap: number;
+  rawCourseHandicap?: number | null;
+}
+
+function combine(rule: SideRule, values: readonly number[]): number {
+  if (values.length === 0) return 0;
+  if (rule === 'sum') return values.reduce((sum, v) => sum + v, 0);
+  return 0.6 * Math.min(...values) + 0.4 * Math.max(...values);
+}
+
+/**
+ * The team's handicap before the format's percentage, one home for the engines
+ * and the views.
+ *
+ * - Every player has the unrounded course handicap the start froze (#2997):
+ *   the rule on those numbers, NOT rounded. The format rounds once, after its
+ *   percentage (WHS 6.2a, interpretation 6.2a/1). 9,513 + 11,394 stays 20,907.
+ * - Otherwise (a round started before the column existed): the rule on the
+ *   frozen integers, rounded, as before. 60/40 of 8 and 14 is 10,4, so 10.
+ *   The sum of integers is already whole.
+ *
+ * A team of another size than two (draft state) takes 60/40 over its lowest
+ * and highest, and an empty team is 0.
+ */
+export function sideHandicap(rule: SideRule, players: readonly SidePlayer[]): number {
+  const exact = players.length > 0 && players.every((p) => p.rawCourseHandicap != null);
+  if (exact) return combine(rule, players.map((p) => p.rawCourseHandicap as number));
+  return roundHalfUp(combine(rule, players.map((p) => p.courseHandicap)));
+}
 
 /**
  * Lagets handicap i scramble-familien. `sumPct` er lagret prosent av summen

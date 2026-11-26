@@ -11,6 +11,8 @@
 //                            Allowance (net): round(0.6×minCH + 0.4×maxCH).
 //   Hull 13–18: Foursomes  — én lagball, kaptein-eide scores-rad.
 //                            Allowance (net): round(0.5×(chA + chB)).
+//   #2997 (F25): lag-tallene på hull 7–18 regnes av de urundede banehandicapene
+//   når starten frøs dem, og rundes én gang (`patsomeTeamHandicaps`).
 //
 // Kaptein = lex-min userId på laget (via `pickTeamCaptain`). Kapteinen eier
 // scores-radene for hull 7–18 (samme mønster som Texas scramble og foursomes
@@ -29,7 +31,9 @@
 // publish; scoring-laget forsvarer seg mot draft-state (n≠2, null-team).
 
 import { pickTeamCaptain } from '@/lib/games/teamCaptain';
+import { roundHalfUp } from '../courseHandicap';
 import { strokesForHole } from '../strokeAllocation';
+import { sideHandicap, type SidePlayer } from '../teamHandicap';
 import { rankTeams } from '../tiebreaker';
 import { parFor } from './parResolver';
 import { computeStablefordPoints } from './stableford';
@@ -71,6 +75,25 @@ function segmentFor(holeNumber: number): PatsomeSegment {
   if (holeNumber <= 6) return 'fourball';
   if (holeNumber <= 12) return 'greensome';
   return 'foursomes';
+}
+
+/**
+ * The team handicaps of the one-ball holes, one home for the engine and the
+ * hole page (#2997): greensome (holes 7–12) 60/40 of the course handicaps,
+ * foursomes (holes 13–18) 50 % of the sum. Taken of the unrounded course
+ * handicaps when the start froze them, and rounded once (WHS 6.2a/1, F25):
+ * 9,513 and 11,394 give 50 % of 20,907 = 10, not 50 % of 21 = 11. A round
+ * started before keeps today's numbers. Gross gives 0 on both.
+ */
+export function patsomeTeamHandicaps(
+  members: readonly SidePlayer[],
+  scoring: 'gross' | 'net',
+): { greensome: number; foursomes: number } {
+  if (scoring === 'gross') return { greensome: 0, foursomes: 0 };
+  return {
+    greensome: roundHalfUp(sideHandicap('sixtyForty', members)),
+    foursomes: roundHalfUp(0.5 * sideHandicap('sum', members)),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -128,19 +151,10 @@ export function compute(ctx: ScoringContext): PatsomeResult {
         members.length > 0 ? pickTeamCaptain(members.map((m) => m.userId)) : '';
       const captainMember = members.find((m) => m.userId === captainUserId);
 
-      // Lag-handicap-verdier for 1-ball-segmentene.
-      const courseHandicaps = members.map((m) => m.courseHandicap);
-      const minCH = courseHandicaps.length > 0 ? Math.min(...courseHandicaps) : 0;
-      const maxCH = courseHandicaps.length > 0 ? Math.max(...courseHandicaps) : 0;
-      const sumCH = courseHandicaps.reduce((s, ch) => s + ch, 0);
-
-      // Greensome allowance: round(0.6×min + 0.4×max). 0 i gross-modus.
-      const greensomeHandicap =
-        scoring === 'net' ? Math.round(0.6 * minCH + 0.4 * maxCH) : 0;
-
-      // Foursomes allowance: round(0.5×sum). 0 i gross-modus.
-      const foursomesHandicap =
-        scoring === 'net' ? Math.round(0.5 * sumCH) : 0;
+      // Lag-handicap-verdier for 1-ball-segmentene: greensome 60/40, foursomes
+      // 50 % av summen, 0 i gross-modus (`patsomeTeamHandicaps`, #2997).
+      const { greensome: greensomeHandicap, foursomes: foursomesHandicap } =
+        patsomeTeamHandicaps(members, scoring);
 
       const holes: PatsomeHoleRow[] = holesSorted.map(
         (hole): PatsomeHoleRow => {

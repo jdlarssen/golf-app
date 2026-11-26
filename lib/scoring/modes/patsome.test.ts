@@ -2,7 +2,7 @@
 // Skriv FAILING tests FIRST, implementer i patsome.ts til alle er grønne.
 
 import { describe, it, expect } from 'vitest';
-import { compute } from './patsome';
+import { compute, patsomeTeamHandicaps } from './patsome';
 import type {
   ScoringContext,
   ScoringHole,
@@ -865,5 +865,57 @@ describe('patsome.compute — points only, the legacy net_to_par flag is ignored
       [1, 1, 0],
       [2, 1, 0],
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #2997 (F25): the team handicaps of holes 7–18 are taken of the unrounded
+// course handicaps when the start froze them, and rounded once (NGF 6.2a,
+// avklaring 6.2a/1, s. 55).
+// ---------------------------------------------------------------------------
+
+describe('patsomeTeamHandicaps — én avrunding av urundet banehandicap (#2997, F25)', () => {
+  const m = (courseHandicap: number, rawCourseHandicap?: number | null) => ({
+    courseHandicap,
+    rawCourseHandicap,
+  });
+
+  it('foursomes: 50 % av 9,513 + 11,394 = 10,45 gir 10 (heltallene 10 + 11 gir 11)', () => {
+    expect(patsomeTeamHandicaps([m(10, 9.513), m(11, 11.394)], 'net').foursomes).toBe(10);
+    expect(patsomeTeamHandicaps([m(10), m(11)], 'net').foursomes).toBe(11);
+  });
+
+  it('greensome: 60/40 av 8,4 og 14,4 = 10,8 gir 11 (heltallene 8 og 14 gir 10,4 → 10)', () => {
+    expect(patsomeTeamHandicaps([m(8, 8.4), m(14, 14.4)], 'net').greensome).toBe(11);
+    expect(patsomeTeamHandicaps([m(8), m(14)], 'net').greensome).toBe(10);
+  });
+
+  it('brutto gir 0 på begge', () => {
+    expect(patsomeTeamHandicaps([m(10, 9.513), m(11, 11.394)], 'gross')).toEqual({
+      greensome: 0,
+      foursomes: 0,
+    });
+  });
+});
+
+describe('patsome.compute — foursomes-hullene fordeler det urundede lag-handicapet (#2997, F25)', () => {
+  it('10 slag, ikke 11: hull 13 på indeks 11 får ikke slag', () => {
+    // Hole 13 carries index 11 and hole 11 index 13: a team handicap of 11
+    // gives a stroke on hole 13, 10 does not.
+    const holes = makeHoles18().map((h) =>
+      h.number === 13 ? { ...h, strokeIndex: 11 } : h.number === 11 ? { ...h, strokeIndex: 13 } : h,
+    );
+    const players = (raw: boolean): ScoringPlayer[] => [
+      { ...makePlayer('a1', 1, 10), rawCourseHandicap: raw ? 9.513 : null },
+      { ...makePlayer('a2', 1, 11), rawCourseHandicap: raw ? 11.394 : null },
+      { ...makePlayer('b1', 2, 0), rawCourseHandicap: raw ? 0 : null },
+      { ...makePlayer('b2', 2, 0), rawCourseHandicap: raw ? 0 : null },
+    ];
+    const hole13 = (raw: boolean) =>
+      compute(makeCtx({ players: players(raw), holes, scores: [makeScore('a1', 13, 5)] }))
+        .teams.find((t) => t.teamNumber === 1)!
+        .holes.find((h) => h.holeNumber === 13)!;
+    expect(hole13(true).teamExtraStrokes).toBe(0);
+    expect(hole13(false).teamExtraStrokes).toBe(1);
   });
 });

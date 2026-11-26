@@ -1053,3 +1053,31 @@ describe('texasScramble.compute — net_to_par tie-break on a part-played round 
     ]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// #2997 (F25): the team handicap is the share of the unrounded course
+// handicaps when the start froze them, rounded once (NGF 6.2a, avklaring
+// 6.2a/1, s. 55).
+// ---------------------------------------------------------------------------
+
+describe('texasScramble.compute — lag-handicap av urundet banehandicap (#2997, F25)', () => {
+  const config: GameModeConfig = {
+    kind: 'texas_scramble',
+    team_size: 2,
+    teams_count: 1,
+    team_handicap_pct: 25,
+  };
+  const team = (raw: boolean): ScoringPlayer[] => [
+    { userId: 'a', teamNumber: 1, flightNumber: 1, courseHandicap: 10, rawCourseHandicap: raw ? 9.6 : null },
+    { userId: 'b', teamNumber: 1, flightNumber: 1, courseHandicap: 12, rawCourseHandicap: raw ? 11.5 : null },
+  ];
+
+  it('to spillere ved 25 %: 9,6 og 11,5 gir 5 (heltallene 10 og 12 gir 6)', () => {
+    const run = (raw: boolean) =>
+      compute(makeCtx({ players: team(raw), holes: par4Holes(18), scores: [], modeConfig: config }))
+        .teams[0];
+    expect(run(true).teamHandicap).toBe(5);
+    expect(run(true).combinedCourseHandicap).toBeCloseTo(21.1, 9);
+    expect(run(false).teamHandicap).toBe(6);
+  });
+});

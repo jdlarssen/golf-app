@@ -16,7 +16,7 @@
 // Eneste forskjell fra Foursomes er lag-handicapet: Gruesome bruker den
 // samme WHS-handicapen som Foursomes (sum av begge partneres CH) — merk
 // at motstanderens tee-valg IKKE endrer dette. Vi delegerer til den delte
-// `computeFoursomesCore` med `combinedSideHandicap`-strategien og returnerer
+// `computeFoursomesCore` med sum-regelen (`'sum'`) og returnerer
 // `kind: 'foursomes_matchplay'` → all leaderboard-/podium-/mail-/scorekort-
 // visning gjenbrukes uendret (Ambrose-mønsteret, #284). Format-navnet
 // «Gruesome» kommer fra `game_mode` → MODE_LABELS, ikke fra result-kind.
@@ -26,19 +26,19 @@
 // foursomes-standard — lik foursomes siden handicap-formelen er identisk).
 // Justerbar 0..100 av admin.
 
-import { combinedSideHandicap, computeFoursomesCore } from './foursomesMatchplay';
+import { computeFoursomesCore } from './foursomesMatchplay';
 import type { ScoringContext, FoursomesMatchplayResult } from './types';
 
 /**
  * Beregner Gruesome-matchplay-leaderboard. Leser `allowance_pct` fra
  * `mode_config` (defensiv fallback til 50 hvis feil kind — foursomes-familiens
  * WHS-default speiles her) og delegerer til den delte foursomes-kjernen med
- * sum-side-handicap (combinedSideHandicap). Returnerer `kind: 'foursomes_matchplay'`.
+ * sum-side-handicap (`'sum'`). Returnerer `kind: 'foursomes_matchplay'`.
  */
 export function compute(ctx: ScoringContext): FoursomesMatchplayResult {
   const allowancePct =
     ctx.game.mode_config.kind === 'gruesome_matchplay'
       ? ctx.game.mode_config.allowance_pct
       : 50; // defensiv fallback: foursomes-familiens WHS-standard
-  return computeFoursomesCore(ctx, allowancePct, combinedSideHandicap);
+  return computeFoursomesCore(ctx, allowancePct, 'sum');
 }
