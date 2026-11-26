@@ -33,6 +33,10 @@ import { supportsNetToParRanking, supportsRulebookCountback } from '@/lib/scorin
  *
  * `countback` (#2940) the same way: stamped on a new game that ranks through
  * `rankTeams`, carried through an edit, never added to a game created before.
+ *
+ * `par_strokes` (#2941) too: stamped on every new match play game
+ * (`stampNewMatchConfig`), carried through an edit, never added to a match
+ * created before.
  */
 export const PRESERVED_MODE_CONFIG_KEYS = [
   'team_strokes_override',
@@ -42,26 +46,43 @@ export const PRESERVED_MODE_CONFIG_KEYS = [
   'wolf_rotation',
   'match_strokes',
   'countback',
+  'par_strokes',
 ] as const;
 
 /**
- * A NEW singles, four-ball or Round Robin match gives the lowest handicap 0
- * strokes and the others the share of the difference (`match_strokes:
- * 'difference'`, read by `matchDifferenceStrokes` in the engine; singles from
- * the owner-ordered audit 2026-11-20, four-ball and Round Robin from #2997,
- * NGF vedlegg C s. 76). Its own function so the cup, which keeps the original
- * ranking rule on best ball (#2625), stamps its match formats without stamping
- * anything else. Any other config is returned unchanged.
+ * The rules a NEW match play game is created with:
+ *  - singles, four-ball and Round Robin give the lowest handicap 0 strokes and
+ *    the others the share of the difference (`match_strokes: 'difference'`,
+ *    read by `matchDifferenceStrokes` in the engine; singles from the
+ *    owner-ordered audit 2026-11-20, four-ball and Round Robin from #2997,
+ *    NGF vedlegg C s. 76);
+ *  - those three and the foursomes family (foursomes, greensome, chapman,
+ *    gruesome) give the player or side on the higher par extra strokes equal
+ *    to the difference (`par_strokes: 'difference'`, read by
+ *    `usesParDifference`; #2941, NGF 6.2b(i) s. 56).
+ * Its own function so the cup, which keeps the original ranking rule on best
+ * ball (#2625), stamps its match formats without stamping anything else. Any
+ * other config is returned unchanged.
  */
 export function stampNewMatchConfig(config: GameModeConfig): GameModeConfig {
-  if (
-    config.kind !== 'singles_matchplay' &&
-    config.kind !== 'fourball_matchplay' &&
-    config.kind !== 'round_robin'
-  ) {
-    return config;
+  switch (config.kind) {
+    case 'singles_matchplay':
+    case 'fourball_matchplay':
+    case 'round_robin':
+      return { ...config, match_strokes: 'difference', par_strokes: 'difference' };
+    case 'foursomes_matchplay':
+    case 'greensome_matchplay':
+    case 'chapman_matchplay':
+    case 'gruesome_matchplay':
+      return { ...config, par_strokes: 'difference' };
+    default:
+      return config;
   }
-  return { ...config, match_strokes: 'difference' };
+}
+
+/** True for the formats `stampNewMatchConfig` stamps. */
+function isStampedMatchFormat(config: GameModeConfig): boolean {
+  return stampNewMatchConfig(config) !== config;
 }
 
 /**
@@ -76,7 +97,8 @@ export function stampNewMatchConfig(config: GameModeConfig): GameModeConfig {
  *    n points (`wolf_rotation: 'catch_up'`, read by `wolfForHole` in
  *    `lib/scoring/modes/wolfTurn.ts`);
  *  - singles, four-ball and Round Robin give the lowest 0 and the others the
- *    difference (`stampNewMatchConfig`, audit 2026-11-20, #2997);
+ *    difference, and every match play format gives the higher par extra
+ *    strokes (`stampNewMatchConfig`, audit 2026-11-20, #2997, #2941);
  *  - every format that ranks through `rankTeams` (the strokeplay formats
  *    above, stableford, modified stableford and patsome) counts a tie back by
  *    the rule book (`countback: 'rulebook'`, read by `countsBackByRulebook`).
@@ -90,13 +112,7 @@ export function stampNewMatchConfig(config: GameModeConfig): GameModeConfig {
  */
 export function stampNewGameModeConfig(config: GameModeConfig): GameModeConfig {
   if (config.kind === 'wolf') return { ...config, wolf_rotation: 'catch_up' };
-  if (
-    config.kind === 'singles_matchplay' ||
-    config.kind === 'fourball_matchplay' ||
-    config.kind === 'round_robin'
-  ) {
-    return stampNewMatchConfig(config);
-  }
+  if (isStampedMatchFormat(config)) return stampNewMatchConfig(config);
   if (!supportsRulebookCountback(config)) return config;
   const stamped: GameModeConfig = { ...config, countback: 'rulebook' };
   if (!supportsNetToParRanking(stamped)) return stamped;

@@ -129,7 +129,8 @@ function greensomeAutoTeamStrokes(
  * (verifisert mot prod): singles = `{kind, team_size:1}` (pluss
  * `match_strokes: 'difference'` fra revisjonen 20.11), 2v2-format =
  * `{kind, team_size:2, teams_count:2, allowance_pct}` (four-ball pluss
- * `match_strokes: 'difference'` fra #2997). best_ball (#1441, D4)
+ * `match_strokes: 'difference'` fra #2997). Alle matchspillformatene får
+ * `par_strokes: 'difference'` (#2941). best_ball (#1441, D4)
  * og greensomes `team_strokes_override` (#1441, D10) er splittet-cup-dagens
  * tilskudd.
  *
@@ -167,8 +168,8 @@ export function cupMatchModeConfig(
     } as GameModeConfig;
   }
   // #2997: a new cup four-ball match gives the lowest 0 and the others the
-  // share of the difference (`stampNewMatchConfig`); the other 2v2 formats
-  // are returned unchanged by it.
+  // share of the difference (`stampNewMatchConfig`). #2941: every match play
+  // format gets the par rule from it too; best ball returned above.
   return stampNewMatchConfig({
     kind: format,
     team_size: 2,

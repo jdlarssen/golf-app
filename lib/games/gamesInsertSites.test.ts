@@ -25,7 +25,7 @@ const INSERT_SITES: Record<string, { count: number; stamps: boolean; reason: str
     count: 1,
     stamps: false,
     reason:
-      'cup matches are matchplay or best ball (CupBundleFormat); the cup keeps the original ranking rule by decision (contract #2625). Its singles and four-ball matches get the difference rule through stampNewMatchConfig (audit 2026-11-20, #2997)',
+      'cup matches are matchplay or best ball (CupBundleFormat); the cup keeps the original ranking rule by decision (contract #2625). Its singles and four-ball matches get the difference rule, and every match play format the par rule, through stampNewMatchConfig (audit 2026-11-20, #2997, #2941)',
   },
   'lib/league/startLeagueRoundFlightCore.ts': {
     count: 1,
