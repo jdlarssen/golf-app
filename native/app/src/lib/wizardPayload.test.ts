@@ -221,7 +221,8 @@ const CASES: {
       gameMode: 'patsome',
       players: teamed(['a', 1], ['b', 1], ['c', 2], ['d', 2]),
     }),
-    modeConfig: { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net' },
+    // #3002 (F24): the app sends the share on holes 1–6, 85 when untouched.
+    modeConfig: { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net', fourball_allowance_pct: 85 },
     // flight = lag (DB-sjekken game_players_team_flight_consistency).
     players: [
       { user_id: 'a', team_number: 1, flight_number: 1 },
@@ -239,7 +240,8 @@ const CASES: {
       players: teamed(['a', 1], ['b', 1], ['c', 2], ['d', 2]),
       setup: { teamSize: 2 },
     }),
-    modeConfig: { kind: 'texas_scramble', team_size: 2, teams_count: 2, team_handicap_pct: 25 },
+    // #3002 (F23): a new Texas game starts on NGF's weighting.
+    modeConfig: { kind: 'texas_scramble', team_size: 2, teams_count: 2, team_handicap_pct: 25, team_handicap_rule: 'ngf_weighted' },
     players: [
       { user_id: 'a', team_number: 1, flight_number: 1 },
       { user_id: 'b', team_number: 1, flight_number: 1 },
@@ -254,7 +256,8 @@ const CASES: {
       players: teamed(['a', 1], ['b', 1], ['c', 2], ['d', 2]),
       setup: { teamSize: 2 },
     }),
-    modeConfig: { kind: 'ambrose', team_size: 2, teams_count: 2, team_handicap_pct: 25 },
+    // #3002: Ambrose keeps its formula, the organiser's share.
+    modeConfig: { kind: 'ambrose', team_size: 2, teams_count: 2, team_handicap_pct: 25, team_handicap_rule: 'sum_pct' },
     players: [
       { user_id: 'a', team_number: 1, flight_number: 1 },
       { user_id: 'b', team_number: 1, flight_number: 1 },
@@ -269,7 +272,7 @@ const CASES: {
       gameMode: 'florida_scramble',
       players: teamed(['a', 1], ['b', 1], ['c', 1], ['d', 2], ['e', 2], ['f', 2]),
     }),
-    modeConfig: { kind: 'florida_scramble', team_size: 3, teams_count: 2, team_handicap_pct: 15 },
+    modeConfig: { kind: 'florida_scramble', team_size: 3, teams_count: 2, team_handicap_pct: 15, team_handicap_rule: 'ngf_weighted' },
     players: [
       { user_id: 'a', team_number: 1, flight_number: 1 },
       { user_id: 'b', team_number: 1, flight_number: 1 },
@@ -315,6 +318,22 @@ describe('scramble-familien og shamble (#2753 D3b)', () => {
     expect(cfg).toMatchObject({ team_size: 4, team_handicap_pct: 10 });
   });
 
+  // #3002 (F23): appen sender regelen for et nytt spill, så validatoren
+  // stempler den. Texas og Florida starter på forbundets vekting, Ambrose på
+  // sin egen formel.
+  it.each([
+    ['texas_scramble', undefined, 'ngf_weighted'],
+    ['florida_scramble', undefined, 'ngf_weighted'],
+    ['ambrose', undefined, 'sum_pct'],
+    ['texas_scramble', 'pct', 'sum_pct'],
+    ['ambrose', 'ngf', 'ngf_weighted'],
+  ] as const)('%s med regel %s gir team_handicap_rule %s', (gameMode, rule, expected) => {
+    const cfg = buildDraftPayload(
+      draft({ gameMode, players: four, setup: { teamSize: 4, teamHandicapRule: rule } }),
+    ).payload.mode_config;
+    expect(cfg).toMatchObject({ team_handicap_rule: expected });
+  });
+
   it('Ambrose tremannslag bruker Ambrose-formelen', () => {
     const six = teamed(['a', 1], ['b', 1], ['c', 1], ['d', 2], ['e', 2], ['f', 2]);
     const cfg = buildDraftPayload(draft({ gameMode: 'ambrose', players: six, setup: { teamSize: 3 } })).payload
@@ -327,7 +346,8 @@ describe('scramble-familien og shamble (#2753 D3b)', () => {
       draft({ gameMode: 'texas_scramble', players: four, setup: { teamHandicapSumPct: 0 } }),
     ).payload;
     expect(gross.errorCode).toBeUndefined();
-    expect(gross.mode_config).toMatchObject({ team_handicap_pct: 0 });
+    // #3002: a chosen share (brutto too) is «Egen prosent», so the rule is pct.
+    expect(gross.mode_config).toMatchObject({ team_handicap_pct: 0, team_handicap_rule: 'sum_pct' });
   });
 
   it('champagne med tre som teller og brutto', () => {
@@ -379,6 +399,12 @@ describe('de nye formatene i D3 (#2753)', () => {
       setup: { patsomeScoring: 'gross' },
     });
     expect(buildDraftPayload(input).payload.mode_config).toMatchObject({ patsome_scoring: 'gross' });
+    // #3002 (F24): andelen på hull 1–6 sendes alltid, 85 når feltet står tomt.
+    expect(buildDraftPayload(input).payload.mode_config).toMatchObject({ fourball_allowance_pct: 85 });
+    expect(
+      buildDraftPayload({ ...input, setup: { ...input.setup, patsomeFourballAllowancePct: 90 } }).payload
+        .mode_config,
+    ).toMatchObject({ fourball_allowance_pct: 90 });
   });
 
   it('Patsome med et lag på tre gir nettets team_balance', () => {

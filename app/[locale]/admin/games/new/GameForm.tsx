@@ -46,6 +46,7 @@ import { NassauSetup } from './sections/NassauSetup';
 import { SkinsSetup } from './sections/SkinsSetup';
 import { NinesSetup } from './sections/NinesSetup';
 import { ShambleSetup } from './sections/ShambleSetup';
+import { PatsomeSetup } from './sections/PatsomeSetup';
 import { TeeShotSection } from './sections/TeeShotSection';
 import type { StartType } from '@/lib/games/startType';
 import type { EditSection } from '@/lib/games/editSections';
@@ -752,7 +753,17 @@ export function GameForm({
           <input type="hidden" name="shamble_team_size" value={String(teamSize)} />
         </>
       )}
-      {state.isPatsome && <input type="hidden" name="patsome_scoring" value={state.patsomeScoring} />}
+      {state.isPatsome && (
+        <>
+          <input type="hidden" name="patsome_scoring" value={state.patsomeScoring} />
+          {/* #3002 (F24): empty for a stored game without the share, so a save adds no key. */}
+          <input
+            type="hidden"
+            name="patsome_fourball_allowance_pct"
+            value={state.patsomeFourballAllowancePct ?? ''}
+          />
+        </>
+      )}
       <input
         type="hidden"
         name="registration_mode"
@@ -818,6 +829,11 @@ export function GameForm({
             name="texas_team_handicap_pct"
             value={texasHandicapPct}
           />
+          <input
+            type="hidden"
+            name="texas_team_handicap_rule"
+            value={state.teamHandicapRule ?? ''}
+          />
         </>
       )}
       {isAmbrose && (
@@ -832,6 +848,11 @@ export function GameForm({
             name="ambrose_team_handicap_pct"
             value={String(ambroseHandicapPct)}
           />
+          <input
+            type="hidden"
+            name="ambrose_team_handicap_rule"
+            value={state.teamHandicapRule ?? ''}
+          />
         </>
       )}
       {isFlorida && (
@@ -845,6 +866,11 @@ export function GameForm({
             type="hidden"
             name="florida_team_handicap_pct"
             value={String(floridaHandicapPct)}
+          />
+          <input
+            type="hidden"
+            name="florida_team_handicap_rule"
+            value={state.teamHandicapRule ?? ''}
           />
         </>
       )}
@@ -1156,6 +1182,8 @@ export function GameForm({
               teamSize={teamSize}
               sumPct={texasHandicapPct}
               onSumPctChange={setTexasHandicapPct}
+              rule={state.teamHandicapRule}
+              onRuleChange={state.setTeamHandicapRule}
             />
             <input type="hidden" name="hcp_allowance_pct" value="100" />
           </>
@@ -1168,6 +1196,8 @@ export function GameForm({
               teamSize={teamSize}
               sumPct={ambroseHandicapPct}
               onSumPctChange={setAmbroseHandicapPct}
+              rule={state.teamHandicapRule}
+              onRuleChange={state.setTeamHandicapRule}
             />
             <input type="hidden" name="hcp_allowance_pct" value="100" />
           </>
@@ -1180,6 +1210,8 @@ export function GameForm({
               teamSize={teamSize}
               sumPct={floridaHandicapPct}
               onSumPctChange={setFloridaHandicapPct}
+              rule={state.teamHandicapRule}
+              onRuleChange={state.setTeamHandicapRule}
             />
             <input type="hidden" name="hcp_allowance_pct" value="100" />
           </>
@@ -1238,6 +1270,18 @@ export function GameForm({
             onVariantChange={state.setNinesVariant}
             scoring={state.ninesScoring}
             onScoringChange={state.setNinesScoring}
+            disabled={lockGameMode}
+          />
+        )}
+        {/* #3002: patsome's setup, mirrored from GameWizard step 2, so the
+            edit shows the share on holes 1–6 it writes. Its scoring radios
+            post themselves; the hidden mirrors above carry the share. */}
+        {state.isPatsome && (
+          <PatsomeSetup
+            scoring={state.patsomeScoring}
+            onScoringChange={state.setPatsomeScoring}
+            fourballAllowancePct={state.patsomeFourballAllowancePct}
+            onFourballAllowanceChange={state.setPatsomeFourballAllowancePct}
             disabled={lockGameMode}
           />
         )}

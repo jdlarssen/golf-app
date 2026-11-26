@@ -32,7 +32,12 @@ import {
   WOLF_SETUP_TEXT,
   sumEquivalentText,
 } from '../../lib/formatSetupCopy';
-import { defaultHcpAllowancePct, defaultTeamHandicapPct } from '../../../../../lib/games/formatSetupDefaults';
+import {
+  defaultHcpAllowancePct,
+  defaultPatsomeFourballAllowancePct,
+  defaultTeamHandicapPct,
+  defaultTeamHandicapRule,
+} from '../../../../../lib/games/formatSetupDefaults';
 import { TEAM_FORMAT_TEAM_SIZES } from '../../../../../lib/games/teamFormatLimits';
 import { averagePctToSumPct, sumPctToAveragePct } from '../../../../../lib/games/teamHandicapUnit';
 import { SETTLEMENT_TEXT } from '../../lib/settlementCopy';
@@ -204,6 +209,11 @@ export function SetupStep({
   const defaultSumPct = isScrambleFamily(mode) ? (defaultTeamHandicapPct(mode, teamSize) ?? 0) : 0;
   const teamHandicapSumPct =
     text.allowance === '' ? defaultSumPct : averagePctToSumPct(Number(text.allowance), teamSize);
+  // #3002 (F23): tre kort som på nettet (variant A). Brutto er prosenten 0
+  // med regelen `pct`, så validatoren lagrer prosenten av summen.
+  const teamHandicapRule = setup.teamHandicapRule ?? defaultTeamHandicapRule(mode);
+  const teamHandicapChoice: 'ngf' | 'pct' | 'brutto' =
+    teamHandicapRule === 'ngf' ? 'ngf' : text.allowance === '0' ? 'brutto' : 'pct';
   const shambleNet = (setup.shambleScoring ?? 'net') === 'net';
   const champagne = setup.shambleVariant === 'champagne';
 
@@ -329,16 +339,30 @@ export function SetupStep({
               {TEAM_HANDICAP_TEXT.description}
             </Text>
             <ChoiceCards
-              columns={2}
-              minHeight={52}
-              value={text.allowance === '0' ? 'brutto' : 'netto'}
-              onChange={(choice) => onText({ allowance: choice === 'brutto' ? '0' : '' })}
+              columns={3}
+              minHeight={64}
+              titleSize={15}
+              paddingX={10}
+              wrapTitle
+              stretch
+              accessibilityLabel={TEAM_HANDICAP_TEXT.legend}
+              value={teamHandicapChoice}
+              onChange={(choice) => {
+                onSetup({ teamHandicapRule: choice === 'ngf' ? 'ngf' : 'pct' });
+                if (choice === 'brutto') onText({ allowance: '0' });
+                else if (text.allowance === '0') onText({ allowance: '' });
+              }}
               options={[
-                { value: 'netto' as const, title: ALLOWANCE_TEXT.nettoLabel, testID: 'create-team-hcp-netto' },
+                { value: 'ngf' as const, title: TEAM_HANDICAP_TEXT.ruleNgfTitle, testID: 'create-team-hcp-ngf' },
+                { value: 'pct' as const, title: TEAM_HANDICAP_TEXT.rulePctTitle, testID: 'create-team-hcp-netto' },
                 { value: 'brutto' as const, title: ALLOWANCE_TEXT.bruttoLabel, testID: 'create-team-hcp-brutto' },
               ]}
             />
-            {text.allowance === '0' ? (
+            {teamHandicapChoice === 'ngf' ? (
+              <Text style={ui.muted} testID="create-team-hcp-ngf-helper">
+                {TEAM_HANDICAP_TEXT.ngfHelper[teamSize as 2 | 3 | 4]}
+              </Text>
+            ) : teamHandicapChoice === 'brutto' ? (
               <Text style={ui.muted} testID="create-team-hcp-brutto-helper">
                 {TEAM_HANDICAP_TEXT.bruttoHelper}
               </Text>
@@ -480,6 +504,20 @@ export function SetupStep({
               { value: 'gross' as const, title: PATSOME_TEXT.gross, hint: PATSOME_TEXT.grossDesc, testID: 'create-patsome-gross' },
             ]}
           />
+          {/* #3002 (F24): andelen på hull 1–6 under Netto, som shambles andel. */}
+          {(setup.patsomeScoring ?? 'net') === 'net' ? (
+            <NestedField label={PATSOME_TEXT.fourballAllowanceLabel} hint={PATSOME_TEXT.fourballAllowanceHint}>
+              <TextInput
+                testID="create-patsome-fourball-allowance"
+                style={[ui.input, styles.input50]}
+                value={text.allowance}
+                onChangeText={(allowance) => onText({ allowance: allowance.replace(/[^0-9]/g, '') })}
+                keyboardType="number-pad"
+                placeholder={String(defaultPatsomeFourballAllowancePct())}
+                placeholderTextColor={colors.muted}
+              />
+            </NestedField>
+          ) : null}
           </View>
         </Field>
       ) : null}

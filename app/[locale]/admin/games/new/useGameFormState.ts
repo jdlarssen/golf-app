@@ -238,6 +238,8 @@ import {
   DEFAULT_SHAMBLE_SETUP,
   defaultHcpAllowancePct,
   defaultMatchAllowancePct,
+  defaultPatsomeFourballAllowancePct,
+  defaultTeamHandicapRule,
   defaultTeamSizeForMode,
   defaultTexasHandicapPct,
 } from '@/lib/games/formatSetupDefaults';
@@ -612,6 +614,16 @@ export function useGameFormState({
       ? Number(initialValues.florida_team_handicap_pct)
       : defaultFloridaHandicapPct(initialTeamSize),
   );
+  // #3002 (F23): how the scramble team handicap is taken, shared by the three
+  // formats. A new game starts on the format's rule (Texas and Florida NGF's
+  // weighting, Ambrose its formula); a stored game shows its own, and one
+  // without the key (created before #3002) reads as null, so the form posts
+  // no rule and a save never adds the key. A team size change keeps it.
+  const [teamHandicapRule, setTeamHandicapRule] = useState<'ngf' | 'pct' | null>(
+    initialValues?.team_handicap_rule !== undefined
+      ? initialValues.team_handicap_rule
+      : defaultTeamHandicapRule(initialMode),
+  );
   // Fourball matchplay (#217): allowance-prosent (0 = brutto, 1..100 = netto).
   // Pre-fylles fra cup-radens fourball_allowance_pct via initialValues; ellers
   // NGF-standarden 90 (#2997, `defaultMatchAllowancePct`). Validator-en
@@ -770,6 +782,14 @@ export function useGameFormState({
   // feltet og faller defensivt tilbake til 'net' ved ugyldig/manglende verdi.
   const [patsomeScoring, setPatsomeScoring] = useState<'gross' | 'net'>(
     initialValues?.patsome_scoring === 'gross' ? 'gross' : 'net',
+  );
+  // #3002 (F24): patsome's share on holes 1–6. A new game starts on 85 (NGF
+  // vedlegg C, four-ball stableford); a stored game without the key reads as
+  // null: the field shows the full handicap and the form posts no share.
+  const [patsomeFourballAllowancePct, setPatsomeFourballAllowancePct] = useState<number | null>(
+    initialValues?.patsome_fourball_allowance_pct !== undefined
+      ? initialValues.patsome_fourball_allowance_pct
+      : defaultPatsomeFourballAllowancePct(),
   );
   const [requirePeerApproval, setRequirePeerApproval] = useState(
     initialValues?.require_peer_approval ?? false,
@@ -1182,6 +1202,12 @@ export function useGameFormState({
     // (15 % for 3-mannslag, 10 % for 4-mannslag). Admin kan deretter justere.
     if (next === 'florida_scramble') {
       setFloridaHandicapPct(defaultFloridaHandicapPct(nextSize));
+    }
+    // #3002: a format switch is a new game, so it starts on the new format's
+    // rule and share.
+    setTeamHandicapRule(defaultTeamHandicapRule(next));
+    if (next === 'patsome') {
+      setPatsomeFourballAllowancePct(defaultPatsomeFourballAllowancePct());
     }
     // #2570: 0 is «Brutto» in the general field. Shamble has its own Brutto
     // under «Tellemåte», so a 0 carried over would show under Netto and play
@@ -2398,6 +2424,8 @@ export function useGameFormState({
     setAmbroseHandicapPct,
     floridaHandicapPct,
     setFloridaHandicapPct,
+    teamHandicapRule,
+    setTeamHandicapRule,
     fourballAllowancePct,
     setFourballAllowancePct,
     foursomesAllowancePct,
@@ -2460,6 +2488,8 @@ export function useGameFormState({
     setMinTeeShots,
     patsomeScoring,
     setPatsomeScoring,
+    patsomeFourballAllowancePct,
+    setPatsomeFourballAllowancePct,
     requirePeerApproval,
     setRequirePeerApproval,
     // #2460

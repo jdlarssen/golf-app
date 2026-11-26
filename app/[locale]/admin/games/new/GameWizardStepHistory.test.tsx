@@ -579,6 +579,8 @@ describe('GameWizard — #1385 gjenopptatt utkast', () => {
         tee_box_id: 'tee-1',
         team_size: 3,
         texas_team_handicap_pct: '26.67',
+        // A draft saved before #3002 has no rule (`buildEditInitialValues`).
+        team_handicap_rule: null,
         players: six.map((p, i) => ({
           user_id: p.id,
           team_number: i < 3 ? 1 : 2,

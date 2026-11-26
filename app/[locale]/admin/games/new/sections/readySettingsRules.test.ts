@@ -23,6 +23,7 @@ const BASE: ReadySettingsInput = {
   texasHandicapPct: 25,
   ambroseHandicapPct: 25,
   floridaHandicapPct: 25,
+  teamHandicapRule: 'pct',
   entryFeeKr: '',
   scoreVisibility: 'live',
   requirePeerApproval: false,
@@ -139,6 +140,23 @@ describe('readySettingsRows — handicap value', () => {
     expect(
       row({ gameMode: 'texas_scramble', teamSize: 4, texasHandicapPct: 0 }, 'handicap').value,
     ).toEqual({ kind: 'gross' });
+  });
+
+  // #3002 (F23): NGF's weighting per player is its own value; the stored share
+  // is not what the round plays off.
+  it.each<GameMode>(['texas_scramble', 'ambrose', 'florida_scramble'])(
+    '%s on NGF’s weighting is named as such',
+    (gameMode) => {
+      expect(row({ gameMode, teamSize: 4, teamHandicapRule: 'ngf' }, 'handicap').value).toEqual({
+        kind: 'teamNgf',
+      });
+    },
+  );
+
+  it('a stored game without a rule (null) keeps the share of the average', () => {
+    expect(
+      row({ gameMode: 'texas_scramble', teamSize: 2, texasHandicapPct: 20, teamHandicapRule: null }, 'handicap').value,
+    ).toEqual({ kind: 'teamAverage', pct: 40 });
   });
 });
 

@@ -63,6 +63,7 @@ export function ReadySettings({
     texasHandicapPct: state.texasHandicapPct,
     ambroseHandicapPct: state.ambroseHandicapPct,
     floridaHandicapPct: state.floridaHandicapPct,
+    teamHandicapRule: state.teamHandicapRule,
     entryFeeKr: state.entryFeeKr,
     scoreVisibility: state.scoreVisibility,
     requirePeerApproval: state.requirePeerApproval,
@@ -75,6 +76,7 @@ export function ReadySettings({
       const v = row.value;
       if (v.kind === 'gross') return t('values.handicapGross');
       if (v.kind === 'teamAverage') return t('values.handicapTeamAverage', { pct: v.pct });
+      if (v.kind === 'teamNgf') return t('values.handicapTeamNgf');
       return t('values.handicapNet', { pct: v.pct });
     }
     if (row.key === 'fee') {
