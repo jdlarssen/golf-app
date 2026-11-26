@@ -813,3 +813,103 @@ describe('compute — én spiller mot to (#1814)', () => {
     expect(r.holesUp).toBe(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// #2997 (F15/F16): a new match (`match_strokes: 'difference'`) gives the
+// lowest player 0 and the others the share of the difference to the lowest
+// (NGF vedlegg C s. 76; s. 8: the share goes on the difference). The share is
+// taken of the unrounded course handicap when the start froze it.
+// ---------------------------------------------------------------------------
+
+describe('compute — slag etter differansen til den laveste (#2997, F15)', () => {
+  function newMatchCtx(players: ScoringPlayer[], allowancePct: number): ScoringContext {
+    return {
+      game: {
+        id: 'g-4b-diff',
+        game_mode: 'fourball_matchplay',
+        mode_config: {
+          kind: 'fourball_matchplay',
+          team_size: 2,
+          teams_count: 2,
+          allowance_pct: allowancePct,
+          match_strokes: 'difference',
+        },
+      },
+      players,
+      holes: par4Holes(18),
+      scores: [],
+    };
+  }
+  const p = (
+    userId: string,
+    teamNumber: number,
+    courseHandicap: number,
+    rawCourseHandicap?: number | null,
+  ): ScoringPlayer => ({ userId, teamNumber, flightNumber: 1, courseHandicap, rawCourseHandicap });
+  const effective = (ctx: ScoringContext) =>
+    Object.fromEntries(
+      compute(ctx).sides.flatMap((s) => s.players.map((sp) => [sp.userId, sp.effectiveHandicap])),
+    );
+  const strokesOnSi = (ctx: ScoringContext, userId: string) =>
+    compute(ctx).holes.map(
+      (h) => [...h.side1Players, ...h.side2Players].find((c) => c.userId === userId)?.extraStrokes,
+    );
+
+  it('C/2 eksempel 2 ved 90 %: 10, 18, 27 og 39 gir 0, 7, 15 og 26 slag', () => {
+    const ctx = newMatchCtx([p('a', 1, 10), p('b', 1, 18), p('c', 2, 27), p('d', 2, 39)], 90);
+    expect(effective(ctx)).toEqual({ a: 0, b: 7, c: 15, d: 26 });
+    expect(strokesOnSi(ctx, 'b')).toEqual([...Array(7).fill(1), ...Array(11).fill(0)]);
+    expect(strokesOnSi(ctx, 'c')).toEqual([...Array(15).fill(1), ...Array(3).fill(0)]);
+    expect(strokesOnSi(ctx, 'd')).toEqual([...Array(8).fill(2), ...Array(10).fill(1)]);
+  });
+
+  it('ved 85 % med 1 og 4: 85 % av 3 er 2,55, altså 3 slag', () => {
+    const ctx = newMatchCtx([p('a', 1, 1), p('b', 1, 4), p('c', 2, 1), p('d', 2, 1)], 85);
+    expect(effective(ctx)).toEqual({ a: 0, b: 3, c: 0, d: 0 });
+  });
+
+  it('C/3 med +4, 2, 11 og 23 ved 90 %: 0, 5, 14 og 24', () => {
+    const ctx = newMatchCtx([p('a', 1, -4), p('b', 1, 2), p('c', 2, 11), p('d', 2, 23)], 90);
+    expect(effective(ctx)).toEqual({ a: 0, b: 5, c: 14, d: 24 });
+  });
+
+  it('den laveste kan stå på motstandersiden: begge på side 1 får differansen', () => {
+    const ctx = newMatchCtx([p('a', 1, 20), p('b', 1, 30), p('c', 2, 10), p('d', 2, 10)], 100);
+    expect(effective(ctx)).toEqual({ a: 10, b: 20, c: 0, d: 0 });
+  });
+
+  it('regner differansen av det urundede banehandicapet og runder én gang (F16)', () => {
+    // 90 % of 20,4 − 9,5 = 9,81 → 10. Rounded first: 90 % of 20 − 10 = 9.
+    const ctx = newMatchCtx(
+      [p('a', 1, 10, 9.5), p('b', 1, 20, 20.4), p('c', 2, 10, 9.5), p('d', 2, 10, 9.5)],
+      90,
+    );
+    expect(effective(ctx)).toEqual({ a: 0, b: 10, c: 0, d: 0 });
+  });
+
+  it('én spiller mot to (#1814): den laveste av de tre som spiller er null', () => {
+    const ctx = newMatchCtx([p('a', 1, 18), p('c', 2, 10), p('d', 2, 27)], 90);
+    expect(effective(ctx)).toEqual({ a: 7, c: 0, d: 15 });
+  });
+
+  it('uten flagget (match opprettet før): egne slag, 9, 16, 24 og 35 ved 90 %', () => {
+    const ctx = makeCtx({
+      players: [p('a', 1, 10), p('b', 1, 18), p('c', 2, 27), p('d', 2, 39)],
+      holes: par4Holes(18),
+      scores: [],
+      allowancePct: 90,
+    });
+    expect(effective(ctx)).toEqual({ a: 9, b: 16, c: 24, d: 35 });
+  });
+
+  it('uten flagget og med urundet tall: egen andel av det urundede, rundet én gang (F16)', () => {
+    // 90 % of 20,5 is 18,45 → 18; the frozen 21 would give 18,9 → 19.
+    const ctx = makeCtx({
+      players: [p('a', 1, 21, 20.5), p('b', 1, 0, 0), p('c', 2, 0, 0), p('d', 2, 0, 0)],
+      holes: par4Holes(18),
+      scores: [],
+      allowancePct: 90,
+    });
+    expect(effective(ctx).a).toBe(18);
+  });
+});

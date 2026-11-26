@@ -8,17 +8,18 @@
 //
 // Eneste forskjell fra Foursomes er lag-handicapet: Chapman bruker WHS-allowance
 // 60 % av laveste + 40 % av høyeste (vs Foursomes' sum). Vi delegerer derfor til
-// den delte `computeFoursomesCore` med `chapmanSideHandicap`-strategien og
+// den delte `computeFoursomesCore` med 60/40-regelen (`'sixtyForty'`) og
 // returnerer `kind: 'foursomes_matchplay'` → all leaderboard-/podium-/mail-/
 // scorekort-visning gjenbrukes uendret (Ambrose-mønsteret, #284). Format-navnet
 // «Chapman» kommer fra `game_mode` → MODE_LABELS, ikke fra result-kind.
 //
-// Allowance: side-HCP = round(0.6×lav + 0.4×høy); høylaget får
+// Allowance: side-HCP = 0.6×lav + 0.4×høy (urundet av de urundede tallene når
+// starten frøs dem, #2997; ellers rundet av heltallene som før); høylaget får
 // round(|side1Hcp − side2Hcp| × allowance_pct/100) strokes via SI. Default
 // allowance_pct = 100 (full diff etter 60/40-reduksjonen — WHS matchplay-
 // standard). 0 = brutto matchplay. Justerbar 0..100 av admin.
 
-import { chapmanSideHandicap, computeFoursomesCore } from './foursomesMatchplay';
+import { computeFoursomesCore } from './foursomesMatchplay';
 import type { ScoringContext, FoursomesMatchplayResult } from './types';
 
 /**
@@ -32,5 +33,5 @@ export function compute(ctx: ScoringContext): FoursomesMatchplayResult {
     ctx.game.mode_config.kind === 'chapman_matchplay'
       ? ctx.game.mode_config.allowance_pct
       : 100;
-  return computeFoursomesCore(ctx, allowancePct, chapmanSideHandicap);
+  return computeFoursomesCore(ctx, allowancePct, 'sixtyForty');
 }

@@ -59,13 +59,13 @@ export function playingHandicapFromRaw(
 }
 
 /**
- * The percentage of an already ROUNDED course handicap, then the cap.
+ * The percentage of a course handicap, then the cap.
  *
- * Used where only the frozen integer is at hand: the formats that take their
- * own percentage in `mode_config` at compute time (four-ball matchplay, Round
- * Robin, `allocatedStrokes`). Rounding twice there is the known deviation from
- * WHS 6.2a; #2924 step 2 is where it gets the unrounded value. For the game's
- * general allowance use `playingHandicapFromRaw` / `playingHandicap`.
+ * Takes the rounded or the unrounded value. The formats with their own
+ * percentage in `mode_config` pass the unrounded one when the start froze it
+ * ({@link strokeBasis}, #2997), so the percentage is rounded once (WHS 6.2a).
+ * For the game's general allowance use `playingHandicapFromRaw` /
+ * `playingHandicap`.
  */
 export function applyAllowance(
   courseHandicap: number,
@@ -74,6 +74,27 @@ export function applyAllowance(
 ): number {
   const allowed = roundHalfUp((courseHandicap * percent) / 100);
   return maxStrokes === null ? allowed : Math.min(allowed, maxStrokes);
+}
+
+/**
+ * The number the formats with their own percentage in `mode_config` take that
+ * percentage of (#2997, F16/F25): the unrounded course handicap the start froze
+ * in `game_players.raw_course_handicap`, or the frozen integer
+ * (`course_handicap`) when the round was started before the column existed.
+ *
+ * WHS 6.2a, interpretation 6.2a/1: the percentage goes on the unrounded number
+ * so it is rounded once. A round started before keeps its numbers, as the
+ * owner ordered 24.11 («Ja, ingen omregning»).
+ *
+ * Only for those formats: there `course_handicap` is the full course handicap,
+ * `round(raw)`. In the formats with the general percentage it is the playing
+ * handicap, and the raw number is not their basis.
+ */
+export function strokeBasis(
+  courseHandicap: number,
+  rawCourseHandicap: number | null | undefined,
+): number {
+  return rawCourseHandicap ?? courseHandicap;
 }
 
 export interface PlayingHandicapInput {

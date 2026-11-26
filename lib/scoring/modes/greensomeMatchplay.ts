@@ -6,13 +6,14 @@
 // Velg/alternate er on-course-veiledning, ikke noe appen sporer slag-for-slag.
 //
 // Eneste forskjell fra Foursomes er lag-handicapet: Greensome bruker 60/40-
-// blandingen (60 % av laveste + 40 % av høyeste, avrundet) i stedet for summen.
-// Vi delegerer derfor til den delte `computeFoursomesCore` med
-// `greensomeTeamHandicap`-strategien (samme mønster som chapmanMatchplay #290 og
+// blandingen (60 % av laveste + 40 % av høyeste) i stedet for summen, urundet
+// av de urundede tallene når starten frøs dem (#2997). Vi delegerer derfor til
+// den delte `computeFoursomesCore` med 60/40-regelen (samme mønster som chapmanMatchplay #290 og
 // gruesomeMatchplay) og returnerer `kind: 'foursomes_matchplay'` → all
 // leaderboard-/podium-/scorekort-/mail-visning gjenbrukes uendret (Ambrose-
 // mønsteret, #284). WHS-default allowance = 100 % for greensome.
 
+import { sideHandicap } from '../teamHandicap';
 import { computeFoursomesCore } from './foursomesMatchplay';
 import type { SideHandicapOverride } from './foursomesMatchplay';
 import type {
@@ -22,14 +23,16 @@ import type {
 } from './types';
 
 /**
- * Greensome lag-handicap: 60 % av laveste + 40 % av høyeste course-handicap,
- * avrundet (WHS-greensome-konvensjon). Skiller seg fra foursomes (sum). Matcher
- * `SideHandicapFn`-signaturen og er order-uavhengig (min/max).
+ * Greensome lag-handicap av to HELE banehandicap: 60 % av laveste + 40 % av
+ * høyeste, avrundet. Order-uavhengig (min/max).
+ *
+ * Brukes av cupens forslag til lag-slag (`team_strokes_override_auto`), som
+ * eieren lot stå som før 24.11 (#2997). Motoren regner sidens tall med
+ * `sideHandicap('sixtyForty', …)`, som tar de urundede tallene når starten frøs
+ * dem; for hele tall er de to like.
  */
 export function greensomeTeamHandicap(chA: number, chB: number): number {
-  const low = Math.min(chA, chB);
-  const high = Math.max(chA, chB);
-  return Math.round(0.6 * low + 0.4 * high);
+  return sideHandicap('sixtyForty', [{ courseHandicap: chA }, { courseHandicap: chB }]);
 }
 
 /**
@@ -71,7 +74,7 @@ export function compute(ctx: ScoringContext): FoursomesMatchplayResult {
   return computeFoursomesCore(
     ctx,
     readAllowancePct(ctx),
-    greensomeTeamHandicap,
+    'sixtyForty',
     readTeamStrokesOverride(ctx.game.mode_config),
   );
 }

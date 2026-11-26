@@ -621,9 +621,9 @@ export type GameModeConfig =
       team_size: 2;
       teams_count: 2;
       /**
-       * HCP-allowance for fourball matchplay (0..100). WHS-default = 85 %.
-       * `compute()` leser feltet og kaller `applyAllowance(courseHandicap, pct)`
-       * per spiller før SI-allokering. 0 = brutto (gross-only matchplay),
+       * HCP-allowance for fourball matchplay (0..100). NGF-default = 90 %
+       * (vedlegg C s. 75; #2997). `compute()` tar andelen per spiller via
+       * `matchDifferenceStrokes` før SI-allokering. 0 = brutto (gross-only matchplay),
        * 100 = full handicap. Validatoren i `lib/games/gamePayload.ts` håndhever
        * range; scoring-laget faller defensivt tilbake til 100 hvis feltet
        * mangler i draft-state.
@@ -639,6 +639,15 @@ export type GameModeConfig =
        * `PRESERVED_MODE_CONFIG_KEYS`.
        */
       withdrawal_play_on?: boolean;
+      /**
+       * #2997 (F15): `'difference'` gives the lowest of the four 0 strokes and
+       * the others `allowance_pct` of the difference to the lowest (NGF
+       * vedlegg C s. 76, s. 8; `matchDifferenceStrokes`). Stamped on NEW games
+       * at creation (`stampNewGameModeConfig`, and the cup's four-ball), never
+       * added to an existing game. Absent = the original rule: each player
+       * gets `allowance_pct` of their own handicap.
+       */
+      match_strokes?: 'difference';
     }
   | {
       kind: 'foursomes_matchplay';
@@ -836,13 +845,19 @@ export type GameModeConfig =
        * (classifyMatchplayHole). Vinnende side: +1 hull-seire til hver spiller.
        * Delt hull: 0 til alle. Rangering: flest hull-seire vinner.
        *
-       * `allowance_pct`: WHS-standard 85 % (matchplay-modell). 0 = brutto.
+       * `allowance_pct`: NGF 90 % som four-ball (vedlegg C s. 75; #2997). 0 = brutto.
        * Speiler fourball_matchplay-config-shapen for allowance-feltet.
        */
       kind: 'round_robin';
       team_size: 1;
       teams_count: 4;
       allowance_pct: number;
+      /**
+       * #2997 (F15): as four-ball. `'difference'` gives the lowest of the four
+       * 0 strokes and the others `allowance_pct` of the difference to the
+       * lowest. Stamped on NEW games only; absent = each player's own share.
+       */
+      match_strokes?: 'difference';
     }
   | {
       /**
@@ -951,6 +966,14 @@ export interface ScoringPlayer {
   /** Null for solo-spill (stableford). */
   flightNumber: number | null;
   courseHandicap: number;
+  /**
+   * #2997 (F16/F25): the unrounded course handicap the start froze in
+   * `game_players.raw_course_handicap`. Null or absent = not frozen (a round
+   * started before the column existed): the engines then use `courseHandicap`.
+   * Only the formats with their own percentage in `mode_config` read it
+   * (`strokeBasis` in `lib/scoring/courseHandicap.ts`).
+   */
+  rawCourseHandicap?: number | null;
   /**
    * Spillerens tee-gender (fra `game_players.tee_gender`). Brukes til å
    * velge riktig par fra `hole.parByGender`. Default `'mens'` når feltet

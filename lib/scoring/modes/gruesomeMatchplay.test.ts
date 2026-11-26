@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { compute } from './gruesomeMatchplay';
-import { combinedSideHandicap } from './foursomesMatchplay';
+import { sideHandicap } from '../teamHandicap';
 import type {
   GameModeConfig,
   ScoringContext,
@@ -54,10 +54,10 @@ function makeCtx(opts: {
 }
 
 // ---------------------------------------------------------------------------
-// combinedSideHandicap — sum-formel (kontrast til chapmanSideHandicap 60/40)
+// sideHandicap('sum') — sum-formel (kontrast til 60/40 i chapman)
 // ---------------------------------------------------------------------------
 
-describe('combinedSideHandicap — sum (brukt av gruesome og foursomes)', () => {
+describe("sideHandicap('sum') — sum (brukt av gruesome og foursomes)", () => {
   it.each([
     // [a, b, forventet sum]
     [10, 20, 30],
@@ -66,8 +66,8 @@ describe('combinedSideHandicap — sum (brukt av gruesome og foursomes)', () => 
     [5, 5, 10],
     [8, 14, 22],
     [3, 8, 11],
-  ])('combinedSideHandicap(%i, %i) = %i', (a, b, expected) => {
-    expect(combinedSideHandicap(a, b)).toBe(expected);
+  ])("sideHandicap('sum', %i, %i) = %i", (a, b, expected) => {
+    expect(sideHandicap('sum', [{ courseHandicap: a }, { courseHandicap: b }])).toBe(expected);
   });
 });
 
