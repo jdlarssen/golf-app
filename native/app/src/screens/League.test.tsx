@@ -267,7 +267,9 @@ describe('tegning 3 og 4: tabellen og rundelista', () => {
   it('rundelista: vinduet og om du har spilt', async () => {
     await renderLeague();
     expect(screen.getByTestId('league-round-1-chip')).toHaveTextContent('Lukket');
-    expect(screen.getByTestId('league-round-1-played')).toHaveTextContent('Har spilt');
+    // #2980: en runde du har et tall for, viser tallet i stedet for «Har spilt».
+    expect(screen.getByTestId('league-round-1-result')).toHaveTextContent('36poeng');
+    expect(screen.queryByTestId('league-round-1-played')).toBeNull();
     expect(screen.getByTestId('league-round-3-chip')).toHaveTextContent('Åpen');
     expect(screen.getByTestId('league-round-3-played')).toHaveTextContent('Ikke spilt');
     expect(screen.getByTestId('league-round-4-chip')).toHaveTextContent('Kommer');
@@ -502,6 +504,93 @@ describe('#2815: kortet bak et resultat i tabellen', () => {
     await renderLeague();
     expect(screen.getByTestId('league-standings')).toBeTruthy();
     expect(screen.queryByTestId(/^league-standings-card-/)).toBeNull();
+  });
+});
+
+describe('#2980: tallet ditt i rundelista, og ett trykk til kortet', () => {
+  it('en runde du har spilt, viser tallet fra tabellen, og raden åpner kortet ditt', async () => {
+    const { navigate } = await renderLeague();
+    const row = screen.getByTestId('league-round-1');
+    expect(screen.getByTestId('league-round-1-result')).toHaveTextContent('36poeng');
+    // Samme tall som cella i tabellen for runden.
+    expect(screen.getByTestId('league-standings-card-me-r1')).toHaveTextContent('36');
+    expect(row.props.accessibilityRole).toBe('button');
+    expect(row.props.accessibilityLabel).toBe('Se kortet ditt fra Runde 1, 36 poeng');
+    await fireEvent.press(row);
+    expect(navigate).toHaveBeenCalledWith('LeagueCard', { leagueId: 'liga-vinter', gameId: 'g-me-r1', userId: 'me' });
+  });
+
+  it('ikke spilt, straff og kommende runde: ingen tall, og raden kan ikke trykkes på', async () => {
+    const view = leagueView();
+    const me = view.standings.find((r) => r.userId === 'me')!;
+    answer({
+      ok: true,
+      view: leagueView({
+        standings: [
+          view.standings[0],
+          // Runde 2 er en straff: ingen kort bak, og den teller som ikke spilt.
+          { ...me, perRound: [me.perRound[0], { roundId: 'r2', value: 45, points: null, penalised: true, gameId: null }] },
+        ],
+      }),
+    });
+    const { navigate } = await renderLeague();
+    for (const n of [2, 3, 4]) {
+      expect(screen.queryByTestId(`league-round-${n}-result`)).toBeNull();
+      expect(screen.getByTestId(`league-round-${n}`).props.accessibilityRole).toBeUndefined();
+    }
+    expect(screen.getByTestId('league-round-3-played')).toHaveTextContent('Ikke spilt');
+    expect(screen.queryByTestId('league-round-4-played')).toBeNull();
+    await fireEvent.press(screen.getByTestId('league-round-3'));
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('et kort som venter på markøren, har ikke noe tall ennå', async () => {
+    answer({
+      ok: true,
+      view: leagueView({
+        rounds: [
+          leagueRound(1, -30, {
+            delivered: ['me'],
+            awaitingMarker: [{ gameId: 'g-me-r1', userId: 'me', markerUserId: 'martin', submittedBy: 'me' }],
+          }),
+        ],
+      }),
+    });
+    await renderLeague();
+    expect(screen.queryByTestId('league-round-1-result')).toBeNull();
+    expect(screen.getByTestId('league-round-1-played')).toHaveTextContent('Har spilt');
+  });
+
+  it('uten kort bak tallet er tallet tekst, og raden kan ikke trykkes på', async () => {
+    const view = leagueView();
+    answer({
+      ok: true,
+      view: {
+        ...view,
+        standings: view.standings.map((row) => ({ ...row, perRound: row.perRound.map((c) => ({ ...c, gameId: null })) })),
+      },
+    });
+    const { navigate } = await renderLeague();
+    expect(screen.getByTestId('league-round-1-result')).toHaveTextContent('36poeng');
+    expect(screen.getByTestId('league-round-1').props.accessibilityRole).toBeUndefined();
+    await fireEvent.press(screen.getByTestId('league-round-1'));
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('i slagspill står tallet mot par alene, som i tabellen', async () => {
+    const view = leagueView({ league: { format: 'stroke', standingsModel: 'total' } });
+    answer({
+      ok: true,
+      view: {
+        ...view,
+        standings: view.standings.map((row) =>
+          row.userId === 'me' ? { ...row, perRound: [{ ...row.perRound[0], value: 3 }] } : row,
+        ),
+      },
+    });
+    await renderLeague();
+    expect(screen.getByTestId('league-round-1-result')).toHaveTextContent(/^\+3$/);
+    expect(screen.getByTestId('league-round-1').props.accessibilityLabel).toBe('Se kortet ditt fra Runde 1, +3');
   });
 });
 

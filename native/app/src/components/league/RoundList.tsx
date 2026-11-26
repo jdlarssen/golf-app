@@ -3,13 +3,37 @@
 // Én rad per runde med vinduet («LUKKET», «ÅPEN», «KOMMER») og datoene. Den
 // åpne runden er grønn. Til høyre står om du har spilt den, for runder som har
 // åpnet og når du er deltaker; en kommende runde har ingenting der.
+//
+// #2980 (variant A): har du et tall i tabellen for runden, står tallet der
+// «Har spilt» sto («34 poeng ›»), og hele raden åpner kortet ditt fra runden.
+// Tallet er cella fra tabellen (`myRoundCell`), så det regnes aldri på nytt.
+// Uten kort bak (`gameId` null) er tallet tekst, og raden kan ikke trykkes på.
 import { StyleSheet, Text, View } from 'react-native';
 import type { AppLeagueView } from '../../../../../lib/league/appLeagueView';
-import { LEAGUE_TEXT, roundCourseLine, roundDates, roundWindow } from '../../lib/leagueCopy';
-import { FONTS, interLine, useTheme } from '../../theme';
+import { myRoundCell } from '../../../../../lib/league/standingsFormat';
+import {
+  LEAGUE_TEXT,
+  myRoundCardLabel,
+  myRoundResult,
+  roundCourseLine,
+  roundDates,
+  roundWindow,
+} from '../../lib/leagueCopy';
+import { FONTS, fraunces, interLine, useTheme } from '../../theme';
+import { ChevronIcon } from '../icons/Icons';
+import { Tap } from '../Tap';
 import { PlayedPill, WindowChip, type PlayedState } from './LeaguePills';
 
-export function RoundList({ view, now }: { view: AppLeagueView; now: Date }) {
+export function RoundList({
+  view,
+  now,
+  onOpenCard,
+}: {
+  view: AppLeagueView;
+  now: Date;
+  /** #2980: et trykk på en runde med tallet ditt og et kort bak. Uten den kan ingen rad trykkes på. */
+  onOpenCard?: (card: { gameId: string; userId: string }) => void;
+}) {
   const { colors } = useTheme();
   const meId = view.me.userId;
   const rounds = [...view.rounds].sort((a, b) => a.sequence - b.sequence);
@@ -34,18 +58,24 @@ export function RoundList({ view, now }: { view: AppLeagueView; now: Date }) {
               : round.inProgress.includes(meId)
                 ? 'inProgress'
                 : 'notPlayed';
-        return (
-          <View
-            key={round.id}
-            style={[
-              styles.row,
-              index > 0 ? styles.next : null,
-              open
-                ? { backgroundColor: colors.youFill, borderColor: colors.youBorder }
-                : { backgroundColor: colors.surface, borderColor: colors.border },
-            ]}
-            testID={`league-round-${round.sequence}`}
-          >
+        // Et kort som venter på markøren, har ikke noe tall ennå (#2661).
+        const waiting = round.awaitingMarker.some((a) => a.userId === meId);
+        const mine =
+          played === null || waiting
+            ? null
+            : myRoundCell(view.standings, meId, round.id, view.league.standingsModel);
+        const result = mine ? myRoundResult(mine.raw, view.league) : null;
+        const gameId = mine?.gameId ?? null;
+        const pressable = result !== null && gameId !== null && onOpenCard !== undefined;
+        const rowStyle = [
+          styles.row,
+          index > 0 ? styles.next : null,
+          open
+            ? { backgroundColor: colors.youFill, borderColor: colors.youBorder }
+            : { backgroundColor: colors.surface, borderColor: colors.border },
+        ];
+        const content = (
+          <>
             <View style={styles.text}>
               <View style={styles.top}>
                 <Text
@@ -67,7 +97,37 @@ export function RoundList({ view, now }: { view: AppLeagueView; now: Date }) {
                 </Text>
               ) : null}
             </View>
-            {played ? <PlayedPill state={played} testID={`league-round-${round.sequence}-played`} /> : null}
+            {result ? (
+              <View style={styles.result} testID={`league-round-${round.sequence}-result`}>
+                <Text style={[styles.resultValue, { color: colors.text }]}>{result.value}</Text>
+                {result.unit ? <Text style={[styles.resultUnit, { color: colors.muted }]}>{result.unit}</Text> : null}
+                {pressable ? <ChevronIcon direction="right" color={colors.muted} size={16} strokeWidth={2} /> : null}
+              </View>
+            ) : played ? (
+              <PlayedPill state={played} testID={`league-round-${round.sequence}-played`} />
+            ) : null}
+          </>
+        );
+        if (pressable && result && gameId) {
+          return (
+            <Tap
+              key={round.id}
+              onPress={() => onOpenCard({ gameId, userId: meId })}
+              accessibilityRole="button"
+              accessibilityLabel={myRoundCardLabel(
+                round.label,
+                result.unit ? `${result.value} ${result.unit}` : result.value,
+              )}
+              style={rowStyle}
+              testID={`league-round-${round.sequence}`}
+            >
+              {content}
+            </Tap>
+          );
+        }
+        return (
+          <View key={round.id} style={rowStyle} testID={`league-round-${round.sequence}`}>
+            {content}
           </View>
         );
       })}
@@ -94,5 +154,9 @@ const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   name: { ...interLine(15, 20) },
   dates: { ...interLine(12, 16), fontFamily: FONTS.sans, marginTop: 2 + interLine(12, 16).marginTop },
+  // #2980: tallet som sesongverdien i tabellen (Fraunces 600, 18/22), «poeng» og pila etter.
+  result: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 },
+  resultValue: { ...fraunces(600, 18, 22), fontVariant: ['tabular-nums'] },
+  resultUnit: { ...interLine(12, 16), fontFamily: FONTS.sans },
   empty: { ...interLine(14, 20), fontFamily: FONTS.sans, marginHorizontal: 20 },
 });

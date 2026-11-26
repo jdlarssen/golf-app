@@ -20,7 +20,7 @@ import type {
   AppLeagueView,
   LeagueCardResponse,
 } from '../../../../lib/league/appLeagueView';
-import { formatRoundCell } from '../../../../lib/league/standingsFormat';
+import { formatRoundCell, isPointsCell } from '../../../../lib/league/standingsFormat';
 import type { LeagueFormat, LeagueScoring, LeagueStatus, StandingsModel } from '../../../../lib/league/types';
 import type {
   ClubLeagueJoinFailure,
@@ -47,6 +47,8 @@ export const LEAGUE_TEXT = {
   homeSeasonLabel: 'Liga',
   homeSeasonNote: 'starter',
   notPlayed: 'Ikke spilt',
+  /** #2980: ordet etter tallet ditt i rundelista (`liga.player.myResultUnit`). */
+  myResultUnit: 'poeng',
   /** `liga.player.playedBy.*`. */
   delivered: 'Har spilt',
   inProgress: 'I gang',
@@ -539,6 +541,26 @@ export function leagueCardResultLine(card: Pick<LeagueCardResponse, 'format' | '
 /** Skjermleserens navn på en celle i tabellen: «Se kortet til Martin, Runde 3» (`liga.standings.openCardAriaLabel`). */
 export function openCardLabel(name: string, roundLabel: string): string {
   return `Se kortet til ${name}, ${roundLabel}`;
+}
+
+/**
+ * #2980: tallet ditt i en runde i rundelista, skrevet som cella i tabellen:
+ * «34» med «poeng» etter i en poengliga, «+3» alene i slagspill.
+ */
+export function myRoundResult(
+  raw: number,
+  league: Pick<AppLeagueView['league'], 'format' | 'standingsModel'>,
+): { value: string; unit: string | null } {
+  const pointsBased = isPointsBased(league.format);
+  return {
+    value: formatRoundCell(raw, league.standingsModel, pointsBased, comma),
+    unit: isPointsCell(league.standingsModel, pointsBased) ? LEAGUE_TEXT.myResultUnit : null,
+  };
+}
+
+/** #2980: skjermleserens navn på raden: «Se kortet ditt fra Runde 1, 34 poeng» (`liga.player.myResultCardAria`). */
+export function myRoundCardLabel(roundLabel: string, result: string): string {
+  return `Se kortet ditt fra ${roundLabel}, ${result}`;
 }
 
 /** #2878: skjermleserens navn på et navn i sesongtabellen: «Åpne Martin». */

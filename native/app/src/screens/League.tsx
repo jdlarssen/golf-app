@@ -3,7 +3,8 @@
 // Fra toppen: navnet, status og sesong, formatlinja («Stableford netto ·
 // beste 5 av 7»), rundeinnstillingene i en simulatorliga (foldet, se
 // `SimSettingsCard`), den åpne runden med «hvem har spilt» og «Spill runden»,
-// sesongtabellen, rundelista og «Del lenka» (#2748) for en deltaker når lenka
+// sesongtabellen, rundelista (tallet ditt per runde åpner kortet ditt, #2980)
+// og «Del lenka» (#2748) for en deltaker når lenka
 // står på. Et klubbmedlem får «Bli med i ligaen» før ligaen starter, og en
 // deltaker «Meld deg av ligaen» (egen bekreftelsesskjerm) til hen har spilt
 // (#2839). Hvilke av dem som vises, avgjør serveren (`me.canJoin` / `me.canLeave`).
@@ -266,7 +267,11 @@ function LeagueRoom({ navigation, route }: ScreenProps<'League'>) {
       />
 
       <SectionHead title={LEAGUE_TEXT.rounds} />
-      <RoundList view={view} now={now} />
+      <RoundList
+        view={view}
+        now={now}
+        onOpenCard={(card) => openOrReturn(navigation, 'LeagueCard', { leagueId, ...card })}
+      />
 
       {/* #2748: adressen og regelen er serverens (`participantShareUrl`). */}
       {league.shareUrl ? (
