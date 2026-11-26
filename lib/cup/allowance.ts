@@ -13,8 +13,14 @@
  */
 
 export const ALLOWANCE_DEFAULTS = {
-  /** WHS default for fourball (best ball) matchplay: each player 85% of handicap. */
-  fourball: 85,
+  /**
+   * NGF default for four-ball matchplay (vedlegg C s. 75): 90 % of the
+   * difference to the lowest (#2997, the owner's «Ja, også cupen» 24.11). The
+   * wizard's `defaultMatchAllowancePct` says the same, and
+   * `tournaments.fourball_allowance_pct` defaults to 90 (0258). A cup keeps
+   * the share it was saved with.
+   */
+  fourball: 90,
   /** WHS default for foursomes (alternate shot) matchplay: 50% of combined diff. */
   foursomes: 50,
   /** WHS default for greensome matchplay: 100% per player. */

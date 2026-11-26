@@ -14,6 +14,7 @@ import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { parseIntent, type Intent } from '@/lib/wizard/intent';
 import { getWizardMountData } from '@/lib/wizard/getWizardMountData';
+import { ALLOWANCE_DEFAULTS } from '@/lib/cup/allowance';
 
 type SearchParams = Promise<{
   tournament_id?: string | string[];
@@ -209,13 +210,14 @@ async function loadCupContext(
             : requestedMode === 'gruesome_matchplay'
               ? 'Gruesome'
               : 'Singles';
-  // Default 85 (WHS) hvis cup-raden ikke har verdien satt (eldre cups før
-  // 0045-migrasjonen, eller cups opprettet før chunk 5 lå ute).
-  const fourballAllowancePct = cup.fourball_allowance_pct ?? 85;
-  const foursomesAllowancePct = cup.foursomes_allowance_pct ?? 50;
-  const greensomeAllowancePct = cup.greensome_allowance_pct ?? 100;
-  const chapmanAllowancePct = cup.chapman_allowance_pct ?? 100;
-  const gruesomeAllowancePct = cup.gruesome_allowance_pct ?? 50;
+  // Cupens standard (`ALLOWANCE_DEFAULTS`, four-ball 90 fra #2997) hvis
+  // cup-raden ikke har verdien satt (eldre cups før 0045-migrasjonen, eller
+  // cups opprettet før chunk 5 lå ute).
+  const fourballAllowancePct = cup.fourball_allowance_pct ?? ALLOWANCE_DEFAULTS.fourball;
+  const foursomesAllowancePct = cup.foursomes_allowance_pct ?? ALLOWANCE_DEFAULTS.foursomes;
+  const greensomeAllowancePct = cup.greensome_allowance_pct ?? ALLOWANCE_DEFAULTS.greensome;
+  const chapmanAllowancePct = cup.chapman_allowance_pct ?? ALLOWANCE_DEFAULTS.chapman;
+  const gruesomeAllowancePct = cup.gruesome_allowance_pct ?? ALLOWANCE_DEFAULTS.gruesome;
   return {
     id: cup.id,
     name: cup.name,

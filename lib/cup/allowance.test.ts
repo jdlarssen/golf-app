@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { ALLOWANCE_DEFAULTS, parseAllowancePct } from './allowance';
+import { defaultMatchAllowancePct } from '@/lib/games/formatSetupDefaults';
 
 describe('ALLOWANCE_DEFAULTS', () => {
-  it('fourball default is 85 (WHS)', () => {
-    expect(ALLOWANCE_DEFAULTS.fourball).toBe(85);
+  it('fourball default is 90 (NGF vedlegg C s. 75, #2997), the wizard\'s too', () => {
+    expect(ALLOWANCE_DEFAULTS.fourball).toBe(90);
+    expect(ALLOWANCE_DEFAULTS.fourball).toBe(defaultMatchAllowancePct('fourball_matchplay'));
   });
   it('foursomes default is 50 (WHS)', () => {
     expect(ALLOWANCE_DEFAULTS.foursomes).toBe(50);
@@ -24,8 +26,8 @@ describe('ALLOWANCE_DEFAULTS', () => {
 
 describe('parseAllowancePct', () => {
   // Empty string → return defaultPct (not a hard-coded value)
-  it('empty string returns the given defaultPct (fourball=85)', () => {
-    expect(parseAllowancePct('', ALLOWANCE_DEFAULTS.fourball)).toBe(85);
+  it('empty string returns the given defaultPct (fourball=90)', () => {
+    expect(parseAllowancePct('', ALLOWANCE_DEFAULTS.fourball)).toBe(90);
   });
   it('empty string returns the given defaultPct (foursomes=50)', () => {
     expect(parseAllowancePct('', ALLOWANCE_DEFAULTS.foursomes)).toBe(50);

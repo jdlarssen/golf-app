@@ -102,6 +102,38 @@ export function defaultHcpAllowancePct(mode: GameMode, teamSize: FormatTeamSize)
   return 100;
 }
 
+/** The match formats with their own share in `mode_config.allowance_pct`. */
+export type MatchAllowanceMode =
+  | 'fourball_matchplay'
+  | 'round_robin'
+  | 'foursomes_matchplay'
+  | 'greensome_matchplay'
+  | 'chapman_matchplay'
+  | 'gruesome_matchplay';
+
+/**
+ * The share a match format with its own field starts on in the wizard, and the
+ * validator's draft fallback. NGF vedlegg C, s. 75: four-ball match play 90 %
+ * (#2997, F18; Round Robin is four-ball with rotating partners and follows
+ * it), foursomes and gruesome 50 %, greensome and chapman 100 %. The
+ * organiser can still pick another share, and a game keeps the share it was
+ * saved with. The engines' own fallbacks for a config without the field are
+ * not this number.
+ */
+export function defaultMatchAllowancePct(mode: MatchAllowanceMode): number {
+  switch (mode) {
+    case 'fourball_matchplay':
+    case 'round_robin':
+      return 90;
+    case 'foursomes_matchplay':
+    case 'gruesome_matchplay':
+      return 50;
+    case 'greensome_matchplay':
+    case 'chapman_matchplay':
+      return 100;
+  }
+}
+
 /**
  * Shamble / Champagne Scramble (#285): the shamble preset, two scores count,
  * net. The validator falls back to the same values.
