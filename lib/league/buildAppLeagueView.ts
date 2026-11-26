@@ -3,6 +3,7 @@ import type { AppLeagueParticipantDetails, AppLeagueView } from './appLeagueView
 import { participantShareUrl } from './joinCode';
 import { leagueSelfServiceState } from './selfService';
 import { normalizeSimSettings } from './simSettings';
+import { leagueTable } from './standingsFormat';
 import type { LeagueFormat, LeagueScoring, LeagueStatus, StandingsModel } from './types';
 import { playerName } from '../names/playerName';
 
@@ -35,9 +36,7 @@ export function buildAppLeagueView(
 ): AppLeagueView {
   const { league, rounds, participants, standings } = snapshot;
   const scoring = SCORINGS.find((s) => s === league.scoring) ?? 'net';
-  // The league's own axis: gross in a gross league, net otherwise ('both' is
-  // legacy and ranks net first, as the web panel does).
-  const table = (scoring === 'gross' ? standings.gross : standings.net) ?? standings.net ?? standings.gross;
+  const table = leagueTable(standings, scoring);
   const mine = participants.find((p) => p.userId === userId);
   const isParticipant = mine !== undefined;
   const status = STATUSES.find((s) => s === league.status) ?? 'draft';

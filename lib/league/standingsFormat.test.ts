@@ -4,6 +4,9 @@ import {
   formatPoints,
   formatRoundCell,
   formatSeasonValue,
+  isPointsCell,
+  leagueTable,
+  myRoundCell,
   roundCellValue,
   splitStandings,
   tableRounds,
@@ -151,5 +154,88 @@ describe('splitStandings — the groups under the ranked rows (#1378)', () => {
 
   it('no rows', () => {
     expect(splitStandings([])).toEqual({ ranked: [], notRanked: [], notRankedYet: [] });
+  });
+});
+
+describe('leagueTable — the league\'s own axis (#2980)', () => {
+  const standings = { net: 'net-table', gross: 'gross-table' };
+
+  it('gross in a gross league, net in a net league and in a legacy «both» league', () => {
+    expect([
+      leagueTable(standings, 'gross'),
+      leagueTable(standings, 'net'),
+      leagueTable(standings, 'both'),
+    ]).toEqual(['gross-table', 'net-table', 'net-table']);
+  });
+
+  it('falls back to the table the league has', () => {
+    expect(leagueTable({ net: null, gross: 'gross-table' }, 'net')).toBe('gross-table');
+    expect(leagueTable({ net: 'net-table', gross: null }, 'gross')).toBe('net-table');
+    expect(leagueTable({ net: null, gross: null }, 'net')).toBeNull();
+  });
+});
+
+describe('myRoundCell — your own number in the round list (#2980)', () => {
+  const cell = (
+    roundId: string,
+    value: number | null,
+    extra: Partial<{ points: number | null; penalised: boolean; gameId: string | null }> = {},
+  ) => ({ roundId, value, points: null, penalised: false, gameId: value === null ? null : `g-${roundId}`, ...extra });
+  const rows = [
+    { userId: 'martin', perRound: [cell('r1', 38), cell('r2', 31)] },
+    {
+      userId: 'me',
+      perRound: [
+        cell('r1', 34),
+        cell('r2', null),
+        cell('r3', 0),
+        cell('r4', 18, { penalised: true, gameId: null }),
+        cell('r5', 33, { gameId: null }),
+      ],
+    },
+  ];
+
+  it('a played round gives your number and the flight behind it, not someone else\'s', () => {
+    expect(myRoundCell(rows, 'me', 'r1', 'total')).toEqual({ raw: 34, gameId: 'g-r1' });
+    expect(myRoundCell(rows, 'martin', 'r1', 'total')).toEqual({ raw: 38, gameId: 'g-r1' });
+  });
+
+  it('a result of zero is a number («E», 0 poeng), not «not played»', () => {
+    expect(myRoundCell(rows, 'me', 'r3', 'best_n')).toEqual({ raw: 0, gameId: 'g-r3' });
+  });
+
+  it('nothing for a round you did not play, a penalty, a round without a cell, and a viewer without a row', () => {
+    expect(myRoundCell(rows, 'me', 'r2', 'total')).toBeNull();
+    expect(myRoundCell(rows, 'me', 'r4', 'total')).toBeNull();
+    expect(myRoundCell(rows, 'me', 'r9', 'total')).toBeNull();
+    expect(myRoundCell(rows, 'sindre', 'r1', 'total')).toBeNull();
+    expect(myRoundCell(rows, null, 'r1', 'total')).toBeNull();
+    expect(myRoundCell([], 'me', 'r1', 'total')).toBeNull();
+  });
+
+  it('a played round without a flight (no card for the caller) keeps the number', () => {
+    expect(myRoundCell(rows, 'me', 'r5', 'total')).toEqual({ raw: 33, gameId: null });
+  });
+
+  it('a cell from a server before #2815 has no flight', () => {
+    const old = [{ userId: 'me', perRound: [{ roundId: 'r1', value: 34, points: null, penalised: false }] }];
+    expect(myRoundCell(old, 'me', 'r1', 'total')).toEqual({ raw: 34, gameId: null });
+  });
+
+  it('under the points model the number is the round\'s points, as in the table', () => {
+    const pointsRows = [{ userId: 'me', perRound: [cell('r1', -2, { points: 10 }), cell('r2', 1, { points: null })] }];
+    expect(myRoundCell(pointsRows, 'me', 'r1', 'points')).toEqual({ raw: 10, gameId: 'g-r1' });
+    expect(myRoundCell(pointsRows, 'me', 'r2', 'points')).toBeNull();
+    expect(myRoundCell(pointsRows, 'me', 'r1', 'total')).toEqual({ raw: -2, gameId: 'g-r1' });
+  });
+});
+
+describe('isPointsCell — when a round\'s number is points (#2980)', () => {
+  it('stableford and the points model are points; stroke play is strokes to par', () => {
+    expect([isPointsCell('total', true), isPointsCell('points', false), isPointsCell('total', false)]).toEqual([
+      true,
+      true,
+      false,
+    ]);
   });
 });
