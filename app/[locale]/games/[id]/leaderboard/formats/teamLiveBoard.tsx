@@ -40,6 +40,8 @@ type PlayerRow = {
   team_number: number | null;
   users: { name: string | null; nickname: string | null } | null;
   course_handicap: number | null;
+  /** #2997: read by the engine (`ScoringPlayer.rawCourseHandicap`). */
+  raw_course_handicap?: number | null;
   tee_gender: TeeGender;
   withdrawn_at: string | null;
   flight_number?: number | null;

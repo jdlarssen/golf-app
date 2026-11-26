@@ -4,11 +4,12 @@
 // lag-kollapsede modusene).
 
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
-import { scrambleTeamHandicap } from '@/lib/scoring/teamHandicap';
+import { scrambleTeamHandicap, sideHandicap } from '@/lib/scoring/teamHandicap';
+import { patsomeTeamHandicaps } from '@/lib/scoring/modes/patsome';
 import { modeCollapsesToTeamCard } from '@/lib/scoring/modes/types';
 import {
   alternateShotSideExtras,
-  matchSideCourseHandicaps,
+  matchStrokeBases,
   matchStrokeHandicap,
 } from '@/lib/scoring/allocatedStrokes';
 import { nameInitials } from '@/lib/names/initials';
@@ -55,6 +56,21 @@ export function buildRoundRobinPlayers(args: {
       teamNumber: p.team_number as number,
       name: playerName(p.users) ?? unknownPlayer,
     }));
+}
+
+/** A roster row as the engine's team handicaps read it (#2997: with the unrounded value). */
+function sidePlayer(p: PlayerForHole): { courseHandicap: number; rawCourseHandicap: number | null } {
+  return { courseHandicap: p.course_handicap ?? 0, rawCourseHandicap: p.raw_course_handicap ?? null };
+}
+
+/** A roster row as `matchStrokeBases` reads it. */
+function matchRosterRow(p: PlayerForHole) {
+  return {
+    teamNumber: p.team_number,
+    courseHandicap: p.course_handicap,
+    rawCourseHandicap: p.raw_course_handicap ?? null,
+    withdrawnAt: p.withdrawn_at,
+  };
 }
 
 /**
@@ -105,20 +121,18 @@ export function buildPlayersForClient(args: {
   if (!modeCollapsesToTeamCard(game.game_mode, holeNumber)) {
     // #2218: the strokes the engine counts — fourball/round robin allowance,
     // 0 for the gross options (patsome holes 1–6 included). The raw frozen
-    // CH made the card give strokes the leaderboard never did. A new singles
-    // match gives the difference to the opponent (audit 2026-11-20), so the
-    // two sides' CHs go in (the whole roster's, not the flight's), as the
-    // engine reads them.
-    const matchChs = matchSideCourseHandicaps(
-      allPlayers.map((p) => ({ teamNumber: p.team_number, courseHandicap: p.course_handicap })),
-    );
+    // CH made the card give strokes the leaderboard never did. A new singles,
+    // four-ball or Round Robin match gives the difference to the lowest
+    // (audit 2026-11-20, #2997), so the whole roster goes in (not the
+    // flight), as the engine reads it, with the unrounded course handicap.
+    const matchBases = matchStrokeBases(game.game_mode, allPlayers.map(matchRosterRow));
     return flight.map((p) => {
       const name = playerName(p.users) ?? unknownPlayer;
       const ch = matchStrokeHandicap(
         game.game_mode,
         game.mode_config,
-        p.course_handicap ?? 0,
-        matchChs,
+        { courseHandicap: p.course_handicap, rawCourseHandicap: p.raw_course_handicap },
+        matchBases,
       );
       const scoreRow = scoresByUser[p.user_id];
       return {
@@ -165,10 +179,6 @@ export function buildPlayersForClient(args: {
       ...activeTeamPlayers,
       ...withdrawnOnTeamInPlay(activeTeamPlayers),
     ];
-    const combinedCH = teamPlayers.reduce(
-      (sum, p) => sum + (p.course_handicap ?? 0),
-      0,
-    );
     if (isDiffFormat) {
       // Alle lag-spillere på motstandersiden — bruk allPlayers for diff-beregning.
       const activeOppPlayers = allPlayers.filter(
@@ -184,12 +194,10 @@ export function buildPlayersForClient(args: {
       // #1447/#2218: side handicap, the organiser's own team strokes
       // (D10 override) and allowance come from the one home the scorecard
       // and the engine test share — not a third copy of the rule here.
-      const chs = (players: PlayerForHole[]) =>
-        players.map((p) => p.course_handicap ?? 0);
       const [side1, side2] =
         teamNum === 1
-          ? [chs(teamPlayers), chs(oppPlayers)]
-          : [chs(oppPlayers), chs(teamPlayers)];
+          ? [teamPlayers.map(sidePlayer), oppPlayers.map(sidePlayer)]
+          : [oppPlayers.map(sidePlayer), teamPlayers.map(sidePlayer)];
       const { side1Extra, side2Extra } = alternateShotSideExtras(
         game.game_mode,
         game.mode_config,
@@ -202,13 +210,10 @@ export function buildPlayersForClient(args: {
         game.mode_config.kind === 'patsome'
           ? game.mode_config.patsome_scoring
           : 'net';
-      if (patsomeScoring === 'gross') return 0;
-      if (holeNumber <= 12) {
-        const chs = teamPlayers.map((p) => p.course_handicap ?? 0);
-        if (chs.length === 0) return 0;
-        return Math.round(0.6 * Math.min(...chs) + 0.4 * Math.max(...chs));
-      }
-      return Math.round(0.5 * combinedCH);
+      // #2997: the engine's own team handicaps (`patsomeTeamHandicaps`), so
+      // the card cannot drift from the board.
+      const handicaps = patsomeTeamHandicaps(teamPlayers.map(sidePlayer), patsomeScoring);
+      return holeNumber <= 12 ? handicaps.greensome : handicaps.foursomes;
     } else {
       // Texas/ambrose/florida
       const handicapPct =
@@ -218,7 +223,7 @@ export function buildPlayersForClient(args: {
           ? game.mode_config.team_handicap_pct
           : 0;
       return scrambleTeamHandicap(
-        combinedCH,
+        sideHandicap('sum', teamPlayers.map(sidePlayer)),
         handicapPct,
         game.mode_config.team_size,
         teamPlayers.length,

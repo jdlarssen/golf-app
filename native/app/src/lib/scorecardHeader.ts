@@ -41,6 +41,8 @@ export type HandicapPart = { kind: 'course' | 'playing' | 'team'; value: number 
 export function scorecardHandicapPart(opts: {
   game: Pick<BundleGame, 'gameMode' | 'modeConfig' | 'hcpAllowancePct' | 'hcpMaxStrokes'>;
   courseHandicap: number | null;
+  /** #2997: det urundede banehandicapet starten frøs, eller null. */
+  rawCourseHandicap?: number | null;
   /** Kortet viser lagets rader (formatet deler én ball). */
   teamMode: boolean;
   /** Lagets handicap fra motoren (`teamHandicapFor`), eller `null`. */
@@ -55,7 +57,11 @@ export function scorecardHandicapPart(opts: {
     return { kind: 'team', value: opts.teamHandicap };
   }
   if (opts.courseHandicap == null) return null;
-  const playing = playerStrokeHandicapFor(opts.game, opts.courseHandicap);
+  const playing = playerStrokeHandicapFor(
+    opts.game,
+    opts.courseHandicap,
+    opts.rawCourseHandicap,
+  );
   if (playing == null) return null;
   // #2712: the frozen course handicap already carries the game's share and cap
   // (`recomputeCourseHandicap`), so under 100 %, or at the cap, the stored

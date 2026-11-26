@@ -3,6 +3,7 @@ import {
   carryPreservedModeConfigKeys,
   editedModeConfig,
   stampNewGameModeConfig,
+  stampNewMatchConfig,
 } from './modeConfigEdit';
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
 
@@ -242,6 +243,36 @@ describe('stampNewGameModeConfig (#2314)', () => {
   it('a draft that switches away from wolf drops the flag', () => {
     const skins = { kind: 'skins', team_size: 1, skins_scoring: 'net' } as GameModeConfig;
     expect(carryPreservedModeConfigKeys(flaggedWolf, skins)).toEqual(skins);
+  });
+});
+
+describe('stampNewGameModeConfig (four-ball og Round Robin, #2997)', () => {
+  // F15: a new four-ball or Round Robin match gives the lowest 0 and the
+  // others the share of the difference; one created before keeps each
+  // player's own share and is never recalculated.
+  const fourball = { kind: 'fourball_matchplay', team_size: 2, teams_count: 2, allowance_pct: 90 } as GameModeConfig;
+  const roundRobin = { kind: 'round_robin', team_size: 1, teams_count: 4, allowance_pct: 90 } as GameModeConfig;
+
+  it.each([
+    ['four-ball', fourball],
+    ['Round Robin', roundRobin],
+  ])('stamps the difference rule on a new %s match', (_label, config) => {
+    expect(stampNewGameModeConfig(config)).toEqual({ ...config, match_strokes: 'difference' });
+    expect(stampNewMatchConfig(config)).toEqual({ ...config, match_strokes: 'difference' });
+  });
+
+  it.each([
+    ['four-ball', fourball],
+    ['Round Robin', roundRobin],
+  ])('an edit of a %s match without the flag does not add it, and one with it keeps it', (_label, config) => {
+    expect(editedModeConfig(config, config)).not.toHaveProperty('match_strokes');
+    const flagged = { ...config, match_strokes: 'difference' } as GameModeConfig;
+    expect(editedModeConfig(flagged, config)).toEqual(flagged);
+  });
+
+  it('stampNewMatchConfig leaves every other format unchanged', () => {
+    const foursomes = { kind: 'foursomes_matchplay', team_size: 2, teams_count: 2, allowance_pct: 50 } as GameModeConfig;
+    expect(stampNewMatchConfig(foursomes)).toBe(foursomes);
   });
 });
 

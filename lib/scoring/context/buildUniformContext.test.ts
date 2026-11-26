@@ -159,6 +159,8 @@ describe('buildUniformContext — spiller-mapping', () => {
         teamNumber: 2,
         flightNumber: null,
         courseHandicap: 18,
+        // #2997: a row without the unrounded value reads as not frozen.
+        rawCourseHandicap: null,
         teeGender: 'ladies',
       },
     ]);

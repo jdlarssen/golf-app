@@ -761,6 +761,8 @@ describe('createAndPublishGame', () => {
       team_size: 2,
       teams_count: 2,
       allowance_pct: 85,
+      // #2997 (F15): a new four-ball match gives the share of the difference.
+      match_strokes: 'difference',
     });
   });
 

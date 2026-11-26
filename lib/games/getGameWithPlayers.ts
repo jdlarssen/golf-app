@@ -204,6 +204,12 @@ export type PlayerForHole = {
   team_number: number;
   flight_number: number;
   course_handicap: number | null;
+  /**
+   * #2997: the unrounded course handicap frozen at start (0258); null = not
+   * frozen. `PLAYERS_SELECT` always reads it; optional so a hand-built row
+   * (tests, the demo) reads as «not frozen».
+   */
+  raw_course_handicap?: number | null;
   submitted_at: string | null;
   /**
    * #2200: who marked the card delivered (trigger-filled, 0191). Differs from
@@ -262,7 +268,7 @@ export const GAME_SELECT =
   'id, name, status, created_by, tournament_id, league_round_id, group_id, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, tee_interval_minutes, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, side_ld_holes, side_ctp_holes, game_mode, mode_config, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, round_report, entry_fee_kr, payment_link, prizes, hole_segment, start_type, source_game_id, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
 
 export const PLAYERS_SELECT =
-  'user_id, team_number, flight_number, course_handicap, submitted_at, submitted_by_user_id, marker_user_id, approved_at, rejection_reason, withdrawn_at, withdrawn_by_user_id, accepted_at, paid_at, tee_gender, users!game_players_user_id_fkey(name, nickname, is_guest)';
+  'user_id, team_number, flight_number, course_handicap, raw_course_handicap, submitted_at, submitted_by_user_id, marker_user_id, approved_at, rejection_reason, withdrawn_at, withdrawn_by_user_id, accepted_at, paid_at, tee_gender, users!game_players_user_id_fkey(name, nickname, is_guest)';
 
 async function fetchGameWithPlayers(
   id: string,

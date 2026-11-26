@@ -23,7 +23,7 @@ const INSERT_SITES: Record<string, { count: number; stamps: boolean; reason: str
     count: 1,
     stamps: false,
     reason:
-      'cup matches are matchplay or best ball (CupBundleFormat); the cup keeps the original ranking rule by decision (contract #2625). Its singles matches get the difference rule through stampNewSinglesMatchConfig (audit 2026-11-20)',
+      'cup matches are matchplay or best ball (CupBundleFormat); the cup keeps the original ranking rule by decision (contract #2625). Its singles and four-ball matches get the difference rule through stampNewMatchConfig (audit 2026-11-20, #2997)',
   },
   'lib/league/startLeagueRoundFlightCore.ts': {
     count: 1,
@@ -114,10 +114,12 @@ describe('games insert sites stamp the net-to-par ranking (#2253, #2625)', () =>
     expect(sources['lib/cup/insertCupMatches.ts']).not.toContain('stampNewGameModeConfig(');
   });
 
-  it('the cup stamps its singles matches with the difference rule (audit 2026-11-20)', () => {
-    // A new singles match gives the higher handicap the difference, in the cup
-    // too. The narrow stamp touches singles only, so cup best ball keeps #2625.
-    expect(sources['lib/cup/insertCupMatches.ts']).toContain('stampNewSinglesMatchConfig(');
+  it('the cup stamps its singles and four-ball matches with the difference rule (audit 2026-11-20, #2997)', () => {
+    // A new singles or four-ball match gives the lowest 0 and the others the
+    // difference, in the cup too. The narrow stamp touches only the match
+    // formats, so cup best ball keeps #2625.
+    expect(sources['lib/cup/insertCupMatches.ts']).toContain('stampNewMatchConfig(');
+    expect(sources['lib/cup/insertCupMatches.ts']).not.toContain('stampNewSinglesMatchConfig(');
   });
 
   it('no database function inserts a game', () => {

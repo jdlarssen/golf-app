@@ -4,10 +4,10 @@ import {
   teamScoreOwnerId,
 } from './teamCaptain';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
-import { scrambleTeamHandicap } from '@/lib/scoring/teamHandicap';
+import { scrambleTeamHandicap, sideHandicap } from '@/lib/scoring/teamHandicap';
 import {
   alternateShotSideExtras,
-  matchSideCourseHandicaps,
+  matchStrokeBases,
   matchStrokeHandicap,
 } from '@/lib/scoring/allocatedStrokes';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
@@ -148,6 +148,11 @@ interface ColumnFormatter {
   displayName(player: PlayerForHole, fallback: string): string;
 }
 
+/** A roster row as the engine's team handicaps read it (#2997: with the unrounded value). */
+function sidePlayer(p: PlayerForHole): { courseHandicap: number; rawCourseHandicap: number | null } {
+  return { courseHandicap: p.course_handicap ?? 0, rawCourseHandicap: p.raw_course_handicap ?? null };
+}
+
 /**
  * Bestemmer scorekort-layout basert på spillmodus, spillerlista og
  * reveal-state. Ren funksjon (ingen DB-tilgang) — call-site fetcher
@@ -184,10 +189,8 @@ export function resolveScorecardLayout(
       teamMembers.length > 0
         ? teamRowOwners(teamMembers)
         : { ownerId: me.user_id, formerOwnerIds: [] };
-    const combinedCH = teamMembers.reduce(
-      (sum, p) => sum + (p.course_handicap ?? 0),
-      0,
-    );
+    // #2997 (F25): the unrounded course handicaps when the start froze them.
+    const combinedCH = sideHandicap('sum', teamMembers.map(sidePlayer));
     const pct =
       cfg.kind === 'texas_scramble' || cfg.kind === 'ambrose' || cfg.kind === 'florida_scramble'
         ? cfg.team_handicap_pct
@@ -281,8 +284,7 @@ export function resolveScorecardLayout(
     // `team_strokes_override`, #1441) og allowance kommer fra samme hjem som
     // hull-siden, bundet til motoren med test. Sidene mappes til side 1/2
     // etter team_number, som i motoren.
-    const chs = (sidePlayers: PlayerForHole[]) =>
-      sidePlayers.map((p) => p.course_handicap ?? 0);
+    const chs = (sidePlayers: PlayerForHole[]) => sidePlayers.map(sidePlayer);
     const meIsSide2 = me.team_number === 2;
     const { side1Extra, side2Extra } = alternateShotSideExtras(
       mode,
@@ -370,12 +372,24 @@ export function resolveScorecardLayout(
 
   // #2218: the handicap the engine spreads over SI for one player —
   // fourball/round robin allowance, 0 for the gross options, the difference
-  // on a new singles match (audit 2026-11-20), raw elsewhere.
-  const matchChs = matchSideCourseHandicaps(
-    players.map((p) => ({ teamNumber: p.team_number, courseHandicap: p.course_handicap })),
+  // to the lowest on a new singles, four-ball or Round Robin match (audit
+  // 2026-11-20, #2997), raw elsewhere.
+  const matchBases = matchStrokeBases(
+    mode,
+    players.map((p) => ({
+      teamNumber: p.team_number,
+      courseHandicap: p.course_handicap,
+      rawCourseHandicap: p.raw_course_handicap ?? null,
+      withdrawnAt: p.withdrawn_at,
+    })),
   );
   const strokeHandicap = (p: PlayerForHole): number =>
-    matchStrokeHandicap(mode, cfg, p.course_handicap ?? 0, matchChs);
+    matchStrokeHandicap(
+      mode,
+      cfg,
+      { courseHandicap: p.course_handicap, rawCourseHandicap: p.raw_course_handicap ?? null },
+      matchBases,
+    );
 
   if (!isTeamMode || revealActive) {
     return {

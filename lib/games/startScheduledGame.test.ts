@@ -3,6 +3,7 @@ import { buildSupabaseMock as buildQueueMock, type QueryResult } from '@/tests/s
 import { startScheduledGame } from './startScheduledGame';
 import { readStartBlock } from './startScheduledGameCore';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import { roundHalfUp } from '@/lib/scoring/courseHandicap';
 
 /**
  * #2207: the profile gate is the `incomplete_profile_ids` RPC, not a users
@@ -355,7 +356,12 @@ describe('startScheduledGame — incomplete_sides guard', () => {
     ).__fromCalls.find(
       (c) => c.table === 'game_players' && c.method === 'update',
     );
-    expect(chUpdate?.args[0]).toEqual({ course_handicap: 14, full_course_handicap: 14 });
+    expect(chUpdate?.args[0]).toEqual({
+      course_handicap: 14,
+      full_course_handicap: 14,
+      // #2997: the unrounded value next to the two integers.
+      raw_course_handicap: 10 * (135 / 113) + (74.5 - 72),
+    });
   });
 });
 
@@ -1799,9 +1805,13 @@ describe('startScheduledGame — ligaens andel og tak på slag (#2660)', () => {
       )
       .map((c) => c.args[0]);
     expect(frozen).toEqual([
-      { course_handicap: 11, full_course_handicap: 14 },
-      { course_handicap: 32, full_course_handicap: 67 },
+      { course_handicap: 11, full_course_handicap: 14, raw_course_handicap: expect.any(Number) },
+      { course_handicap: 32, full_course_handicap: 67, raw_course_handicap: expect.any(Number) },
     ]);
+    // #2997: the invariant the column comment states, full = round(raw).
+    for (const row of frozen as Array<{ full_course_handicap: number; raw_course_handicap: number }>) {
+      expect(roundHalfUp(row.raw_course_handicap)).toBe(row.full_course_handicap);
+    }
   });
 });
 
@@ -1965,6 +1975,7 @@ describe('startScheduledGame — shamble med handicapprosent (#2570)', () => {
     expect(await frozenHandicap(80, 'shamble')).toEqual({
       course_handicap: 16,
       full_course_handicap: 20,
+      raw_course_handicap: 20,
     });
   });
 
@@ -1972,6 +1983,7 @@ describe('startScheduledGame — shamble med handicapprosent (#2570)', () => {
     expect(await frozenHandicap(80, 'champagne')).toEqual({
       course_handicap: 16,
       full_course_handicap: 20,
+      raw_course_handicap: 20,
     });
   });
 
@@ -1979,6 +1991,7 @@ describe('startScheduledGame — shamble med handicapprosent (#2570)', () => {
     expect(await frozenHandicap(100, 'shamble')).toEqual({
       course_handicap: 20,
       full_course_handicap: 20,
+      raw_course_handicap: 20,
     });
   });
 });
@@ -2027,6 +2040,12 @@ describe('startScheduledGame — 0,5 rounds up in both frozen numbers (#2939, F3
         __fromCalls: Array<{ table: string; method: string; args: unknown[] }>;
       }
     ).__fromCalls.find((c) => c.table === 'game_players' && c.method === 'update');
-    expect(chUpdate?.args[0]).toEqual({ course_handicap: 24, full_course_handicap: 24 });
+    expect(chUpdate?.args[0]).toEqual({
+      course_handicap: 24,
+      full_course_handicap: 24,
+      raw_course_handicap: expect.any(Number),
+    });
+    const written = chUpdate?.args[0] as { full_course_handicap: number; raw_course_handicap: number };
+    expect(roundHalfUp(written.raw_course_handicap)).toBe(written.full_course_handicap);
   });
 });

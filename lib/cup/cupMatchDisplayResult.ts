@@ -32,7 +32,7 @@ export type CupMatchDisplayResultInput = {
   modeConfig: {
     allowance_pct?: number;
     team_strokes_override?: { team1: number; team2: number };
-    /** Singel-match: forskjellen i slag (revisjonen 20.11). */
+    /** Singel- og four-ball-match: forskjellen til den laveste (revisjonen 20.11, #2997). */
     match_strokes?: 'difference';
   } | null;
   side1: CupMatchSidePlayer[];

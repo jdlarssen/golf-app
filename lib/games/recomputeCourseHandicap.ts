@@ -41,6 +41,8 @@ export interface RecomputeUpdate {
   courseHandicap: number;
   /** The full course handicap (100 %) the score differential uses (F1). */
   fullCourseHandicap: number;
+  /** #2997: the unrounded course handicap; `fullCourseHandicap = round(raw)`. */
+  rawCourseHandicap: number;
 }
 
 /**
@@ -90,6 +92,7 @@ export function planHandicapRecompute(
       gameId: row.gameId,
       courseHandicap: playingHandicapFromRaw(raw, row.allowancePct, row.maxStrokes),
       fullCourseHandicap: roundHalfUp(raw),
+      rawCourseHandicap: raw,
     });
   }
   return updates;
@@ -312,6 +315,7 @@ export async function recomputeCourseHandicapForUser(
       .update({
         course_handicap: update.courseHandicap,
         full_course_handicap: update.fullCourseHandicap,
+        raw_course_handicap: update.rawCourseHandicap,
       })
       .eq('user_id', userId)
       .eq('game_id', update.gameId)

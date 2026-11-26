@@ -27,9 +27,9 @@ import { supportsNetToParRanking } from '@/lib/scoring/tiebreaker';
  * `wolf_rotation` (#2314) follows the same pattern: stamped on a new wolf
  * game, carried through an edit, and never added to a game created before.
  *
- * `match_strokes` (owner-ordered audit 2026-11-20) too: stamped on a new
- * singles match (`stampNewSinglesMatchConfig`), carried through an edit, and
- * never added to a match created before.
+ * `match_strokes` (owner-ordered audit 2026-11-20, #2997) too: stamped on a
+ * new singles, four-ball or Round Robin match (`stampNewMatchConfig`), carried
+ * through an edit, and never added to a match created before.
  */
 export const PRESERVED_MODE_CONFIG_KEYS = [
   'team_strokes_override',
@@ -41,15 +41,22 @@ export const PRESERVED_MODE_CONFIG_KEYS = [
 ] as const;
 
 /**
- * Owner-ordered audit 2026-11-20: a NEW singles match gives the higher
- * handicap the difference (`match_strokes: 'difference'`, read by
- * `singlesStrokeHandicap` in the engine). Its own function so the cup, which
- * keeps the original ranking rule on best ball (#2625), stamps its singles
- * matches without stamping anything else. Any other config is returned
- * unchanged.
+ * A NEW singles, four-ball or Round Robin match gives the lowest handicap 0
+ * strokes and the others the share of the difference (`match_strokes:
+ * 'difference'`, read by `matchDifferenceStrokes` in the engine; singles from
+ * the owner-ordered audit 2026-11-20, four-ball and Round Robin from #2997,
+ * NGF vedlegg C s. 76). Its own function so the cup, which keeps the original
+ * ranking rule on best ball (#2625), stamps its match formats without stamping
+ * anything else. Any other config is returned unchanged.
  */
-export function stampNewSinglesMatchConfig(config: GameModeConfig): GameModeConfig {
-  if (config.kind !== 'singles_matchplay') return config;
+export function stampNewMatchConfig(config: GameModeConfig): GameModeConfig {
+  if (
+    config.kind !== 'singles_matchplay' &&
+    config.kind !== 'fourball_matchplay' &&
+    config.kind !== 'round_robin'
+  ) {
+    return config;
+  }
   return { ...config, match_strokes: 'difference' };
 }
 
@@ -64,8 +71,8 @@ export function stampNewSinglesMatchConfig(config: GameModeConfig): GameModeConf
  *  - wolf gives the last holes to the player in last place only with a gap of
  *    n points (`wolf_rotation: 'catch_up'`, read by `wolfForHole` in
  *    `lib/scoring/modes/wolfTurn.ts`);
- *  - singles matchplay gives the higher handicap the difference
- *    (`stampNewSinglesMatchConfig`, audit 2026-11-20).
+ *  - singles, four-ball and Round Robin give the lowest 0 and the others the
+ *    difference (`stampNewMatchConfig`, audit 2026-11-20, #2997).
  * Every other config is returned unchanged.
  *
  * Called at every insert site that can create one of those formats — the
@@ -76,7 +83,13 @@ export function stampNewSinglesMatchConfig(config: GameModeConfig): GameModeConf
  */
 export function stampNewGameModeConfig(config: GameModeConfig): GameModeConfig {
   if (config.kind === 'wolf') return { ...config, wolf_rotation: 'catch_up' };
-  if (config.kind === 'singles_matchplay') return stampNewSinglesMatchConfig(config);
+  if (
+    config.kind === 'singles_matchplay' ||
+    config.kind === 'fourball_matchplay' ||
+    config.kind === 'round_robin'
+  ) {
+    return stampNewMatchConfig(config);
+  }
   if (!supportsNetToParRanking(config)) return config;
   return { ...config, ranking: 'net_to_par' };
 }

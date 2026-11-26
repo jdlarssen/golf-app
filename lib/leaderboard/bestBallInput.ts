@@ -1,5 +1,5 @@
 import type { LbHole, LbPlayer, LbScore } from '@/lib/leaderboard';
-import { matchSideCourseHandicaps, matchStrokeHandicap } from '@/lib/scoring/allocatedStrokes';
+import { matchStrokeBases, matchStrokeHandicap } from '@/lib/scoring/allocatedStrokes';
 import { ranksByNetToPar } from '@/lib/scoring/tiebreaker';
 import type { GameMode, GameModeConfig, ScoringGender } from '@/lib/scoring/modes/types';
 
@@ -8,6 +8,8 @@ export type BestBallRosterRow = {
   user_id: string;
   team_number: number;
   course_handicap: number | null;
+  /** #2997: the unrounded course handicap frozen at start; null = not frozen. */
+  raw_course_handicap?: number | null;
   tee_gender: ScoringGender;
   withdrawn_at: string | null;
   users: { name: string | null; nickname: string | null } | null;
@@ -71,8 +73,14 @@ export function bestBallBoardInput(opts: {
     }));
   const withdrawnIds = new Set(withdrawn.map((p) => p.user_id));
 
-  const matchChs = matchSideCourseHandicaps(
-    roster.map((p) => ({ teamNumber: p.team_number, courseHandicap: p.course_handicap })),
+  const matchBases = matchStrokeBases(
+    gameMode,
+    roster.map((p) => ({
+      teamNumber: p.team_number,
+      courseHandicap: p.course_handicap,
+      rawCourseHandicap: p.raw_course_handicap ?? null,
+      withdrawnAt: p.withdrawn_at,
+    })),
   );
   const players: LbPlayer[] = roster
     .filter((p) => p.users != null && p.withdrawn_at == null)
@@ -81,7 +89,12 @@ export function bestBallBoardInput(opts: {
       name: p.users!.name ?? unknownPlayer,
       nickname: p.users!.nickname,
       teamNumber: p.team_number,
-      courseHandicap: matchStrokeHandicap(gameMode, modeConfig, p.course_handicap ?? 0, matchChs),
+      courseHandicap: matchStrokeHandicap(
+        gameMode,
+        modeConfig,
+        { courseHandicap: p.course_handicap, rawCourseHandicap: p.raw_course_handicap ?? null },
+        matchBases,
+      ),
       teeGender: p.tee_gender,
     }));
 

@@ -513,6 +513,8 @@ describe('gameBundle', () => {
         flightNumber: 1,
         // Frossen kolonne — aldri regnet om i appen.
         courseHandicap: 12,
+        // #2997: raden har ikke det urundede tallet (runde startet før 0258).
+        rawCourseHandicap: null,
         teeGender: 'mens',
         // #463: arrangør-flatene skiller bekreftet fra ubekreftet på dette feltet.
         acceptedAt: '2026-08-29T18:00:00.000Z',
