@@ -2350,7 +2350,7 @@ describe('buildGameInsertPayload — fourball_matchplay (issue #217, fase 2 av #
     }
   });
 
-  it('draft tolererer tom allowance (defaulter til 100)', () => {
+  it('draft tolererer tom allowance (defaulter til NGF-standarden 90, #2997)', () => {
     const result = buildGameInsertPayload(
       fourballFd({
         sides: [{ userId: 'a', side: 1 }],
@@ -2360,7 +2360,7 @@ describe('buildGameInsertPayload — fourball_matchplay (issue #217, fase 2 av #
     );
     expect(result.errorCode).toBeUndefined();
     if (result.mode_config.kind === 'fourball_matchplay') {
-      expect(result.mode_config.allowance_pct).toBe(100);
+      expect(result.mode_config.allowance_pct).toBe(90);
     } else {
       throw new Error('unexpected mode_config kind');
     }
@@ -3628,7 +3628,7 @@ describe('buildGameInsertPayload — round_robin (issue #280)', () => {
     }
   });
 
-  it('draft tolererer tom allowance (defaulter til 85 WHS)', () => {
+  it('draft tolererer tom allowance (defaulter til 90 som four-ball, #2997)', () => {
     const result = buildGameInsertPayload(
       roundRobinFd({
         slots: [{ userId: 'a', slot: 1 }],
@@ -3638,7 +3638,7 @@ describe('buildGameInsertPayload — round_robin (issue #280)', () => {
     );
     expect(result.errorCode).toBeUndefined();
     if (result.mode_config.kind === 'round_robin') {
-      expect(result.mode_config.allowance_pct).toBe(85);
+      expect(result.mode_config.allowance_pct).toBe(90);
     } else {
       throw new Error('unexpected mode_config kind');
     }

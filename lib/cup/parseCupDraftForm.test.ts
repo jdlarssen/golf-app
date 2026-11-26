@@ -39,7 +39,8 @@ describe('parseCupDraftForm — happy path', () => {
         team2: 'USA',
         // Hvert felt skal få SIN egen default — en ombytting her ville gitt
         // feil slag i en hel cup uten at noe feilet.
-        fourballAllowance: 85,
+        // #2997 (F18): four-ball starts on NGF's 90.
+        fourballAllowance: 90,
         foursomesAllowance: 50,
         greensomeAllowance: 100,
         chapmanAllowance: 100,

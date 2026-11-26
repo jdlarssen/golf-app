@@ -11,7 +11,7 @@
 import { useTranslations } from 'next-intl';
 import type { GameFormState } from '../useGameFormState';
 import { showsGeneralAllowanceField } from '@/lib/games/hcpAllowance';
-import { defaultHcpAllowancePct } from '@/lib/games/formatSetupDefaults';
+import { defaultHcpAllowancePct, defaultMatchAllowancePct } from '@/lib/games/formatSetupDefaults';
 import { AllowanceField } from '@/components/admin/AllowanceField';
 import { TeamHandicapField } from './TeamHandicapField';
 import { bruttoHelperKeyFor } from '@/lib/games/allowanceCopy';
@@ -60,7 +60,7 @@ export function HandicapSettings({ state }: { state: GameFormState }) {
       {gameMode === 'fourball_matchplay' && (
         <AllowanceField
           fieldName="fourball_allowance_pct"
-          defaultPct={85}
+          defaultPct={defaultMatchAllowancePct('fourball_matchplay')}
           legend={tWizard('allowanceProps.fourball.legend')}
           description={tWizard('allowanceProps.fourball.description')}
           nettoHelperText={tWizard('allowanceProps.fourball.nettoHelper')}
@@ -73,7 +73,7 @@ export function HandicapSettings({ state }: { state: GameFormState }) {
       {gameMode === 'foursomes_matchplay' && (
         <AllowanceField
           fieldName="foursomes_allowance_pct"
-          defaultPct={50}
+          defaultPct={defaultMatchAllowancePct('foursomes_matchplay')}
           legend={tWizard('allowanceProps.foursomes.legend')}
           description={tWizard('allowanceProps.foursomes.description')}
           nettoHelperText={tWizard('allowanceProps.foursomes.nettoHelper')}
@@ -86,7 +86,7 @@ export function HandicapSettings({ state }: { state: GameFormState }) {
       {gameMode === 'greensome_matchplay' && (
         <AllowanceField
           fieldName="greensome_allowance_pct"
-          defaultPct={100}
+          defaultPct={defaultMatchAllowancePct('greensome_matchplay')}
           legend={tWizard('allowanceProps.greensome.legend')}
           description={tWizard('allowanceProps.greensome.description')}
           nettoHelperText={tWizard('allowanceProps.greensome.nettoHelper')}
@@ -99,7 +99,7 @@ export function HandicapSettings({ state }: { state: GameFormState }) {
       {gameMode === 'chapman_matchplay' && (
         <AllowanceField
           fieldName="chapman_allowance_pct"
-          defaultPct={100}
+          defaultPct={defaultMatchAllowancePct('chapman_matchplay')}
           legend={tWizard('allowanceProps.chapman.legend')}
           description={tWizard('allowanceProps.chapman.description')}
           nettoHelperText={tWizard('allowanceProps.chapman.nettoHelper')}
@@ -112,7 +112,7 @@ export function HandicapSettings({ state }: { state: GameFormState }) {
       {gameMode === 'gruesome_matchplay' && (
         <AllowanceField
           fieldName="gruesome_allowance_pct"
-          defaultPct={50}
+          defaultPct={defaultMatchAllowancePct('gruesome_matchplay')}
           legend={tWizard('allowanceProps.gruesome.legend')}
           description={tWizard('allowanceProps.gruesome.description')}
           nettoHelperText={tWizard('allowanceProps.gruesome.nettoHelper')}
@@ -125,7 +125,7 @@ export function HandicapSettings({ state }: { state: GameFormState }) {
       {isRoundRobin && (
         <AllowanceField
           fieldName="round_robin_allowance_pct"
-          defaultPct={85}
+          defaultPct={defaultMatchAllowancePct('round_robin')}
           legend={tWizard('allowanceProps.roundRobin.legend')}
           description={tWizard('allowanceProps.roundRobin.description')}
           nettoHelperText={tWizard('allowanceProps.roundRobin.nettoHelper')}

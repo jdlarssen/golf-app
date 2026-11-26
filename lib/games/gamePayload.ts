@@ -15,6 +15,7 @@ import { parseStartType, type StartType } from './startType';
 import { organizerCapBounds } from '@/lib/wizard/fitsPlayerCount';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { hcpAllowanceInPlay } from './hcpAllowance';
+import { defaultMatchAllowancePct } from './formatSetupDefaults';
 import {
   MAX_TEAM_FORMAT_PLAYERS,
   MAX_TEAM_NUMBER,
@@ -1564,12 +1565,13 @@ function validateFourballMatchplay(
   formData: FormData,
   mode: PayloadMode,
 ): ModeValidationResult {
-  // Tom allowance i draft defaulter til 100; publish krever eksplisitt verdi
-  // (wizarden pre-fyller fra `tournaments.fourball_allowance_pct`).
+  // Tom allowance i draft defaulter til NGF-standarden 90 (#2997); publish
+  // krever eksplisitt verdi (wizarden pre-fyller fra
+  // `tournaments.fourball_allowance_pct`).
   const allowancePct = parseMatchplayAllowancePct(
     formData,
     'fourball_allowance_pct',
-    100,
+    defaultMatchAllowancePct('fourball_matchplay'),
     mode,
   );
   if (allowancePct === null) {
@@ -1623,7 +1625,7 @@ function validateFoursomesMatchplay(
   const allowancePct = parseMatchplayAllowancePct(
     formData,
     'foursomes_allowance_pct',
-    50,
+    defaultMatchAllowancePct('foursomes_matchplay'),
     mode,
   );
   if (allowancePct === null) {
@@ -1674,7 +1676,7 @@ function validateGreensomeMatchplay(
   const allowancePct = parseMatchplayAllowancePct(
     formData,
     'greensome_allowance_pct',
-    100,
+    defaultMatchAllowancePct('greensome_matchplay'),
     mode,
   );
   if (allowancePct === null) {
@@ -1714,7 +1716,7 @@ function validateChapmanMatchplay(
   const allowancePct = parseMatchplayAllowancePct(
     formData,
     'chapman_allowance_pct',
-    100,
+    defaultMatchAllowancePct('chapman_matchplay'),
     mode,
   );
   if (allowancePct === null) {
@@ -1766,7 +1768,7 @@ function validateGruesomeMatchplay(
   const allowancePct = parseMatchplayAllowancePct(
     formData,
     'gruesome_allowance_pct',
-    50,
+    defaultMatchAllowancePct('gruesome_matchplay'),
     mode,
   );
   if (allowancePct === null) {
@@ -2111,7 +2113,7 @@ function validateNines(
  * (allowance). Round Robin krever spillertallet i `START_COUNT_RANGES.round_robin`
  * (nøyaktig én spiller per rotasjons-slot, matematisk tvunget) ved publish.
  * Speiler Fourball for allowance: form-feltet `round_robin_allowance_pct`
- * (0..100), default 85 i draft.
+ * (0..100), default 90 i draft (#2997).
  *
  * Regler (#969 — rotasjon tildeles ved start, ikke ved publish):
  *  - publish med påkrevd liste: under grensen → `min_players_for_mode`, over →
@@ -2166,10 +2168,10 @@ function validateRoundRobin(
  * Leser `round_robin_allowance_pct` fra form-data. Returnerer 0..100 (heltall)
  * eller null hvis ugyldig.
  *
- * Tom string i draft defaulter til 85 (WHS-default for matchplay) så partial
- * form-state ikke kaster; publish krever eksplisitt gyldig verdi (wizarden
- * pre-fyller 85 som fallback). Range 0..100 håndheves uansett.
- * Speiler `parseMatchplayAllowancePct`-mønsteret (egen parser pga. RR-default 85).
+ * Tom string i draft defaulter til 90 (NGF four-ball matchspill, #2997) så
+ * partial form-state ikke kaster; publish krever eksplisitt gyldig verdi
+ * (wizarden pre-fyller samme tall). Range 0..100 håndheves uansett.
+ * Speiler `parseMatchplayAllowancePct`-mønsteret.
  */
 function parseRoundRobinAllowancePct(
   formData: FormData,
@@ -2177,9 +2179,9 @@ function parseRoundRobinAllowancePct(
 ): number | null {
   const raw = formData.get('round_robin_allowance_pct');
   if (raw === null || raw === '') {
-    // Draft: defensiv default 85 (WHS-standard for matchplay). Publish: krev
-    // eksplisitt verdi via wizard (som alltid pre-fyller 85 som fallback).
-    return mode === 'draft' ? 85 : null;
+    // Draft: defensiv default (`defaultMatchAllowancePct`). Publish: krev
+    // eksplisitt verdi via wizard (som alltid pre-fyller samme tall).
+    return mode === 'draft' ? defaultMatchAllowancePct('round_robin') : null;
   }
   const n = Number(raw);
   if (!Number.isInteger(n) || n < 0 || n > 100) return null;
