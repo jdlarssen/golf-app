@@ -324,3 +324,65 @@ describe('computeScoreDifferential — plus-handicap player', () => {
     expect(result).toBe(-17.0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// #2939 (F2): over 54 the hole cap is par + 5
+// ---------------------------------------------------------------------------
+
+describe('computeScoreDifferential — par + 5 cap over 54 (#2939, F2)', () => {
+  /**
+   * NGF 3.1b (s. 31): with a course handicap over 54 and 4 or more strokes on
+   * a hole, the highest hole score is par + 5.
+   *
+   * CH 56 gets 4 strokes on SI 1 and 2. Par on every hole except a 12 on SI 1:
+   *   SI 1: cap = 4 + 5 = 9 (not 4 + 2 + 4 = 10), adj = 9
+   *   AGS = 17 × 4 + 9 = 77
+   *   differential = round1((113/113) × (77 − 72)) = 5.0
+   */
+  it('a 12 on SI 1 with CH 56 counts 9 and gives 5.0', () => {
+    const result = computeScoreDifferential({
+      holes: makeHoles([{ strokes: 12 }], { strokes: 4, par: 4, strokeIndex: 0 }),
+      courseHandicap: 56,
+      slope: 113,
+      courseRating: 72.0,
+    });
+    expect(result).toBe(5.0);
+  });
+
+  /**
+   * CH 72 gets 4 strokes on every hole. A 15 on every hole:
+   *   cap = 4 + 5 = 9 on every hole, AGS = 9 × 18 = 162
+   *   differential = round1(162 − 72) = 90.0
+   */
+  it('CH 72 caps every hole at par + 5', () => {
+    const result = computeScoreDifferential({
+      holes: makeHoles([], { strokes: 15, par: 4, strokeIndex: 0 }),
+      courseHandicap: 72,
+      slope: 113,
+      courseRating: 72.0,
+    });
+    expect(result).toBe(90.0);
+  });
+
+  /**
+   * At 54 and below the cap is par + 2 + strokes as before. A 15 on every hole:
+   *   CH 54: 3 strokes everywhere, cap 9, AGS 162 → 90.0
+   *   CH 18: 1 stroke everywhere, cap 7, AGS 126 → 54.0
+   *   CH 0:  cap 6, AGS 108 → 36.0
+   *   CH −1: gives back a stroke on SI 18, cap 5 there, AGS 17 × 6 + 5 = 107 → 35.0
+   */
+  it.each([
+    [54, 90.0],
+    [18, 54.0],
+    [0, 36.0],
+    [-1, 35.0],
+  ])('CH %i keeps par + 2 + strokes: %d', (courseHandicap, expected) => {
+    const result = computeScoreDifferential({
+      holes: makeHoles([], { strokes: 15, par: 4, strokeIndex: 0 }),
+      courseHandicap,
+      slope: 113,
+      courseRating: 72.0,
+    });
+    expect(result).toBe(expected);
+  });
+});

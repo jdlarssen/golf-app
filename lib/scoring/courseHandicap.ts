@@ -16,8 +16,29 @@ export function rawCourseHandicap(input: CourseHandicapInput): number {
   return input.hcpIndex * (input.slope / 113) + (input.courseRating - input.par);
 }
 
+/**
+ * #2939 (F3): what `roundHalfUp` adds before `Math.round`. See there.
+ */
+export const ROUNDING_EPSILON = 1e-9;
+
+/**
+ * Rounds to the nearest integer with 0.5 up (WHS 6.2a), also when the float
+ * lands just under an exact half (45 × 0.7 is 31.499999999999996).
+ *
+ * #2939 (F3): the inputs are an index and a course rating with one decimal and
+ * whole numbers for slope, par and percent, so the exact value is a fraction
+ * with denominator 113 000 at most. When it is not a half, it lies at least
+ * 1 / 226 000 ≈ 4.4e-6 from one. The float error is around 1e-14, so adding
+ * 1e-9 lifts a lost half back up and moves nothing else.
+ *
+ * A negative half rounds toward zero as before (−2.5 gives −2, F10).
+ */
+export function roundHalfUp(x: number): number {
+  return Math.round(x + ROUNDING_EPSILON);
+}
+
 export function calculateCourseHandicap(input: CourseHandicapInput): number {
-  return Math.round(rawCourseHandicap(input));
+  return roundHalfUp(rawCourseHandicap(input));
 }
 
 /**
@@ -33,7 +54,7 @@ export function playingHandicapFromRaw(
   percent: number,
   maxStrokes: number | null = null,
 ): number {
-  const allowed = Math.round(rawCourseHandicap * (percent / 100));
+  const allowed = roundHalfUp((rawCourseHandicap * percent) / 100);
   return maxStrokes === null ? allowed : Math.min(allowed, maxStrokes);
 }
 
@@ -51,7 +72,7 @@ export function applyAllowance(
   percent: number,
   maxStrokes: number | null = null,
 ): number {
-  const allowed = Math.round(courseHandicap * (percent / 100));
+  const allowed = roundHalfUp((courseHandicap * percent) / 100);
   return maxStrokes === null ? allowed : Math.min(allowed, maxStrokes);
 }
 
