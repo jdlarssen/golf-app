@@ -669,6 +669,7 @@ export type Database = {
           handed_over_at: string | null
           marker_user_id: string | null
           paid_at: string | null
+          raw_course_handicap: number | null
           rejection_reason: string | null
           result_summary: Json | null
           score_differential: number | null
@@ -693,6 +694,7 @@ export type Database = {
           handed_over_at?: string | null
           marker_user_id?: string | null
           paid_at?: string | null
+          raw_course_handicap?: number | null
           rejection_reason?: string | null
           result_summary?: Json | null
           score_differential?: number | null
@@ -717,6 +719,7 @@ export type Database = {
           handed_over_at?: string | null
           marker_user_id?: string | null
           paid_at?: string | null
+          raw_course_handicap?: number | null
           rejection_reason?: string | null
           result_summary?: Json | null
           score_differential?: number | null
