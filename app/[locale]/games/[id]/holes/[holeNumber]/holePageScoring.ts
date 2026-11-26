@@ -14,14 +14,14 @@ import {
 } from '@/lib/scoring/modes/wolfTurn';
 import type {
   ScoringContext,
-  ScoringHole,
   ScoringPlayer,
   ScoringHoleScore,
   WolfHoleChoice,
 } from '@/lib/scoring/modes/types';
 import type { GameForHole, PlayerForHole } from '@/lib/games/getGameWithPlayers';
-import type { HolePageData, HoleRow } from './holePageData';
+import type { HolePageData } from './holePageData';
 import { playerName } from '@/lib/names/playerName';
+import { toScoringHoles } from '@/lib/scoring/context/scoringHoles';
 
 type ScoreRowForCtx = {
   user_id: string;
@@ -29,18 +29,6 @@ type ScoreRowForCtx = {
   strokes: number | null;
 };
 
-function toScoringHoles(rows: HoleRow[] | null): ScoringHole[] {
-  return (rows ?? []).map((h) => ({
-    number: h.hole_number,
-    par: h.par_mens,
-    parByGender: {
-      mens: h.par_mens,
-      ladies: h.par_ladies,
-      juniors: h.par_juniors,
-    },
-    strokeIndex: h.stroke_index,
-  }));
-}
 
 function toScoringPlayers(allPlayers: PlayerForHole[]): ScoringPlayer[] {
   return allPlayers.map((p) => ({

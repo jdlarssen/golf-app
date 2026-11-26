@@ -9,9 +9,10 @@ import { patsomeTeamHandicaps } from '@/lib/scoring/modes/patsome';
 import { modeCollapsesToTeamCard } from '@/lib/scoring/modes/types';
 import {
   alternateShotSideExtras,
-  matchStrokeBases,
+  matchStrokeField,
   matchStrokeHandicap,
 } from '@/lib/scoring/allocatedStrokes';
+import type { ScoringHole } from '@/lib/scoring/modes/types';
 import { nameInitials } from '@/lib/names/initials';
 import { resolveFlight as resolveFlightFor } from '@/lib/games/flightScope';
 import { teamScoreOwnerId } from '@/lib/games/teamCaptain';
@@ -63,14 +64,20 @@ function sidePlayer(p: PlayerForHole): { courseHandicap: number; rawCourseHandic
   return { courseHandicap: p.course_handicap ?? 0, rawCourseHandicap: p.raw_course_handicap ?? null };
 }
 
-/** A roster row as `matchStrokeBases` reads it. */
+/** A roster row as `matchStrokeField` reads it (#2941: with the tee). */
 function matchRosterRow(p: PlayerForHole) {
   return {
     teamNumber: p.team_number,
     courseHandicap: p.course_handicap,
     rawCourseHandicap: p.raw_course_handicap ?? null,
     withdrawnAt: p.withdrawn_at,
+    teeGender: p.tee_gender,
   };
+}
+
+/** A side player as `alternateShotSideExtras` reads it: the handicaps, and the id and tee that give the captain's par (#2941). */
+function alternateShotPlayer(p: PlayerForHole) {
+  return { ...sidePlayer(p), userId: p.user_id, teeGender: p.tee_gender };
 }
 
 /**
@@ -101,6 +108,12 @@ export function buildPlayersForClient(args: {
   unknownPlayer: string;
   /** «Lag 2 · Ola, Kari» in the viewer's language; defaults to Norwegian. */
   teamName?: (number: number, names: string) => string;
+  /**
+   * #2941: the holes in scope (`holesForSegment`), with par per tee. A new
+   * match gives the higher par extra strokes over them, as the engine does.
+   * Empty (the default) gives no par strokes.
+   */
+  scopeHoles?: readonly ScoringHole[];
 }): ClientPlayer[] {
   const {
     game,
@@ -111,6 +124,7 @@ export function buildPlayersForClient(args: {
     scoresByUser,
     unknownPlayer,
     teamName = (number, names) => `Lag ${number} · ${names}`,
+    scopeHoles = [],
   } = args;
   const isFoursomes = game.game_mode === 'foursomes_matchplay';
   const isGreensome = game.game_mode === 'greensome_matchplay';
@@ -125,14 +139,19 @@ export function buildPlayersForClient(args: {
     // four-ball or Round Robin match gives the difference to the lowest
     // (audit 2026-11-20, #2997), so the whole roster goes in (not the
     // flight), as the engine reads it, with the unrounded course handicap.
-    const matchBases = matchStrokeBases(game.game_mode, allPlayers.map(matchRosterRow));
+    // #2941: with each tee and the holes in scope, for the par strokes.
+    const matchField = matchStrokeField(game.game_mode, allPlayers.map(matchRosterRow), scopeHoles);
     return flight.map((p) => {
       const name = playerName(p.users) ?? unknownPlayer;
       const ch = matchStrokeHandicap(
         game.game_mode,
         game.mode_config,
-        { courseHandicap: p.course_handicap, rawCourseHandicap: p.raw_course_handicap },
-        matchBases,
+        {
+          courseHandicap: p.course_handicap,
+          rawCourseHandicap: p.raw_course_handicap,
+          teeGender: p.tee_gender,
+        },
+        matchField,
       );
       const scoreRow = scoresByUser[p.user_id];
       return {
@@ -194,15 +213,17 @@ export function buildPlayersForClient(args: {
       // #1447/#2218: side handicap, the organiser's own team strokes
       // (D10 override) and allowance come from the one home the scorecard
       // and the engine test share — not a third copy of the rule here.
+      // #2941: the side's par is its captain's tee, over the holes in scope.
       const [side1, side2] =
         teamNum === 1
-          ? [teamPlayers.map(sidePlayer), oppPlayers.map(sidePlayer)]
-          : [oppPlayers.map(sidePlayer), teamPlayers.map(sidePlayer)];
+          ? [teamPlayers.map(alternateShotPlayer), oppPlayers.map(alternateShotPlayer)]
+          : [oppPlayers.map(alternateShotPlayer), teamPlayers.map(alternateShotPlayer)];
       const { side1Extra, side2Extra } = alternateShotSideExtras(
         game.game_mode,
         game.mode_config,
         side1,
         side2,
+        scopeHoles,
       );
       return teamNum === 1 ? side1Extra : side2Extra;
     } else if (isPatsome) {

@@ -132,3 +132,26 @@ describe('bestBallBoardInput', () => {
     expect(bestBallBoardInput(base).countback).toBeUndefined();
   });
 });
+
+describe('bestBallBoardInput — ulik par (#2941, F17)', () => {
+  // holeRows give ladies par 5 on hole 1 (men 72, ladies 73). A new singles
+  // match gives the lady one extra stroke, as the engine does.
+  const singles = (extra: object) => ({
+    ...base,
+    gameMode: 'singles_matchplay' as const,
+    modeConfig: { kind: 'singles_matchplay', team_size: 1, teams_count: 2, match_strokes: 'difference', ...extra } as never,
+    roster: [row('herre', 1), row('dame', 2, { tee_gender: 'ladies' })],
+  });
+
+  it('a new match gives the lady her par stroke', () => {
+    const input = bestBallBoardInput(singles({ par_strokes: 'difference' }));
+    expect(input.players.map((p) => [p.userId, p.courseHandicap])).toEqual([
+      ['herre', 0],
+      ['dame', 1],
+    ]);
+  });
+
+  it('a match created before gives none', () => {
+    expect(bestBallBoardInput(singles({})).players.map((p) => p.courseHandicap)).toEqual([0, 0]);
+  });
+});

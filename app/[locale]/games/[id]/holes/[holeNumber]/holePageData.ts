@@ -20,6 +20,7 @@ import { computeGreenCenter } from '@/lib/geo/greenCenter';
 import { PIN_GATE_MAX_PINS, PIN_GATE_WINDOW_DAYS } from '@/lib/geo/pinRules';
 import type { LatLng } from '@/lib/geo/distance';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import { usesParDifference } from '@/lib/scoring/parDifference';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { readHoleClaims, type HoleClaimsNeed } from '@/lib/games/sideClaims';
 import {
@@ -194,6 +195,7 @@ export async function fetchHolePageData(args: {
     siblingTeamRes,
     cupAwardsRes,
     holeClaimsRes,
+    parHolesRes,
   ] = await Promise.all([
       game.course_id
         ? supabase.from('courses').select('name').eq('id', game.course_id).maybeSingle<{ name: string }>()
@@ -327,12 +329,25 @@ export async function fetchHolePageData(args: {
       sideReads.claims
         ? readHoleClaims(supabase, { gameId, holeNumber, need: sideReads.claims })
         : Promise.resolve(null),
+      // #2941: a new match with the par rule sums every hole's par per tee
+      // for the extra strokes, as the engine does; this hole alone is not
+      // enough. Any other game skips the read.
+      usesParDifference(game.mode_config)
+        ? supabase
+            .from('course_holes')
+            .select(COURSE_HOLES_SELECT)
+            .eq('course_id', game.course_id)
+            .returns<HoleRow[]>()
+        : Promise.resolve({ data: [] as HoleRow[], error: null }),
     ]);
   const courseName = courseNameRes.data?.name ?? null;
 
   // Error ≠ absence (#1441): throw on query failure (error boundary), 404
   // only when the hole row is genuinely missing — the caller does that.
   if (holeRes.error) throw holeRes.error;
+  // #2941: without every hole the cards would give a new mixed match no par
+  // strokes while the board gives them — fail like the hole row.
+  if (parHolesRes.error) throw parHolesRes.error;
 
   return {
     courseName,
@@ -350,6 +365,8 @@ export async function fetchHolePageData(args: {
     siblingTeamRes,
     cupAwardsRes,
     holeClaimsRes,
+    /** #2941: every hole of the course for a match with the par rule, else `[]`. */
+    parHoles: parHolesRes.data ?? [],
   };
 }
 
