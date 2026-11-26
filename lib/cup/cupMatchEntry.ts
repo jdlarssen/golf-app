@@ -198,22 +198,29 @@ export function buildCupMatchEntry(input: CupMatchEntryInput): CupMatchEntry {
         }
       : null;
 
+  // #2997: a new four-ball match gives the strokes from the lowest in the
+  // match, and the match's own board leaves a withdrawn player out
+  // (`buildUniformContext`). The cup point does the same, or the two find a
+  // different lowest. Four-ball has no withdrawal mid-round
+  // (`supportsWithdrawal`), so the withdrawn player has no scores to lose, and
+  // the engine accepts one player against two (#1814). Every other format
+  // keeps the rows, for the reason above.
+  const scoringSide = (side: typeof side1Players) =>
+    (game.game_mode === 'fourball_matchplay' ? side.filter((p) => p.withdrawn_at == null) : side).map(
+      (p) => ({
+        userId: p.user_id,
+        courseHandicap: p.course_handicap ?? 0,
+        rawCourseHandicap: p.raw_course_handicap ?? null,
+      }),
+    );
   const result = computeCupMatchDisplayResult({
     gameId: game.id,
     gameMode: game.game_mode,
     status: game.status,
     scoreVisibility: game.score_visibility,
     modeConfig,
-    side1: side1Players.map((p) => ({
-      userId: p.user_id,
-      courseHandicap: p.course_handicap ?? 0,
-      rawCourseHandicap: p.raw_course_handicap ?? null,
-    })),
-    side2: side2Players.map((p) => ({
-      userId: p.user_id,
-      courseHandicap: p.course_handicap ?? 0,
-      rawCourseHandicap: p.raw_course_handicap ?? null,
-    })),
+    side1: scoringSide(side1Players),
+    side2: scoringSide(side2Players),
     holes,
     scores: scores.map((s) => ({
       userId: s.user_id,
