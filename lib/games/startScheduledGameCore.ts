@@ -3,6 +3,7 @@ import type { Database, Json } from '@/lib/database.types';
 import {
   rawCourseHandicap,
   playingHandicapFromRaw,
+  roundHalfUp,
 } from '@/lib/scoring/courseHandicap';
 import { expectAffected, expectOne } from '@/lib/supabase/affectedRows';
 import type { GameStatus } from './status';
@@ -388,8 +389,9 @@ export async function startScheduledGameCore(
       courseRating: rating.courseRating,
       par: rating.par,
     });
-    // The full course handicap (100 %), before any allowance or cap.
-    const fullCourseHandicap = Math.round(raw);
+    // The full course handicap (100 %), before any allowance or cap. #2939
+    // (F3): 0.5 rounds up also when the float lands just under.
+    const fullCourseHandicap = roundHalfUp(raw);
     frozenPlayers.push({
       teamNumber: row.team_number,
       withdrawnAt: row.withdrawn_at,
