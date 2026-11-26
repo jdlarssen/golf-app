@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeCupMatchResult, type CupMatchScoringInput } from './computeCupMatchResult';
+import { MIXED_PAR_18 } from '@/lib/scoring/__fixtures__/mixedPar';
 
 // Type-A unit-test for cup-match-scoring-dispatcheren. Dekker alle seks
 // matchplay-modi, med greensome som regresjons-case for #331 (greensome ble
@@ -377,5 +378,58 @@ describe('computeCupMatchResult — four-ball with the difference rule (#2997, F
     };
     expect(computeCupMatchResult(at90(true))).toEqual({ winnerSide: 2, formatted: '3&2' });
     expect(computeCupMatchResult(at90(false))).toEqual({ winnerSide: 2, formatted: '4&3' });
+  });
+});
+
+describe('computeCupMatchResult — ulik par (#2941, F17)', () => {
+  // A man (par 72) against a lady (par 74, par 5 on SI 1 and 2), both on 0.
+  // She plays 5 and he 4 on holes 1 and 2, both 4 elsewhere. With the par
+  // rule she gets a stroke on SI 1 and 2: every hole halved, AS. A match
+  // created before gives no extra strokes: he is 2 up with one to play, 2&1.
+  const scores = MIXED_PAR_18.flatMap((h) => [
+    { userId: 'a', holeNumber: h.number, gross: 4 },
+    { userId: 'b', holeNumber: h.number, gross: h.number <= 2 ? 5 : 4 },
+  ]);
+  const singles = (modeConfig: CupMatchScoringInput['modeConfig']): CupMatchScoringInput => ({
+    gameMode: 'singles_matchplay',
+    modeConfig,
+    side1: [{ userId: 'a', courseHandicap: 0, teeGender: 'mens' }],
+    side2: [{ userId: 'b', courseHandicap: 0, teeGender: 'ladies' }],
+    holes: MIXED_PAR_18,
+    scores,
+  });
+
+  it('a new cup singles match gives her the par strokes: AS', () => {
+    expect(computeCupMatchResult(singles({ match_strokes: 'difference', par_strokes: 'difference' }))).toEqual({
+      winnerSide: 'tied',
+      formatted: 'AS',
+    });
+  });
+
+  it('a cup singles match created before gives no par strokes: 2&1', () => {
+    expect(computeCupMatchResult(singles({ match_strokes: 'difference' }))).toEqual({ winnerSide: 1, formatted: '2&1' });
+  });
+
+  it('a new cup greensome match reads the side par from the captain\'s tee', () => {
+    // b1 is side 2's captain (lex-min) and plays from the ladies' tee.
+    const greensome = (modeConfig: CupMatchScoringInput['modeConfig']): CupMatchScoringInput => ({
+      gameMode: 'greensome_matchplay',
+      modeConfig,
+      side1: [
+        { userId: 'a1', courseHandicap: 0, teeGender: 'mens' },
+        { userId: 'a2', courseHandicap: 0, teeGender: 'mens' },
+      ],
+      side2: [
+        { userId: 'b1', courseHandicap: 0, teeGender: 'ladies' },
+        { userId: 'b2', courseHandicap: 0, teeGender: 'mens' },
+      ],
+      holes: MIXED_PAR_18,
+      scores: MIXED_PAR_18.flatMap((h) => [
+        { userId: 'a1', holeNumber: h.number, gross: 4 },
+        { userId: 'b1', holeNumber: h.number, gross: h.number <= 2 ? 5 : 4 },
+      ]),
+    });
+    expect(computeCupMatchResult(greensome({ allowance_pct: 100, par_strokes: 'difference' }))?.formatted).toBe('AS');
+    expect(computeCupMatchResult(greensome({ allowance_pct: 100 }))?.formatted).toBe('2&1');
   });
 });

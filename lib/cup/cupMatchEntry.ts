@@ -142,11 +142,13 @@ export function buildCupMatchEntry(input: CupMatchEntryInput): CupMatchEntry {
   // frosne banehandicapet, slik at kampens egen tavle og cup-poenget regner
   // med samme tall. Se `lib/cup/cupMatchAllowance.ts`.
   // `match_strokes`: forskjellen til den laveste i en ny singel- eller
-  // four-ball-match (revisjonen 20.11, #2997).
+  // four-ball-match (revisjonen 20.11, #2997). `par_strokes`: tilleggsslag
+  // for høyest par i en ny match (#2941).
   const modeConfig = (game.mode_config ?? null) as {
     allowance_pct?: number;
     team_strokes_override?: { team1: number; team2: number };
     match_strokes?: 'difference';
+    par_strokes?: 'difference';
   } | null;
 
   // #1814: er kampen avgjort ved trekk? Utledes hver gang, aldri lagret —
@@ -211,6 +213,8 @@ export function buildCupMatchEntry(input: CupMatchEntryInput): CupMatchEntry {
         userId: p.user_id,
         courseHandicap: p.course_handicap ?? 0,
         rawCourseHandicap: p.raw_course_handicap ?? null,
+        // #2941: the tee, for the extra strokes on a higher par.
+        teeGender: p.tee_gender ?? null,
       }),
     );
   const result = computeCupMatchDisplayResult({

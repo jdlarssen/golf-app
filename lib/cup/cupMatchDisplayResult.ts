@@ -34,11 +34,18 @@ export type CupMatchDisplayResultInput = {
     team_strokes_override?: { team1: number; team2: number };
     /** Singel- og four-ball-match: forskjellen til den laveste (revisjonen 20.11, #2997). */
     match_strokes?: 'difference';
+    /** Tilleggsslag for høyest par i en ny match (#2941). */
+    par_strokes?: 'difference';
   } | null;
   side1: CupMatchSidePlayer[];
   side2: CupMatchSidePlayer[];
   /** Allerede segment-filtrert (#1441 D1/D2) av kalleren. */
-  holes: Array<{ number: number; par: number; strokeIndex: number }>;
+  holes: Array<{
+    number: number;
+    par: number;
+    strokeIndex: number;
+    parByGender?: { mens: number; ladies: number; juniors: number };
+  }>;
   scores: Array<{ userId: string; holeNumber: number; gross: number | null }>;
 };
 

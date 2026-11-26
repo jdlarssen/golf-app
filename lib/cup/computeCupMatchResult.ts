@@ -4,6 +4,7 @@ import { compute as computeFoursomesMatchplay } from '@/lib/scoring/modes/fourso
 import { compute as computeGreensomeMatchplay } from '@/lib/scoring/modes/greensomeMatchplay';
 import { compute as computeChapmanMatchplay } from '@/lib/scoring/modes/chapmanMatchplay';
 import { compute as computeGruesomeMatchplay } from '@/lib/scoring/modes/gruesomeMatchplay';
+import { asScoringGender } from '@/lib/scoring/modes/parResolver';
 import type { GameMode, GameModeConfig, ScoringContext } from '@/lib/scoring/modes/types';
 import type { CupMatchInput } from './computeCupLeaderboard';
 
@@ -111,6 +112,8 @@ export type CupMatchSidePlayer = {
   courseHandicap: number;
   /** #2997: the unrounded course handicap frozen at start; null = not frozen. */
   rawCourseHandicap?: number | null;
+  /** #2941: `game_players.tee_gender`, the par the player plays to. */
+  teeGender?: string | null;
 };
 
 export type CupMatchScoringInput = {
@@ -125,15 +128,24 @@ export type CupMatchScoringInput = {
    * `match_strokes` (revisjonen 20.11) leses for `singles_matchplay` og
    * `fourball_matchplay` (#2997): en ny match gir forskjellen til den laveste
    * (`matchDifferenceStrokes`).
+   * `par_strokes` (#2941) leses for alle modusene: en ny match gir spilleren
+   * med høyest par tilleggsslag (`usesParDifference`), og da trengs
+   * spillernes `teeGender` og hullenes `parByGender`.
    */
   modeConfig: {
     allowance_pct?: number;
     team_strokes_override?: { team1: number; team2: number };
     match_strokes?: 'difference';
+    par_strokes?: 'difference';
   } | null;
   side1: CupMatchSidePlayer[];
   side2: CupMatchSidePlayer[];
-  holes: Array<{ number: number; par: number; strokeIndex: number }>;
+  holes: Array<{
+    number: number;
+    par: number;
+    strokeIndex: number;
+    parByGender?: { mens: number; ladies: number; juniors: number };
+  }>;
   scores: Array<{ userId: string; holeNumber: number; gross: number | null }>;
 };
 
@@ -174,6 +186,10 @@ export function computeCupMatchResult(input: CupMatchScoringInput): CupMatchInpu
     input.modeConfig?.match_strokes === 'difference'
       ? input.modeConfig.match_strokes
       : undefined;
+  // #2941 (F17): a new match gives the higher par extra strokes; without it
+  // here the cup point would score a mixed match without them while the match
+  // page gives them.
+  const parStrokes = input.modeConfig?.par_strokes === 'difference' ? 'difference' : undefined;
 
   const modeConfig: GameModeConfig = (
     cfg.teamSize === 1
@@ -182,6 +198,7 @@ export function computeCupMatchResult(input: CupMatchScoringInput): CupMatchInpu
           team_size: 1,
           teams_count: 2,
           ...(matchStrokes ? { match_strokes: matchStrokes } : {}),
+          ...(parStrokes ? { par_strokes: parStrokes } : {}),
         }
       : {
           kind: input.gameMode,
@@ -190,6 +207,7 @@ export function computeCupMatchResult(input: CupMatchScoringInput): CupMatchInpu
           allowance_pct: allowancePct,
           ...(teamStrokesOverride ? { team_strokes_override: teamStrokesOverride } : {}),
           ...(matchStrokes ? { match_strokes: matchStrokes } : {}),
+          ...(parStrokes ? { par_strokes: parStrokes } : {}),
         }
   ) as GameModeConfig;
 
@@ -206,6 +224,7 @@ export function computeCupMatchResult(input: CupMatchScoringInput): CupMatchInpu
         flightNumber: null,
         courseHandicap: p.courseHandicap,
         rawCourseHandicap: p.rawCourseHandicap ?? null,
+        teeGender: asScoringGender(p.teeGender),
       })),
       ...input.side2.map((p) => ({
         userId: p.userId,
@@ -213,9 +232,15 @@ export function computeCupMatchResult(input: CupMatchScoringInput): CupMatchInpu
         flightNumber: null,
         courseHandicap: p.courseHandicap,
         rawCourseHandicap: p.rawCourseHandicap ?? null,
+        teeGender: asScoringGender(p.teeGender),
       })),
     ],
-    holes: input.holes.map((h) => ({ number: h.number, par: h.par, strokeIndex: h.strokeIndex })),
+    holes: input.holes.map((h) => ({
+      number: h.number,
+      par: h.par,
+      strokeIndex: h.strokeIndex,
+      ...(h.parByGender ? { parByGender: h.parByGender } : {}),
+    })),
     scores: input.scores.map((s) => ({
       userId: s.userId,
       holeNumber: s.holeNumber,
