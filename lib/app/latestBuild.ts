@@ -40,5 +40,14 @@ export const LATEST_APP_BUILD = {
       'Flere småfeil er rettet i cup-oppsettet.',
     ] as readonly string[],
   },
-  android: { latestVersionCode: 14, latestVersion: '1.2.0', notes: [] as readonly string[] },
+  android: {
+    latestVersionCode: 15,
+    latestVersion: '1.2.0',
+    notes: [
+      'Appen sier fra når en ny versjon er klar, og viser hva som er nytt.',
+      'Bedre kontrast på brytere og på «Neste hull» om kvelden.',
+      'Tydeligere tekst om hva som skjer når du sletter kontoen.',
+      'Flere småfeil er rettet i cup-oppsettet.',
+    ] as readonly string[],
+  },
 } as const;
