@@ -5,7 +5,9 @@ import {
   DEFAULT_SHAMBLE_SETUP,
   defaultHcpAllowancePct,
   defaultMatchAllowancePct,
+  defaultPatsomeFourballAllowancePct,
   defaultTeamHandicapPct,
+  defaultTeamHandicapRule,
   defaultTeamSizeForMode,
   defaultTexasHandicapPct,
 } from './formatSetupDefaults';
@@ -68,5 +70,26 @@ describe('defaultMatchAllowancePct (#2997, F18)', () => {
     ['gruesome_matchplay', 50],
   ] as const)('%s starts on %i %%', (mode, pct) => {
     expect(defaultMatchAllowancePct(mode)).toBe(pct);
+  });
+});
+
+// #3002: new Texas and Florida games start on NGF's weighting per player
+// (F23); Ambrose keeps its formula (the owner, 24.11). Patsome plays holes
+// 1–6 on 85 % (F24).
+describe('defaultTeamHandicapRule (#3002, F23)', () => {
+  it.each([
+    ['texas_scramble', 'ngf'],
+    ['florida_scramble', 'ngf'],
+    ['ambrose', 'pct'],
+    ['best_ball', null],
+    ['patsome', null],
+  ] as const)('%s → %s', (mode, expected) => {
+    expect(defaultTeamHandicapRule(mode)).toBe(expected);
+  });
+});
+
+describe('defaultPatsomeFourballAllowancePct (#3002, F24)', () => {
+  it('is 85, NGF vedlegg C s. 75 for four-ball stableford', () => {
+    expect(defaultPatsomeFourballAllowancePct()).toBe(85);
   });
 });

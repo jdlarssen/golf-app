@@ -373,3 +373,37 @@ describe('stampNewMatchConfig (ulik par, #2941)', () => {
     expect(editedModeConfig(before, formOutput)).toEqual(before);
   });
 });
+
+// #3002: `team_handicap_rule` (scramble) and `fourball_allowance_pct`
+// (patsome) are written by the forms that show them. An edit from a client
+// without the field (an app build from before #3002) must not drop the
+// choice, and an edit never adds it to a game created without it.
+describe('carryPreservedModeConfigKeys (#3002)', () => {
+  const texas = (extra: Record<string, unknown> = {}): GameModeConfig =>
+    ({ kind: 'texas_scramble', team_size: 4, teams_count: 2, team_handicap_pct: 10, ...extra }) as GameModeConfig;
+  const patsome = (extra: Record<string, unknown> = {}): GameModeConfig =>
+    ({ kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net', ...extra }) as GameModeConfig;
+
+  it('bærer team_handicap_rule når skjemaet ikke sender den', () => {
+    expect(editedModeConfig(texas({ team_handicap_rule: 'ngf_weighted' }), texas())).toEqual(
+      texas({ team_handicap_rule: 'ngf_weighted' }),
+    );
+  });
+
+  it('lar skjemaets valg vinne', () => {
+    expect(
+      editedModeConfig(texas({ team_handicap_rule: 'ngf_weighted' }), texas({ team_handicap_rule: 'sum_pct' })),
+    ).toEqual(texas({ team_handicap_rule: 'sum_pct' }));
+  });
+
+  it('bærer fourball_allowance_pct når skjemaet ikke sender den', () => {
+    expect(editedModeConfig(patsome({ fourball_allowance_pct: 85 }), patsome())).toEqual(
+      patsome({ fourball_allowance_pct: 85 }),
+    );
+  });
+
+  it('et spill uten nøklene får dem aldri fra en redigering uten feltene', () => {
+    expect(editedModeConfig(texas(), texas())).toEqual(texas());
+    expect(editedModeConfig(patsome(), patsome())).toEqual(patsome());
+  });
+});
