@@ -427,6 +427,17 @@ export function formatCapturesPutts(mode: GameMode): boolean {
 }
 
 /**
+ * #2940: `'rulebook'` counts a tie back by Committee Procedures 5A(6)(d):
+ * after hole 18 on holes 4-9, 7-9 and 9 (F4), and in solo strokeplay with
+ * one-half, one-third, one-sixth and one-eighteenth of the handicap instead of
+ * net hole by hole (F5). Stamped on NEW games at creation
+ * (`stampNewGameModeConfig`), never added to an existing game. Absent = the
+ * five steps and net hole by hole (`rankTeams`). Asked via
+ * `countsBackByRulebook`.
+ */
+export type CountbackStamp = 'rulebook';
+
+/**
  * Mode-spesifikk config som lagres i `games.mode_config` (JSONB).
  * Diskrimineres på `kind` slik at konsumenter narrower trygt.
  *
@@ -460,17 +471,6 @@ export function formatCapturesPutts(mode: GameMode): boolean {
  *    laget representeres dette ved at lag-kapteinen (først-i-rekkefølge per
  *    lag) eier scores-radene; andre lag-medlemmer har null på sine egne rader.
  */
-/**
- * #2940: `'rulebook'` counts a tie back by Committee Procedures 5A(6)(d):
- * after hole 18 on holes 4-9, 7-9 and 9 (F4), and in solo strokeplay with
- * one-half, one-third, one-sixth and one-eighteenth of the handicap instead of
- * net hole by hole (F5). Stamped on NEW games at creation
- * (`stampNewGameModeConfig`), never added to an existing game. Absent = the
- * five steps and net hole by hole (`rankTeams`). Asked via
- * `countsBackByRulebook`.
- */
-export type CountbackStamp = 'rulebook';
-
 export type GameModeConfig =
   | {
       kind: 'best_ball';
