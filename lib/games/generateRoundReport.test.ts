@@ -534,6 +534,41 @@ describe('generateAndPersistRoundReport: a league flight (#2983)', () => {
     expect(result.status).toBe('generated');
   });
 
+  it('the passed players are named when they said yes, also outside the flight (staging 27.11)', async () => {
+    // Alice passes Bob, who is in the league but not in the flight. The
+    // consent read must cover the league, not only the flight.
+    readAiAllowedUserIdsMock.mockImplementation(async (_admin: unknown, ids: string[]) =>
+      new Set(ids.filter((id) => id === 'u1' || id === 'u9')),
+    );
+    getLigaSnapshotMock.mockResolvedValue({
+      ...SNAPSHOT,
+      standings: {
+        net: {
+          rows: [
+            { userId: 'u1', ranked: true, rank: 1, perRound: [{ roundId: 'round-2', value: 36, penalised: false }] },
+            { userId: 'u9', ranked: true, rank: 2, perRound: [] },
+          ],
+        },
+        gross: null,
+      },
+      baseline: {
+        net: {
+          rows: [
+            { userId: 'u9', ranked: true, rank: 1, perRound: [] },
+            { userId: 'u1', ranked: true, rank: 2, perRound: [] },
+          ],
+        },
+        gross: null,
+      },
+    });
+
+    await generateAndPersistRoundReport(GAME_ID);
+
+    const content = messagesCreateMock.mock.calls[0][0].messages[0].content as string;
+    const facts = JSON.parse(content.slice(content.indexOf('{')));
+    expect(facts.league.players[0]).toMatchObject({ name: 'Alice A.', move: 1, passed: ['Bob B.'] });
+  });
+
   it('a failed table read gives the report without the league block', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     getLigaSnapshotMock.mockRejectedValue(new Error('db down'));

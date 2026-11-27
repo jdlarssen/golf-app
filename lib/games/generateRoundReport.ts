@@ -294,7 +294,11 @@ async function readFlightLeague(
     if (error || !data) throw error ?? new Error(`league round ${roundId} not found`);
     const snapshot = await getLigaSnapshot(data.league_id, { baseline: { withoutGameId: gameId } });
     if (!snapshot) return null;
-    return buildFlightLeagueFacts({ snapshot, roundId, flightUserIds, aiAllowedUserIds });
+    // The players passed are in the league, not in the flight: their answer
+    // is read too (found on staging 27.11). A read error reads as nobody.
+    const others = snapshot.participants.map((p) => p.userId).filter((id) => !flightUserIds.includes(id));
+    const leagueAllowed = new Set([...aiAllowedUserIds, ...(await readAiAllowedUserIds(admin, others))]);
+    return buildFlightLeagueFacts({ snapshot, roundId, flightUserIds, aiAllowedUserIds: leagueAllowed });
   } catch (err) {
     console.error('[generateRoundReport] league read failed, the report goes without it', { gameId, err });
     return null;
