@@ -1,9 +1,11 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
 import {
+  NARRATIVE_ATTEMPTS,
   NARRATIVE_EFFORT,
   NARRATIVE_MAX_TOKENS,
   NARRATIVE_MODEL,
+  NARRATIVE_RETRY_MIN_MS,
   NARRATIVE_TIMEOUT_MS,
 } from '@/lib/ai/narrative';
 import { readAiAllowedUserIds } from '@/lib/ai/consent';
@@ -12,16 +14,6 @@ import { buildRoundNewsFacts, buildRoundNewsPrompt, checkRoundNews } from './rou
 import type { RoundSummary } from './roundSummary';
 
 type AdminClient = ReturnType<typeof getAdminClient>;
-
-/** The first draft, and one more when the first is dropped. */
-const NEWS_ATTEMPTS = 2;
-
-/**
- * A second attempt starts only with this much of the time left. The first
- * call in prod took under 7 seconds (23.11.2026); with less than this left, a
- * second draft would most likely be cut off by the deadline anyway.
- */
-const NEWS_RETRY_MIN_MS = 8_000;
 
 /**
  * The short news story about the round in `summary` (#2979), written by the
@@ -58,9 +50,9 @@ export async function generateRoundNews(
     const deadline = Date.now() + NARRATIVE_TIMEOUT_MS;
     let fault: string | null = null;
 
-    for (let attempt = 1; attempt <= NEWS_ATTEMPTS; attempt++) {
+    for (let attempt = 1; attempt <= NARRATIVE_ATTEMPTS; attempt++) {
       const timeLeft = deadline - Date.now();
-      if (attempt > 1 && timeLeft < NEWS_RETRY_MIN_MS) break;
+      if (attempt > 1 && timeLeft < NARRATIVE_RETRY_MIN_MS) break;
 
       const { system, user } = buildRoundNewsPrompt(facts, fault);
       const response = await client.messages.create(

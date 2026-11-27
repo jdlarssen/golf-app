@@ -40,6 +40,20 @@ export const NARRATIVE_TIMEOUT_MS = 20_000;
 export const NARRATIVE_MAX_RETRIES = 1;
 
 /**
+ * Et utkast som sperrene forkaster, får ett nytt forsøk med grunnen, innenfor
+ * den samme fristen (`NARRATIVE_TIMEOUT_MS`): nyhetssaken (#2979) og
+ * referatet (#2983).
+ */
+export const NARRATIVE_ATTEMPTS = 2;
+
+/**
+ * Det nye forsøket starter bare med så mye tid igjen. Det første kallet i prod
+ * tok under 7 sekunder (23.11.2026); med mindre tid igjen ville det andre
+ * utkastet trolig bli kuttet av fristen uansett.
+ */
+export const NARRATIVE_RETRY_MIN_MS = 8_000;
+
+/**
  * Ukedagene, som tekstene aldri skal nevne (#2983). En historie nevnte en
  * ukedag 22.11, og den var feil: modellen vet ikke hvilken dag det er, og en
  * dato i fakta gjør den ikke klokere. En regel som bare står i prompten er en
@@ -66,6 +80,22 @@ export function findWeekday(text: string, known = ''): string | null {
     if (!names.has(m[0].toLowerCase())) return m[0];
   }
   return null;
+}
+
+/**
+ * Tallene i `text` som ikke står i `known` (fakta modellen fikk, som JSON),
+ * hvert én gang (#2979, #2983). Leser bare sifre: hver sifferrekke i teksten
+ * må også stå som sifferrekke i fakta. Komma som desimaltegn leses som punktum
+ * («41,5» → «41.5»). Et tall skrevet med bokstaver, eller et riktig tall brukt
+ * om feil ting, slipper gjennom; der er prompten eneste vern.
+ */
+export function numbersNotIn(text: string, known: string): string[] {
+  const knownRuns = new Set(digitRuns(known));
+  return [...new Set(digitRuns(text).filter((n) => !knownRuns.has(n)))];
+}
+
+function digitRuns(text: string): string[] {
+  return (text.match(/\d+(?:[.,]\d+)?/g) ?? []).map((n) => n.replace(',', '.'));
 }
 
 /**

@@ -7,6 +7,7 @@ import {
   NARRATIVE_TIMEOUT_MS,
   WEEKDAY_WORDS,
   findWeekday,
+  numbersNotIn,
   sanitizeNarrative,
 } from './narrative';
 
@@ -87,6 +88,13 @@ describe('findWeekday (#2983)', () => {
 
   it('the list names the seven days, one home for the checks', () => {
     expect(WEEKDAY_WORDS).toEqual(['mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag', 'søndag']);
+  });
+});
+
+describe('numbersNotIn (#2983)', () => {
+  it('lists each run of digits in the text that is not in the known text, once, with a decimal comma read as a point', () => {
+    const known = JSON.stringify({ value: 44, avg: 41.5, label: 'Runde 2' });
+    expect(numbersNotIn('44 poeng, 41,5 i snitt, Runde 2, 45 og 45 igjen, og 3,5.', known)).toEqual(['45', '3.5']);
   });
 });
 
