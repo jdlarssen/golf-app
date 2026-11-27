@@ -37,6 +37,16 @@ describe('legal.privacy who-sees-it paragraphs', () => {
     }
   });
 
+  it('says the entry fee is paid outside Tørny, with the agreement as legal basis, and who sees it', () => {
+    for (const [lang, m] of [['no', no], ['en', en]] as const) {
+      const p = m.legal.privacy as Record<string, string>;
+      expect(p.legalBasisPayment, lang).toMatch(/6/);
+      expect(p.s3Para8, lang).toMatch(/Vipps/);
+    }
+    expect(source).toContain("'legalBasisPayment'");
+    expect(no.legal.privacy.s3Para8).toContain('uten å logge inn');
+  });
+
   it('says that ideas are published openly on GitHub without the name', () => {
     expect(no.legal.privacy.s3Para5).toMatch(/GitHub.*uten navnet ditt/);
     expect(en.legal.privacy.s3Para5).toMatch(/GitHub.*without your name/);

@@ -102,6 +102,7 @@ export default async function PrivacyPage() {
             <li>{t('s1Item13')}</li>
             <li>{t('s1Item14')}</li>
             <li>{t('s1Item15')}</li>
+            <li>{t('s1Item16')}</li>
           </ul>
         </section>
 
@@ -169,6 +170,7 @@ export default async function PrivacyPage() {
             <p>{t('s3Para5')}</p>
             <p>{t('s3Para6')}</p>
             <p>{t('s3Para7')}</p>
+            <p>{t('s3Para8')}</p>
           </div>
         </section>
 
@@ -181,6 +183,7 @@ export default async function PrivacyPage() {
           <ul className="list-disc list-outside pl-5 space-y-1 text-text">
             <li>{t.rich('legalBasisAccount', { term })}</li>
             <li>{t.rich('legalBasisNotifications', { term })}</li>
+            <li>{t.rich('legalBasisPayment', { term })}</li>
             <li>{t.rich('legalBasisDigest', { term })}</li>
             <li>{t.rich('legalBasisAi', { term })}</li>
             <li>{t.rich('legalBasisInvitations', { term })}</li>
