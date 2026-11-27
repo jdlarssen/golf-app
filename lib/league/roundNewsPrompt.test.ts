@@ -293,6 +293,12 @@ describe('checkRoundNews: never a weekday', () => {
     });
   });
 
+  it('a league named after a day keeps its stories', () => {
+    const onsdag = { ...facts, leagueName: 'Onsdagsligaen' };
+    expect(checkRoundNews('Onsdagsligaen har fått en ny leder i Dina D.', onsdag).story).not.toBeNull();
+    expect(checkRoundNews('Onsdagsligaen ble avgjort på mandag.', onsdag).fault).toContain('«mandag»');
+  });
+
   it('a word that only holds a weekday elsewhere goes out', () => {
     // «helgen» is not a weekday; the check reads whole words from their start.
     expect(checkRoundNews('Dina D. tok helgen med storm.', facts).story).not.toBeNull();
