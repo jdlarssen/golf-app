@@ -76,7 +76,7 @@ export function ReadySettings({
       const v = row.value;
       if (v.kind === 'gross') return t('values.handicapGross');
       if (v.kind === 'teamAverage') return t('values.handicapTeamAverage', { pct: v.pct });
-      if (v.kind === 'teamNgf') return t('values.handicapTeamNgf');
+      if (v.kind === 'teamStandard') return t('values.handicapTeamNgf');
       return t('values.handicapNet', { pct: v.pct });
     }
     if (row.key === 'fee') {

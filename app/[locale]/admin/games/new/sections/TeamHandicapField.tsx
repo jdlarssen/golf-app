@@ -7,7 +7,12 @@ import { ChoiceCardGrid, RadioChoiceCard } from '@/components/ui/ChoiceCard';
 import { Input } from '@/components/ui/Input';
 import { PillRadio } from '@/components/ui/PillRadio';
 import { CARD_FIELD_HINT } from '@/components/ui/CardField';
-import { defaultTeamHandicapPct, type FormatTeamSize } from '@/lib/games/formatSetupDefaults';
+import {
+  defaultTeamHandicapPct,
+  offersNgfWeighting,
+  onAmbroseFormula,
+  type FormatTeamSize,
+} from '@/lib/games/formatSetupDefaults';
 import {
   TEAM_HANDICAP_AVERAGE_PCT_MAX,
   averagePctToSumPct,
@@ -21,9 +26,10 @@ import {
  * formatene. Under Netto velger to små knapper regelen: «Standard» vekter hver
  * spiller etter NGF vedlegg C, og «Egen prosent» er arrangørens andel av
  * lagets snitt, med tallfeltet bare da. Brutto er 0. Nye Texas- og Florida-
- * spill starter på Standard, Ambrose på sin egen formel
- * (`defaultTeamHandicapRule`). Eieren 27.11.2026: nærmere variant B, med
- * enklere ord og færre trykk.
+ * spill starter på Standard (NGFs vekting). I Ambrose er «Standard» formelen,
+ * halve snittet, lagret som prosent av summen med regelen `pct`; vektingen
+ * tilbys ikke der (`offersNgfWeighting`). Eieren 27.11.2026: nærmere variant
+ * B, med enklere ord og færre trykk, og for Ambrose «B: formelen».
  *
  * Egen prosent: arrangøren setter tallet som prosent av lagets SNITT-handicap,
  * slik klubbene snakker om det («snittet og så 80 %»). Appen lagrer og scorer
@@ -91,6 +97,14 @@ export function TeamHandicapField({
   const suffix = helperSuffix(teamSize);
 
   const gross = rule !== 'ngf' && sumPct === 0;
+  // Ambrose: «Standard» is the formula, not a rule, so the choice between the
+  // pills is kept here; it starts on whether the stored share is the formula.
+  const weighting = offersNgfWeighting(mode);
+  const formulaSumPct = defaultTeamHandicapPct(mode, teamSize as FormatTeamSize) ?? 0;
+  const [ownShare, setOwnShare] = useState<boolean>(
+    !weighting && sumPct > 0 && !onAmbroseFormula(sumPct, teamSize),
+  );
+  const standard = weighting ? rule === 'ngf' : !ownShare;
 
   // The last share above 0, so «Brutto» → «Netto» brings it back instead of
   // the start value, and the rule the organiser had under Netto. The parent
@@ -125,6 +139,16 @@ export function TeamHandicapField({
   }
 
   function selectRule(next: TeamHandicapRule) {
+    if (!weighting) {
+      // Ambrose: Standard puts the formula back; Egen prosent opens the field
+      // on the share as it stands. The rule never changes.
+      setOwnShare(next === 'pct');
+      if (next === 'ngf') {
+        setLastSumPct(formulaSumPct);
+        onSumPctChange(formulaSumPct);
+      }
+      return;
+    }
     if (next === 'ngf') onRuleChange('ngf');
     else if (rule === 'ngf') onRuleChange('pct');
   }
@@ -174,7 +198,7 @@ export function TeamHandicapField({
             <PillRadio
               name={`${prefix}_team_handicap_rule__choice`}
               value="ngf"
-              checked={rule === 'ngf'}
+              checked={standard}
               onChange={() => selectRule('ngf')}
             >
               {t('ruleNgfTitle')}
@@ -182,15 +206,17 @@ export function TeamHandicapField({
             <PillRadio
               name={`${prefix}_team_handicap_rule__choice`}
               value="pct"
-              checked={rule !== 'ngf'}
+              checked={!standard}
               onChange={() => selectRule('pct')}
             >
               {t('rulePctTitle')}
             </PillRadio>
           </div>
 
-          {rule === 'ngf' ? (
-            <p className={CARD_FIELD_HINT}>{t(`ngfHelper${suffix}` as Key)}</p>
+          {standard ? (
+            <p className={CARD_FIELD_HINT}>
+              {weighting ? t(`ngfHelper${suffix}` as Key) : t(key('standardHelper'))}
+            </p>
           ) : (
             <Input
               variant="card"

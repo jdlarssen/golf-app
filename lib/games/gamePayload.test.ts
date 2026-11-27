@@ -8,6 +8,7 @@ import {
   resolveTeeOffForSave,
   TEE_OFF_PAST_GRACE_MS,
 } from './gamePayload';
+import { offersNgfWeighting } from './formatSetupDefaults';
 
 function fd(entries: Record<string, string>): FormData {
   const data = new FormData();
@@ -5164,7 +5165,9 @@ describe('buildGameInsertPayload — scramble team_handicap_rule (#3002, F23)', 
       ...extras,
     });
 
-  it.each(FORMATS)('$mode: ngf → ngf_weighted, with the start value for the team size as the share', (f) => {
+  // The owner 27.11.2026, «B: formelen»: Ambrose's «Standard» is its formula,
+  // so NGF's weighting is not offered there and the validator refuses it.
+  it.each(FORMATS.filter((f) => f.mode !== 'ambrose'))('$mode: ngf → ngf_weighted, with the start value for the team size as the share', (f) => {
     // The organiser's typed share is not the rule here; the stored share is
     // the format's start value, so an older app build shows a known number.
     const result = buildGameInsertPayload(
@@ -5227,5 +5230,33 @@ describe('buildGameInsertPayload — patsome_fourball_allowance_pct (#3002, F24)
   it.each(['101', '-1', '85.5', 'åtti'])('%s → bad_allowance', (raw) => {
     const result = buildGameInsertPayload(form({ patsome_fourball_allowance_pct: raw }), 'draft');
     expect(result.errorCode).toBe('bad_allowance');
+  });
+});
+
+// #3002, trap 4: one home for which scramble formats offer NGF's weighting
+// (`offersNgfWeighting`). The web field, the app and the validator read it;
+// this test holds the validator to it for every scramble format.
+describe('buildGameInsertPayload — the weighting is offered exactly where the field offers it (#3002)', () => {
+  const SIZES = { texas_scramble: ['texas', '4'], ambrose: ['ambrose', '4'], florida_scramble: ['florida', '4'] } as const;
+  it.each(Object.keys(SIZES) as (keyof typeof SIZES)[])('%s', (mode) => {
+    const [prefix, size] = SIZES[mode];
+    const result = buildGameInsertPayload(
+      fd({
+        name: 'Scramble',
+        course_id: 'c1',
+        tee_box_id: 't1',
+        game_mode: mode,
+        [`${prefix}_team_size`]: size,
+        [`${prefix}_team_handicap_pct`]: '10',
+        [`${prefix}_team_handicap_rule`]: 'ngf',
+      }),
+      'draft',
+    );
+    if (offersNgfWeighting(mode)) {
+      expect(result.errorCode).toBeUndefined();
+      expect(result.mode_config).toMatchObject({ team_handicap_rule: 'ngf_weighted' });
+    } else {
+      expect(result.errorCode).toBe('bad_allowance');
+    }
   });
 });

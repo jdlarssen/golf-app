@@ -93,11 +93,12 @@ describe('SetupStep — lag-handicap og patsome-andel (#3002)', () => {
     expect(screen.getByTestId('create-team-hcp-ngf-helper')).toHaveTextContent(/30, 20 og 10/);
   });
 
-  it('Ambrose starter på egen prosent med tallfeltet', async () => {
+  // The owner 27.11.2026, «B: formelen»: in Ambrose «Standard» is the formula.
+  it('Ambrose starter på Standard, som er formelen, uten tallfelt', async () => {
     await renderSetup('ambrose');
-    expect(screen.getByTestId('create-team-hcp-pct').props.accessibilityState).toMatchObject({ selected: true });
-    expect(screen.getByTestId('create-team-hcp')).toBeTruthy();
-    expect(screen.queryByTestId('create-team-hcp-ngf-helper')).toBeNull();
+    expect(screen.getByTestId('create-team-hcp-ngf').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId('create-team-hcp-ngf-helper')).toHaveTextContent(/halve snittet/);
+    expect(screen.queryByTestId('create-team-hcp')).toBeNull();
   });
 
   it('Brutto skriver regelen pct og prosenten 0', async () => {
@@ -178,5 +179,39 @@ describe('SetupStep — lag-handicapet som på nettet (#3002)', () => {
     await fireEvent.changeText(screen.getByTestId('create-team-hcp'), '00');
     expect(selected('create-team-hcp-netto')).toBe(true);
     expect(screen.getByTestId('create-team-hcp').props.value).toBe('60');
+  });
+});
+
+// #3002, «B: formelen»: Ambrose never takes NGF's weighting; «Egen prosent»
+// opens the field on the formula's 50, and «Standard» puts the formula back.
+describe('SetupStep — Ambrose: Standard er formelen (#3002)', () => {
+  function Harness() {
+    const [setup, setSetup] = useState<ModeSetup>({});
+    const [text, setText] = useState<SetupText>({ allowance: '', krPerUnit: '' });
+    return (
+      <SetupStep
+        mode="ambrose"
+        common={COMMON}
+        onCommon={() => {}}
+        setup={setup}
+        onSetup={(patch) => setSetup((prev) => ({ ...prev, ...patch }))}
+        text={text}
+        onText={(patch) => setText((prev) => ({ ...prev, ...patch }))}
+        fee={{ entryFee: '', paymentLink: '', prizes: emptyPrizeDraft(), prizesOpen: false }}
+        onFee={() => {}}
+      />
+    );
+  }
+  const selected = (testID: string) => screen.getByTestId(testID).props.accessibilityState?.selected;
+
+  it('«Egen prosent» viser tallfeltet på 50, «Standard» tar formelen tilbake', async () => {
+    await render(<Harness />);
+    await fireEvent.press(screen.getByTestId('create-team-hcp-pct'));
+    expect(selected('create-team-hcp-pct')).toBe(true);
+    expect(screen.getByTestId('create-team-hcp').props.placeholder).toBe('50');
+    await fireEvent.changeText(screen.getByTestId('create-team-hcp'), '80');
+    await fireEvent.press(screen.getByTestId('create-team-hcp-ngf'));
+    expect(selected('create-team-hcp-ngf')).toBe(true);
+    expect(screen.queryByTestId('create-team-hcp')).toBeNull();
   });
 });

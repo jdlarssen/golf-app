@@ -135,9 +135,10 @@ describe('Vedlegg C: scramble vekter hver spiller (F23, rettet i #3002)', () => 
   });
 
   // Scramble (2 spillere): «35 % laveste / 15 % høyeste spillehandicap».
-  // 10 and 18: 3,5 + 2,7 = 6,2 → 6. New Ambrose games keep the Ambrose
-  // formula (the owner, 24.11), but an organiser who picks the weighting gets
-  // the table.
+  // 10 and 18: 3,5 + 2,7 = 6,2 → 6. Ambrose keeps its formula (the owner,
+  // 24.11), and its «Standard» is the formula (27.11, «B: formelen»): the
+  // forms never give Ambrose the key (`offersNgfWeighting`). The engine still
+  // weighs a scramble config with the key the same way for all three.
   it('F23: Ambrose med to spillere og vekting etter vedlegg C: 10 og 18 gir 6', () => {
     const result = computeAmbrose(
       ctx(

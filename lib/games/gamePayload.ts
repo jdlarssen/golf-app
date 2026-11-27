@@ -15,7 +15,7 @@ import { parseStartType, type StartType } from './startType';
 import { organizerCapBounds } from '@/lib/wizard/fitsPlayerCount';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { hcpAllowanceInPlay } from './hcpAllowance';
-import { defaultMatchAllowancePct, defaultTeamHandicapPct } from './formatSetupDefaults';
+import { defaultMatchAllowancePct, defaultTeamHandicapPct, offersNgfWeighting } from './formatSetupDefaults';
 import {
   MAX_TEAM_FORMAT_PLAYERS,
   MAX_TEAM_NUMBER,
@@ -1101,7 +1101,8 @@ const SCRAMBLE_FIELD_PREFIX = {
 /**
  * #3002 (F23): how the form says the team handicap is taken,
  * `<prefix>_team_handicap_rule`:
- *  - `ngf`: NGF's weighting per player (`team_handicap_rule: 'ngf_weighted'`).
+ *  - `ngf`: NGF's weighting per player (`team_handicap_rule: 'ngf_weighted'`),
+ *    only where it is offered (`offersNgfWeighting`; not Ambrose, else null).
  *    The stored share is the format's start value for the team size
  *    (`defaultTeamHandicapPct`), so an app build from before #3002 shows a
  *    known number; the engine does not read it for this rule.
@@ -1118,6 +1119,8 @@ function parseScrambleHandicap(
 ): ScrambleHandicapFields | null {
   const raw = String(formData.get(`${SCRAMBLE_FIELD_PREFIX[mode]}_team_handicap_rule`) ?? '').trim();
   if (raw === 'ngf') {
+    // Ambrose's «Standard» is its formula; the weighting is not offered there.
+    if (!offersNgfWeighting(mode)) return null;
     const startPct = defaultTeamHandicapPct(mode, teamSize);
     if (startPct === null) return null;
     return { team_handicap_pct: startPct, team_handicap_rule: 'ngf_weighted' };

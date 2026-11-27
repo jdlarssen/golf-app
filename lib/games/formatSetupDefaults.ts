@@ -106,6 +106,25 @@ export function defaultTeamHandicapRule(mode: GameMode): 'ngf' | 'pct' | null {
 }
 
 /**
+ * Which scramble formats offer NGF's weighting as «Standard» (#3002), one home
+ * for the web field, the app's field, the app's payload and the validator.
+ * Texas and Florida do. Ambrose's «Standard» is its own formula, half the
+ * average (the owner 27.11.2026, «B: formelen»), so the weighting is not
+ * offered there and the validator refuses it.
+ */
+export function offersNgfWeighting(mode: GameMode): boolean {
+  return mode === 'texas_scramble' || mode === 'florida_scramble';
+}
+
+/**
+ * True when an Ambrose share (percent of the SUM) is the Ambrose formula for
+ * the team size, half the average: then the field shows «Standard» (#3002).
+ */
+export function onAmbroseFormula(sumPct: number, teamSize: number): boolean {
+  return Number.isFinite(sumPct) && teamSize > 0 && Math.abs(sumPct - ambroseDefaultPct(teamSize)) < 0.01;
+}
+
+/**
  * The share of each player's course handicap a new patsome game plays holes
  * 1–6 (four-ball stableford) off: NGF vedlegg C s. 75, 85 % (#3002, F24).
  * The organiser can pick another share.

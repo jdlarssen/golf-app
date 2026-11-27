@@ -112,3 +112,55 @@ describe('TeamHandicapField — Netto/Brutto, Standard og Egen prosent (#3002)',
     expect(onRuleChange).not.toHaveBeenCalled();
   });
 });
+
+// #3002, the owner 27.11.2026, «B: formelen»: in Ambrose «Standard» is the
+// Ambrose formula (half the average, stored as the share of the sum with the
+// rule `pct`), preselected; «Egen prosent» opens the number field. NGF's
+// weighting is not offered, so the field never writes `ngf`.
+describe('TeamHandicapField — Ambrose: Standard er formelen (#3002)', () => {
+  function ambrose(props: { sumPct: number; rule?: 'pct' | null }) {
+    const onSumPctChange = vi.fn();
+    const onRuleChange = vi.fn();
+    const view = render(
+      <TeamHandicapField
+        key={4}
+        mode="ambrose"
+        teamSize={4}
+        sumPct={props.sumPct}
+        onSumPctChange={onSumPctChange}
+        rule={props.rule === undefined ? 'pct' : props.rule}
+        onRuleChange={onRuleChange}
+      />,
+    );
+    return { onSumPctChange, onRuleChange, view };
+  }
+
+  it('on the formula: Standard is chosen, the formula line shows, and no number field', () => {
+    ambrose({ sumPct: 12.5 });
+    expect(screen.getByRole('radio', { name: 'Standard' })).toBeChecked();
+    expect(screen.getByText(/halve snittet/)).toBeInTheDocument();
+    expect(screen.queryByRole('spinbutton')).toBeNull();
+  });
+
+  it('a stored game without a rule on the formula shows Standard too', () => {
+    ambrose({ sumPct: 12.5, rule: null });
+    expect(screen.getByRole('radio', { name: 'Standard' })).toBeChecked();
+  });
+
+  it('another share shows «Egen prosent» with the number', () => {
+    ambrose({ sumPct: 20 });
+    expect(screen.getByRole('radio', { name: 'Egen prosent' })).toBeChecked();
+    expect((screen.getByRole('spinbutton') as HTMLInputElement).value).toBe('80');
+  });
+
+  it('«Egen prosent» opens the field on 50; «Standard» brings back the formula; never ngf', () => {
+    const { onSumPctChange, onRuleChange } = ambrose({ sumPct: 12.5 });
+    fireEvent.click(screen.getByRole('radio', { name: 'Egen prosent' }));
+    expect((screen.getByRole('spinbutton') as HTMLInputElement).value).toBe('50');
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '80' } });
+    expect(onSumPctChange).toHaveBeenLastCalledWith(20);
+    fireEvent.click(screen.getByRole('radio', { name: 'Standard' }));
+    expect(onSumPctChange).toHaveBeenLastCalledWith(12.5);
+    expect(onRuleChange).not.toHaveBeenCalledWith('ngf');
+  });
+});

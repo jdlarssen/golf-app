@@ -8,6 +8,7 @@ import {
   defaultPatsomeFourballAllowancePct,
   defaultTeamHandicapPct,
   defaultTeamHandicapRule,
+  offersNgfWeighting,
   defaultTeamSizeForMode,
   defaultTexasHandicapPct,
 } from './formatSetupDefaults';
@@ -91,5 +92,24 @@ describe('defaultTeamHandicapRule (#3002, F23)', () => {
 describe('defaultPatsomeFourballAllowancePct (#3002, F24)', () => {
   it('is 85, NGF vedlegg C s. 75 for four-ball stableford', () => {
     expect(defaultPatsomeFourballAllowancePct()).toBe(85);
+  });
+});
+
+// #3002: Ambrose's «Standard» is its formula (the owner 27.11.2026, «B:
+// formelen»), so only Texas and Florida offer NGF's weighting.
+describe('offersNgfWeighting (#3002)', () => {
+  it.each([
+    ['texas_scramble', true],
+    ['florida_scramble', true],
+    ['ambrose', false],
+    ['best_ball', false],
+  ] as const)('%s → %s', (mode, expected) => {
+    expect(offersNgfWeighting(mode)).toBe(expected);
+  });
+
+  it('a format that starts on the weighting offers it', () => {
+    for (const mode of ['texas_scramble', 'ambrose', 'florida_scramble'] as const) {
+      if (defaultTeamHandicapRule(mode) === 'ngf') expect(offersNgfWeighting(mode)).toBe(true);
+    }
   });
 });

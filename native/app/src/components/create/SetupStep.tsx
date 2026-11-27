@@ -37,6 +37,7 @@ import {
   defaultPatsomeFourballAllowancePct,
   defaultTeamHandicapPct,
   defaultTeamHandicapRule,
+  offersNgfWeighting,
 } from '../../../../../lib/games/formatSetupDefaults';
 import { TEAM_FORMAT_TEAM_SIZES } from '../../../../../lib/games/teamFormatLimits';
 import { averagePctToSumPct, sumPctToAveragePct } from '../../../../../lib/games/teamHandicapUnit';
@@ -218,6 +219,11 @@ export function SetupStep({
   // share, as the web field does (`lastNetRule`/`lastSumPct` in
   // TeamHandicapField). Without it (a fresh mount on Brutto), Netto starts on
   // the format's start.
+  // «B: formelen» (eieren 27.11): in Ambrose «Standard» is the formula (the
+  // start share, an empty field), not a rule, so the choice is kept here.
+  const weighting = offersNgfWeighting(mode);
+  const [ambroseOwn, setAmbroseOwn] = useState(text.allowance !== '' && text.allowance !== '0');
+  const standardChosen = weighting ? teamHandicapRule === 'ngf' : !ambroseOwn;
   const [lastNet, setLastNet] = useState<{ rule: ModeSetup['teamHandicapRule']; allowance: string } | null>(null);
   const shambleNet = (setup.shambleScoring ?? 'net') === 'net';
   const champagne = setup.shambleVariant === 'champagne';
@@ -371,17 +377,26 @@ export function SetupStep({
               <Chips
                 testID="create-team-hcp-rule"
                 style={styles.ruleChips}
-                value={teamHandicapRule}
-                onChange={(rule) => onSetup({ teamHandicapRule: rule })}
+                value={standardChosen ? 'ngf' : 'pct'}
+                onChange={(rule) => {
+                  if (weighting) {
+                    onSetup({ teamHandicapRule: rule });
+                    return;
+                  }
+                  setAmbroseOwn(rule === 'pct');
+                  if (rule === 'ngf') onText({ allowance: '' });
+                }}
                 options={[
                   { value: 'ngf' as const, label: TEAM_HANDICAP_TEXT.ruleNgfTitle, testID: 'create-team-hcp-ngf' },
                   { value: 'pct' as const, label: TEAM_HANDICAP_TEXT.rulePctTitle, testID: 'create-team-hcp-pct' },
                 ]}
               />
             )}
-            {teamHandicapGross ? null : teamHandicapRule === 'ngf' ? (
+            {teamHandicapGross ? null : standardChosen ? (
               <Text style={ui.muted} testID="create-team-hcp-ngf-helper">
-                {TEAM_HANDICAP_TEXT.ngfHelper[teamSize as 2 | 3 | 4]}
+                {weighting
+                  ? TEAM_HANDICAP_TEXT.ngfHelper[teamSize as 2 | 3 | 4]
+                  : TEAM_HANDICAP_TEXT.ambroseStandardHelper}
               </Text>
             ) : (
               <NestedField
