@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { LeagueSnapshot } from './getLigaSnapshot';
-import { buildRoundSummary } from './roundSummary';
+import { buildRoundSummary, closedRoundBefore } from './roundSummary';
 
 /**
  * Type A (#2979): the numbers of a round that has closed, read from the
@@ -23,6 +23,12 @@ function snapshot(opts: {
   closes: number[];
   players: PlayerSpec[];
   scoring?: 'net' | 'gross';
+  /**
+   * #2983: the table before the round that closed, as `getLigaSnapshot`
+   * gives it with `baseline`: the rank per player, null when unranked. Left
+   * out, the snapshot has no baseline.
+   */
+  before?: Record<string, number | null>;
 }): LeagueSnapshot {
   const rounds = opts.closes.map((offset, i) => ({
     id: `r${i + 1}`,
@@ -48,6 +54,19 @@ function snapshot(opts: {
     })),
   }));
   const table = { rows };
+  const before = opts.before;
+  const baselineTable = before
+    ? {
+        rows: Object.entries(before).map(([userId, rank]) => ({
+          userId,
+          value: 0,
+          roundsPlayed: rank === null ? 0 : 1,
+          ranked: rank !== null,
+          rank,
+          perRound: [],
+        })),
+      }
+    : null;
   return {
     league: {
       name: 'Vinterliga 2026-2027',
@@ -65,6 +84,12 @@ function snapshot(opts: {
       hasPlayed: true,
     })),
     standings: opts.scoring === 'gross' ? { net: null, gross: table } : { net: table, gross: null },
+    ...(baselineTable
+      ? {
+          baseline:
+            opts.scoring === 'gross' ? { net: null, gross: baselineTable } : { net: baselineTable, gross: null },
+        }
+      : {}),
   } as unknown as LeagueSnapshot;
 }
 
@@ -218,5 +243,135 @@ describe('buildRoundSummary', () => {
     ]);
     expect(buildRoundSummary(empty, 'r2', NOW)).toBeNull();
     expect(buildRoundSummary(empty, 'ukjent', NOW)).toBeNull();
+  });
+
+  describe('moves in the table since the round before (#2983)', () => {
+    // Round 2 has closed, round 3 opens. Round 1 set the table «before».
+    const twoRounds = (players: PlayerSpec[], before: Record<string, number | null> | undefined, scoring?: 'gross') =>
+      snapshot({ closes: [-15, -1, 13], players, before, scoring });
+    const p = (id: string, rank: number | null, value: number, cells: Cell[]): PlayerSpec => ({
+      id,
+      name: id.toUpperCase(),
+      rank,
+      value,
+      cells,
+    });
+    const moves = (s: ReturnType<typeof buildRoundSummary>) =>
+      s!.table.map((r) => [r.userId, r.place, r.previousPlace, r.move]);
+
+    it('a climb is positive, a fall negative, an unchanged place 0', () => {
+      const s = buildRoundSummary(
+        twoRounds(
+          [
+            p('a', 1, 80, [{ value: 36 }, { value: 44 }, { value: null }]),
+            p('b', 2, 78, [{ value: 40 }, { value: 38 }, { value: null }]),
+            p('c', 3, 70, [{ value: 35 }, { value: 35 }, { value: null }]),
+          ],
+          { b: 1, a: 2, c: 3 },
+        ),
+        'r3',
+        NOW,
+      );
+      expect(moves(s)).toEqual([
+        ['a', 1, 2, 1],
+        ['b', 2, 1, -1],
+        ['c', 3, 3, 0],
+      ]);
+    });
+
+    it('a shared place moves from the rank the table gives', () => {
+      const s = buildRoundSummary(
+        twoRounds(
+          [
+            p('a', 1, 80, [{ value: 40 }, { value: 40 }, { value: null }]),
+            p('b', 1, 80, [{ value: 40 }, { value: 40 }, { value: null }]),
+            p('c', 3, 70, [{ value: 41 }, { value: 29 }, { value: null }]),
+          ],
+          { c: 1, a: 2, b: 2 },
+        ),
+        'r3',
+        NOW,
+      );
+      expect(moves(s)).toEqual([
+        ['a', 1, 2, 1],
+        ['b', 1, 2, 1],
+        ['c', 3, 1, -2],
+      ]);
+    });
+
+    it('a player new in the table has no place before, and no move', () => {
+      const s = buildRoundSummary(
+        twoRounds(
+          [
+            p('a', 1, 80, [{ value: 40 }, { value: 40 }, { value: null }]),
+            p('n', 2, 39, [{ value: null }, { value: 39 }, { value: null }]),
+          ],
+          { a: 1, n: null },
+        ),
+        'r3',
+        NOW,
+      );
+      expect(moves(s)).toEqual([
+        ['a', 1, 1, 0],
+        ['n', 2, null, null],
+      ]);
+    });
+
+    it('the first round with results has nothing to move from', () => {
+      const s = buildRoundSummary(
+        stableford([p('a', 1, 44, [{ value: 44 }, { value: null }]), p('b', 2, 40, [{ value: 40 }, { value: null }])]),
+        'r2',
+        NOW,
+      );
+      expect(s!.roundsPlayed).toBe(1);
+      expect(moves(s)).toEqual([
+        ['a', 1, null, null],
+        ['b', 2, null, null],
+      ]);
+    });
+
+    it('without a baseline in the snapshot there are no moves', () => {
+      const s = buildRoundSummary(
+        twoRounds([p('a', 1, 80, [{ value: 40 }, { value: 40 }, { value: null }])], undefined),
+        'r3',
+        NOW,
+      );
+      expect(moves(s)).toEqual([['a', 1, null, null]]);
+    });
+
+    it('a gross-only league reads the gross baseline', () => {
+      const s = buildRoundSummary(
+        twoRounds(
+          [
+            p('a', 1, 80, [{ value: 36 }, { value: 44 }, { value: null }]),
+            p('b', 2, 78, [{ value: 40 }, { value: 38 }, { value: null }]),
+          ],
+          { b: 1, a: 2 },
+          'gross',
+        ),
+        'r3',
+        NOW,
+      );
+      expect(moves(s)).toEqual([
+        ['a', 1, 2, 1],
+        ['b', 2, 1, -1],
+      ]);
+    });
+  });
+});
+
+describe('closedRoundBefore', () => {
+  const rounds = [
+    { id: 'r1', sequence: 1, closesAt: new Date(NOW - 15 * DAY).toISOString() },
+    { id: 'r3', sequence: 3, closesAt: new Date(NOW + 13 * DAY).toISOString() },
+    { id: 'r2', sequence: 2, closesAt: new Date(NOW - DAY).toISOString() },
+  ];
+  it('is the round with the highest sequence below the opening one, once it has closed', () => {
+    expect(closedRoundBefore(rounds, 'r3', NOW)?.id).toBe('r2');
+  });
+  it('is null for the first round, an unknown round, or a round before that has not closed', () => {
+    expect(closedRoundBefore(rounds, 'r1', NOW)).toBeNull();
+    expect(closedRoundBefore(rounds, 'ukjent', NOW)).toBeNull();
+    expect(closedRoundBefore(rounds, 'r3', NOW - 2 * DAY)).toBeNull();
   });
 });

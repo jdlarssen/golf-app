@@ -208,7 +208,9 @@ async function previousRoundSummary(
   now: number,
 ): Promise<LeagueRoundMailSummary | null> {
   try {
-    const snapshot = await getLigaSnapshot(round.league_id);
+    // #2983: the table as it stood before the round that closed, so the
+    // summary can say who climbed and who fell.
+    const snapshot = await getLigaSnapshot(round.league_id, { baseline: { beforeRoundBefore: round.id } });
     if (!snapshot) return null;
     const summary = buildRoundSummary(snapshot, round.id, now);
     if (!summary) return null;

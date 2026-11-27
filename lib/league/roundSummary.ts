@@ -9,6 +9,11 @@
  * the round and the gaps, which the language model must never work out itself
  * (`roundNewsPrompt.ts`).
  *
+ * The moves in the table (#2983) come from the table as it stood before the
+ * round, which `getLigaSnapshot` works out with the same arithmetic when it is
+ * asked for a `baseline`. The move is the difference of two ranks, nothing
+ * more.
+ *
  * Pure. No I/O.
  */
 import { formatPublicName } from '@/lib/names/formatPublicName';
@@ -30,6 +35,15 @@ export type RoundSummaryRow = {
   value: number;
   /** How far behind the best in the list, never negative. 0 for the best. */
   behind: number;
+  /**
+   * `table` only (#2983): the place in the table before the round. Null when
+   * the player was not ranked then, when this is the first round with
+   * results, or when the snapshot has no table from before. Always null in
+   * `round`.
+   */
+  previousPlace: number | null;
+  /** `previousPlace − place`: positive is places climbed, negative places fallen. Null with `previousPlace`. */
+  move: number | null;
 };
 
 export type RoundSummary = {
@@ -58,9 +72,28 @@ export type RoundSummary = {
 };
 
 /**
- * The summary of the round before `openingRoundId`: the one with the highest
- * sequence below it that has closed at `now`. Null when there is none (the
- * league's first round), when it has not closed, or when nobody played it.
+ * The round a summary for `openingRoundId` is about: the one with the highest
+ * sequence below it, once it has closed at `now`. Null when there is none (the
+ * league's first round, or an unknown round) or when it has not closed. One
+ * home for the choice (trap 4): the summary and the snapshot's baseline both
+ * read it.
+ */
+export function closedRoundBefore<R extends { id: string; sequence: number; closesAt: string }>(
+  rounds: readonly R[],
+  openingRoundId: string,
+  now: number,
+): R | null {
+  const opening = rounds.find((r) => r.id === openingRoundId);
+  if (!opening) return null;
+  const closed = rounds
+    .filter((r) => r.sequence < opening.sequence)
+    .sort((a, b) => b.sequence - a.sequence)[0];
+  return closed && Date.parse(closed.closesAt) <= now ? closed : null;
+}
+
+/**
+ * The summary of the round before `openingRoundId` (`closedRoundBefore`).
+ * Null when there is no such round, or when nobody played it.
  */
 export function buildRoundSummary(
   snapshot: LeagueSnapshot,
@@ -68,14 +101,9 @@ export function buildRoundSummary(
   now: number,
 ): RoundSummary | null {
   const standings = snapshot.standings.net ?? snapshot.standings.gross;
-  const opening = snapshot.rounds.find((r) => r.id === openingRoundId);
-  if (!standings || !opening) return null;
-
-  const before = snapshot.rounds
-    .filter((r) => r.sequence < opening.sequence)
-    .sort((a, b) => b.sequence - a.sequence);
-  const closed = before[0];
-  if (!closed || Date.parse(closed.closesAt) > now) return null;
+  if (!standings) return null;
+  const closed = closedRoundBefore(snapshot.rounds, openingRoundId, now);
+  if (!closed) return null;
 
   const pointsBased = isPointsBasedFormat(snapshot.league.format as LeagueFormat);
   const model = snapshot.league.standings_model;
@@ -102,23 +130,39 @@ export function buildRoundSummary(
     name: nameOf.get(r.userId) ?? null,
     value: r.value,
     behind: Math.abs(best - r.value),
-  }));
-
-  const ranked = standings.rows
-    .filter((row) => row.ranked && row.rank !== null)
-    .sort((a, b) => a.rank! - b.rank!);
-  const leader = ranked[0]?.value ?? 0;
-  const table: RoundSummaryRow[] = ranked.map((row) => ({
-    userId: row.userId,
-    place: row.rank!,
-    name: nameOf.get(row.userId) ?? null,
-    value: row.value,
-    behind: Math.abs(leader - row.value),
+    previousPlace: null,
+    move: null,
   }));
 
   const roundsPlayed = snapshot.rounds.filter(
     (r) => r.sequence <= closed.sequence && standings.rows.some((row) => playedValue(row, r.id) !== null),
   ).length;
+
+  // The table before the round, on the same scoring as the table now. After
+  // the first round with results there was no table to move from.
+  const baseline = snapshot.standings.net ? snapshot.baseline?.net : snapshot.baseline?.gross;
+  const placeBefore = new Map(
+    roundsPlayed > 1 && baseline
+      ? baseline.rows.flatMap((row) => (row.ranked && row.rank !== null ? [[row.userId, row.rank] as const] : []))
+      : [],
+  );
+
+  const ranked = standings.rows
+    .filter((row) => row.ranked && row.rank !== null)
+    .sort((a, b) => a.rank! - b.rank!);
+  const leader = ranked[0]?.value ?? 0;
+  const table: RoundSummaryRow[] = ranked.map((row) => {
+    const previousPlace = placeBefore.get(row.userId) ?? null;
+    return {
+      userId: row.userId,
+      place: row.rank!,
+      name: nameOf.get(row.userId) ?? null,
+      value: row.value,
+      behind: Math.abs(leader - row.value),
+      previousPlace,
+      move: previousPlace === null ? null : previousPlace - row.rank!,
+    };
+  });
 
   return {
     leagueName: snapshot.league.name,

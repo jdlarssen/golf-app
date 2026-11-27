@@ -481,7 +481,8 @@ describe('runLeagueRoundNotices: the summary of the round before', () => {
       result({ league_round_open: 2, league_round_closing: 0 }, { league_round_open: 2 }),
     );
 
-    expect(snapshotMock).toHaveBeenCalledWith(LEAGUE_ID);
+    // #2983: with the table before the round that closed, for the moves.
+    expect(snapshotMock).toHaveBeenCalledWith(LEAGUE_ID, { baseline: { beforeRoundBefore: ROUND_ID } });
     expect(summaryMock).toHaveBeenCalledWith(SNAPSHOT, ROUND_ID, NOW);
     expect(newsMock).toHaveBeenCalledWith(fake.client, SUMMARY, 'Runde 3');
     expect(newsMock).toHaveBeenCalledTimes(1);
