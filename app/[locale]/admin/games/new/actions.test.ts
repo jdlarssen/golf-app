@@ -763,6 +763,8 @@ describe('createAndPublishGame', () => {
       allowance_pct: 85,
       // #2997 (F15): a new four-ball match gives the share of the difference.
       match_strokes: 'difference',
+      // #2941 (F17): and the higher par its extra strokes.
+      par_strokes: 'difference',
     });
   });
 

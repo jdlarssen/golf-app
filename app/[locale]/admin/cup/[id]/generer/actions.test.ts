@@ -480,6 +480,8 @@ describe('createCupMatchesFromPlan — happy path', () => {
       team_size: 2,
       teams_count: 2,
       allowance_pct: 50,
+      // #2941 (F17): every new cup match gives the higher par extra strokes.
+      par_strokes: 'difference',
     });
   });
 
@@ -500,6 +502,7 @@ describe('createCupMatchesFromPlan — happy path', () => {
       kind: 'singles_matchplay',
       team_size: 1,
       match_strokes: 'difference',
+      par_strokes: 'difference',
     });
   });
 
@@ -771,6 +774,7 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
       team_size: 2,
       teams_count: 2,
       allowance_pct: 100, // ALLOWANCE_DEFAULTS.greensome — draftCup fixture has no override
+      par_strokes: 'difference',
     });
 
     expect(bestBallRow.hole_segment).toBe('back9');
@@ -797,6 +801,7 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
       kind: 'singles_matchplay',
       team_size: 1,
       match_strokes: 'difference',
+      par_strokes: 'difference',
     });
 
     expect(singles2Row.source_game_id).toBe('game-bestball');
@@ -844,6 +849,7 @@ describe('createCupMatchesFromPlan — splittet cup-dag to-pass insert (#1441)',
       // ingen rating-kolonner → samme fallback som veiviseren (rå HCP-indeks):
       // 60/40 av 5/10 = 7, av 6/11 = 8.
       team_strokes_override_auto: { team1: 7, team2: 8 },
+      par_strokes: 'difference',
     });
   });
 
