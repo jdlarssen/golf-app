@@ -17,7 +17,7 @@ import { maybeAutoConfirmLeagueParticipation } from '@/lib/league/confirmLeagueP
 import { leagueSelfServiceState } from '@/lib/league/selfService';
 import { canOpenLeagueCards, canViewLeague } from '@/lib/league/canViewLeague';
 import { joinClubLeague } from '@/lib/league/actions';
-import type { LeagueStatus } from '@/lib/league/types';
+import type { LeagueStandingRow, LeagueStandingsByScoring, LeagueStatus } from '@/lib/league/types';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { getServerClient } from '@/lib/supabase/server';
@@ -90,6 +90,32 @@ const WINDOW_CHIP_STYLES: Record<
     color: 'var(--score-over2-fg)',
   },
 };
+
+/** #2980: the season table's rows on the league's own axis (`leagueTable`), or none. */
+function leagueRows(standings: LeagueStandingsByScoring, scoring: string): LeagueStandingRow[] {
+  return leagueTable(standings, scoring)?.rows ?? [];
+}
+
+/**
+ * #2980: what a round's row says, as one line for the screen reader: label,
+ * window, dates and flights. The link to your card is named with it, so the
+ * row reads as it did before it became a link.
+ */
+function roundSummary(
+  round: { label: string; opensAt: string; closesAt: string; flightCount: number },
+  ws: 'open' | 'upcoming' | 'closed',
+  t: Awaited<ReturnType<typeof getTranslations<'liga.player'>>>,
+  locale: AppLocale,
+): string {
+  return [
+    round.label,
+    t(`windowChip.${ws}`),
+    `${fmtWindow(round.opensAt, locale)} – ${fmtWindow(round.closesAt, locale)}`,
+    round.flightCount > 0 ? t('roundFlightCount', { count: round.flightCount }) : null,
+  ]
+    .filter(Boolean)
+    .join(', ');
+}
 
 /**
  * #2662: the receipt after joining through the shareable link (with «Hent
@@ -278,7 +304,7 @@ export default async function LigaPublicPage({
   const table = tableRoundsNow(rounds);
   // #2980: your number per round in the round list, from the league's own axis
   // (the app's table reads the same one).
-  const myRows = leagueTable(standings, league.scoring)?.rows ?? [];
+  const myRows = leagueRows(standings, league.scoring);
   const pointsBased = isPointsBasedFormat(league.format as LeagueFormat);
 
   const participantNames = participants.map((p) => ({
@@ -473,7 +499,7 @@ export default async function LigaPublicPage({
                       pointsBased={pointsBased}
                       leagueId={cardLeagueId}
                       userId={currentUserId}
-                      roundLabel={round.label}
+                      roundSummary={roundSummary(round, ws, t, locale)}
                       action={
                         myWait ? (
                           <span

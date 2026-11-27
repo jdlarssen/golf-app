@@ -71,7 +71,7 @@ describe('#2815: kortet bak et resultat i tabellen', () => {
       points: leagueCardResultLine({ format: 'stableford', value: 34, playingHandicap: 12 }),
       aria: openCardLabel('Martin', 'Runde 3'),
       myUnit: LEAGUE_TEXT.myResultUnit,
-      myAria: myRoundCardLabel('Runde 1', '34 poeng'),
+      myAria: myRoundCardLabel('Runde 1, Lukket, 3. nov – 13. nov', '34 poeng'),
     }).toEqual({
       kicker: card.kicker,
       unknownPlayer: card.unknownPlayer,
@@ -82,7 +82,7 @@ describe('#2815: kortet bak et resultat i tabellen', () => {
       aria: fill(source.liga.standings.openCardAriaLabel, { name: 'Martin', round: 'Runde 3' }),
       // #2980: rundelista
       myUnit: player.myResultUnit,
-      myAria: fill(player.myResultCardAria, { round: 'Runde 1', result: '34 poeng' }),
+      myAria: fill(player.myResultCardAria, { round: 'Runde 1, Lukket, 3. nov – 13. nov', result: '34 poeng' }),
     });
   });
 

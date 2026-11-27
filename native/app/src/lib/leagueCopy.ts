@@ -558,9 +558,14 @@ export function myRoundResult(
   };
 }
 
-/** #2980: skjermleserens navn på raden: «Se kortet ditt fra Runde 1, 34 poeng» (`liga.player.myResultCardAria`). */
-export function myRoundCardLabel(roundLabel: string, result: string): string {
-  return `Se kortet ditt fra ${roundLabel}, ${result}`;
+/**
+ * #2980: skjermleserens navn på raden. Det har med det raden sa før den ble en
+ * knapp (runden, vinduet, datoene, banen), så resultatet og «Se kortet ditt»:
+ * «Runde 1, Lukket, 3. nov – 13. nov, St Andrews · Gul tee, 34 poeng. Se kortet ditt.»
+ * (`liga.player.myResultCardAria`).
+ */
+export function myRoundCardLabel(round: string, result: string): string {
+  return `${round}, ${result}. Se kortet ditt.`;
 }
 
 /** #2878: skjermleserens navn på et navn i sesongtabellen: «Åpne Martin». */
