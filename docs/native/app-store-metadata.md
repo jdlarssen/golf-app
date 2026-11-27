@@ -183,7 +183,7 @@ apper måtte svare på de nye spørsmålene innen 31. januar 2026
 (<https://developer.apple.com/news/?id=tlur8uvi>). Definisjonene og hvilken
 aldersgrense hvert svar gir, står på
 <https://developer.apple.com/help/app-store-connect/reference/app-information/age-ratings-values-and-definitions>
-(lest 2026-10-18, og definisjonene for brukerinnhold, sosiale medier, meldinger, konkurranser og pengespill lest på nytt 2026-11-27; siden viser ingen «sist oppdatert»-dato, og ordlyden er kontrollert av to uavhengige lesinger 27.11).
+(lest 2026-10-18, og definisjonene for brukerinnhold, sosiale medier, meldinger, konkurranser og pengespill lest på nytt 2026-11-27; siden viser ingen «sist oppdatert»-dato, og ordlyden er lest to ganger 27.11, av byggeren og av evaluatoren i #2561 G2).
 
 Klikkstien: Apps → Tørny → General → App Information → «Set Up Age Ratings» (eller
 «Edit») → gå gjennom stegene. Orkestratoren sjekker at spørsmålene står slik i
