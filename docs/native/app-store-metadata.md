@@ -53,7 +53,7 @@ Så hakes disse av, én rad per datatype:
 |---|---|---|---|---|---|
 | Contact Info | **Email Address** | Adressen kontoen logger inn med engangskoden (`native/app/src/screens/Login.tsx`, `requestLoginCode`). | App Functionality | **Yes** | **No** |
 | Contact Info | **Name** | Navnet og kallenavnet spilleren fyller inn i profilen, og som medspillerne ser på tavla (`CompleteProfile.tsx`, feltet `complete-profile-name`; `EditProfile.tsx`, feltet `edit-profile-nickname`). | App Functionality | **Yes** | **No** |
-| Contact Info | **Phone Number** | Vipps-nummeret arrangøren legger inn som betalingsmåte for startkontingenten (`native/app/src/components/create/FeeAndPrizes.tsx`, feltet `create-payment-link`; `wizardPayload.ts`, `payment_link`). Feltet er fritekst, og et telefonnummer er bruken det er laget for. Arrangøren velger selv om kontingent og nummer settes (valgfritt). Spillerne i runden ser nummeret på kontingentkortet (`PaymentCard.tsx`). | App Functionality | **Yes** | **No** |
+| Contact Info | **Phone Number** | Vipps-nummeret arrangøren legger inn som betalingsmåte for startkontingenten (`native/app/src/components/create/FeeAndPrizes.tsx`, feltet `create-payment-link`; `wizardPayload.ts`, `payment_link`). Feltet er fritekst, og et telefonnummer er bruken det er laget for. Arrangøren velger selv om kontingent og nummer settes (valgfritt). Spillerne i runden ser nummeret på kontingentkortet (`PaymentCard.tsx`). I en runde som er åpen for påmelding ser alle som har påmeldingslenka det også, uten innlogging (`app/[locale]/signup/[shortId]/page.tsx`, nettsiden). | App Functionality | **Yes** | **No** |
 | Purchases | **Purchase History** | At arrangøren har krysset av for at en spiller har betalt startkontingenten (`game_players.paid_at`; `native/app/src/data/payments.ts`, `PaymentStatus.tsx`). Betalingen skjer utenfor appen, og appen ser den aldri; avkrysningen er arrangørens liste. Vi oppgir den likevel, fordi en etikett som rapporterer for lite er en avvisningsgrunn. Se tolkningen under. | App Functionality | **Yes** | **No** |
 | Contacts | **Contacts** | Vennelista, e-postadressene spilleren taster for å legge til eller invitere en venn (`native/app/src/data/friends.ts`, `addFriendByEmail` og `inviteFriend`), og adressene arrangøren inviterer inn i en runde (`OrganiserSection.tsx`, `inviteToGame`). Apple regner en «social graph» som kontakter. Appen leser aldri kontaktene på telefonen. | App Functionality | **Yes** | **No** |
 | Identifiers | **User ID** | Konto-id-en radene i databasen henger på (Supabase Auth). | App Functionality | **Yes** | **No** |
@@ -183,7 +183,7 @@ apper måtte svare på de nye spørsmålene innen 31. januar 2026
 (<https://developer.apple.com/news/?id=tlur8uvi>). Definisjonene og hvilken
 aldersgrense hvert svar gir, står på
 <https://developer.apple.com/help/app-store-connect/reference/app-information/age-ratings-values-and-definitions>
-(lest 2026-10-18, og definisjonene for brukerinnhold, sosiale medier, meldinger, konkurranser og pengespill lest på nytt 2026-11-27; siden viser ingen «sist oppdatert»-dato, og ordlyden under er gjengitt fra et sammendrag av siden, så orkestratoren sjekker den i konsollen).
+(lest 2026-10-18, og definisjonene for brukerinnhold, sosiale medier, meldinger, konkurranser og pengespill lest på nytt 2026-11-27; siden viser ingen «sist oppdatert»-dato, og ordlyden er kontrollert av to uavhengige lesinger 27.11).
 
 Klikkstien: Apps → Tørny → General → App Information → «Set Up Age Ratings» (eller
 «Edit») → gå gjennom stegene. Orkestratoren sjekker at spørsmålene står slik i
@@ -201,7 +201,7 @@ Velg det som betyr «ingen».
 | In-App Controls: Parental Controls | Ikke valgt | Appen har ingen foreldrekontroll. |
 | In-App Controls: Age Assurance | Ikke valgt | Appen sjekker ikke alder. |
 | Capabilities: Unrestricted Web Access | Ikke valgt | Appen har ingen nettleser. Lenker til tornygolf.no åpnes i Safari, utenfor appen (`native/app/src/lib/webLink.ts`, `Linking.openURL`). Verken `react-native-webview` eller `expo-web-browser` er avhengigheter. |
-| Capabilities: User-Generated Content | **Valgt** | Apples definisjon: «Includes the broad distribution of content created by users as a component of the app's intended user experience». Fra bygg 15 viser terminlista «Finn turneringer» og den delte påmeldingslenka rundenavnet og klubbnavnet arrangøren skriver til alle innloggede spillere, også folk utenfor vennelista (`TerminRow.tsx`, `RoundInvite.tsx`; arrangørens navn vises ikke). Premie- og sponsorteksten, lagnavn og reaksjonene ser bare spillerne i runden. Apple oppgir at svaret gir 4+, så det flytter ikke aldersgrensen. |
+| Capabilities: User-Generated Content | **Valgt** | Apples definisjon: «Includes the broad distribution of content created by users as a component of the app's intended user experience». Fra bygg 15 viser terminlista «Finn turneringer» og den delte påmeldingslenka rundenavnet og klubbnavnet arrangøren skriver til alle innloggede spillere, også folk utenfor vennelista (`TerminRow.tsx`, `RoundInvite.tsx`; arrangørens navn vises ikke). Premiebordet ser spillerne i runden, og i en runde som er åpen for påmelding også alle som har påmeldingslenka, uten innlogging (nettsiden, `signup/[shortId]/page.tsx`). Lagnavn og reaksjonene ser bare spillerne i runden. Apple oppgir at svaret gir 4+, så det flytter ikke aldersgrensen. |
 | Capabilities: Social Media | Ikke valgt | Spørsmålene om sosiale medier er påkrevd fra september 2026. Apples definisjon er «Redistribution, amplification, or interaction with user-generated content through a social feed or similar discovery method that visibly spreads content to many users» (lest 2026-11-27). Terminlista er en liste over arrangementer med dato, bane og ledige plasser. Den sprer ikke innhold fra brukerne, og ingen strøm gir visninger, likes, kommentarer eller deling videre. Reaksjonene på tavla er en fast palett på seks emojier, bare for spillerne i runden. Vennelista viser bare egne venner (`native/app/src/data/friends.ts`). |
 | Capabilities: Social Media Disabled for Users Under 13 | Ikke valgt | Gjelder bare apper med sosiale medier. |
 | Capabilities: Messaging and Chat | **Valgt** | Apples definisjon: «Users can directly communicate with one another through features within the app». En makker eller arrangøren kan sende et scorekort tilbake med en grunn i fritekst, og spilleren leser den på spillsiden (`Approve.tsx`, `GameHome.tsx:268`). Det er en kort melding fra én spiller til en annen. Den valgfrie hilsenen til arrangøren i en påmelding (`RoundInvite.tsx`, høyst 200 tegn) er en melding til én person. Valgt gir 4+. |
@@ -347,7 +347,7 @@ dokumentasjon og er ikke sjekket i konsollen; sjekk den før du limer.
   (`League.tsx`, `LeagueRoundStart.tsx`, `MarkerApprove.tsx`). Appen oppretter ikke
   ligaer, og beskrivelsen sier ikke at den gjør det. Ligavarslene («runden åpner», «fristen
   nærmer seg») står i begge tekstene. Fra bygg 15 kan du også melde deg på en liga som er
-  åpen for påmelding (#2839, `League.tsx`, `LeagueJoin.tsx`), og det står i «LIGA».
+  åpen for påmelding (#2839, `League.tsx` og Hjem, `87fd721e1` og `910ab7c48`), og det står i «LIGA».
 - **Å sette opp scramble i appen.** Det kan du fra bygg 15: veiviseren oppretter
   Texas scramble, Florida scramble, Ambrose og Shamble (#2753 D3b, 12.11). Den gamle
   linja «Scramble og flere lagformater, når arrangøren har satt opp runden på
@@ -387,7 +387,7 @@ Nytt i denne versjonen:
 - Ligaen: følg sesongtabellen, meld deg på og start runden rett fra appen.
 - Reaksjoner på tavla, og et resultatkort du kan dele.
 - Innboksen samler det som venter på deg.
-- Varsler på iPhone og Android når du blir invitert, når et scorekort venter på deg og når resultatet er klart. Du velger selv hva du får.
+- Varsler når du blir invitert, når et scorekort venter på deg og når resultatet er klart. Du velger selv hva du får.
 - Lås appen med Face ID.
 - Venner: legg til venner og se hvor mange runder dere har spilt sammen.
 - Legg runden inn i kalenderen med ett trykk, og del lenka så andre kan følge tavla live.
@@ -395,14 +395,16 @@ Nytt i denne versjonen:
 - Du bestemmer selv om navnet ditt kan stå i tekstene språkmodellen skriver, og under «Personvern og konto» kan du laste ned dataene dine.
 ```
 
+Lista nevner ikke Android: Apples regel 2.3.10 sier at metadata ikke skal nevne andre mobilplattformer. Punktet om varsler gjelder derfor bare «varsler». Android-varslene (#2758) står i Play-teksten og i personvernerklæringen.
+
 Kildene (fil og dato, alle på `1fc9a089d`):
 
-- Terminlista, åpen runde og «be om plass»: `Terminliste.tsx` og `RoundInvite.tsx` (2026-11-12); lagpåmeldingen (#2840): `TeamSignupForm.tsx` (2026-11-12).
+- Terminlista (`Terminliste.tsx`, 2026-11-12), åpen runde (`RoundInvite.tsx`, 2026-11-02) og «be om plass» (`564f37ed8`, 2026-11-12); lagpåmeldingen (#2840): `TeamSignupForm.tsx` (2026-11-12).
 - Formatene: `appFormats.ts` (slagspill og Patsome 2026-11-12, scramble-familien og shamble 2026-11-12, Nassau 2026-11-13).
 - Klubbturneringer: `CreateGame.tsx` (typen «klubb») og `bec3ca209`/`5c1a2a7c8` (2026-11-12).
 - Cup: `CreateCup.tsx`, `Cup.tsx` (2026-11-01 og 2026-11-02).
 - Kontingent og premiebord: `FeeAndPrizes.tsx`, `PaymentCard.tsx`, `PaymentStatus.tsx`, `PrizeTable.tsx` (2026-11-10).
-- Ligaen: `League.tsx` (2026-10-28), påmeldingen `LeagueJoin.tsx` (2026-11-12).
+- Ligaen: `League.tsx` (2026-10-28); påmelding til en åpen klubbliga fra ligasiden, Hjem og terminlista (`87fd721e1` og `910ab7c48`, 2026-11-12; `LeagueJoin.tsx` selv kom 2026-11-01).
 - Reaksjoner og resultatkort: `RowReactions.tsx`, `ResultShareCard.tsx` (2026-11-04). Reaksjonene finnes i noen formater, ikke i alle (`reactions.ts`).
 - Innboksen: `Inbox.tsx` (2026-11-04).
 - Varsler: `pushDevice.ts` (iPhone 2026-09-30, Android 2026-11-02).
