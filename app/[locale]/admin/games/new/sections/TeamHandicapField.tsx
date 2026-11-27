@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { FormSection, FormSectionText } from '@/components/ui/FormSection';
 import { ChoiceCardGrid, RadioChoiceCard } from '@/components/ui/ChoiceCard';
 import { Input } from '@/components/ui/Input';
+import { PillRadio } from '@/components/ui/PillRadio';
 import { CARD_FIELD_HINT } from '@/components/ui/CardField';
 import { defaultTeamHandicapPct, type FormatTeamSize } from '@/lib/games/formatSetupDefaults';
 import {
@@ -16,10 +17,13 @@ import {
 /**
  * Lag-handicap-feltet for scramble-familien (Texas, Ambrose, Florida) — #2009.
  *
- * #3002 (F23): tre valgkort på én rad (variant A). «Forbundets vekting» vekter
- * hver spiller etter NGF vedlegg C, «Egen prosent» er arrangørens andel av
- * lagets snitt, og «Brutto» er 0. Nye Texas- og Florida-spill starter på
- * forbundets vekting, Ambrose på sin egen formel (`defaultTeamHandicapRule`).
+ * #3002 (F23): «Netto» og «Brutto» som valgkort øverst, som i de andre
+ * formatene. Under Netto velger to små knapper regelen: «Standard» vekter hver
+ * spiller etter NGF vedlegg C, og «Egen prosent» er arrangørens andel av
+ * lagets snitt, med tallfeltet bare da. Brutto er 0. Nye Texas- og Florida-
+ * spill starter på Standard, Ambrose på sin egen formel
+ * (`defaultTeamHandicapRule`). Eieren 27.11.2026: nærmere variant B, med
+ * enklere ord og færre trykk.
  *
  * Egen prosent: arrangøren setter tallet som prosent av lagets SNITT-handicap,
  * slik klubbene snakker om det («snittet og så 80 %»). Appen lagrer og scorer
@@ -28,11 +32,11 @@ import {
  * så redigeringsflyten viser samme tall arrangøren tastet. Hjelpeteksten sier
  * alltid begge tall, så ingen kan taste 80 og tro de fikk noe annet.
  *
- * `rule` er `null` for et lagret spill uten nøkkelen (laget før #3002): kortet
- * «Egen prosent» (eller «Brutto») er valgt, og skjemaet sender ingen regel, så
- * en lagring legger aldri nøkkelen på spillet. Brutto og Egen prosent beholder
- * `null`; bare et trykk på «Forbundets vekting» eller et bytte bort fra den
- * skriver en regel.
+ * `rule` er `null` for et lagret spill uten nøkkelen (laget før #3002, eller en
+ * revansje av et slikt): «Egen prosent» (eller «Brutto») er valgt, og skjemaet
+ * sender ingen regel, så en lagring legger aldri nøkkelen på spillet. Brutto og
+ * Egen prosent beholder `null`; bare et trykk på «Standard» eller et bytte bort
+ * fra den skriver en regel.
  *
  * Én komponent for tre formater i stedet for tre nesten like blokker —
  * forrige runde viste hvor lett en 2/4-antakelse overlever i én av kopiene og
@@ -72,8 +76,6 @@ function helperSuffix(teamSize: number): '2' | '3' | '4' {
   return '4';
 }
 
-type Choice = 'ngf' | 'pct' | 'gross';
-
 export function TeamHandicapField({
   mode,
   teamSize,
@@ -88,14 +90,16 @@ export function TeamHandicapField({
   const prefix = COPY_PREFIX[mode];
   const suffix = helperSuffix(teamSize);
 
-  const choice: Choice = rule === 'ngf' ? 'ngf' : sumPct === 0 ? 'gross' : 'pct';
+  const gross = rule !== 'ngf' && sumPct === 0;
 
-  // The last share above 0, so «Brutto» → «Egen prosent» brings it back
-  // instead of the start value. The parent remounts the field on a team size
-  // change (`key={teamSize}`), which re-seeds it.
+  // The last share above 0, so «Brutto» → «Netto» brings it back instead of
+  // the start value, and the rule the organiser had under Netto. The parent
+  // remounts the field on a team size change (`key={teamSize}`), which
+  // re-seeds both.
   const [lastSumPct, setLastSumPct] = useState<number>(
     sumPct > 0 ? sumPct : (defaultTeamHandicapPct(mode, teamSize as FormatTeamSize) ?? 0),
   );
+  const [lastNetRule, setLastNetRule] = useState<TeamHandicapRule | null>(rule);
 
   const averagePct = sumPctToAveragePct(lastSumPct, teamSize);
   // Intl direkte (ikke next-intls useFormatter): gir «26,7» på norsk uten å
@@ -107,16 +111,22 @@ export function TeamHandicapField({
   type Key = Parameters<typeof t>[0];
   const key = (name: string) => `${prefix}.${name}` as Key;
 
-  function select(next: Choice) {
-    if (next === 'ngf') {
-      onRuleChange('ngf');
-      if (sumPct === 0) onSumPctChange(lastSumPct);
-      return;
-    }
-    // Leaving the weighting writes `pct`; a stored game without a rule keeps
+  function selectGross() {
+    setLastNetRule(rule);
+    // Leaving Standard writes `pct`; a stored game without a rule keeps
     // `null`, so its save adds no key.
     if (rule === 'ngf') onRuleChange('pct');
-    onSumPctChange(next === 'gross' ? 0 : lastSumPct);
+    onSumPctChange(0);
+  }
+
+  function selectNet() {
+    if (lastNetRule === 'ngf') onRuleChange('ngf');
+    onSumPctChange(lastSumPct);
+  }
+
+  function selectRule(next: TeamHandicapRule) {
+    if (next === 'ngf') onRuleChange('ngf');
+    else if (rule === 'ngf') onRuleChange('pct');
   }
 
   /**
@@ -134,61 +144,72 @@ export function TeamHandicapField({
   }
 
   const legend = t(key('legend'));
-  const radioName = `${prefix}_team_handicap_rule__choice`;
 
   return (
     <FormSection legend={legend}>
       <FormSectionText>{t(key('description'))}</FormSectionText>
 
-      <ChoiceCardGrid columns={3} label={legend}>
+      <ChoiceCardGrid columns={2} label={legend}>
         <RadioChoiceCard
-          name={radioName}
-          value="ngf"
-          checked={choice === 'ngf'}
-          onChange={() => select('ngf')}
-          height={64}
-          layout="dense"
-          title={t('ruleNgfTitle')}
+          name={`${prefix}_team_handicap__mode`}
+          value="netto"
+          checked={!gross}
+          onChange={selectNet}
+          height={52}
+          title={tAllowance('nettoLabel')}
         />
         <RadioChoiceCard
-          name={radioName}
-          value="pct"
-          checked={choice === 'pct'}
-          onChange={() => select('pct')}
-          height={64}
-          layout="dense"
-          title={t('rulePctTitle')}
-        />
-        <RadioChoiceCard
-          name={radioName}
-          value="gross"
-          checked={choice === 'gross'}
-          onChange={() => select('gross')}
-          height={64}
-          layout="dense"
+          name={`${prefix}_team_handicap__mode`}
+          value="brutto"
+          checked={gross}
+          onChange={selectGross}
+          height={52}
           title={tAllowance('bruttoLabel')}
         />
       </ChoiceCardGrid>
 
-      {choice === 'ngf' && <p className={CARD_FIELD_HINT}>{t(`ngfHelper${suffix}` as Key)}</p>}
+      {!gross && (
+        <>
+          <div role="radiogroup" aria-label={t('ruleGroupLabel')} className="flex flex-wrap gap-2">
+            <PillRadio
+              name={`${prefix}_team_handicap_rule__choice`}
+              value="ngf"
+              checked={rule === 'ngf'}
+              onChange={() => selectRule('ngf')}
+            >
+              {t('ruleNgfTitle')}
+            </PillRadio>
+            <PillRadio
+              name={`${prefix}_team_handicap_rule__choice`}
+              value="pct"
+              checked={rule !== 'ngf'}
+              onChange={() => selectRule('pct')}
+            >
+              {t('rulePctTitle')}
+            </PillRadio>
+          </div>
 
-      {choice === 'pct' && (
-        <Input
-          variant="card"
-          id={`${prefix}_team_handicap_pct__input`}
-          label={t(key('inputLabel'))}
-          hint={[t(key(`nettoHelper${suffix}`)), t('sumEquivalent', { sumPct: sumPctText })].join(' ')}
-          type="number"
-          min={0}
-          max={TEAM_HANDICAP_AVERAGE_PCT_MAX}
-          step={1}
-          value={averagePct}
-          onChange={(e) => typeAveragePct(e.target.value)}
-          inputClassName="tabular-nums"
-        />
+          {rule === 'ngf' ? (
+            <p className={CARD_FIELD_HINT}>{t(`ngfHelper${suffix}` as Key)}</p>
+          ) : (
+            <Input
+              variant="card"
+              id={`${prefix}_team_handicap_pct__input`}
+              label={t(key('inputLabel'))}
+              hint={[t(key(`nettoHelper${suffix}`)), t('sumEquivalent', { sumPct: sumPctText })].join(' ')}
+              type="number"
+              min={0}
+              max={TEAM_HANDICAP_AVERAGE_PCT_MAX}
+              step={1}
+              value={averagePct}
+              onChange={(e) => typeAveragePct(e.target.value)}
+              inputClassName="tabular-nums"
+            />
+          )}
+        </>
       )}
 
-      {choice === 'gross' && (
+      {gross && (
         <p className="font-sans text-xs leading-[1.4] text-muted">{t(key('bruttoHelper'))}</p>
       )}
     </FormSection>

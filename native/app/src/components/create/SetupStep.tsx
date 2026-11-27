@@ -209,11 +209,11 @@ export function SetupStep({
   const defaultSumPct = isScrambleFamily(mode) ? (defaultTeamHandicapPct(mode, teamSize) ?? 0) : 0;
   const teamHandicapSumPct =
     text.allowance === '' ? defaultSumPct : averagePctToSumPct(Number(text.allowance), teamSize);
-  // #3002 (F23): tre kort som på nettet (variant A). Brutto er prosenten 0
-  // med regelen `pct`, så validatoren lagrer prosenten av summen.
+  // #3002 (F23): «Netto» og «Brutto» som på nettet, og under Netto
+  // «Standard» (NGFs vekting) eller «Egen prosent» (eieren 27.11.2026). Brutto
+  // er prosenten 0 med regelen `pct`, så validatoren lagrer prosenten av summen.
   const teamHandicapRule = setup.teamHandicapRule ?? defaultTeamHandicapRule(mode);
-  const teamHandicapChoice: 'ngf' | 'pct' | 'brutto' =
-    teamHandicapRule === 'ngf' ? 'ngf' : text.allowance === '0' ? 'brutto' : 'pct';
+  const teamHandicapGross = teamHandicapRule !== 'ngf' && text.allowance === '0';
   const shambleNet = (setup.shambleScoring ?? 'net') === 'net';
   const champagne = setup.shambleVariant === 'champagne';
 
@@ -339,32 +339,44 @@ export function SetupStep({
               {TEAM_HANDICAP_TEXT.description}
             </Text>
             <ChoiceCards
-              columns={3}
-              minHeight={64}
-              titleSize={15}
-              paddingX={10}
-              wrapTitle
-              stretch
+              columns={2}
+              minHeight={52}
               accessibilityLabel={TEAM_HANDICAP_TEXT.legend}
-              value={teamHandicapChoice}
+              value={teamHandicapGross ? 'brutto' : 'netto'}
               onChange={(choice) => {
-                onSetup({ teamHandicapRule: choice === 'ngf' ? 'ngf' : 'pct' });
-                if (choice === 'brutto') onText({ allowance: '0' });
-                else if (text.allowance === '0') onText({ allowance: '' });
+                if (choice === 'brutto') {
+                  onSetup({ teamHandicapRule: 'pct' });
+                  onText({ allowance: '0' });
+                } else {
+                  // Back to Netto: the format's start, as a new game.
+                  onSetup({ teamHandicapRule: undefined });
+                  onText({ allowance: '' });
+                }
               }}
               options={[
-                { value: 'ngf' as const, title: TEAM_HANDICAP_TEXT.ruleNgfTitle, testID: 'create-team-hcp-ngf' },
-                { value: 'pct' as const, title: TEAM_HANDICAP_TEXT.rulePctTitle, testID: 'create-team-hcp-netto' },
+                { value: 'netto' as const, title: ALLOWANCE_TEXT.nettoLabel, testID: 'create-team-hcp-netto' },
                 { value: 'brutto' as const, title: ALLOWANCE_TEXT.bruttoLabel, testID: 'create-team-hcp-brutto' },
               ]}
             />
-            {teamHandicapChoice === 'ngf' ? (
-              <Text style={ui.muted} testID="create-team-hcp-ngf-helper">
-                {TEAM_HANDICAP_TEXT.ngfHelper[teamSize as 2 | 3 | 4]}
-              </Text>
-            ) : teamHandicapChoice === 'brutto' ? (
+            {teamHandicapGross ? (
               <Text style={ui.muted} testID="create-team-hcp-brutto-helper">
                 {TEAM_HANDICAP_TEXT.bruttoHelper}
+              </Text>
+            ) : (
+              <Chips
+                testID="create-team-hcp-rule"
+                style={styles.ruleChips}
+                value={teamHandicapRule}
+                onChange={(rule) => onSetup({ teamHandicapRule: rule })}
+                options={[
+                  { value: 'ngf' as const, label: TEAM_HANDICAP_TEXT.ruleNgfTitle, testID: 'create-team-hcp-ngf' },
+                  { value: 'pct' as const, label: TEAM_HANDICAP_TEXT.rulePctTitle, testID: 'create-team-hcp-pct' },
+                ]}
+              />
+            )}
+            {teamHandicapGross ? null : teamHandicapRule === 'ngf' ? (
+              <Text style={ui.muted} testID="create-team-hcp-ngf-helper">
+                {TEAM_HANDICAP_TEXT.ngfHelper[teamSize as 2 | 3 | 4]}
               </Text>
             ) : (
               <NestedField
@@ -660,6 +672,8 @@ const styles = StyleSheet.create({
   // Forklaringen over kortene: 12 pt ned til dem (6 fra gruppa pluss 6 her), som `Nyttspill-5-avansert-a`.
   descriptionAboveCards: { marginBottom: 6 },
   nestedField: { gap: 6, marginTop: 6 },
+  // #3002: «Standard» og «Egen prosent» under Netto, 12 pt fra kortene som feltet under.
+  ruleChips: { marginTop: 6 },
   nestedLabel: { marginTop: 0 },
   // Tallfeltet under valgkortene er 50 høyt på tegningen (`ui.input` er 44).
   input50: { minHeight: 50 },
