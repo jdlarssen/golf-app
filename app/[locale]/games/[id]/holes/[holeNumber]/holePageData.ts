@@ -332,7 +332,7 @@ export async function fetchHolePageData(args: {
       // #2941: a new match with the par rule sums every hole's par per tee
       // for the extra strokes, as the engine does; this hole alone is not
       // enough. Any other game skips the read.
-      usesParDifference(game.mode_config)
+      usesParDifference(game.mode_config) && game.course_id
         ? supabase
             .from('course_holes')
             .select(COURSE_HOLES_SELECT)
