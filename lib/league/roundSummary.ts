@@ -71,6 +71,39 @@ export type RoundSummary = {
   table: RoundSummaryRow[];
 };
 
+type StandingRow = NonNullable<LeagueSnapshot['standings']['net']>['rows'][number];
+
+/**
+ * A player's value in the round, when a card is behind it. A penalty for a
+ * missed round has a value too, but it is not a result.
+ */
+function playedValue(row: StandingRow, roundId: string): number | null {
+  const cell = row.perRound.find((c) => c.roundId === roundId);
+  return cell && cell.value !== null && !cell.penalised ? cell.value : null;
+}
+
+/**
+ * The results in one round, the best first, with the place in the round
+ * (1-based, shared by players level on the value). One home for the place in
+ * a round (#2983): the summary of a closed round and the report after a
+ * league flight both read it.
+ */
+export function roundResults(
+  rows: readonly StandingRow[],
+  roundId: string,
+  higherIsBetter: boolean,
+): Array<{ userId: string; value: number; place: number }> {
+  const results = rows.flatMap((row) => {
+    const value = playedValue(row, roundId);
+    return value === null ? [] : [{ userId: row.userId, value }];
+  });
+  results.sort((a, b) => (higherIsBetter ? b.value - a.value : a.value - b.value));
+  return results.map((r) => ({
+    ...r,
+    place: 1 + results.filter((o) => (higherIsBetter ? o.value > r.value : o.value < r.value)).length,
+  }));
+}
+
 /**
  * The round a summary for `openingRoundId` is about: the one with the highest
  * sequence below it, once it has closed at `now`. Null when there is none (the
@@ -109,24 +142,12 @@ export function buildRoundSummary(
   const model = snapshot.league.standings_model;
   const nameOf = new Map(snapshot.participants.map((p) => [p.userId, formatPublicName(p)]));
 
-  // A played round has a card behind it. A penalty for a missed round has a
-  // value too, but it is not a result.
-  const playedValue = (row: (typeof standings.rows)[number], roundId: string): number | null => {
-    const cell = row.perRound.find((c) => c.roundId === roundId);
-    return cell && cell.value !== null && !cell.penalised ? cell.value : null;
-  };
-
-  const roundHigherIsBetter = pointsBased;
-  const results = standings.rows.flatMap((row) => {
-    const value = playedValue(row, closed.id);
-    return value === null ? [] : [{ userId: row.userId, value }];
-  });
+  const results = roundResults(standings.rows, closed.id, pointsBased);
   if (results.length === 0) return null;
-  results.sort((a, b) => (roundHigherIsBetter ? b.value - a.value : a.value - b.value));
   const best = results[0]!.value;
   const round: RoundSummaryRow[] = results.map((r) => ({
     userId: r.userId,
-    place: 1 + results.filter((o) => (roundHigherIsBetter ? o.value > r.value : o.value < r.value)).length,
+    place: r.place,
     name: nameOf.get(r.userId) ?? null,
     value: r.value,
     behind: Math.abs(best - r.value),

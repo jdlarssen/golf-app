@@ -22,7 +22,7 @@
  *
  * Pure. No I/O.
  */
-import { findWeekday, sanitizeNarrative } from '@/lib/ai/narrative';
+import { findWeekday, numbersNotIn, sanitizeNarrative } from '@/lib/ai/narrative';
 import type { RoundSummary } from './roundSummary';
 
 export type RoundNewsFacts = {
@@ -204,19 +204,18 @@ export function buildRoundNewsPrompt(facts: RoundNewsFacts, previousFault: strin
  * `GATHERING_WORDS`. The fault then says which,
  * in words the model can act on.
  *
- * The number check reads digits only: every run of digits in the story must
- * also be a run of digits in the facts as the model saw them. It catches an
- * invented score or place. It does not catch a number written as a word, or
- * a number from the facts used about the wrong thing; the prompt is the only
- * guard there.
+ * The number check (`numbersNotIn`) reads digits only: every run of digits in
+ * the story must also be a run of digits in the facts as the model saw them.
+ * It catches an invented score or place. It does not catch a number written
+ * as a word, or a number from the facts used about the wrong thing; the
+ * prompt is the only guard there.
  */
 export function checkRoundNews(raw: string, facts: RoundNewsFacts): RoundNewsCheck {
   const text = sanitizeNarrative(raw, MAX_NEWS_LENGTH);
   if (text === null) return { story: null, fault: 'Utkastet var tomt eller for langt.' };
 
   const faults: string[] = [];
-  const known = new Set(digitRuns(JSON.stringify(facts)));
-  const unknown = [...new Set(digitRuns(text).filter((n) => !known.has(n)))];
+  const unknown = numbersNotIn(text, JSON.stringify(facts));
   if (unknown.length > 0) {
     faults.push(`Utkastet inneholdt tall som ikke står i fakta-objektet: ${unknown.join(', ')}.`);
   }
@@ -231,9 +230,4 @@ export function checkRoundNews(raw: string, facts: RoundNewsFacts): RoundNewsChe
     }
   }
   return faults.length > 0 ? { story: null, fault: faults.join(' ') } : { story: text, fault: null };
-}
-
-/** Every run of digits, with a decimal comma read as a point («41,5» → «41.5»). */
-function digitRuns(text: string): string[] {
-  return (text.match(/\d+(?:[.,]\d+)?/g) ?? []).map((n) => n.replace(',', '.'));
 }
