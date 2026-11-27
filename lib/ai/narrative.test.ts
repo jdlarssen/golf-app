@@ -5,6 +5,8 @@ import {
   NARRATIVE_MAX_TOKENS,
   NARRATIVE_MODEL,
   NARRATIVE_TIMEOUT_MS,
+  WEEKDAY_WORDS,
+  findWeekday,
   sanitizeNarrative,
 } from './narrative';
 
@@ -56,3 +58,27 @@ describe('delte konstanter', () => {
     expect(NARRATIVE_MAX_RETRIES).toBe(1);
   });
 });
+
+describe('findWeekday (#2983)', () => {
+  it.each([
+    ['Han leverte på lørdag.', 'lørdag'],
+    ['Søndagskvelden ble lang.', 'Søndagskvelden'],
+    ['Mandagen starter runden.', 'Mandagen'],
+    ['tirsdager er tunge', 'tirsdager'],
+    ['onsdag, torsdag og fredag', 'onsdag'],
+  ])('finds a weekday in any inflection: %s', (text, found) => {
+    expect(findWeekday(text)).toBe(found);
+  });
+
+  it.each(['Han tok helgen.', 'Søndre Land', 'En formann og en dag på banen.', 'Kalender og ukeplan.'])(
+    'finds none where none is: %s',
+    (text) => {
+      expect(findWeekday(text)).toBeNull();
+    },
+  );
+
+  it('the list names the seven days, one home for the prompts and the checks', () => {
+    expect(WEEKDAY_WORDS).toEqual(['mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag', 'søndag']);
+  });
+});
+

@@ -40,6 +40,25 @@ export const NARRATIVE_TIMEOUT_MS = 20_000;
 export const NARRATIVE_MAX_RETRIES = 1;
 
 /**
+ * Ukedagene, som tekstene aldri skal nevne (#2983). En historie nevnte en
+ * ukedag 22.11, og den var feil: modellen vet ikke hvilken dag det er, og en
+ * dato i fakta gjør den ikke klokere. En regel som bare står i prompten er en
+ * bønn, ikke en sperre (#2989), så sperrene leser den samme lista som
+ * promptene (felle 4).
+ */
+export const WEEKDAY_WORDS = ['mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag', 'søndag'] as const;
+
+// Et ord som begynner med en ukedag, i alle bøyninger og sammensetninger
+// («lørdag», «mandagen», «søndagskveld»). `\p{L}` og flagget `u`, fordi `\b`
+// ikke kjenner æ, ø og å.
+const WEEKDAY_PATTERN = new RegExp(`(?<!\\p{L})(?:${WEEKDAY_WORDS.join('|')})\\p{L}*`, 'iu');
+
+/** Det første ordet i `text` som er en ukedag, slik det står, eller null. */
+export function findWeekday(text: string): string | null {
+  return text.match(WEEKDAY_PATTERN)?.[0] ?? null;
+}
+
+/**
  * Vasker et rått modellsvar før det lagres.
  *
  * Returnerer `null` når svaret er tomt eller urimelig langt — kallstedet
