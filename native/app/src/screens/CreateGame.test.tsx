@@ -466,6 +466,10 @@ describe('CreateGame: scramble og shamble (#2753 D3b)', () => {
     });
     // iOS tegner Fraunces bredere enn tegningen: tittelen krymper heller enn å dele ordet.
     expect(screen.getByText('Tremannslag').props).toMatchObject({ numberOfLines: 1, adjustsFontSizeToFit: true });
+    // #3002 (F23): Texas starter på forbundets vekting, uten tallfelt.
+    expect(screen.getByTestId('create-team-hcp-ngf').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.queryByTestId('create-team-hcp')).toBeNull();
+    await fireEvent.press(screen.getByTestId('create-team-hcp-netto'));
     expect(screen.getByTestId('create-team-hcp').props.placeholder).toBe('40');
     await fireEvent.press(screen.getByTestId('create-team-size-2'));
     expect(screen.getByTestId('create-team-hcp').props.placeholder).toBe('50');
@@ -490,7 +494,7 @@ describe('CreateGame: scramble og shamble (#2753 D3b)', () => {
 
     const [draft] = publishGameMock.mock.calls.at(-1)!;
     expect(draft.gameMode).toBe('texas_scramble');
-    expect(draft.setup).toMatchObject({ teamSize: 2, teamHandicapSumPct: 30 });
+    expect(draft.setup).toMatchObject({ teamSize: 2, teamHandicapSumPct: 30, teamHandicapRule: 'pct' });
     publishGameMock.mockClear();
   });
 
@@ -1241,9 +1245,10 @@ describe('summaryLines — kontingent og premiebord', () => {
   });
 
   // #2880: handicap-andelen og lag-handicap står som valgkort med netto valgt fra start.
+  // #3002 (F23): for Texas er netto-valget fra start forbundets vekting.
   it.each([
     { slug: 'stableford', net: 'create-allowance-netto', gross: 'create-allowance-brutto' },
-    { slug: 'texas_scramble', net: 'create-team-hcp-netto', gross: 'create-team-hcp-brutto' },
+    { slug: 'texas_scramble', net: 'create-team-hcp-ngf', gross: 'create-team-hcp-brutto' },
   ])('#2880: $slug viser netto/brutto som valgkort', async ({ slug, net, gross }) => {
     (fetchFormatCatalog as jest.Mock).mockResolvedValueOnce([
       { slug, label: slug, iconKey: slug, isPrimary: false, sortOrder: 10 },
@@ -1260,15 +1265,17 @@ describe('summaryLines — kontingent og premiebord', () => {
 
   // #2880: tallfeltet under kortene er 50 høyt og etiketten har ingen egen toppluft (`Nyttspill-5-avansert-a`).
   it.each([
-    { slug: 'stableford', input: 'create-allowance', label: 'Handicap-andel (%)', descriptionText: ALLOWANCE_TEXT.description },
-    { slug: 'texas_scramble', input: 'create-team-hcp', label: 'Prosent av lagets snitthandicap', descriptionText: TEAM_HANDICAP_TEXT.description },
-  ])('#2880: $slug har tallfeltet 50 høyt og etiketten uten toppluft', async ({ slug, input, label, descriptionText }) => {
+    { slug: 'stableford', input: 'create-allowance', label: 'Handicap-andel (%)', descriptionText: ALLOWANCE_TEXT.description, reveal: null },
+    // #3002: Texas viser tallfeltet under «Egen prosent».
+    { slug: 'texas_scramble', input: 'create-team-hcp', label: 'Prosent av lagets snitthandicap', descriptionText: TEAM_HANDICAP_TEXT.description, reveal: 'create-team-hcp-netto' },
+  ])('#2880: $slug har tallfeltet 50 høyt og etiketten uten toppluft', async ({ slug, input, label, descriptionText, reveal }) => {
     (fetchFormatCatalog as jest.Mock).mockResolvedValueOnce([
       { slug, label: slug, iconKey: slug, isPrimary: false, sortOrder: 10 },
     ]);
     await renderWizard();
     await fireEvent.press(await screen.findByTestId(`create-format-${slug}`));
     await fireEvent.press(screen.getByTestId('create-next'));
+    if (reveal) await fireEvent.press(screen.getByTestId(reveal));
     expect(StyleSheet.flatten(screen.getByTestId(input).props.style).minHeight).toBe(50);
     const labelText = screen.getAllByText(/./).find((n) => n.props.children === label);
     expect(labelText).toBeTruthy();
