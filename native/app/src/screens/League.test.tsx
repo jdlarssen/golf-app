@@ -515,7 +515,8 @@ describe('#2980: tallet ditt i rundelista, og ett trykk til kortet', () => {
     // Samme tall som cella i tabellen for runden.
     expect(screen.getByTestId('league-standings-card-me-r1')).toHaveTextContent('36');
     expect(row.props.accessibilityRole).toBe('button');
-    expect(row.props.accessibilityLabel).toBe('Se kortet ditt fra Runde 1, 36 poeng');
+    // Navnet har med det raden sa før den ble en knapp: runden, vinduet, datoene og banen.
+    expect(row.props.accessibilityLabel).toMatch(/^Runde 1, Lukket, \S+ \S+ – \S+ \S+, St Andrews · Gul tee, 36 poeng\. Se kortet ditt\.$/);
     await fireEvent.press(row);
     expect(navigate).toHaveBeenCalledWith('LeagueCard', { leagueId: 'liga-vinter', gameId: 'g-me-r1', userId: 'me' });
   });
@@ -590,7 +591,9 @@ describe('#2980: tallet ditt i rundelista, og ett trykk til kortet', () => {
     });
     await renderLeague();
     expect(screen.getByTestId('league-round-1-result')).toHaveTextContent(/^\+3$/);
-    expect(screen.getByTestId('league-round-1').props.accessibilityLabel).toBe('Se kortet ditt fra Runde 1, +3');
+    expect(screen.getByTestId('league-round-1').props.accessibilityLabel).toMatch(
+      /^Runde 1, Lukket, .+, St Andrews · Gul tee, \+3\. Se kortet ditt\.$/,
+    );
   });
 });
 

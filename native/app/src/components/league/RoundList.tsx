@@ -8,6 +8,8 @@
 // «Har spilt» sto («34 poeng ›»), og hele raden åpner kortet ditt fra runden.
 // Tallet er cella fra tabellen (`myRoundCell`), så det regnes aldri på nytt.
 // Uten kort bak (`gameId` null) er tallet tekst, og raden kan ikke trykkes på.
+// Knappens navn for skjermleseren har med det raden sa før: runden, vinduet,
+// datoene og banen, så tallet og «Se kortet ditt».
 import { StyleSheet, Text, View } from 'react-native';
 import type { AppLeagueView } from '../../../../../lib/league/appLeagueView';
 import { myRoundCell } from '../../../../../lib/league/standingsFormat';
@@ -18,6 +20,7 @@ import {
   roundCourseLine,
   roundDates,
   roundWindow,
+  WINDOW_CHIP,
 } from '../../lib/leagueCopy';
 import { FONTS, fraunces, interLine, useTheme } from '../../theme';
 import { ChevronIcon } from '../icons/Icons';
@@ -115,7 +118,9 @@ export function RoundList({
               onPress={() => onOpenCard({ gameId, userId: meId })}
               accessibilityRole="button"
               accessibilityLabel={myRoundCardLabel(
-                round.label,
+                [round.label, WINDOW_CHIP[window], roundDates(round.opensAt, round.closesAt), roundCourseLine(round)]
+                  .filter(Boolean)
+                  .join(', '),
                 result.unit ? `${result.value} ${result.unit}` : result.value,
               )}
               style={rowStyle}

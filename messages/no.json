@@ -5934,7 +5934,7 @@
       "delivered": "Levert",
       "deliveredAria": "Du har levert denne runden",
       "myResultUnit": "poeng",
-      "myResultCardAria": "Se kortet ditt fra {round}, {result}",
+      "myResultCardAria": "{round}, {result}. Se kortet ditt.",
       "playButton": "Spill",
       "playedBy": {
         "delivered": "Har spilt",

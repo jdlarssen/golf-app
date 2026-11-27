@@ -4,6 +4,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
+import { createTranslator } from 'next-intl';
+import en from '@/messages/en.json';
 import { RoundMyResult } from './RoundMyResult';
 
 beforeEach(() => cleanup());
@@ -18,7 +20,7 @@ function renderRow(overrides: Partial<Props> = {}) {
     pointsBased: true,
     leagueId: 'l1',
     userId: 'me',
-    roundLabel: 'Runde 1',
+    roundSummary: 'Runde 1, Lukket, 10. nov 2026 – 20. nov 2026',
     action: <span data-testid="today-action">Levert</span>,
     children: <p>Runde 1</p>,
     ...overrides,
@@ -31,7 +33,8 @@ describe('RoundMyResult — your number in the round list (#2980)', () => {
     renderRow();
     const link = screen.getByTestId('liga-round-card-link');
     expect(link).toHaveAttribute('href', '/liga/l1/kort/g1/me');
-    expect(link).toHaveAttribute('aria-label', 'Se kortet ditt fra Runde 1, 34 poeng');
+    // The name keeps what the row said before it became a link: round, window, dates.
+    expect(link).toHaveAttribute('aria-label', 'Runde 1, Lukket, 10. nov 2026 – 20. nov 2026, 34 poeng. Se kortet ditt.');
     // The round's own column is inside the link: the row is the target.
     expect(link).toHaveTextContent(/^Runde 1/);
     expect(screen.getByTestId('liga-round-my-result')).toHaveTextContent('34poeng');
@@ -48,7 +51,10 @@ describe('RoundMyResult — your number in the round list (#2980)', () => {
   it('stroke play shows strokes to par alone, as the table cell does', () => {
     renderRow({ mine: { raw: 3, gameId: 'g1' }, model: 'total', pointsBased: false });
     expect(screen.getByTestId('liga-round-my-result')).toHaveTextContent(/^\+3$/);
-    expect(screen.getByTestId('liga-round-card-link')).toHaveAttribute('aria-label', 'Se kortet ditt fra Runde 1, +3');
+    expect(screen.getByTestId('liga-round-card-link')).toHaveAttribute(
+      'aria-label',
+      'Runde 1, Lukket, 10. nov 2026 – 20. nov 2026, +3. Se kortet ditt.',
+    );
   });
 
   it('a round without your number (not played, a penalty, upcoming) keeps today\'s row', () => {
@@ -73,5 +79,16 @@ describe('RoundMyResult — your number in the round list (#2980)', () => {
     renderRow({ mine: { raw: 34, gameId: null } });
     expect(screen.getByTestId('liga-round-my-result')).toHaveTextContent('34poeng');
     expect(screen.queryByRole('link')).toBeNull();
+  });
+
+  it('English says «1 point» and «2 points»; Norwegian «poeng» either way', () => {
+    const tEn = createTranslator({ locale: 'en', messages: en, namespace: 'liga.player' });
+    expect([tEn('myResultUnit', { count: 1 }), tEn('myResultUnit', { count: 2 }), tEn('myResultUnit', { count: 36.5 })]).toEqual([
+      'point',
+      'points',
+      'points',
+    ]);
+    renderRow({ mine: { raw: 1, gameId: 'g1' } });
+    expect(screen.getByTestId('liga-round-my-result')).toHaveTextContent('1poeng');
   });
 });

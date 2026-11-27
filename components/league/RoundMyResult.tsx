@@ -16,6 +16,10 @@ import { localeDecimal } from '@/components/league/LeagueStandingsTable';
  * A card that waits for the marker has no number in the table yet (#2661), so
  * `awaiting` keeps the waiting line. Without `leagueId` (a caller the card's
  * gate would refuse) or without a flight, the number is plain text.
+ *
+ * The link's name for a screen reader keeps what the row said before it
+ * became a link (`roundSummary`: label, window, dates), then the result and
+ * «Se kortet ditt».
  */
 export function RoundMyResult({
   mine,
@@ -24,7 +28,7 @@ export function RoundMyResult({
   pointsBased,
   leagueId,
   userId,
-  roundLabel,
+  roundSummary,
   action,
   children,
 }: {
@@ -36,7 +40,8 @@ export function RoundMyResult({
   /** `cardLinkLeagueId`: the league id when the caller may open cards. */
   leagueId: string | null;
   userId: string | null;
-  roundLabel: string;
+  /** The round as the screen reader reads it: «Runde 1, Lukket, 10. nov 2026 – 20. nov 2026». */
+  roundSummary: string;
   /** Today's right-hand side, for a round without your number. */
   action: ReactNode;
   /** The round's own column: number, window, label and dates. */
@@ -55,7 +60,7 @@ export function RoundMyResult({
   }
 
   const value = formatRoundCell(mine.raw, model, pointsBased, localeDecimal(locale));
-  const unit = isPointsCell(model, pointsBased) ? t('myResultUnit') : null;
+  const unit = isPointsCell(model, pointsBased) ? t('myResultUnit', { count: mine.raw }) : null;
   const result = (
     <span className="flex items-baseline gap-1" data-testid="liga-round-my-result">
       <span className="font-serif text-base font-semibold tabular-nums text-text">{value}</span>
@@ -77,7 +82,7 @@ export function RoundMyResult({
     <Link
       href={`/liga/${leagueId}/kort/${mine.gameId}/${userId}`}
       prefetch={false}
-      aria-label={t('myResultCardAria', { round: roundLabel, result: unit ? `${value} ${unit}` : value })}
+      aria-label={t('myResultCardAria', { round: roundSummary, result: unit ? `${value} ${unit}` : value })}
       data-testid="liga-round-card-link"
       className="-m-2 flex min-h-[44px] items-start justify-between gap-3 rounded-xl p-2 transition-colors hover:bg-primary-soft/50"
     >
