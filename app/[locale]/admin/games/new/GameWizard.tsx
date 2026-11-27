@@ -1414,6 +1414,7 @@ function WizardBody({
                   fourballAllowancePct={state.patsomeFourballAllowancePct}
                   onFourballAllowanceChange={state.setPatsomeFourballAllowancePct}
                   disabled={state.lockGameMode}
+                  serializedExternally
                 />
               )}
               {/* #1065: allowance-feltene (HCP-allowance, lag-handicap for

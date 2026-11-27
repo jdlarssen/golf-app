@@ -314,6 +314,24 @@ describe('GameForm edit round trip — scramble rule and patsome share (#3002)',
     },
   ];
 
+  // The edit shows PatsomeSetup, and the hidden mirror carries the value for
+  // a locked game (disabled radios post nothing): the radios must not post
+  // `patsome_scoring` a second time.
+  it.each([true, false])('patsome, locked %s: the edit posts patsome_scoring once', (locked) => {
+    const f = FIXTURES_3002[2];
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={PLAYERS}
+        initialValues={{ ...buildEditFormInitialValues(storedRow(f), storedRoster(f)), lock_game_mode: locked }}
+        mode={{ kind: 'edit-scheduled', gameId: 'game-1', updateAction: async () => {} }}
+      />,
+    );
+    const data = new FormData(container.querySelector('form') as HTMLFormElement);
+    expect(data.getAll('patsome_scoring')).toEqual(['net']);
+    expect(data.getAll('patsome_fourball_allowance_pct')).toEqual(['85']);
+  });
+
   it.each(FIXTURES_3002.map((f) => [f.mode, f] as const))(
     '%s: the form posts the stored keys itself',
     (_label, f) => {
