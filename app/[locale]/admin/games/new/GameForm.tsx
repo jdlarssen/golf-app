@@ -214,7 +214,7 @@ export type InitialValues = {
    */
   ambrose_team_handicap_pct?: string;
   /**
-   * Florida Scramble (#283): lag-handicap-prosent (NGF-fasttabell), prosent av
+   * Florida Scramble (#283): lag-handicap-prosent (fast startverdi), prosent av
    * summen. 0–100 % av lagets snitt (#2566), heltall default (15 for
    * 3-mannslag, 10 for 4-mannslag). Default settes via
    * `defaultFloridaHandicapPct(teamSize)` når lagstørrelse endres.
