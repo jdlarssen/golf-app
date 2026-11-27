@@ -7,12 +7,21 @@ import type { RoundSummary } from './roundSummary';
  * thrown away. The model call itself is in `roundNews.test.ts`.
  */
 
-const row = (userId: string, place: number, name: string | null, value: number, behind: number) => ({
+const row = (
+  userId: string,
+  place: number,
+  name: string | null,
+  value: number,
+  behind: number,
+  previousPlace: number | null = null,
+) => ({
   userId,
   place,
   name,
   value,
   behind,
+  previousPlace,
+  move: previousPlace === null ? null : previousPlace - place,
 });
 
 const summary: RoundSummary = {
@@ -42,9 +51,9 @@ describe('buildRoundNewsFacts', () => {
       { place: 4, name: 'Gard G.', value: 36, behindBest: 8 },
     ]);
     expect(facts.table).toEqual([
-      { place: 1, name: 'Dina D.', total: 44, behindLeader: 0 },
-      { place: 2, name: 'Emil E.', total: 43, behindLeader: 1 },
-      { place: 4, name: 'Gard G.', total: 36, behindLeader: 8 },
+      { place: 1, name: 'Dina D.', total: 44, behindLeader: 0, previousPlace: null, move: null },
+      { place: 2, name: 'Emil E.', total: 43, behindLeader: 1, previousPlace: null, move: null },
+      { place: 4, name: 'Gard G.', total: 36, behindLeader: 8, previousPlace: null, move: null },
     ]);
     expect(JSON.stringify(facts)).not.toMatch(/Nina|nei/);
     expect(facts).toMatchObject({
@@ -226,3 +235,67 @@ describe('checkRoundNews: a simulator league has no meeting place', () => {
     }
   });
 });
+
+describe('moves in the table (#2983)', () => {
+  // Round 2 has closed: Gard climbed from 4th to 2nd, past Emil and Nina (who
+  // said no), and Emil fell one place. Dina stayed on top.
+  const afterTwo: RoundSummary = {
+    ...summary,
+    roundId: 'r2',
+    roundLabel: 'Runde 2',
+    roundsPlayed: 2,
+    table: [
+      row('dina', 1, 'Dina D.', 84, 0, 1),
+      row('gard', 2, 'Gard G.', 80, 4, 4),
+      row('emil', 3, 'Emil E.', 79, 5, 2),
+      row('nei', 4, 'Nina N.', 70, 14, 3),
+      row('ny', 5, 'Nils N.', 30, 54, null),
+    ],
+  };
+  const moved = buildRoundNewsFacts(afterTwo, 'Runde 3', new Set([...yes, 'ny']))!;
+
+  it('the facts carry the place before and the move, worked out, only for the players who said yes', () => {
+    expect(moved.table.map((r) => [r.name, r.place, r.previousPlace, r.move])).toEqual([
+      ['Dina D.', 1, 1, 0],
+      ['Gard G.', 2, 4, 2],
+      ['Emil E.', 3, 2, -1],
+      ['Nils N.', 5, null, null],
+    ]);
+  });
+
+  it('the prompt says the move is worked out, and to say nothing when it is null', () => {
+    const { system } = buildRoundNewsPrompt(moved);
+    expect(system).toContain('move er ferdig regnet');
+    expect(system).toContain('Er move null');
+  });
+
+  it('a climb in digits from the facts goes out; a climb the facts do not hold is dropped', () => {
+    expect(checkRoundNews('Gard G. klatret 2 plasser og er nå nummer 2.', moved)).toEqual({
+      story: 'Gard G. klatret 2 plasser og er nå nummer 2.',
+      fault: null,
+    });
+    expect(checkRoundNews('Gard G. klatret 7 plasser.', moved).fault).toBe(
+      'Utkastet inneholdt tall som ikke står i fakta-objektet: 7.',
+    );
+  });
+});
+
+describe('checkRoundNews: never a weekday', () => {
+  it.each([
+    'Dina D. leverte på lørdag og tok runden.',
+    'Søndagskvelden ble lang for Gard G.',
+    'Mandagen starter Runde 2.',
+    'Emil E. spilte fredagen.',
+  ])('a story with a weekday is dropped, also inflected: %s', (story) => {
+    expect(checkRoundNews(story, facts)).toEqual({
+      story: null,
+      fault: expect.stringContaining('ukedag'),
+    });
+  });
+
+  it('a word that only holds a weekday elsewhere goes out', () => {
+    // «helgen» is not a weekday; the check reads whole words from their start.
+    expect(checkRoundNews('Dina D. tok helgen med storm.', facts).story).not.toBeNull();
+  });
+});
+

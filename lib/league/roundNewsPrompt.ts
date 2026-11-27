@@ -22,7 +22,7 @@
  *
  * Pure. No I/O.
  */
-import { sanitizeNarrative } from '@/lib/ai/narrative';
+import { findWeekday, sanitizeNarrative } from '@/lib/ai/narrative';
 import type { RoundSummary } from './roundSummary';
 
 export type RoundNewsFacts = {
@@ -49,7 +49,19 @@ export type RoundNewsFacts = {
   playersInLeague: number;
   playedThisRound: number;
   round: Array<{ place: number; name: string; value: number; behindBest: number }>;
-  table: Array<{ place: number; name: string; total: number; behindLeader: number }>;
+  /**
+   * #2983: `previousPlace` is the place in the table before the round, `move`
+   * the places climbed (negative: fallen). Both worked out in
+   * `buildRoundSummary`, null when there is nothing to move from.
+   */
+  table: Array<{
+    place: number;
+    name: string;
+    total: number;
+    behindLeader: number;
+    previousPlace: number | null;
+    move: number | null;
+  }>;
 };
 
 export type RoundNewsPrompt = { system: string; user: string };
@@ -106,6 +118,8 @@ export function buildRoundNewsFacts(
     name: r.name,
     total: r.value,
     behindLeader: r.behind,
+    previousPlace: r.previousPlace,
+    move: r.move,
   }));
   // «poeng», never «stablefordpoeng» (the owner 23.11): the model repeats the
   // word it is given.
@@ -160,6 +174,7 @@ export function buildRoundNewsPrompt(facts: RoundNewsFacts, previousFault: strin
     'Bruk KUN fakta og tall fra fakta-objektet under — finn ALDRI på tall, hull, slag, vær eller hendelser som ikke står der. Du vet ingenting om hvordan rundene ble spilt, bare verdiene og plassene.',
     'Regn ALDRI ut noe selv. Avstanden til rundens beste står i behindBest, og avstanden til lederen av tabellen i behindLeader. Trenger du en annen avstand, lar du den være.',
     'Nevn aldri ukedag eller dato.',
+    'I «table» er previousPlace plassen i tabellen før runden, og move er ferdig regnet: et positivt tall er antall plasser spilleren har klatret, et negativt tall er antall plasser spilleren har falt, og 0 betyr samme plass. Regn aldri ut en bevegelse selv. Er move null, skriver du ingenting om at den spilleren har flyttet seg.',
     `Er simulator true, spiller hver spiller runden alene på simulator når det passer. Ingen drar noe sted, og ingen treffer hverandre. Da er disse ordene forbudt, i alle bøyninger og i alle betydninger: ${gatheringWords}. Om dem som deltok, skriver du at de spilte runden eller leverte. Skriv heller aldri at spillerne sto på banen sammen. Banen er den de spilte på skjermen.`,
     'Ligaen går over flere runder. «round» er resultatet i runden som nettopp stengte, «table» er tabellen etter den. Er roundsPlayed 1, er de to like: skriv da om runden og om at tabellen er satt for første gang. Ellers skriver du både om rundens beste og om hvem som leder tabellen.',
     'Lik plass betyr delt plass. Si aldri at noen «vant» en delt plass.',
@@ -184,8 +199,9 @@ export function buildRoundNewsPrompt(facts: RoundNewsFacts, previousFault: strin
 
 /**
  * The model's answer, cleaned and checked. The story must not go out when it
- * is empty, too long, holds a number that is not in the facts, or (in a
- * simulator league) holds one of `GATHERING_WORDS`. The fault then says which,
+ * is empty, too long, holds a number that is not in the facts, names a
+ * weekday (#2983, `WEEKDAY_WORDS`), or (in a simulator league) holds one of
+ * `GATHERING_WORDS`. The fault then says which,
  * in words the model can act on.
  *
  * The number check reads digits only: every run of digits in the story must
@@ -203,6 +219,10 @@ export function checkRoundNews(raw: string, facts: RoundNewsFacts): RoundNewsChe
   const unknown = [...new Set(digitRuns(text).filter((n) => !known.has(n)))];
   if (unknown.length > 0) {
     faults.push(`Utkastet inneholdt tall som ikke står i fakta-objektet: ${unknown.join(', ')}.`);
+  }
+  const weekday = findWeekday(text);
+  if (weekday !== null) {
+    faults.push(`Utkastet nevnte en ukedag («${weekday}»). Nevn aldri ukedag eller dato.`);
   }
   if (facts.simulator) {
     const used = GATHERING_WORDS.filter((g) => g.pattern.test(text)).map((g) => `«${g.word}»`);
