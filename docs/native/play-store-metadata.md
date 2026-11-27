@@ -9,12 +9,13 @@ ordlyden i skjemaet, står det, og orkestratoren sjekker i konsollen før eieren
 **Samme regel som iOS:** vi lover bare det Android-appen gjør. Android har varsler
 (#2758): spilleren slår dem på under «Varsler og tema», og serveren sender gjennom
 Googles varseltjeneste. Aldri
-pengeoppgjør, og kontingenten venter på #2561 (se `app-store-metadata.md`). Cup følger regelen i `app-store-metadata.md`. Ligaen står i beskrivelsen
-fra bygg 9: appen viser ligaen
-du er med i og starter runden (avsnittet «LIGA»), og arrangøren setter den opp på
-nettsiden. Appen oppretter åtte formater, men spiller også rundene arrangøren setter
-opp på nettsiden, blant dem scramble og de fleste lagformatene (regelen står i
-`app-store-metadata.md`).
+pengeoppgjør. Startkontingenten og premiebordet står i beskrivelsen under «FOR
+ARRANGØREN» (#2561, G2), uten ord som lokker med premier. Cup følger regelen i
+`app-store-metadata.md`. Ligaen står i beskrivelsen fra bygg 9: appen viser ligaen
+du er med i og starter runden (avsnittet «LIGA»), og fra bygg 15 kan du melde deg på en
+liga som er åpen for påmelding. Appen oppretter 15 formater, scramble-familien med
+(regelen står i `app-store-metadata.md`). Målestokken er bygg 1.2.0 (15), `1fc9a089d`
+(23.11.2026), samme som for iOS.
 
 ## Oppføringen (Main store listing)
 
@@ -51,31 +52,39 @@ Handicapet regnes etter WHS, slik at alle spiller på like vilkår. Ingen sitter
 Ryker dekningen ute på banen, går det fint: slagene blir liggende på telefonen og sendes av seg selv når nettet er tilbake.
 
 FORMATER DU KAN SPILLE
-- Stableford og Modifisert Stableford
+- Slagspill, Stableford og Modifisert Stableford
 - Matchplay
-- Best ball og Greensome
-- Wolf, Skins og Bingo Bango Bongo
-- Scramble og flere lagformater, når arrangøren har satt opp runden på tornygolf.no
+- Best ball, Greensome og Patsome
+- Texas scramble, Florida scramble, Ambrose og Shamble
+- Wolf, Skins, Bingo Bango Bongo og Nassau
+
+FINN EN RUNDE
+Terminlista viser turneringene denne helga og i klubben din. Er det ledig plass, melder du deg på, alene eller med laget ditt. Er runden full, kan du be om plass.
 
 SIDETURNERINGER
 Slå på lengste drive og nærmest pinnen på hullene dere velger, så har dere noe å krangle om i klubbhuset etterpå.
 
+FOR ARRANGØREN
+Lag kompisrunden eller klubbturneringen i appen. Du kan sette en startkontingent med Vipps-nummer eller betalingslenke, se hvem som har betalt og minne resten på det. Betalingen går rett til deg, utenfor appen. Premiene dere spiller om, legger du inn på premiebordet.
+
 LIGA
-Er du med i en liga som arrangøren har satt opp på tornygolf.no, finner du den i appen. Der ser du sesongtabellen, den åpne runden og hvem som har spilt, og du starter runden rett derfra. Slår du på varsler, får du beskjed når en runde åpner og når fristen nærmer seg. I en simulatorliga godkjenner du kortet til en annen i ligaen som markør.
+Er du med i en liga som arrangøren har satt opp på tornygolf.no, finner du den i appen. Der ser du sesongtabellen, den åpne runden og hvem som har spilt, og du starter runden rett derfra. Er ligaen åpen for påmelding, melder du deg på i appen. Slår du på varsler, får du beskjed når en runde åpner og når fristen nærmer seg. I en simulatorliga godkjenner du kortet til en annen i ligaen som markør.
 
 CUP
 Sett opp en lagkamp mot kompisene rett i appen. Du velger bane, format og spillere, fordeler lagene og får et forslag til kamper, eller lar kapteinene ta ut laget sitt i hemmelighet. Så spiller dere, og når cupen er ferdig, ser alle hvilket lag som vant.
 
 FØR OG UNDER RUNDEN
-Legg runden inn i kalenderen med ett trykk. Slå på varsler hvis du vil vite når du blir invitert, når et scorekort venter på deg og når resultatet er klart. Har arrangøren slått på live-følging, kan du dele lenka, så kan de hjemme følge tavla mens dere spiller.
+Legg runden inn i kalenderen med ett trykk. Slå på varsler hvis du vil vite når du blir invitert, når et scorekort venter på deg og når resultatet er klart. Innboksen samler det som venter på deg. Har arrangøren slått på live-følging, kan du dele lenka, så kan de hjemme følge tavla mens dere spiller.
 
 NÅR RUNDEN ER FERDIG
-Du leverer kortet ditt, arrangøren avslutter runden, og resultatet er klart for alle som var med.
+Du leverer kortet ditt, arrangøren avslutter runden, og resultatet er klart for alle som var med. Resultatkortet kan du dele med gjengen.
 
 I romjula får du Kavalkaden, en oppsummering av golfåret ditt som du kan dele med gjengen. En språkmodell skriver teksten, og navnet ditt er bare med hvis du har sagt ja til det.
 
 Tørny er laget for norske runder og norske baner. Du bruker den samme kontoen på tornygolf.no.
 ```
+
+2679 tegn, målt med `len()` (grensen er 4000).
 
 Hva som med vilje ikke står der, og hvorfor, står i `app-store-metadata.md` («Hva som
 med vilje IKKE står der»). Det gjelder Android også.
@@ -123,13 +132,15 @@ Svarene øverst i skjemaet:
 |---|---|---|---|---|
 | Personal info → Name | Navnet og kallenavnet i profilen, som medspillerne ser på tavla (`CompleteProfile.tsx`; `EditProfile.tsx`, feltet `edit-profile-nickname`). Google: «How a user refers to themselves, such as their first or last name, or nickname.» | Nei | Påkrevd | App functionality, Account management |
 | Personal info → Email address | Adressen kontoen logger inn med (`native/app/src/screens/Login.tsx`). | Nei | Påkrevd | App functionality, Account management |
+| Personal info → Phone number | Vipps-nummeret arrangøren legger inn som betalingsmåte for startkontingenten (`FeeAndPrizes.tsx`, feltet `create-payment-link`; `wizardPayload.ts`, `payment_link`). Feltet er fritekst, og et telefonnummer er bruken det er laget for. Spillerne i runden ser nummeret på kontingentkortet (`PaymentCard.tsx`). Vi oppgir den som en tolkning: for mye heller enn for lite. | Nei | Valgfri (kontingent og nummer settes bare hvis arrangøren vil) | App functionality |
 | Personal info → User IDs | Konto-id-en radene i databasen henger på (Supabase Auth). | Nei | Påkrevd | App functionality, Account management |
 | Personal info → Other info | Kjønn (herre eller dame) og spillerklasse (junior, voksen eller senior) fra «Rediger profil» (`EditProfile.tsx`). De velger tee for spilleren (`lib/games/joinTeeGenders.ts`). Google: «Any other personal information such as date of birth, gender identity, veteran status, etc.» | Nei | Valgfri (kjønn kan stå tomt, `lib/users/profileInput.ts:128-139`, og spillerklassen står som voksen til spilleren velger noe annet) | App functionality |
 | Contacts | Vennelista, e-postadressene spilleren taster for å legge til eller invitere en venn (`native/app/src/data/friends.ts`), og adressene arrangøren inviterer inn i en runde (`OrganiserSection.tsx`, `inviteToGame`). Google regner «social graph information like usernames» som kontakter. Appen leser aldri kontaktene på telefonen. | Nei | Valgfri (venner og invitasjoner er ikke nødvendig for å spille) | App functionality |
 | Device or other IDs | Varsel-tokenet fra Google, som `turnOnPush` lagrer i `fcm_tokens` sammen med konto-id-en og Android-versjonen («Tørny-appen Android …», `userAgent()`), bare når spilleren slår på varsler. Appen har ingen reklame-id. | Nei | Valgfri | App functionality |
-| Messages → Other in-app messages | Grunnen en makker eller arrangøren skriver når et scorekort sendes tilbake, som spilleren ser på spillsiden (`Approve.tsx`, `GameHome.tsx:268`). Google: «Any other types of messages. For example, instant messages or chat content.» | Nei | Valgfri (grunnen kan stå tom) | App functionality |
+| Messages → Other in-app messages | Grunnen en makker eller arrangøren skriver når et scorekort sendes tilbake, som spilleren ser på spillsiden (`Approve.tsx`, `GameHome.tsx:268`). Fra bygg 15 også den valgfrie hilsenen til arrangøren i en påmelding (`RoundInvite.tsx`). Google: «Any other types of messages. For example, instant messages or chat content.» | Nei | Valgfri (grunnen kan stå tom) | App functionality |
 | App activity → App interactions | At spilleren delte et kort fra Kavalkaden, hvilket kort og hvilket år, og når (`ShareKavalkadeCardButton.tsx` → `kavalkade_shares`). Vi bruker det bare til å telle hvor mange spillere som har delt. Google: «Information about how a user interacts with the app». | Nei | Valgfri (bare når spilleren deler) | Analytics |
-| App activity → Other user-generated content | Slagene, rundene, resultatene, spillnavnene og handicapet spilleren oppgir. | Nei | Påkrevd | App functionality |
+| App activity → Other user-generated content | Slagene, rundene, resultatene, spillnavnene og handicapet spilleren oppgir. Fra bygg 15 også premie- og sponsorteksten på premiebordet (`FeeAndPrizes.tsx`, `PrizeTable.tsx`), lagnavnet kapteinen skriver (`TeamSignupForm.tsx`, `CreateCup.tsx`), hilsenen i en påmelding (`RoundInvite.tsx`) og reaksjonene på tavla (`RowReactions.tsx`, seks faste emojier). | Nei | Påkrevd | App functionality |
+| Financial info → Purchase history | At arrangøren har krysset av for at en spiller har betalt startkontingenten (`game_players.paid_at`; `native/app/src/data/payments.ts`, `PaymentStatus.tsx`). Betalingen skjer hos Vipps eller arrangørens egen lenke, og appen ser den aldri. Vi oppgir avkrysningen likevel, som en tolkning. | Nei | Valgfri (bare når arrangøren bruker kontingent) | App functionality |
 
 Grunnen når et kort sendes tilbake står under «Other in-app messages» her, men under
 «Other User Content» hos Apple, fordi Apples meldingstype gjelder e-post og SMS. Begge
@@ -160,7 +171,7 @@ Dette hakes **ikke** av, og her er grunnen:
   teller, er delte Kavalkade-kort (raden App interactions).
 - **Messages → Emails og SMS or MMS.** Appen leser verken e-post eller SMS. Den eneste
   meldingen er grunnen når et kort sendes tilbake (raden Other in-app messages).
-- **Financial info, Health and fitness, Audio, Files and docs, Web browsing.** Ingen.
+- **Health and fitness, Audio, Files and docs, Web browsing.** Ingen. **Financial info** har bare raden Purchase history over: appen har ingen kortnummer, kontonummer eller kreditt, og Vipps-nummeret står under Phone number.
 
 ## Innholdsvurdering (IARC)
 
@@ -176,9 +187,9 @@ spør om.
 |---|---|---|
 | Kategori | **All Other App Types** | IARC skiller mellom spill, apper for sosialt eller kommunikasjon, og alle andre apper (Epic Games' gjennomgang av IARC-skjemaet, <https://dev.epicgames.com/documentation/fortnite/rating-screen-in-fortnite>). Tørny er et verktøy for golfrunder. Den korte grunnen når et kort sendes tilbake, gjør ikke appen til en app for kommunikasjon. Sjekkes i konsollen av orkestratoren. |
 | Vold, seksuelt innhold, banning, rusmidler | Nei | Ingenting av det finnes i appen. |
-| Pengespill med ekte penger | Nei | Appen har ingen innsats, og pengeoppgjøret mellom spillerne er skjult (`SHOW_SETTLEMENT_IN_APP = false` i `lib/launchRules.ts`). Fra #2749 viser appen startkontingenten til et ekte arrangement, arrangørens betalingslenke eller Vipps-nummer, og premiebordet; betalingen skjer utenfor appen. Vurderingen mot Googles «Real-Money Gambling, Games, and Contests» står i `app-store-metadata.md`, «Kontingent og premiebord mot butikkreglene». |
+| Pengespill med ekte penger | Nei | Appen har ingen innsats, og pengeoppgjøret mellom spillerne er skjult (`SHOW_SETTLEMENT_IN_APP = false` i `lib/launchRules.ts`). Fra #2749 viser appen startkontingenten til et ekte arrangement, arrangørens betalingslenke eller Vipps-nummer, og premiebordet; betalingen skjer utenfor appen, og svaret er fortsatt Nei. Vurderingen mot Googles «Real-Money Gambling, Games, and Contests» står i `app-store-metadata.md`, «Kontingent og premiebord mot butikkreglene». |
 | Simulert pengespill | Nei | De seks formatene som ellers kan spilles om penger (Skins, Wolf, Bingo Bango Bongo, Nines, Acey Deucey og Nassau, `lib/scoring/settlement.ts`), er måter å telle poeng på, og i appen er det ingen innsats. Samme svar som for Apple (`app-store-metadata.md`, «Aldersgrense (Apple)»). |
-| Kan brukerne samhandle eller dele innhold med hverandre? | **Ja** | Spillerne ser hverandres navn, slag og resultater i felles runder, kan legge til venner, og en makker eller arrangøren kan sende et kort tilbake med en grunn i fritekst (`Approve.tsx`). Appen har ingen chat ut over det. |
+| Kan brukerne samhandle eller dele innhold med hverandre? | **Ja** | Spillerne ser hverandres navn, slag og resultater i felles runder, kan legge til venner, en makker eller arrangøren kan sende et kort tilbake med en grunn i fritekst (`Approve.tsx`), spillerne kan sende faste reaksjoner (seks emojier) på tavla, og påmeldingen har en valgfri hilsen til arrangøren på 200 tegn. Terminlista viser rundenavn og klubbnavn til alle innloggede spillere. Appen har ingen chat ut over det. |
 | Deler appen brukerens posisjon? | Nei | Appen leser ikke posisjon. |
 | Digitale kjøp | Nei | Appen har ingen kjøp. |
 | Ubegrenset tilgang til internett | Nei | Appen har ingen nettleser. Lenker åpnes i nettleseren, utenfor appen. |
@@ -194,8 +205,20 @@ Google regner ut aldersgrensen fra svarene.
 | Advertising ID | Nei, appen bruker ikke reklame-id | Appen har ingen reklame. |
 | News app | Nei | Kategorien er Sports, og appen kaller seg ikke nyheter (<https://support.google.com/googleplay/android-developer/answer/10523915>). |
 | Health apps | «My app doesn't provide any health features» | Skjemaet er påkrevd for alle apper, også testspor (<https://support.google.com/googleplay/android-developer/answer/14738291>). |
-| Financial features | «My app doesn't provide any financial features» | Påkrevd for alle apper (<https://support.google.com/googleplay/android-developer/answer/13849271>). |
+| Financial features | «My app doesn't provide any financial features» | Påkrevd for alle apper (<https://support.google.com/googleplay/android-developer/answer/13849271>). Lista lest på nytt 2026-11-27, se under. |
 | Government app | Nei | Ingen. |
+
+**Financial features, lest 2026-11-27.** Siden lister banking og lån, betalinger og overføringer
+(«Mobile payments and digital wallets», «Money transfer and wire services»), kjøpsavtaler,
+handel og fond (krypto, aksjer, «Crowdfunding and chit funds») og støttetjenester (kredittovervåking,
+økonomisk rådgivning, forsikring, «Other»). Siden sier ingenting om apper som viser en
+betalingslenke eller et Vipps-nummer for en betaling utenfor appen. Erklæringen står fordi
+Tørny verken har lommebok, overføring, lån eller handel: arrangøren legger inn et nummer
+eller en lenke, spilleren betaler hos Vipps eller arrangøren, og appen tar ingen penger,
+ingen andel og kjenner ikke betalingen. Avkrysningen «betalt» er en liste. Passer ingen
+kategori, og det gjør ingen, står svaret. VERIFICATION GAP: Googles egne sider
+«Financial Services policy» (9876821) og «Payments policy» (10281818), som erklæringen lenker til, er ikke lest.
+Orkestratoren leser dem før svaret limes inn, og passer en kategori der, står den i stedet.
 
 ## App-tilgang (App access)
 
@@ -208,7 +231,7 @@ er den samme som for Apple (langtrykket på tittelen), men Google har sin egen
 review-konto med egen adresse, eget passord og egne demo-runder
 (`app-store-review-konto.md`).
 
-Teksten under står i Play Console under **Appinnhold → Påloggingsinformasjon** («Google Play review account»), ordrett slik den ble lest 30.10 (#2561). Feltet tar høyst 500 tegn (denne er 468). Brukernavn og passord står i feltene over, i Play Console (**se Play Console**), og skal aldri inn her.
+Teksten under står i Play Console under **Appinnhold → Påloggingsinformasjon** («Google Play review account»), ordrett slik den ble lest 30.10 (#2561). Feltet tar høyst 500 tegn (denne er 468). En setning om kontingent og premier, for eksempel «Entry fees and prizes are paid and handed out by organisers outside the app.» (76 tegn), gir 545 tegn og får ikke plass. Forklaringen står i stedet i linja under premiebordet i appen og i `app-store-metadata.md`. Brukernavn og passord står i feltene over, i Play Console (**se Play Console**), og skal aldri inn her.
 
 ```text
 Sign-in normally uses an emailed one-time code. For review: on the sign-in screen, press and hold the title "Tørny" for 2 seconds. A password field and the button "Logg inn med passord" appear. Enter the user name and password above. The account has demo rounds and a demo league ("Demo League (Google Play) — Tørny") on the home screen. The app is in Norwegian, Norway only. Account deletion: Profil > Personvern og konto > Slett konto (stop before the final button).
