@@ -1305,7 +1305,7 @@
           "handicapNet": "Netto, {pct} %",
           "handicapGross": "Brutto",
           "handicapTeamAverage": "{pct} % av lagets snitt",
-          "handicapTeamNgf": "Forbundets vekting per spiller",
+          "handicapTeamNgf": "Standard",
           "feeNone": "Ingen",
           "feeAmount": "{kr} kr",
           "visibilityLive": "Vis alt",
@@ -1619,7 +1619,8 @@
         "nettoHelper": "Andel av spillerens handicap som teller. NGF anbefaler 100 % når alle spiller for seg selv, og 85 % i best ball og stableford i par."
       },
       "sumEquivalent": "Valget ditt tilsvarer {sumPct} % av summen av banehandicapene.",
-      "ruleNgfTitle": "Forbundets vekting",
+      "ruleNgfTitle": "Standard",
+      "ruleGroupLabel": "Slik regnes laghandicapet",
       "rulePctTitle": "Egen prosent",
       "ngfHelper2": "NGF vekter hver spiller etter banehandicap, fra lavest til høyest: 35 og 15 %.",
       "ngfHelper3": "NGF vekter hver spiller etter banehandicap, fra lavest til høyest: 30, 20 og 10 %.",
@@ -1922,7 +1923,7 @@
           },
           {
             "heading": "Handicap i texas scramble",
-            "body": "Scramble er et lagformat, så handicapet regnes for laget, ikke for hver enkelt. Tørny finner først banehandicapet ditt ut fra hcp-indeksen din, slope og course rating på teen du spiller fra. Deretter vekter Tørny hver spiller slik NGF anbefaler, fra lavest til høyest banehandicap: 25, 20, 15 og 10 prosent på et lag på fire, 30, 20 og 10 på et lag på tre, og 35 og 15 på et lag på to. Summen er laghandicapet. Arrangøren kan heller velge en egen prosent av lagets snitt, eller spille brutto. Grunnen til at andelene er så lave, er enkel: fire spillere som plukker beste ball scorer langt bedre enn hver av dem gjør alene, så fullt handicap ville gitt vill overkompensasjon. Laghandicapet fordeles på hullene etter stroke index og trekkes fra lagets bruttototal."
+            "body": "Scramble er et lagformat, så handicapet regnes for laget, ikke for hver enkelt. Tørny finner først banehandicapet ditt ut fra hcp-indeksen din, slope og course rating på teen du spiller fra. Deretter vekter Tørny hver spiller slik NGF anbefaler, fra lavest til høyest banehandicap: 25, 20, 15 og 10 prosent på et lag på fire, 30, 20 og 10 på et lag på tre, og 35 og 15 på et lag på to. Summen er laghandicapet, og dette er standarden. Arrangøren kan heller velge en egen prosent av lagets snitt, eller spille brutto. Grunnen til at andelene er så lave, er enkel: fire spillere som plukker beste ball scorer langt bedre enn hver av dem gjør alene, så fullt handicap ville gitt vill overkompensasjon. Laghandicapet fordeles på hullene etter stroke index og trekkes fra lagets bruttototal."
           },
           {
             "heading": "Vanlige husregler",
@@ -1941,7 +1942,7 @@
           },
           {
             "q": "Hvordan regnes laghandicapet i texas scramble?",
-            "a": "Tørny vekter hver spiller slik NGF anbefaler, fra lavest til høyest banehandicap: 25, 20, 15 og 10 prosent på et lag på fire, 30, 20 og 10 på et lag på tre, og 35 og 15 på et lag på to. Summen av andelene er laghandicapet. Når runden opprettes, kan arrangøren heller velge en egen prosent av lagets snitthandicap, eller brutto."
+            "a": "Tørny vekter hver spiller slik NGF anbefaler, fra lavest til høyest banehandicap: 25, 20, 15 og 10 prosent på et lag på fire, 30, 20 og 10 på et lag på tre, og 35 og 15 på et lag på to. Summen av andelene er laghandicapet, og dette er standarden. Når arrangøren lager runden, kan hen heller velge en egen prosent av lagets snitthandicap, eller brutto."
           },
           {
             "q": "Kan vi legge ballen bedre der vi velger å spille fra?",

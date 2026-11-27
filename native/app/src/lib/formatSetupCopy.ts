@@ -83,8 +83,8 @@ export type ScrambleMode = 'texas_scramble' | 'ambrose' | 'florida_scramble';
 export const TEAM_HANDICAP_TEXT = {
   legend: 'Laghandicap',
   description: 'Laget spiller på en andel av spillernes banehandicap. Tørny regner det om til slag per hull.',
-  /** #3002 (F23): de tre valgkortene, og forbundets tabell per lagstørrelse. */
-  ruleNgfTitle: 'Forbundets vekting',
+  /** #3002 (F23): de to valgene under Netto, og NGFs tabell per lagstørrelse. */
+  ruleNgfTitle: 'Standard',
   rulePctTitle: 'Egen prosent',
   ngfHelper: {
     2: 'NGF vekter hver spiller etter banehandicap, fra lavest til høyest: 35 og 15\u00a0%.',

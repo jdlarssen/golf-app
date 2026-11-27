@@ -32,9 +32,11 @@ describe('TeamHandicapField — snitt-prosent i feltet, sum-prosent i state (#20
   });
 });
 
-// #3002 (F23), variant A: three cards on one row. The rule and the share live
-// in the parent; the field says which card is chosen and what each tap writes.
-describe('TeamHandicapField — Forbundets vekting, Egen prosent og Brutto (#3002)', () => {
+// #3002 (F23): «Netto» and «Brutto» on top, as the other formats; under
+// Netto two pills, «Standard» (NGF's weighting) and «Egen prosent» (the owner,
+// 27.11.2026: nearer variant B, simpler words). The rule and the share live in
+// the parent; the field says what is chosen and what each tap writes.
+describe('TeamHandicapField — Netto/Brutto, Standard og Egen prosent (#3002)', () => {
   function setup(props: { teamSize?: number; sumPct?: number; rule: 'ngf' | 'pct' | null }) {
     const onSumPctChange = vi.fn();
     const onRuleChange = vi.fn();
@@ -52,9 +54,10 @@ describe('TeamHandicapField — Forbundets vekting, Egen prosent og Brutto (#300
     return { onSumPctChange, onRuleChange, view };
   }
 
-  it('NGF: the weighting card is chosen, the table for the team size shows, and no number field', () => {
+  it('Standard: Netto and Standard are chosen, the table for the team size shows, and no number field', () => {
     const { view } = setup({ rule: 'ngf' });
-    expect(screen.getByRole('radio', { name: 'Forbundets vekting' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Netto' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Standard' })).toBeChecked();
     expect(screen.getByText(/25, 20, 15 og 10/)).toBeInTheDocument();
     expect(screen.queryByRole('spinbutton')).toBeNull();
 
@@ -73,31 +76,39 @@ describe('TeamHandicapField — Forbundets vekting, Egen prosent og Brutto (#300
     expect(screen.getByText(/35 og 15/)).toBeInTheDocument();
   });
 
-  it('from NGF, «Egen prosent» writes pct and «Brutto» writes 0', () => {
-    const { onSumPctChange, onRuleChange } = setup({ rule: 'ngf' });
+  it('«Egen prosent» is one tap: it writes pct and shows the number field', () => {
+    const { onRuleChange, view } = setup({ rule: 'ngf' });
     fireEvent.click(screen.getByRole('radio', { name: 'Egen prosent' }));
     expect(onRuleChange).toHaveBeenLastCalledWith('pct');
-    expect(onSumPctChange).toHaveBeenLastCalledWith(10);
-
-    fireEvent.click(screen.getByRole('radio', { name: 'Brutto' }));
-    expect(onSumPctChange).toHaveBeenLastCalledWith(0);
+    view.rerender(
+      <TeamHandicapField key={4} mode="texas_scramble" teamSize={4} sumPct={10} onSumPctChange={vi.fn()} rule="pct" onRuleChange={vi.fn()} />,
+    );
+    expect((screen.getByRole('spinbutton') as HTMLInputElement).value).toBe('40');
   });
 
-  it('a stored game without a rule shows «Egen prosent» and keeps null on Brutto', () => {
+  it('Brutto from Standard writes pct and 0, and Netto brings Standard and the share back', () => {
+    const { onSumPctChange, onRuleChange, view } = setup({ rule: 'ngf' });
+    fireEvent.click(screen.getByRole('radio', { name: 'Brutto' }));
+    expect(onRuleChange).toHaveBeenLastCalledWith('pct');
+    expect(onSumPctChange).toHaveBeenLastCalledWith(0);
+
+    const back = { onSumPctChange: vi.fn(), onRuleChange: vi.fn() };
+    view.rerender(
+      <TeamHandicapField key={4} mode="texas_scramble" teamSize={4} sumPct={0} onSumPctChange={back.onSumPctChange} rule="pct" onRuleChange={back.onRuleChange} />,
+    );
+    expect(screen.getByRole('radio', { name: 'Brutto' })).toBeChecked();
+    expect(screen.queryByRole('radio', { name: 'Standard' })).toBeNull();
+    fireEvent.click(screen.getByRole('radio', { name: 'Netto' }));
+    expect(back.onRuleChange).toHaveBeenLastCalledWith('ngf');
+    expect(back.onSumPctChange).toHaveBeenLastCalledWith(10);
+  });
+
+  it('a stored game without a rule shows «Egen prosent» and keeps null through Brutto', () => {
     const { onSumPctChange, onRuleChange } = setup({ rule: null });
     expect(screen.getByRole('radio', { name: 'Egen prosent' })).toBeChecked();
     expect((screen.getByRole('spinbutton') as HTMLInputElement).value).toBe('40');
     fireEvent.click(screen.getByRole('radio', { name: 'Brutto' }));
     expect(onSumPctChange).toHaveBeenLastCalledWith(0);
     expect(onRuleChange).not.toHaveBeenCalled();
-  });
-
-  it('from Brutto, «Forbundets vekting» writes ngf and brings the share back', () => {
-    const { onSumPctChange, onRuleChange } = setup({ rule: 'pct', sumPct: 0 });
-    expect(screen.getByRole('radio', { name: 'Brutto' })).toBeChecked();
-    fireEvent.click(screen.getByRole('radio', { name: 'Forbundets vekting' }));
-    expect(onRuleChange).toHaveBeenLastCalledWith('ngf');
-    // The start value for four, 10 % of the sum.
-    expect(onSumPctChange).toHaveBeenLastCalledWith(10);
   });
 });

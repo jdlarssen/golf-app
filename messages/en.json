@@ -1305,7 +1305,7 @@
           "handicapNet": "Net, {pct}%",
           "handicapGross": "Gross",
           "handicapTeamAverage": "{pct}% of the team average",
-          "handicapTeamNgf": "Federation weighting per player",
+          "handicapTeamNgf": "Standard",
           "feeNone": "None",
           "feeAmount": "{kr} kr",
           "visibilityLive": "Show everything",
@@ -1619,7 +1619,8 @@
         "nettoHelper": "Share of the player's handicap that counts. NGF recommends 100% when everyone plays for themselves, and 85% in best ball and stableford in pairs."
       },
       "sumEquivalent": "Your choice equals {sumPct}% of the sum of course handicaps.",
-      "ruleNgfTitle": "Federation weighting",
+      "ruleNgfTitle": "Standard",
+      "ruleGroupLabel": "How the team handicap is worked out",
       "rulePctTitle": "Own percentage",
       "ngfHelper2": "NGF weighs each player by course handicap, from the lowest to the highest: 35 and 15%.",
       "ngfHelper3": "NGF weighs each player by course handicap, from the lowest to the highest: 30, 20 and 10%.",
@@ -1922,7 +1923,7 @@
           },
           {
             "heading": "Handicap in Texas scramble",
-            "body": "Scramble is a team format, so the handicap is worked out for the team, not for each player. Tørny first finds your course handicap from your handicap index, the slope and the course rating of the tee you play from. Each player is then weighted as the Norwegian federation recommends, from the lowest to the highest course handicap: 25, 20, 15 and 10 per cent for a team of four, 30, 20 and 10 for a team of three, and 35 and 15 for a team of two. The sum is the team handicap. The organiser can instead pick their own percentage of the team average, or play gross. The reason the shares are so low is simple: four players picking the best ball score far better than any of them does alone, so a full handicap would massively overcompensate. The team handicap is spread across the holes by stroke index and deducted from the team gross."
+            "body": "Scramble is a team format, so the handicap is worked out for the team, not for each player. Tørny first finds your course handicap from your handicap index, the slope and the course rating of the tee you play from. Each player is then weighted as the Norwegian federation recommends, from the lowest to the highest course handicap: 25, 20, 15 and 10 per cent for a team of four, 30, 20 and 10 for a team of three, and 35 and 15 for a team of two. The sum is the team handicap, and this is the standard. The organiser can instead pick their own percentage of the team average, or play gross. The reason the shares are so low is simple: four players picking the best ball score far better than any of them does alone, so a full handicap would massively overcompensate. The team handicap is spread across the holes by stroke index and deducted from the team gross."
           },
           {
             "heading": "Common house rules",
@@ -1941,7 +1942,7 @@
           },
           {
             "q": "How is the team handicap worked out in Texas scramble?",
-            "a": "Tørny weighs each player as the Norwegian federation recommends, from the lowest to the highest course handicap: 25, 20, 15 and 10 per cent for a team of four, 30, 20 and 10 for a team of three, and 35 and 15 for a team of two. The sum of the shares is the team handicap. When the round is created, the organiser can instead pick their own percentage of the team's average handicap, or gross."
+            "a": "Tørny weighs each player as the Norwegian federation recommends, from the lowest to the highest course handicap: 25, 20, 15 and 10 per cent for a team of four, 30, 20 and 10 for a team of three, and 35 and 15 for a team of two. The sum of the shares is the team handicap, and this is the standard. When the organiser creates the round, they can instead pick their own percentage of the team's average handicap, or gross."
           },
           {
             "q": "Can we improve the lie where we choose to play from?",

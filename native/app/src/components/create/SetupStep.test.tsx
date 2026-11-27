@@ -48,8 +48,8 @@ describe('SetupStep — plassholderen for HCP-andelen (#2942)', () => {
   });
 });
 
-// #3002: the scramble field's three cards (variant A, as the web) and
-// patsome's share on holes 1–6. What is sent is Type A in wizardPayload.test.ts.
+// #3002: the scramble field as the web (Netto/Brutto, then «Standard» or
+// «Egen prosent» under Netto) and patsome's share on holes 1–6. What is sent is Type A in wizardPayload.test.ts.
 describe('SetupStep — lag-handicap og patsome-andel (#3002)', () => {
   async function renderSetup(
     mode: AppGameMode,
@@ -72,10 +72,19 @@ describe('SetupStep — lag-handicap og patsome-andel (#3002)', () => {
     );
   }
 
-  it('Texas starter på forbundets vekting: tabellen for fire, ingen tallfelt', async () => {
+  it('Texas starter på Netto og Standard: tabellen for fire, ingen tallfelt', async () => {
     await renderSetup('texas_scramble');
+    expect(screen.getByTestId('create-team-hcp-netto').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId('create-team-hcp-ngf').props.accessibilityState).toMatchObject({ selected: true });
     expect(screen.getByTestId('create-team-hcp-ngf-helper')).toHaveTextContent(/25, 20, 15 og 10/);
     expect(screen.queryByTestId('create-team-hcp')).toBeNull();
+  });
+
+  it('«Egen prosent» er ett trykk og viser tallfeltet', async () => {
+    const onSetup = jest.fn();
+    await renderSetup('texas_scramble', {}, '', { onSetup });
+    fireEvent.press(screen.getByTestId('create-team-hcp-pct'));
+    expect(onSetup).toHaveBeenLastCalledWith({ teamHandicapRule: 'pct' });
   });
 
   it('Florida på tre viser trelagsraden', async () => {
@@ -85,6 +94,7 @@ describe('SetupStep — lag-handicap og patsome-andel (#3002)', () => {
 
   it('Ambrose starter på egen prosent med tallfeltet', async () => {
     await renderSetup('ambrose');
+    expect(screen.getByTestId('create-team-hcp-pct').props.accessibilityState).toMatchObject({ selected: true });
     expect(screen.getByTestId('create-team-hcp')).toBeTruthy();
     expect(screen.queryByTestId('create-team-hcp-ngf-helper')).toBeNull();
   });
@@ -98,13 +108,14 @@ describe('SetupStep — lag-handicap og patsome-andel (#3002)', () => {
     expect(onText).toHaveBeenLastCalledWith({ allowance: '0' });
   });
 
-  it('egen prosent fra brutto tømmer feltet', async () => {
+  it('Netto fra brutto går tilbake til formatets start og tømmer feltet', async () => {
     const onSetup = jest.fn();
     const onText = jest.fn();
     await renderSetup('texas_scramble', { teamHandicapRule: 'pct' }, '0', { onSetup, onText });
     expect(screen.getByTestId('create-team-hcp-brutto').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.queryByTestId('create-team-hcp-ngf')).toBeNull();
     fireEvent.press(screen.getByTestId('create-team-hcp-netto'));
-    expect(onSetup).toHaveBeenLastCalledWith({ teamHandicapRule: 'pct' });
+    expect(onSetup).toHaveBeenLastCalledWith({ teamHandicapRule: undefined });
     expect(onText).toHaveBeenLastCalledWith({ allowance: '' });
   });
 
