@@ -583,8 +583,8 @@ export function useGameFormState({
   // Texas scramble: lag-handicap-prosent (prosent av summen, som lagret).
   // Initialiseres fra initialValues hvis edit-flyt, ellers default per
   // teamSize. 0 = brutto (laveste lag-gross per hull), ellers netto med den
-  // prosenten, opptil 100 % av lagets snitt (NGF-standard 25 for 2-mann, 10
-  // for 4-mann). Eies av TeamHandicapField i både veiviseren og GameForm
+  // prosenten, opptil 100 % av lagets snitt (startverdi 25 for 2-mann, 10
+  // for 4-mann; NGFs egen regel er vektingen, #3002). Eies av TeamHandicapField i både veiviseren og GameForm
   // (#2566), som viser snittet; `key={teamSize}` sørger for remount når
   // team-size endres så toggle-state re-initialiseres til ny default.
   const [texasHandicapPct, setTexasHandicapPct] = useState<number>(
@@ -604,7 +604,7 @@ export function useGameFormState({
       ? Number(initialValues.ambrose_team_handicap_pct)
       : ambroseDefaultPct(initialTeamSize),
   );
-  // Florida Scramble (#283): lag-handicap-prosent. NGF-fasttabell:
+  // Florida Scramble (#283): lag-handicap-prosent, med fast startverdi:
   // 15 % for 3-mannslag, 10 % for 4-mannslag. Heltall (i motsetning til
   // Ambrose' fraksjonelle 12,5 %), men validator aksepterer desimaler om
   // admin justerer. Edit-flyt: pre-fylles fra initialValues.
@@ -1188,7 +1188,7 @@ export function useGameFormState({
     // handleTeamSizeChange; Texas pair with 6 → shamble four keeps 4, not 6.
     setMinTeeShots((current) => clampMinTeeShots(current, nextSize));
     followAllowanceDefault(gameMode, teamSize, next, nextSize);
-    // Texas scramble: default lag-handicap-prosent per NGF-konvensjon
+    // Texas scramble: startverdien for lag-handicap-prosenten
     // (25 % for 2-mannslag, 10 % for 4-mannslag). Admin kan deretter justere.
     if (next === 'texas_scramble') {
       setTexasHandicapPct(defaultTexasHandicapPct(nextSize));
@@ -1198,7 +1198,7 @@ export function useGameFormState({
     if (next === 'ambrose') {
       setAmbroseHandicapPct(ambroseDefaultPct(nextSize));
     }
-    // Florida Scramble (#283): default lag-handicap-prosent per NGF-fasttabell
+    // Florida Scramble (#283): default lag-handicap-prosent per fast startverdi
     // (15 % for 3-mannslag, 10 % for 4-mannslag). Admin kan deretter justere.
     if (next === 'florida_scramble') {
       setFloridaHandicapPct(defaultFloridaHandicapPct(nextSize));
@@ -1312,7 +1312,7 @@ export function useGameFormState({
   const isAmbrose = gameMode === 'ambrose';
   // - isFlorida: florida_scramble (#283). Mekanisk identisk med Texas scramble —
   //   én ball per lag, kaptein eier scores-radene, lavest lag-netto vinner.
-  //   Forskjeller mot Texas: lagstørrelser 3 eller 4 (ikke 2), NGF-fasttabell
+  //   Forskjeller mot Texas: lagstørrelser 3 eller 4 (ikke 2), fast startverdi
   //   for lag-handicap-default (15 %/10 %), og step-aside-påminnelse på hull-flaten.
   const isFlorida = gameMode === 'florida_scramble';
   // - isWolf: 3-5-spiller rotating partner-format (#465). team_number 1..n

@@ -1922,7 +1922,7 @@
           },
           {
             "heading": "Handicap i texas scramble",
-            "body": "Scramble er et lagformat, så handicapet regnes for laget, ikke for hver enkelt. Tørny finner først banehandicapet ditt ut fra hcp-indeksen din, slope og course rating på teen du spiller fra. Deretter legges banehandicapet til alle på laget sammen, og laget får en prosent av summen. Tørny foreslår NGF-satsene når du lager runden: 25 prosent for lag på to, 15 for lag på tre og 10 for lag på fire. Arrangøren kan justere tallet før start. Grunnen til at andelen er så lav, er enkel: fire spillere som plukker beste ball scorer langt bedre enn hver av dem gjør alene, så fullt handicap ville gitt vill overkompensasjon. Laghandicapet fordeles på hullene etter stroke index og trekkes fra lagets bruttototal."
+            "body": "Scramble er et lagformat, så handicapet regnes for laget, ikke for hver enkelt. Tørny finner først banehandicapet ditt ut fra hcp-indeksen din, slope og course rating på teen du spiller fra. Deretter vekter Tørny hver spiller slik NGF anbefaler, fra lavest til høyest banehandicap: 25, 20, 15 og 10 prosent på et lag på fire, 30, 20 og 10 på et lag på tre, og 35 og 15 på et lag på to. Summen er laghandicapet. Arrangøren kan heller velge en egen prosent av lagets snitt, eller spille brutto. Grunnen til at andelene er så lave, er enkel: fire spillere som plukker beste ball scorer langt bedre enn hver av dem gjør alene, så fullt handicap ville gitt vill overkompensasjon. Laghandicapet fordeles på hullene etter stroke index og trekkes fra lagets bruttototal."
           },
           {
             "heading": "Vanlige husregler",
@@ -1941,7 +1941,7 @@
           },
           {
             "q": "Hvordan regnes laghandicapet i texas scramble?",
-            "a": "Tørny legger sammen banehandicapet til alle på laget og gir laget en prosent av summen. Forslaget følger NGF: 25 prosent for lag på to, 15 for lag på tre, 10 for lag på fire. I veiviseren setter du tallet som prosent av lagets snitthandicap, så forslaget for et lag på tre står som 45. Arrangøren kan justere det når runden opprettes."
+            "a": "Tørny vekter hver spiller slik NGF anbefaler, fra lavest til høyest banehandicap: 25, 20, 15 og 10 prosent på et lag på fire, 30, 20 og 10 på et lag på tre, og 35 og 15 på et lag på to. Summen av andelene er laghandicapet. Når runden opprettes, kan arrangøren heller velge en egen prosent av lagets snitthandicap, eller brutto."
           },
           {
             "q": "Kan vi legge ballen bedre der vi velger å spille fra?",
@@ -1966,7 +1966,7 @@
           "Slik bytter dere på, og alle er med gjennom hullet. Laget får én score per hull.",
           "Laget får et felles handikap som trekkes fra. Lavest lagtotal vinner."
         ],
-        "long": "Florida Scramble er en Texas-scramble-variant med én viktig regel: den spilleren som slo det valgte slaget, hopper over neste slag. Resten av laget slår, og dere velger igjen det beste blant de gjenværende. Slik rullerer dere gjennom hullet, og alle bidrar. Laget spiller lag à 3 eller 4, og laghandicapet (10–15 % av sum-CH) trekkes fra totalen.",
+        "long": "Florida Scramble er en Texas-scramble-variant med én viktig regel: den spilleren som slo det valgte slaget, hopper over neste slag. Resten av laget slår, og dere velger igjen det beste blant de gjenværende. Slik rullerer dere gjennom hullet, og alle bidrar. Laget spiller lag à 3 eller 4, og laghandicapet trekkes fra totalen. Tørny vekter hver spiller slik NGF anbefaler, fra lavest til høyest banehandicap.",
         "example": "Hull 8, par 4, lag på 4 (A, B, C, D): A slår det beste utslaget. A hopper over neste slag, så B, C og D slår fra det stedet. C slår best. C hopper over, og A, B og D putter fra 3 m. B er best og går i hull. Lagets score: 1 (A sitt utslag) + 1 (C sitt andre) + 1 (B putter inn) = 3."
       },
       "singles_matchplay": {
