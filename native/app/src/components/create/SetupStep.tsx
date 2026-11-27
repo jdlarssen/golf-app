@@ -214,6 +214,11 @@ export function SetupStep({
   // er prosenten 0 med regelen `pct`, så validatoren lagrer prosenten av summen.
   const teamHandicapRule = setup.teamHandicapRule ?? defaultTeamHandicapRule(mode);
   const teamHandicapGross = teamHandicapRule !== 'ngf' && text.allowance === '0';
+  // What Netto had before Brutto, so «Netto» brings back the rule and the
+  // share, as the web field does (`lastNetRule`/`lastSumPct` in
+  // TeamHandicapField). Without it (a fresh mount on Brutto), Netto starts on
+  // the format's start.
+  const [lastNet, setLastNet] = useState<{ rule: ModeSetup['teamHandicapRule']; allowance: string } | null>(null);
   const shambleNet = (setup.shambleScoring ?? 'net') === 'net';
   const champagne = setup.shambleVariant === 'champagne';
 
@@ -345,12 +350,12 @@ export function SetupStep({
               value={teamHandicapGross ? 'brutto' : 'netto'}
               onChange={(choice) => {
                 if (choice === 'brutto') {
+                  setLastNet({ rule: setup.teamHandicapRule, allowance: text.allowance });
                   onSetup({ teamHandicapRule: 'pct' });
                   onText({ allowance: '0' });
                 } else {
-                  // Back to Netto: the format's start, as a new game.
-                  onSetup({ teamHandicapRule: undefined });
-                  onText({ allowance: '' });
+                  onSetup({ teamHandicapRule: lastNet?.rule });
+                  onText({ allowance: lastNet?.allowance ?? '' });
                 }
               }}
               options={[
@@ -387,7 +392,13 @@ export function SetupStep({
                   testID="create-team-hcp"
                   style={[ui.input, styles.input50]}
                   value={text.allowance}
-                  onChangeText={(allowance) => onText({ allowance: allowance.replace(/[^0-9]/g, '') })}
+                  onChangeText={(allowance) => {
+                    // A typed 0 is not Brutto (Brutto is its own card): keep
+                    // the last share, as the web field does.
+                    const digits = allowance.replace(/[^0-9]/g, '');
+                    if (digits !== '' && Number(digits) === 0) return;
+                    onText({ allowance: digits });
+                  }}
                   keyboardType="number-pad"
                   placeholder={String(sumPctToAveragePct(defaultSumPct, teamSize))}
                   placeholderTextColor={colors.muted}
