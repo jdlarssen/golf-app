@@ -1922,7 +1922,7 @@
           },
           {
             "heading": "Handicap in Texas scramble",
-            "body": "Scramble is a team format, so the handicap is worked out for the team, not for each player. Tørny first finds your course handicap from your handicap index, the slope and the course rating of the tee you play from. The course handicaps of everyone on the team are then added up, and the team gets a percentage of that sum. Tørny suggests the Norwegian federation rates when you create the round: 25 per cent for teams of two, 15 for teams of three and 10 for teams of four. The organiser can adjust the number before the start. The reason the allowance is so low is simple: four players picking the best ball score far better than any of them does alone, so a full handicap would massively overcompensate. The team handicap is spread across the holes by stroke index and deducted from the team gross."
+            "body": "Scramble is a team format, so the handicap is worked out for the team, not for each player. Tørny first finds your course handicap from your handicap index, the slope and the course rating of the tee you play from. Each player is then weighted as the Norwegian federation recommends, from the lowest to the highest course handicap: 25, 20, 15 and 10 per cent for a team of four, 30, 20 and 10 for a team of three, and 35 and 15 for a team of two. The sum is the team handicap. The organiser can instead pick their own percentage of the team average, or play gross. The reason the shares are so low is simple: four players picking the best ball score far better than any of them does alone, so a full handicap would massively overcompensate. The team handicap is spread across the holes by stroke index and deducted from the team gross."
           },
           {
             "heading": "Common house rules",
@@ -1941,7 +1941,7 @@
           },
           {
             "q": "How is the team handicap worked out in Texas scramble?",
-            "a": "Tørny adds up the course handicaps of everyone on the team and gives the team a percentage of that sum. The suggested default follows the Norwegian federation: 25 per cent for teams of two, 15 for teams of three, 10 for teams of four. In the wizard you set the number as a percentage of the team's average handicap, so the suggestion for a team of three shows as 45. The organiser can adjust it when the round is created."
+            "a": "Tørny weighs each player as the Norwegian federation recommends, from the lowest to the highest course handicap: 25, 20, 15 and 10 per cent for a team of four, 30, 20 and 10 for a team of three, and 35 and 15 for a team of two. The sum of the shares is the team handicap. When the round is created, the organiser can instead pick their own percentage of the team's average handicap, or gross."
           },
           {
             "q": "Can we improve the lie where we choose to play from?",
@@ -1966,7 +1966,7 @@
           "You take turns like this, and everyone is involved through the hole. The team records one score per hole.",
           "The team gets a combined handicap that is deducted. Lowest team total wins."
         ],
-        "long": "Florida Scramble is a Texas Scramble variant with one key rule: the player who hit the chosen shot skips the next one. The rest of the team plays, and you again choose the best among those remaining. You rotate through the hole this way, and everyone contributes. The team plays in groups of 3 or 4, and the team handicap (10–15% of the combined CH) is deducted from the total.",
+        "long": "Florida Scramble is a Texas Scramble variant with one key rule: the player who hit the chosen shot skips the next one. The rest of the team plays, and you again choose the best among those remaining. You rotate through the hole this way, and everyone contributes. The team plays in groups of 3 or 4, and the team handicap is deducted from the total. Tørny weighs each player as the Norwegian federation recommends, from the lowest to the highest course handicap.",
         "example": "Hole 8, par 4, team of 4 (A, B, C, D): A hits the best drive. A skips the next shot — B, C and D play from that spot. C hits the best. C skips — A, B and D putt from 3 m. B is best and holes it. Team score: 1 (A's drive) + 1 (C's second) + 1 (B holing out) = 3."
       },
       "singles_matchplay": {
