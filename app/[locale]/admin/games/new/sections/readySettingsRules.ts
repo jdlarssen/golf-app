@@ -1,6 +1,7 @@
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { showsGeneralAllowanceField } from '@/lib/games/hcpAllowance';
 import { sumPctToAveragePct } from '@/lib/games/teamHandicapUnit';
+import { onAmbroseFormula } from '@/lib/games/formatSetupDefaults';
 
 /**
  * The INNSTILLINGER rows on step 5 «Klar?» (#2457): Handicap, Startkontingent,
@@ -16,8 +17,11 @@ export type HandicapValue =
   | { kind: 'gross' }
   /** Scramble family: percent of the team's average handicap. */
   | { kind: 'teamAverage'; pct: number }
-  /** Scramble family on NGF's weighting per player (#3002, F23). */
-  | { kind: 'teamNgf' };
+  /**
+   * Scramble family on «Standard» (#3002): NGF's weighting per player in Texas
+   * and Florida, the Ambrose formula in Ambrose.
+   */
+  | { kind: 'teamStandard' };
 
 export type ReadySettingsValue =
   | { key: 'handicap'; value: HandicapValue }
@@ -109,13 +113,14 @@ function handicapValue(input: ReadySettingsInput): HandicapValue {
     case 'texas_scramble':
     case 'ambrose':
     case 'florida_scramble': {
-      if (input.teamHandicapRule === 'ngf') return { kind: 'teamNgf' };
+      if (input.teamHandicapRule === 'ngf') return { kind: 'teamStandard' };
       const sumPct =
         gameMode === 'texas_scramble'
           ? input.texasHandicapPct
           : gameMode === 'ambrose'
             ? input.ambroseHandicapPct
             : input.floridaHandicapPct;
+      if (gameMode === 'ambrose' && onAmbroseFormula(sumPct, teamSize)) return { kind: 'teamStandard' };
       const pct = sumPctToAveragePct(sumPct, teamSize);
       return pct === 0 ? { kind: 'gross' } : { kind: 'teamAverage', pct };
     }

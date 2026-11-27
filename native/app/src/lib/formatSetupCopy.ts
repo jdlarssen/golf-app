@@ -85,6 +85,8 @@ export const TEAM_HANDICAP_TEXT = {
   description: 'Laget spiller på en andel av spillernes banehandicap. Tørny regner det om til slag per hull.',
   /** #3002 (F23): de to valgene under Netto, og NGFs tabell per lagstørrelse. */
   ruleNgfTitle: 'Standard',
+  /** «B: formelen» (eieren 27.11): i Ambrose er «Standard» formelen. */
+  ambroseStandardHelper: 'Ambrose-formelen: laget spiller på halve snittet av spillernes banehandicap.',
   rulePctTitle: 'Egen prosent',
   ngfHelper: {
     2: 'NGF vekter hver spiller etter banehandicap, fra lavest til høyest: 35 og 15\u00a0%.',

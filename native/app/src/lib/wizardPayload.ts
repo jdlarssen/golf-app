@@ -28,6 +28,7 @@ import {
   defaultTeamHandicapPct,
   defaultTeamHandicapRule,
   defaultTeamSizeForMode,
+  offersNgfWeighting,
 } from '../../../../lib/games/formatSetupDefaults';
 import { defaultFlightForTeam } from '../../../../lib/games/teamFormatLimits';
 import { canRepeatWeekly } from '../../../../lib/games/weeklyRepeatRule';
@@ -483,10 +484,14 @@ export function draftToFormData(draft: GameDraft): WizardFormData {
     // #3002 (F23): regelen sendes alltid for et nytt spill, så validatoren
     // skriver den (`team_handicap_rule`). En valgt prosent (også brutto, 0)
     // finnes bare under «Egen prosent», så den betyr `pct` når regelen mangler.
+    const rule =
+      setup.teamHandicapRule ??
+      (setup.teamHandicapSumPct !== undefined ? 'pct' : defaultTeamHandicapRule(draft.gameMode));
+    // Ambrose never sends the weighting: its «Standard» is the formula, and
+    // the validator refuses `ngf` there (`offersNgfWeighting`).
     form.set(
       `${prefix}_team_handicap_rule`,
-      setup.teamHandicapRule ??
-        (setup.teamHandicapSumPct !== undefined ? 'pct' : defaultTeamHandicapRule(draft.gameMode)),
+      rule === 'ngf' && !offersNgfWeighting(draft.gameMode) ? 'pct' : rule,
     );
   }
   if (draft.gameMode === 'shamble') {

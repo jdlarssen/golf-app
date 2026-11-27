@@ -144,14 +144,29 @@ describe('readySettingsRows — handicap value', () => {
 
   // #3002 (F23): NGF's weighting per player is its own value; the stored share
   // is not what the round plays off.
-  it.each<GameMode>(['texas_scramble', 'ambrose', 'florida_scramble'])(
-    '%s on NGF’s weighting is named as such',
+  it.each<GameMode>(['texas_scramble', 'florida_scramble'])(
+    '%s on NGF’s weighting is «Standard»',
     (gameMode) => {
       expect(row({ gameMode, teamSize: 4, teamHandicapRule: 'ngf' }, 'handicap').value).toEqual({
-        kind: 'teamNgf',
+        kind: 'teamStandard',
       });
     },
   );
+
+  // The owner 27.11.2026, «B: formelen»: Ambrose's «Standard» is its formula,
+  // half the average (12,5 % of the sum for four).
+  it('Ambrose on its formula is «Standard»; another share is the share', () => {
+    expect(row({ gameMode: 'ambrose', teamSize: 4, ambroseHandicapPct: 12.5, teamHandicapRule: 'pct' }, 'handicap').value).toEqual({
+      kind: 'teamStandard',
+    });
+    expect(row({ gameMode: 'ambrose', teamSize: 4, ambroseHandicapPct: 12.5, teamHandicapRule: null }, 'handicap').value).toEqual({
+      kind: 'teamStandard',
+    });
+    expect(row({ gameMode: 'ambrose', teamSize: 4, ambroseHandicapPct: 20, teamHandicapRule: 'pct' }, 'handicap').value).toEqual({
+      kind: 'teamAverage',
+      pct: 80,
+    });
+  });
 
   it('a stored game without a rule (null) keeps the share of the average', () => {
     expect(

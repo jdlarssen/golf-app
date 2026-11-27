@@ -326,7 +326,8 @@ describe('scramble-familien og shamble (#2753 D3b)', () => {
     ['florida_scramble', undefined, 'ngf_weighted'],
     ['ambrose', undefined, 'sum_pct'],
     ['texas_scramble', 'pct', 'sum_pct'],
-    ['ambrose', 'ngf', 'ngf_weighted'],
+    // «B: formelen» (27.11): Ambrose never sends the weighting.
+    ['ambrose', 'ngf', 'sum_pct'],
   ] as const)('%s med regel %s gir team_handicap_rule %s', (gameMode, rule, expected) => {
     const cfg = buildDraftPayload(
       draft({ gameMode, players: four, setup: { teamSize: 4, teamHandicapRule: rule } }),

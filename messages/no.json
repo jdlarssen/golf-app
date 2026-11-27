@@ -1637,6 +1637,7 @@
       "ambrose": {
         "legend": "Laghandicap",
         "description": "Laget spiller på en andel av spillernes banehandicap. Tørny regner det om til slag per hull.",
+        "standardHelper": "Ambrose-formelen: laget spiller på halve snittet av spillernes banehandicap.",
         "nettoHelper2": "Ambrose-formelen gir alltid halve snittet: 50 (25 % av summen for 2-mannslag).",
         "nettoHelper3": "Ambrose-formelen gir alltid halve snittet: 50 (16,7 % av summen for 3-mannslag).",
         "nettoHelper4": "Ambrose-formelen gir alltid halve snittet: 50 (12,5 % av summen for 4-mannslag).",
@@ -1957,7 +1958,7 @@
           "Lag-handikapet bygger på alle på laget, så sterke og svake lag stiller likere.",
           "Lavest lagtotal etter handikap vinner."
         ],
-        "long": "Ambrose er en scramble-variant med et laghandicap som veier inn alle spillernes nivå. Alle slår fra tee, dere plukker beste utslag og alle slår derfra igjen. Slik fortsetter dere hull for hull. Laghandicapet beregnes som sum-CH delt på to ganger lagstørrelsen (12,5 % for 4-mannslag), og det trekkes fra lagets brutto-total.",
+        "long": "Ambrose er en scramble-variant med et laghandicap som veier inn alle spillernes nivå. Alle slår fra tee, dere plukker beste utslag og alle slår derfra igjen. Slik fortsetter dere hull for hull. Laghandicapet beregnes som sum-CH delt på to ganger lagstørrelsen (12,5 % for 4-mannslag), og det trekkes fra lagets brutto-total. Formelen er standarden i Tørny, og arrangøren kan heller velge en egen prosent.",
         "example": "Lag på 4: CH 8, 12, 16 og 20 → sum-CH 56. Laghandicap = 56 ÷ (2 × 4) = 7. Hull 5, par 5: alle slår fra tee, beste utslag 240 m på fairway. Dere chipper til 2 m på neste slag (alle spiller derfra). En av spillerne putter inn. Lagets brutto hullscore: 3. Netto etter 18 hull: brutto-total − 7."
       },
       "florida_scramble": {

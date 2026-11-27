@@ -91,6 +91,10 @@ describe('scramble-familien og shamble er nettets (D3b)', () => {
     for (const size of [2, 3, 4] as const) {
       expect(TEAM_HANDICAP_TEXT.ngfHelper[size]).toBe(props[`ngfHelper${size}`]);
     }
+    // «B: formelen»: Ambrose's «Standard» line.
+    expect(TEAM_HANDICAP_TEXT.ambroseStandardHelper).toBe(
+      (wizard.allowanceProps.ambrose as unknown as Record<string, string>).standardHelper,
+    );
   });
 
   it('summen med én desimal og komma', () => {

@@ -1637,6 +1637,7 @@
       "ambrose": {
         "legend": "Team handicap",
         "description": "The team plays off a share of its players' course handicaps. Tørny converts it to strokes per hole.",
+        "standardHelper": "The Ambrose formula: the team plays off half the average of its players' course handicaps.",
         "nettoHelper2": "The Ambrose formula is always half the average: 50 (25% of the sum for 2-player teams).",
         "nettoHelper3": "The Ambrose formula is always half the average: 50 (16.7% of the sum for 3-player teams).",
         "nettoHelper4": "The Ambrose formula is always half the average: 50 (12.5% of the sum for 4-player teams).",
@@ -1957,7 +1958,7 @@
           "The team handicap is built from everyone on the team, so strong and weak teams line up more evenly.",
           "Lowest team total after handicap wins."
         ],
-        "long": "Ambrose is a scramble variant with a team handicap that factors in every player's level. Everyone tees off, you pick the best drive and everyone plays from there again. You carry on like this hole by hole. The team handicap is worked out as the combined CH divided by twice the team size (12.5% for a team of four), and it is deducted from the team's gross total.",
+        "long": "Ambrose is a scramble variant with a team handicap that factors in every player's level. Everyone tees off, you pick the best drive and everyone plays from there again. You carry on like this hole by hole. The team handicap is worked out as the combined CH divided by twice the team size (12.5% for a team of four), and it is deducted from the team's gross total. The formula is the standard in Tørny, and the organiser can instead pick their own percentage.",
         "example": "Team of 4: CH 8, 12, 16 and 20 → combined CH 56. Team handicap = 56 ÷ (2 × 4) = 7. Hole 5, par 5: everyone tees off, best drive 240 m on the fairway. You chip to 2 m on the next shot (everyone plays from there). One of the players holes the putt. Team gross hole score: 3. Net after 18 holes: gross total − 7."
       },
       "florida_scramble": {
