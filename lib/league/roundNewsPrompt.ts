@@ -220,7 +220,7 @@ export function checkRoundNews(raw: string, facts: RoundNewsFacts): RoundNewsChe
   if (unknown.length > 0) {
     faults.push(`Utkastet inneholdt tall som ikke står i fakta-objektet: ${unknown.join(', ')}.`);
   }
-  const weekday = findWeekday(text);
+  const weekday = findWeekday(text, JSON.stringify(facts));
   if (weekday !== null) {
     faults.push(`Utkastet nevnte en ukedag («${weekday}»). Nevn aldri ukedag eller dato.`);
   }

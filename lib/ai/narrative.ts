@@ -43,19 +43,29 @@ export const NARRATIVE_MAX_RETRIES = 1;
  * Ukedagene, som tekstene aldri skal nevne (#2983). En historie nevnte en
  * ukedag 22.11, og den var feil: modellen vet ikke hvilken dag det er, og en
  * dato i fakta gjør den ikke klokere. En regel som bare står i prompten er en
- * bønn, ikke en sperre (#2989), så sperrene leser den samme lista som
- * promptene (felle 4).
+ * bønn, ikke en sperre (#2989): promptene sier «ukedag», og sperrene leser
+ * denne lista (felle 4).
  */
 export const WEEKDAY_WORDS = ['mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag', 'søndag'] as const;
 
 // Et ord som begynner med en ukedag, i alle bøyninger og sammensetninger
 // («lørdag», «mandagen», «søndagskveld»). `\p{L}` og flagget `u`, fordi `\b`
 // ikke kjenner æ, ø og å.
-const WEEKDAY_PATTERN = new RegExp(`(?<!\\p{L})(?:${WEEKDAY_WORDS.join('|')})\\p{L}*`, 'iu');
+const WEEKDAY_PATTERN = new RegExp(`(?<!\\p{L})(?:${WEEKDAY_WORDS.join('|')})\\p{L}*`, 'giu');
 
-/** Det første ordet i `text` som er en ukedag, slik det står, eller null. */
-export function findWeekday(text: string): string | null {
-  return text.match(WEEKDAY_PATTERN)?.[0] ?? null;
+/**
+ * Det første ordet i `text` som er en ukedag, slik det står, eller null.
+ *
+ * Et ord som også står i `known` (fakta modellen fikk), er et navn og ikke en
+ * ukedag: «Onsdagsligaen», «Torsdagsgolfen» (evaluatoren 27.11). Ordet må stå
+ * helt likt; selve dagen («onsdag») er fortsatt en ukedag.
+ */
+export function findWeekday(text: string, known = ''): string | null {
+  const names = new Set(Array.from(known.matchAll(WEEKDAY_PATTERN), (m) => m[0].toLowerCase()));
+  for (const m of text.matchAll(WEEKDAY_PATTERN)) {
+    if (!names.has(m[0].toLowerCase())) return m[0];
+  }
+  return null;
 }
 
 /**

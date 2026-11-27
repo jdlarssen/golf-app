@@ -77,7 +77,15 @@ describe('findWeekday (#2983)', () => {
     },
   );
 
-  it('the list names the seven days, one home for the prompts and the checks', () => {
+  it('a word that stands in the facts is a name, not a weekday', () => {
+    // The evaluator's probe (27.11): a league or a game named after a day.
+    const facts = JSON.stringify({ leagueName: 'Onsdagsligaen', gameName: 'Torsdagsgolfen 4' });
+    expect(findWeekday('Onsdagsligaen er i gang, og Torsdagsgolfen 4 er spilt.', facts)).toBeNull();
+    // The day itself is still a weekday, also when a name holds it.
+    expect(findWeekday('Onsdagsligaen spilte på onsdag.', facts)).toBe('onsdag');
+  });
+
+  it('the list names the seven days, one home for the checks', () => {
     expect(WEEKDAY_WORDS).toEqual(['mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag', 'søndag']);
   });
 });
