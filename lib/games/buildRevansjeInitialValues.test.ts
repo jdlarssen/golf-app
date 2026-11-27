@@ -166,3 +166,61 @@ describe('buildRevansjeInitialValues', () => {
     expect(result.game_mode).toBe('best_ball');
   });
 });
+
+// #3002: a rematch is a NEW game, so it starts on the new rules. A source
+// game from before #3002 has no `team_handicap_rule` / `fourball_allowance_pct`;
+// the edit prefill reads that as null («keep the old rule»), which a rematch
+// must not carry over. An organiser's own choice (gross or another share) is
+// kept as «Egen prosent»; the old start value gives way to the new start.
+describe('buildRevansjeInitialValues — regelbok F23 og F24 (#3002)', () => {
+  const texas = (extra: Record<string, unknown> = {}) =>
+    baseGame({
+      game_mode: 'texas_scramble',
+      mode_config: { kind: 'texas_scramble', team_size: 4, teams_count: 2, team_handicap_pct: 10, ...extra } as GameModeConfig,
+    });
+
+  it('eldre Texas på den gamle startverdien starter på formatets nye regel', () => {
+    const result = buildRevansjeInitialValues(texas(), [player()]);
+    expect(result.team_handicap_rule).toBeUndefined();
+    expect('team_handicap_rule' in result).toBe(false);
+  });
+
+  it('eldre Texas i brutto beholder brutto som «Egen prosent» 0', () => {
+    const result = buildRevansjeInitialValues(texas({ team_handicap_pct: 0 }), [player()]);
+    expect(result.team_handicap_rule).toBe('pct');
+    expect(result.texas_team_handicap_pct).toBe('0');
+  });
+
+  it('eldre Texas med arrangørens egen prosent beholder den', () => {
+    const result = buildRevansjeInitialValues(texas({ team_handicap_pct: 20 }), [player()]);
+    expect(result.team_handicap_rule).toBe('pct');
+    expect(result.texas_team_handicap_pct).toBe('20');
+  });
+
+  it('eldre Ambrose på formelen starter på formatets regel', () => {
+    const result = buildRevansjeInitialValues(
+      baseGame({
+        game_mode: 'ambrose',
+        mode_config: { kind: 'ambrose', team_size: 3, teams_count: 2, team_handicap_pct: 16.67 } as GameModeConfig,
+      }),
+      [player()],
+    );
+    expect('team_handicap_rule' in result).toBe(false);
+  });
+
+  it('et spill med regelen tar den med', () => {
+    const result = buildRevansjeInitialValues(texas({ team_handicap_rule: 'ngf_weighted' }), [player()]);
+    expect(result.team_handicap_rule).toBe('ngf');
+  });
+
+  it('eldre patsome starter på 85; et spill med andelen tar den med', () => {
+    const patsome = (extra: Record<string, unknown> = {}) =>
+      baseGame({
+        game_mode: 'patsome',
+        mode_config: { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net', ...extra } as GameModeConfig,
+      });
+    const old = buildRevansjeInitialValues(patsome(), [player()]);
+    expect('patsome_fourball_allowance_pct' in old).toBe(false);
+    expect(buildRevansjeInitialValues(patsome({ fourball_allowance_pct: 90 }), [player()]).patsome_fourball_allowance_pct).toBe(90);
+  });
+});
