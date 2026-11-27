@@ -1,23 +1,29 @@
 # App Store-oppføringen — personvern-etikett og butikk-tekst
 
 Alt eieren limer inn i App Store Connect for iOS-appen, samlet ett sted. Skrevet for
-N8 (#1954, P6) og oppdatert i #2561 for neste innsending: varsler på iOS,
-AI-spørsmålet, ingen kroner i appen og bare Norge. Klikkstien og «hva du skal se
-etter» står i oppskriftene på PR #2596 (E6); denne fila er kilden tekstene kopieres
-fra, så neste innsending ikke må finne dem opp på nytt.
+N8 (#1954, P6) og oppdatert i #2561 for innsendingen i desember: varsler på iOS,
+AI-spørsmålet, ingen kroner mellom spillerne, bare Norge, og fra 27.11 også
+startkontingenten og premiebordet. Klikkstien og «hva du skal se etter» står i
+oppskriftene på PR #2596 (E6); denne fila er kilden tekstene kopieres fra, så
+neste innsending ikke må finne dem opp på nytt.
+
+**Målestokken er bygg 1.2.0 (15)**, bump-commiten `1fc9a089d` (23.11.2026). Teksten
+lover det som står i den commiten, ikke mer. Det som er merget etter 23.11, er ikke
+med i bygget og står ikke her. Sendes et nyere bygg inn, holder teksten fortsatt.
 
 **Regelen som styrer teksten:** vi lover bare det appen faktisk gjør. Nettsiden kan
 mer enn appen, og en beskrivelse som selger nettsidens repertoar er en avvisning som
 venter på å skje. Aldri «over 20 spillformer», aldri pengeoppgjør (appen viser det
-ikke ved lansering). Startkontingenten og premiebordet vises i appen fra #2749;
-butikkteksten nevner dem ikke før #2561 har skrevet den om. Cup står i beskrivelsen fra bygget som har kapteinuttaket
+ikke ved lansering). Startkontingenten og premiebordet vises i appen fra #2749 og
+står i beskrivelsen under «FOR ARRANGØREN», uten ord som lokker med premier («vinn»,
+«premier verdt …»). Cup står i beskrivelsen fra bygget som har kapteinuttaket
 (#2752, avsnittet «CUP»): appen lager, spiller og avslutter en personlig cup, og en klubb-cup
 lages på nettsiden. Ligaen står i beskrivelsen fra bygg 9:
 appen viser ligaen du er med i og starter runden, men arrangøren setter den opp på
-nettsiden. Appen **oppretter** åtte formater, men
-den **spiller** også rundene arrangøren setter opp på nettsiden, blant dem scramble og
-de fleste lagformatene, også patsome. Beskrivelsen sier derfor aldri at du kan *sette opp*
-scramble i appen.
+nettsiden. Fra bygg 15 kan du også melde deg på en liga som er åpen for påmelding.
+Appen **oppretter** 15 formater (`APP_SUPPORTED_MODES`), og scramble-familien er med
+(#2753). Den **spiller** i tillegg rundene arrangøren setter opp på nettsiden, blant
+dem de lagformatene appen ikke oppretter selv.
 
 ## Personvern-etikett (App Privacy)
 
@@ -35,7 +41,8 @@ Etiketten følger Apples egne definisjoner på
 
 Alt appen samler, unntatt Kavalkade-tellingen, er for at appen skal virke (App
 Functionality). Kavalkade-tellingen har formålet Analytics (raden Product Interaction).
-Alt er koblet til kontoen, og ingenting brukes til sporing.
+Alt er koblet til kontoen, og ingenting brukes til sporing. Lest på nytt 2026-11-27
+mot bygg 1.2.0 (15), `1fc9a089d`.
 
 Første spørsmål i skjemaet: **«Do you or your third-party partners collect data from
 this app?» → Yes.**
@@ -46,11 +53,13 @@ Så hakes disse av, én rad per datatype:
 |---|---|---|---|---|---|
 | Contact Info | **Email Address** | Adressen kontoen logger inn med engangskoden (`native/app/src/screens/Login.tsx`, `requestLoginCode`). | App Functionality | **Yes** | **No** |
 | Contact Info | **Name** | Navnet og kallenavnet spilleren fyller inn i profilen, og som medspillerne ser på tavla (`CompleteProfile.tsx`, feltet `complete-profile-name`; `EditProfile.tsx`, feltet `edit-profile-nickname`). | App Functionality | **Yes** | **No** |
+| Contact Info | **Phone Number** | Vipps-nummeret arrangøren legger inn som betalingsmåte for startkontingenten (`native/app/src/components/create/FeeAndPrizes.tsx`, feltet `create-payment-link`; `wizardPayload.ts`, `payment_link`). Feltet er fritekst, og et telefonnummer er bruken det er laget for. Arrangøren velger selv om kontingent og nummer settes (valgfritt). Spillerne i runden ser nummeret på kontingentkortet (`PaymentCard.tsx`). | App Functionality | **Yes** | **No** |
+| Purchases | **Purchase History** | At arrangøren har krysset av for at en spiller har betalt startkontingenten (`game_players.paid_at`; `native/app/src/data/payments.ts`, `PaymentStatus.tsx`). Betalingen skjer utenfor appen, og appen ser den aldri; avkrysningen er arrangørens liste. Vi oppgir den likevel, fordi en etikett som rapporterer for lite er en avvisningsgrunn. Se tolkningen under. | App Functionality | **Yes** | **No** |
 | Contacts | **Contacts** | Vennelista, e-postadressene spilleren taster for å legge til eller invitere en venn (`native/app/src/data/friends.ts`, `addFriendByEmail` og `inviteFriend`), og adressene arrangøren inviterer inn i en runde (`OrganiserSection.tsx`, `inviteToGame`). Apple regner en «social graph» som kontakter. Appen leser aldri kontaktene på telefonen. | App Functionality | **Yes** | **No** |
 | Identifiers | **User ID** | Konto-id-en radene i databasen henger på (Supabase Auth). | App Functionality | **Yes** | **No** |
 | Identifiers | **Device ID** | Varsel-tokenet fra Apple, som `turnOnPush` lagrer i `apns_tokens` sammen med konto-id-en og iOS-versjonen («Tørny-appen iOS …», `userAgent()`), bare når spilleren slår på varsler (`native/app/src/data/pushDevice.ts:110-137`). Se tolkningen under. | App Functionality | **Yes** | **No** |
 | User Content | **Gameplay Content** | Slagene, resultatene og handicapet poengregningen bygger på, og hvem som spiller i hvilken runde (`lib/scoring/`, `CompleteProfile.tsx`, feltet `complete-profile-hcp`). Apple: «Such as saved games, multiplayer matching or gameplay logic, or user-generated content in-game». | App Functionality | **Yes** | **No** |
-| User Content | **Other User Content** | Navnet arrangøren gir runden (`native/app/src/components/create/SetupStep.tsx`, feltet `create-name`), og grunnen en makker eller arrangøren skriver når et scorekort sendes tilbake (`Approve.tsx`), som spilleren ser på spillsiden (`GameHome.tsx:268`). Apple: «Any other user-generated content». | App Functionality | **Yes** | **No** |
+| User Content | **Other User Content** | Navnet arrangøren gir runden (`native/app/src/components/create/SetupStep.tsx`, feltet `create-name`), og grunnen en makker eller arrangøren skriver når et scorekort sendes tilbake (`Approve.tsx`), som spilleren ser på spillsiden (`GameHome.tsx:268`). Fra bygg 15 også premie- og sponsorteksten på premiebordet (`FeeAndPrizes.tsx`, `PrizeTable.tsx`), lagnavnet kapteinen skriver når laget meldes på (`TeamSignupForm.tsx`) eller en cup settes opp (`CreateCup.tsx`), den valgfrie hilsenen til arrangøren i en påmelding (`RoundInvite.tsx`), og reaksjonene på tavla (`RowReactions.tsx`, en fast palett med seks emojier). Apple: «Any other user-generated content». | App Functionality | **Yes** | **No** |
 | Usage Data | **Product Interaction** | At spilleren delte et kort fra Kavalkaden, hvilket kort og hvilket år, og når (`ShareKavalkadeCardButton.tsx` → `logKavalkadeShare` → tabellen `kavalkade_shares`). Vi bruker det bare til å telle hvor mange spillere som har delt (`lib/kavalkade/countKavalkadeSharers.ts`). Apple: «other information about how the user interacts with the app». | Analytics | **Yes** | **No** |
 | Other Data | **Other Data Types** | Kjønn (herre eller dame) og spillerklasse (junior, voksen eller senior) fra «Rediger profil» (`EditProfile.tsx`, `GENDER_OPTIONS` og `LEVEL_OPTIONS`). De velger tee for spilleren (`lib/games/joinTeeGenders.ts`). Se tolkningen under. | App Functionality | **Yes** | **No** |
 
@@ -66,6 +75,14 @@ navn. Vi oppgir det som Device ID ut fra to sitater:
 Tokenet blir liggende i databasen så lenge varslene er på, og det er koblet til kontoen,
 så det er samlet inn etter definisjonen over. iOS-versjonen lagres i samme rad for å
 kjenne igjen telefonen og oppgis derfor sammen med tokenet.
+
+**Phone Number og Purchase History er også tolkninger, og vi oppgir for mye heller enn
+for lite.** Vipps-nummeret er ofte et telefonnummer, og feltet tar fritekst, så vi
+oppgir det som Phone Number selv om det er arrangørens nummer og ikke spillerens.
+«Betalt» er en betaling spilleren har gjort, selv om den skjer hos Vipps eller
+arrangørens egen lenke og appen aldri ser den. Apples «Purchase History» passer
+dårlig for en avkrysning i en liste, men en etikett som rapporterer for lite er en
+avvisningsgrunn, og det koster lite å rapportere for mye (#2561, G2).
 
 **Kjønn og spillerklasse er også en tolkning.** Apple har ingen egen datatype for dem.
 «Sensitive Info» er «racial or ethnic data, sexual orientation, pregnancy or childbirth
@@ -112,8 +129,8 @@ Siste spørsmål, «Do you use this data to track you or your device across apps
 websites owned by other companies?», er **No** for alle radene.
 
 Etterpå skal oppsummeringen på siden vise **Data Linked to You** med Contact Info,
-Contacts, Identifiers, Usage Data, User Content og Other Data, og **Data Not Used to
-Track You**.
+Purchases, Contacts, Identifiers, Usage Data, User Content og Other Data, og **Data Not
+Used to Track You**.
 
 **Grunnen når et kort sendes tilbake** står under Other User Content hos Apple, men
 under «Other in-app messages» hos Google. Apples meldingstype er «Emails or Text
@@ -138,6 +155,12 @@ Content** (rundenavnet og grunnen når et kort sendes tilbake). Kallenavnet stå
 Name, og kjønn og spillerklasse under **Other Data Types**. De tre feltene fantes i
 appen også ved forrige innsending, men sto ikke på etiketten.
 
+**Endring i #2561 G2 (27.11):** **Phone Number** (Vipps-nummeret) og **Purchase
+History** (at arrangøren har krysset av for betalt) er lagt til, og **Other User
+Content** er utvidet med premie- og sponsortekst, lagnavn, hilsenen i en påmelding og
+reaksjonene på tavla. Kildene står i tabellen. Face ID-låsen og bildet som lagres i
+Bilder gir ingen rader: se «Dette hakes **ikke** av».
+
 ## App-navn og URL-er
 
 | Felt | Verdi |
@@ -160,7 +183,7 @@ apper måtte svare på de nye spørsmålene innen 31. januar 2026
 (<https://developer.apple.com/news/?id=tlur8uvi>). Definisjonene og hvilken
 aldersgrense hvert svar gir, står på
 <https://developer.apple.com/help/app-store-connect/reference/app-information/age-ratings-values-and-definitions>
-(lest 2026-10-18).
+(lest 2026-10-18, og definisjonene for brukerinnhold, sosiale medier, meldinger, konkurranser og pengespill lest på nytt 2026-11-27; siden viser ingen «sist oppdatert»-dato, og ordlyden under er gjengitt fra et sammendrag av siden, så orkestratoren sjekker den i konsollen).
 
 Klikkstien: Apps → Tørny → General → App Information → «Set Up Age Ratings» (eller
 «Edit») → gå gjennom stegene. Orkestratoren sjekker at spørsmålene står slik i
@@ -178,10 +201,10 @@ Velg det som betyr «ingen».
 | In-App Controls: Parental Controls | Ikke valgt | Appen har ingen foreldrekontroll. |
 | In-App Controls: Age Assurance | Ikke valgt | Appen sjekker ikke alder. |
 | Capabilities: Unrestricted Web Access | Ikke valgt | Appen har ingen nettleser. Lenker til tornygolf.no åpnes i Safari, utenfor appen (`native/app/src/lib/webLink.ts`, `Linking.openURL`). Verken `react-native-webview` eller `expo-web-browser` er avhengigheter. |
-| Capabilities: User-Generated Content | Ikke valgt | Det spillerne skriver (navn, rundenavn, slag, grunnen når et kort sendes tilbake), ser bare medspillerne og vennene, ikke folk flest. Apples definisjon krever «broad distribution». Valgt gir også 4+, så svaret flytter ikke aldersgrensen. |
-| Capabilities: Social Media | Ikke valgt | Spørsmålene om sosiale medier er påkrevd fra september 2026. Apples definisjon er innhold som spres «through a social feed or similar discovery method that visibly spreads content to many users». Appen har ingen strøm og ingen måte å spre innhold til mange på. Vennelista viser bare egne venner (`native/app/src/data/friends.ts`). |
+| Capabilities: User-Generated Content | **Valgt** | Apples definisjon: «Includes the broad distribution of content created by users as a component of the app's intended user experience». Fra bygg 15 viser terminlista «Finn turneringer» og den delte påmeldingslenka rundenavnet og klubbnavnet arrangøren skriver til alle innloggede spillere, også folk utenfor vennelista (`TerminRow.tsx`, `RoundInvite.tsx`; arrangørens navn vises ikke). Premie- og sponsorteksten, lagnavn og reaksjonene ser bare spillerne i runden. Apple oppgir at svaret gir 4+, så det flytter ikke aldersgrensen. |
+| Capabilities: Social Media | Ikke valgt | Spørsmålene om sosiale medier er påkrevd fra september 2026. Apples definisjon er «Redistribution, amplification, or interaction with user-generated content through a social feed or similar discovery method that visibly spreads content to many users» (lest 2026-11-27). Terminlista er en liste over arrangementer med dato, bane og ledige plasser. Den sprer ikke innhold fra brukerne, og ingen strøm gir visninger, likes, kommentarer eller deling videre. Reaksjonene på tavla er en fast palett på seks emojier, bare for spillerne i runden. Vennelista viser bare egne venner (`native/app/src/data/friends.ts`). |
 | Capabilities: Social Media Disabled for Users Under 13 | Ikke valgt | Gjelder bare apper med sosiale medier. |
-| Capabilities: Messaging and Chat | **Valgt** | Apples definisjon: «Users can directly communicate with one another through features within the app». En makker eller arrangøren kan sende et scorekort tilbake med en grunn i fritekst, og spilleren leser den på spillsiden (`Approve.tsx`, `GameHome.tsx:268`). Det er en kort melding fra én spiller til en annen. Valgt gir 4+. |
+| Capabilities: Messaging and Chat | **Valgt** | Apples definisjon: «Users can directly communicate with one another through features within the app». En makker eller arrangøren kan sende et scorekort tilbake med en grunn i fritekst, og spilleren leser den på spillsiden (`Approve.tsx`, `GameHome.tsx:268`). Det er en kort melding fra én spiller til en annen. Den valgfrie hilsenen til arrangøren i en påmelding (`RoundInvite.tsx`, høyst 200 tegn) er en melding til én person. Valgt gir 4+. |
 | Capabilities: Advertising | Ikke valgt | Appen har ingen reklame. |
 | Mature Themes: Profanity or Crude Humor | None | Ingen. |
 | Mature Themes: Horror/Fear Themes | None | Ingen. |
@@ -190,7 +213,7 @@ Velg det som betyr «ingen».
 | Medical or Wellness: Health or Wellness Topics | None / No | Appen gir ingen råd om trening eller helse. Handicapet er et golfmål. |
 | Sexuality or Nudity (alle) | None | Ingen. |
 | Violence (alle, også våpen) | None | Ingen. |
-| Chance-Based Activities: Gambling | No | Appen har ingen pengespill. Pengeoppgjøret mellom spillerne er skjult (`SHOW_SETTLEMENT_IN_APP = false` i `lib/launchRules.ts`). Fra #2749 viser appen startkontingenten til et ekte arrangement, arrangørens betalingslenke eller Vipps-nummer, og premiebordet. Betalingen skjer utenfor appen, og ingen kan satse noe i appen. Se «Kontingent og premiebord mot butikkreglene» under. |
+| Chance-Based Activities: Gambling | No | Appen har ingen pengespill. Pengeoppgjøret mellom spillerne er skjult (`SHOW_SETTLEMENT_IN_APP = false` i `lib/launchRules.ts`). Fra #2749 viser appen startkontingenten til et ekte arrangement, arrangørens betalingslenke eller Vipps-nummer, og premiebordet. Betalingen skjer utenfor appen, og ingen kan satse noe i appen. Grunnen står i «Kontingent og premiebord mot butikkreglene» under. |
 | Chance-Based Activities: Simulated Gambling | None | Apples definisjon er «Betting or wagering without using real money or in-game currency that can be exchanged for real money». De seks formatene som ellers kan spilles om penger (Skins, Wolf, Bingo Bango Bongo, Nines, Acey Deucey og Nassau, `lib/scoring/settlement.ts`), er måter å telle poeng på, og i appen er det ingen innsats: oppgjøret er skjult (`lib/launchRules.ts`). |
 | Chance-Based Activities: Contests | Frequent | Hver runde er en konkurranse med tavle og plasseringer. Det er hele appen. Frequent gir 13+. |
 | Chance-Based Activities: Loot Boxes | No | Appen har ingen kjøp. |
@@ -228,7 +251,7 @@ Opprett runden på et par minutter, tast slag hull for hull og se tavla oppdater
 
 164 tegn.
 
-## Beskrivelse
+## Beskrivelse (maks 4000 tegn)
 
 ```text
 Tørny er turneringen i lomma.
@@ -240,31 +263,39 @@ Handicapet regnes etter WHS, slik at alle spiller på like vilkår. Ingen sitter
 Ryker dekningen ute på banen, går det fint: slagene blir liggende på telefonen og sendes av seg selv når nettet er tilbake.
 
 FORMATER DU KAN SPILLE
-- Stableford og Modifisert Stableford
+- Slagspill, Stableford og Modifisert Stableford
 - Matchplay
-- Best ball og Greensome
-- Wolf, Skins og Bingo Bango Bongo
-- Scramble og flere lagformater, når arrangøren har satt opp runden på tornygolf.no
+- Best ball, Greensome og Patsome
+- Texas scramble, Florida scramble, Ambrose og Shamble
+- Wolf, Skins, Bingo Bango Bongo og Nassau
+
+FINN EN RUNDE
+Terminlista viser turneringene denne helga og i klubben din. Er det ledig plass, melder du deg på, alene eller med laget ditt. Er runden full, kan du be om plass.
 
 SIDETURNERINGER
 Slå på lengste drive og nærmest pinnen på hullene dere velger, så har dere noe å krangle om i klubbhuset etterpå.
 
+FOR ARRANGØREN
+Lag kompisrunden eller klubbturneringen i appen. Du kan sette en startkontingent med Vipps-nummer eller betalingslenke, se hvem som har betalt og minne resten på det. Betalingen går rett til deg, utenfor appen. Premiene dere spiller om, legger du inn på premiebordet.
+
 LIGA
-Er du med i en liga som arrangøren har satt opp på tornygolf.no, finner du den i appen. Der ser du sesongtabellen, den åpne runden og hvem som har spilt, og du starter runden rett derfra. Slår du på varsler, får du beskjed når en runde åpner og når fristen nærmer seg. I en simulatorliga godkjenner du kortet til en annen i ligaen som markør.
+Er du med i en liga som arrangøren har satt opp på tornygolf.no, finner du den i appen. Der ser du sesongtabellen, den åpne runden og hvem som har spilt, og du starter runden rett derfra. Er ligaen åpen for påmelding, melder du deg på i appen. Slår du på varsler, får du beskjed når en runde åpner og når fristen nærmer seg. I en simulatorliga godkjenner du kortet til en annen i ligaen som markør.
 
 CUP
 Sett opp en lagkamp mot kompisene rett i appen. Du velger bane, format og spillere, fordeler lagene og får et forslag til kamper, eller lar kapteinene ta ut laget sitt i hemmelighet. Så spiller dere, og når cupen er ferdig, ser alle hvilket lag som vant.
 
 FØR OG UNDER RUNDEN
-Legg runden inn i kalenderen med ett trykk. Slå på varsler hvis du vil vite når du blir invitert, når et scorekort venter på deg og når resultatet er klart. Har arrangøren slått på live-følging, kan du dele lenka, så kan de hjemme følge tavla mens dere spiller.
+Legg runden inn i kalenderen med ett trykk. Slå på varsler hvis du vil vite når du blir invitert, når et scorekort venter på deg og når resultatet er klart. Innboksen samler det som venter på deg. Har arrangøren slått på live-følging, kan du dele lenka, så kan de hjemme følge tavla mens dere spiller.
 
 NÅR RUNDEN ER FERDIG
-Du leverer kortet ditt, arrangøren avslutter runden, og resultatet er klart for alle som var med.
+Du leverer kortet ditt, arrangøren avslutter runden, og resultatet er klart for alle som var med. Resultatkortet kan du dele med gjengen.
 
 I romjula får du Kavalkaden, en oppsummering av golfåret ditt som du kan dele med gjengen. En språkmodell skriver teksten, og navnet ditt er bare med hvis du har sagt ja til det.
 
 Tørny er laget for norske runder og norske baner. Du bruker den samme kontoen på tornygolf.no.
 ```
+
+2679 tegn, målt med `len()` på teksten i blokka (grensen er 4000). Ingen «vinn» og ingen «premier verdt …».
 
 ### Lim inn i App Store Connect
 
@@ -276,22 +307,27 @@ dokumentasjon og er ikke sjekket i konsollen; sjekk den før du limer.
 
 1. Marker alt i «Description» og slett det.
 2. Lim inn hele kodeblokka over (fra «Tørny er turneringen i lomma.» til «…samme kontoen
-   på tornygolf.no.»). Den nye linja er den siste i lista under «FORMATER DU KAN SPILLE»:
-   «Scramble og flere lagformater, når arrangøren har satt opp runden på tornygolf.no».
+   på tornygolf.no.»). Nytt fra 27.11: formatlista med scramble-familien og Nassau, «FINN EN RUNDE»
+   og «FOR ARRANGØREN».
 3. Samme versjonsside lenger ned, **App Review Information → Notes**: marker alt, slett,
    og lim inn blokka under «Notes-mal til App Store Connect» i
    [`app-store-review-konto.md`](app-store-review-konto.md) (lengden står i den fila).
-   Linja som er endret, er den nest siste under «NOT IN THE APP».
+   Nytt fra 27.11: avsnittet «ENTRY FEE AND PRIZES», og linjene under «NOT IN THE APP» er skrevet om.
 4. Trykk «Save» øverst til høyre.
 
 ### Hva som med vilje IKKE står der
 
-- **«Over 20 spillformer.»** Nettsiden har 22 aktive formater; appen oppretter åtte
-  (`native/app/src/lib/appFormats.ts`). Åtte er det vi lover.
+- **«Over 20 spillformer.»** Nettsiden har 22 aktive formater; appen oppretter 15
+  (`APP_SUPPORTED_MODES` i `native/app/src/lib/appFormats.ts` på `1fc9a089d`; filas egen
+  kommentar sier «15 etter #2753»). Det er tallet vi lover, og beskrivelsen lister dem
+  ved navn. Kontrakten fra 12.11 skrev 14, men Nassau (#2755) kom 13.11. VERIFICATION GAP:
+  hvilke av dem veiviseren faktisk viser, avgjøres også av `formats.is_active` og
+  `format_intent_mapping` i databasen, og det er ikke lest.
 - **Varsler som noe appen gjør av seg selv.** Beskrivelsen sier «slå på varsler hvis du
   vil», fordi appen bare spør når spilleren slår dem på under «Varsler og tema»
   (`NotificationsAndTheme.tsx` → `turnOnPush`). «Resultatet er klart»-mailen kommer fra
-  serveren, ikke fra appen, og er derfor ikke et app-løfte.
+  serveren, ikke fra appen, og er derfor ikke et app-løfte. Android har varsler fra
+  bygg 15 (#2758), så teksten gjelder begge plattformene.
 - **Pengeoppgjør.** Skins og Wolf spilles ofte om penger, men appen viser ikke
   oppgjøret ved lansering (`SHOW_SETTLEMENT_IN_APP = false` i `lib/launchRules.ts`,
   #2561, #2749). Oppgjøret finnes på nettsiden. Startkontingenten, betalingslenka og
@@ -310,15 +346,24 @@ dokumentasjon og er ikke sjekket i konsollen; sjekk den før du limer.
   åpne runden, starter runden og lar markøren godkjenne kortet i en simulatorliga
   (`League.tsx`, `LeagueRoundStart.tsx`, `MarkerApprove.tsx`). Appen oppretter ikke
   ligaer, og beskrivelsen sier ikke at den gjør det. Ligavarslene («runden åpner», «fristen
-  nærmer seg») står i begge tekstene.
-- **Å sette opp scramble i appen.** Opprett-veiviseren har bare de åtte formatene over.
-  Scramble-familien settes opp på nettsiden, og så spiller du den i appen: appen fører
-  ett lagkort (`modeCollapsesToTeamCard`, N4) og viser lagtavla (`teamBoard.ts`, #2579).
-  Derfor står den som «når arrangøren har satt opp runden på tornygolf.no», ikke som et
-  format du velger. Linja sier «flere lagformater» og ikke «alle». Den ble skrevet mens
-  patsome var stengt i appen. Det er det ikke lenger (#2751), og butikkteksten byttes
-  ved neste butikkrunde. Skal beskrivelsen holdes som før, stryk den siste linja i
-  lista i begge beskrivelsene (alternativ B i PR #2615).
+  nærmer seg») står i begge tekstene. Fra bygg 15 kan du også melde deg på en liga som er
+  åpen for påmelding (#2839, `League.tsx`, `LeagueJoin.tsx`), og det står i «LIGA».
+- **Å sette opp scramble i appen.** Det kan du fra bygg 15: veiviseren oppretter
+  Texas scramble, Florida scramble, Ambrose og Shamble (#2753 D3b, 12.11). Den gamle
+  linja «Scramble og flere lagformater, når arrangøren har satt opp runden på
+  tornygolf.no» er derfor strøket, og formatene står ved navn. Lag-handicapet
+  arrangøren setter, og lagnavnet kapteinen skriver, finnes i appen.
+- **Premiebordet selges ikke som premier.** Beskrivelsen nevner premiebordet bare som
+  et sted arrangøren legger inn premiene gruppen spiller om, og bruker aldri «vinn»,
+  «premier verdt …» eller «konkurranse med premier». Tørny deler ikke ut noe. Appen
+  sier det selv under premiebordet (`PRIZE_TEXT.organiserNote`, G1, PR #2859): «Arrangøren
+  deler ut premiene. Verken Tørny eller Apple står bak konkurransen.» (Android: uten
+  «eller Apple».)
+- **Startkontingenten som betaling i appen.** Beskrivelsen sier at betalingen går rett til
+  arrangøren, utenfor appen. Appen tar ingen betaling og ingen andel, og viser bare hvem
+  som har betalt (se «Kontingent og premiebord mot butikkreglene»).
+- **Det som ikke er med i bygg 15:** pengeoppgjøret (`SHOW_SETTLEMENT_IN_APP = false`),
+  kroner per enhet i veiviseren, og alt som er merget etter 23.11.
 - **Invitasjoner som eget punkt.** Appen kan invitere: arrangøren inviterer en
   e-postadresse inn i runden fra runden selv (`OrganiserSection.tsx`, `inviteToGame`), og
   en venn kan inviteres fra vennelista (`inviteFriend`). Når runden settes opp, velger du
@@ -329,23 +374,44 @@ dokumentasjon og er ikke sjekket i konsollen; sjekk den før du limer.
 ## Nytt i denne versjonen («What's New in This Version», maks 4000 tegn)
 
 Kreves for en oppdatering, og 1.1.0 (3) er alt godkjent. Alt i lista er kommet i appen
-etter 1.1.0 (3), som ble bygget 2026-09-06 (taggen `native-ios/v1.1.0-3`).
+etter 1.1.0 (3), som ble bygget 2026-09-06 (taggen `native-ios/v1.1.0-3`), og er med i
+bygg 1.2.0 (15), `1fc9a089d`.
 
 ```text
 Nytt i denne versjonen:
-- Varsler på iPhone når du blir invitert, når et scorekort venter på deg og når resultatet er klart. Du slår dem på under Profil, Varsler og tema.
-- Ligaen: følg sesongtabellen og den åpne runden, og start runden rett fra appen.
+- Terminlista: se turneringene denne helga og i klubben din, meld deg på, be om plass når runden er full, og meld på laget ditt.
+- Du kan sette opp flere formater selv: Slagspill, Patsome, Texas scramble, Florida scramble, Ambrose, Shamble og Nassau.
+- Klubbturneringer: lag dem og meld deg på i appen.
+- Cup: sett opp en lagkamp mot kompisene og spill den ferdig i appen.
+- Startkontingent med Vipps-nummer eller betalingslenke, og et premiebord. Arrangøren ser hvem som har betalt og kan minne resten på det.
+- Ligaen: følg sesongtabellen, meld deg på og start runden rett fra appen.
+- Reaksjoner på tavla, og et resultatkort du kan dele.
+- Innboksen samler det som venter på deg.
+- Varsler på iPhone og Android når du blir invitert, når et scorekort venter på deg og når resultatet er klart. Du velger selv hva du får.
+- Lås appen med Face ID.
 - Venner: legg til venner og se hvor mange runder dere har spilt sammen.
-- Arrangøren kan invitere nye spillere på e-post rett fra runden.
 - Legg runden inn i kalenderen med ett trykk, og del lenka så andre kan følge tavla live.
 - Kavalkaden: oppsummeringen av golfåret ditt, i romjula.
-- Du bestemmer selv om navnet ditt kan stå i tekstene språkmodellen skriver.
+- Du bestemmer selv om navnet ditt kan stå i tekstene språkmodellen skriver, og under «Personvern og konto» kan du laste ned dataene dine.
 ```
 
-Kildene: varslene (`pushDevice.ts`, 2026-09-30), vennene (`friends.ts`, 2026-09-29),
-invitasjonen (`inviteToGame.ts`, 2026-09-20), kalenderen og live-lenka
-(`addToCalendar.ts`, `shareLive.ts`, 2026-09-29 og 2026-09-30), Kavalkaden
-(`kavalkade.ts`, 2026-10-01), ligaen (`League.tsx`, 2026-10-28) og AI-spørsmålet (`AiConsentGate.tsx`, 2026-10-16).
+Kildene (fil og dato, alle på `1fc9a089d`):
+
+- Terminlista, åpen runde og «be om plass»: `Terminliste.tsx` og `RoundInvite.tsx` (2026-11-12); lagpåmeldingen (#2840): `TeamSignupForm.tsx` (2026-11-12).
+- Formatene: `appFormats.ts` (slagspill og Patsome 2026-11-12, scramble-familien og shamble 2026-11-12, Nassau 2026-11-13).
+- Klubbturneringer: `CreateGame.tsx` (typen «klubb») og `bec3ca209`/`5c1a2a7c8` (2026-11-12).
+- Cup: `CreateCup.tsx`, `Cup.tsx` (2026-11-01 og 2026-11-02).
+- Kontingent og premiebord: `FeeAndPrizes.tsx`, `PaymentCard.tsx`, `PaymentStatus.tsx`, `PrizeTable.tsx` (2026-11-10).
+- Ligaen: `League.tsx` (2026-10-28), påmeldingen `LeagueJoin.tsx` (2026-11-12).
+- Reaksjoner og resultatkort: `RowReactions.tsx`, `ResultShareCard.tsx` (2026-11-04). Reaksjonene finnes i noen formater, ikke i alle (`reactions.ts`).
+- Innboksen: `Inbox.tsx` (2026-11-04).
+- Varsler: `pushDevice.ts` (iPhone 2026-09-30, Android 2026-11-02).
+- Face ID-låsen (#2841): `AppLockGate.tsx` (2026-11-12).
+- Vennene (`friends.ts`, 2026-09-29), kalenderen og live-lenka (`addToCalendar.ts`, `shareLive.ts`, 2026-09-29 og 2026-09-30), Kavalkaden (`kavalkade.ts`, 2026-10-01).
+- AI-spørsmålet (`AiConsentGate.tsx`, 2026-10-16) og «Dine data» (`dataExport.ts`, 2026-11-14).
+
+Arrangøren som inviterer nye spillere på e-post (`inviteToGame.ts`, 2026-09-20) står ikke
+som eget punkt lenger: «Sett opp spillerne» i beskrivelsen dekker det.
 
 ## Skjermbilder
 
@@ -377,6 +443,10 @@ forteller hvordan de ble laget:
 («Hvem sitt utslag ble brukt?»), runden er ferdig, godkjenning, resultat og lagtavla.
 Ingen kroner, ingen e-postadresse og bare oppdiktede spillere. Bildene viser koden på
 `main` `69a2d2dae`, samme kilde som bygget 1.2.0 (4).
+
+Bildene viser koden fra bygg 4 og dekker ikke terminlista, kontingenten eller premiebordet.
+Eieren svarte 12.11 «Ja, nye etter lansering»: vi sender inn med de åtte bildene vi
+har, og tar nye etter lanseringen.
 
 Bildene fra 1.1.0 (3) ligger i feltet for 6,5" i App Store Connect (og i
 `~/Desktop/Tørny-skjermbilder/` hos eieren): hjem, hull-føring, tavle, sluttresultat og
@@ -430,14 +500,17 @@ kan ikke tilhøre noen. De spiller tre runder på Byneset North: «Søndagsrunde
 matchplay). P4-dataene er ikke rørt. Fiksturen står igjen på staging, så bildene
 kan tas om igjen uten å seede på nytt.
 
-## Kontingent og premiebord mot butikkreglene (#2749)
+## Kontingent og premiebord mot butikkreglene (#2749, #2561)
 
 Eieren valgte 01.11 å vise startkontingenten, arrangørens betalingslenke og
 premiebordet i appen før lansering, men holde pengeoppgjøret mellom spillerne skjult.
-Reglene under er sitert ordrett fra sidene 10.11.2026. #2561 bekrefter vurderingen før
-neste bygg sendes til gjennomgang.
+Reglene under er sitert ordrett. 3.1.1, 3.1.3(e) og 5.3.4 er lest 2026-11-10 (#2749).
+5.3 til 5.3.3 og Googles side er lest 2026-11-12 av utredningen til #2561; Apple-siden
+var da sist oppdatert «October 16, 2026». Ordlyden er ikke lest på nytt 27.11. Eieren
+svarte 12.11 «Behold, med linje under».
 
-**Apple, App Store Review Guidelines** (<https://developer.apple.com/app-store/review/guidelines/>):
+**Apple, App Store Review Guidelines** (<https://developer.apple.com/app-store/review/guidelines/>,
+«Last Updated: October 16, 2026»):
 
 - 3.1.1 In-App Purchase: «If you want to unlock features or functionality within your
   app, (by way of example: subscriptions, in-game currencies, game levels, access to
@@ -446,30 +519,60 @@ neste bygg sendes til gjennomgang.
   physical goods or services that will be consumed outside of the app, you must use
   purchase methods other than in-app purchase to collect those payments, such as Apple
   Pay or traditional credit card entry.»
-- 5.3 Gaming, Gambling, and Lotteries: «Gaming, gambling, and lotteries can be tricky to
-  manage and tend to be one of the most regulated offerings on the App Store.» 5.3.1:
-  «Sweepstakes and contests must be sponsored by the developer of the app.» 5.3.4: «Apps
-  that offer real money gaming (such as sports betting, poker, casino games, horse
-  racing) or lotteries must have necessary licensing and permissions in the locations
-  where the app is used […]»
+- 5.3 Gaming, Gambling, and Lotteries: «Only include this functionality if you've fully
+  vetted your legal obligations everywhere you make your app available and are prepared
+  for extra time during the review process.»
+- 5.3.1: «Sweepstakes and contests must be sponsored by the developer of the app.»
+- 5.3.2: «Official rules for sweepstakes, contests, and raffles must be presented in the
+  app and make clear that Apple is not a sponsor or involved in the activity in any
+  manner.»
+- 5.3.3: «Apps may not use in-app purchase to purchase credit or currency for use in
+  conjunction with real money gaming of any kind.»
+- 5.3.4: «Apps that offer real money gaming (such as sports betting, poker, casino
+  games, horse racing) or lotteries must have necessary licensing and permissions in
+  the locations where the app is used […]»
 
 **Google Play, «Real-Money Gambling, Games, and Contests»**
 (<https://support.google.com/googleplay/android-developer/answer/9877032>): Google Play
 «generally prohibits apps from facilitating real-money gambling and gaming», det vil si
 apper som lar brukerne «wager, stake, or participate using real money» «to obtain a prize
-of real world monetary value». Eksempel på brudd: «Games that accept money in exchange
-for an opportunity to win a physical or monetary prize».
+of real world monetary value». Eksempler på brudd: «Games that accept money in exchange
+for an opportunity to win a physical or monetary prize» og «Apps that accept or manage
+wagers, in-app currencies, winnings, or deposits». Siden har ikke noe eget unntak for
+idrettsarrangementer i den virkelige verden.
 
 **Vurderingen:**
 
-- Kontingenten låser ikke opp noe i appen. Den betaler for en golfrunde på en ekte bane,
-  altså en tjeneste som brukes utenfor appen (3.1.3(e)), og den betales til arrangøren
-  gjennom arrangørens egen lenke eller Vipps. Appen tar ingen betaling.
-- Pengeoppgjøret, der spillerne vinner penger av hverandre på resultatet, er fortsatt
-  skjult. Svaret på «Gambling» og «Pengespill med ekte penger» er derfor fortsatt Nei.
-- ASSUMPTION: kontingent til et ekte arrangement, betalt via arrangørens egen lenke eller
-  Vipps, faller utenfor kravet om kjøp i appen og utenfor pengespill.
-- Åpent for #2561: premiebordet viser premier en arrangør (ikke Tørny) deler ut i en
-  konkurranse med kontingent. Apples 5.3.1 og Googles eksempel over handler om
-  konkurranser i selve appen; en golfturnering er et arrangement utenfor appen, men det
-  bør bekreftes før neste innsending.
+1. **Kontingenten er ikke kjøp i appen og ikke pengespill.** Den låser ikke opp noe i
+   appen. Den betaler for en golfrunde på en ekte bane, altså en tjeneste som brukes
+   utenfor appen (3.1.3(e)), og den går rett til arrangøren gjennom arrangørens egen
+   lenke eller Vipps. Appen verken tar imot eller forvalter penger, og avkrysningen
+   «betalt» er en liste, ikke penger. Svarene «Gambling: No» og «Pengespill med ekte
+   penger: Nei» står.
+2. **Premiebordet er den reelle risikoen hos Apple.** En reviewer kan lese
+   «startkontingent + premiebord» som en konkurranse med premier som utvikleren ikke
+   står bak (5.3.1), og som mangler «Apple is not a sponsor» (5.3.2). Vår lesning er at
+   5.3 gjelder konkurranser appen selv holder, mens en klubbturnering er et arrangement
+   på banen. Reglene for selve runden (format og handicap) vises allerede i appen
+   (`formatGuideCopy.ts`), og vi leser dem som «official rules» i 5.3.2. Det minste som
+   må til, er gjort: (a) én linje under premiebordet i appen som sier at arrangøren
+   deler ut premiene og at verken Tørny eller Apple står bak (`PRIZE_TEXT.organiserNote`,
+   PR #2859, i bygg 15), (b) et avsnitt i notatet til revieweren som sier det samme
+   (`app-store-review-konto.md`, «ENTRY FEE AND PRIZES»), og (c) ingen ord i
+   butikkteksten som lokker med premier.
+3. **Hos Google er risikoen lavere.** Appen tar ikke imot penger, så eksemplene over
+   passer ikke. Linja under premiebordet står også i Android-appen, uten ordet Apple.
+   Forklaringen kommer ikke i App access-teksten fordi den ikke får plass innenfor 500
+   tegn (`play-store-metadata.md`).
+4. **Premiebordet kan inneholde kroner i fritekst.** Arrangøren kan skrive «1000 kr»
+   som premie. Vi stenger ikke for det: en golfturnering med pengepremie hos
+   arrangøren er lovlig, og en sperre ville vært over-engineering. Linja i appen og
+   review-notatet dekker det.
+5. **Etikettene oppgir for mye heller enn for lite.** Vipps-nummeret er ofte et
+   telefonnummer (Phone Number), og «betalt» er en betaling spilleren har gjort
+   (Purchase History). Se personvern-etiketten over.
+
+VERIFICATION GAP: bare Apples egen gjennomgang kan bekrefte lesningen av 5.3.1, at en
+klubbturnering med kontingent og et premiebord arrangøren deler ut ikke regnes som en
+konkurranse appen selv holder. Vi sender inn med linja og notatet, og tar det opp i
+svaret hvis reviewer spør.

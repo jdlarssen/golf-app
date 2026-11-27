@@ -309,15 +309,17 @@ Connect eller Play Console, fordi de husker det gamle.
 ## Notes-mal til App Store Connect
 
 Skrevet for native-appen som sendes inn i N8 (#1954, build `1.1.0 (3)`), og
-oppdatert i #2561 for neste innsending: AI-spørsmålet etter innlogging, varsler
-på iOS, ingen kroner i appen, bare Norge, og slettingen på Apple-kontoen. Lim den
+oppdatert i #2561 for innsendingen i desember: AI-spørsmålet etter innlogging, varsler
+på iOS, ingen kroner mellom spillerne, bare Norge, slettingen på Apple-kontoen og
+(27.11) avsnittet «ENTRY FEE AND PRIZES» om startkontingenten og premiebordet. Lim den
 inn som den er, med adressen og passordet til **Apple-kontoen** i feltene over —
 notatet nevner ingen av delene selv. Google Play har sin egen konto og sin egen
 tekst (`play-store-metadata.md`, «App-tilgang»).
 
-**Lengden:** Apples Notes-felt tar maks 4 000 byte. Malen er 3 789 byte, målt med
-`wc -c` på teksten i blokka. Linjene er ikke brutt, så det du limer inn, er det som er
-målt. Mål på nytt med `wc -c` hvis du endrer noe, og hold den under 3 800.
+**Lengden:** Apples Notes-felt tar maks 4 000 byte. Malen er 3 920 byte, målt med
+`wc -c` på teksten i blokka (med linjeskift til slutt). Linjene er ikke brutt, så det du
+limer inn, er det som er målt. Mål på nytt med `wc -c` hvis du endrer noe, og hold den
+under 3 950.
 
 Navnene står med de tegnene appen faktisk viser («Tørny», «Demo Round — Tørny»).
 Anmelderen skal lete etter det som står på skjermen, ikke etter en forenklet
@@ -336,9 +338,7 @@ The app asks "Kan AI-en skrive om deg?" (Can the AI write about you?). Tørny wr
 - "Ja, det er greit" (Yes): the player's name can appear, and Anthropic receives names, results, game and course names and dates.
 - "Nei takk" (No thanks): the name is left out of new texts; numbers without names may still be used.
 Both answers open the app. Change it under "Profil" > "Personvern og konto" > "AI-tekster om meg".
-
-WHERE THE AI TEXT SHOWS
-After a finished round, "Resultater" shows the round report "Fra pressetribunen" (From the press box), marked "Skrevet av AI ut fra slagene dere førte." (Written by AI from the strokes you entered). It is only written when a player in the round has answered "Ja, det er greit", and it only names players who did. The demo rounds are not finished, so they show no report.
+After a finished round, "Resultater" shows the report "Fra pressetribunen" (From the press box), marked as written by AI. It names only players who said "Ja, det er greit". The demo rounds are not finished, so they show no report.
 
 WORDS YOU WILL NEED
 "Profil" = Profile (top right on home)
@@ -347,26 +347,29 @@ WORDS YOU WILL NEED
 "Resultater" = Results
 
 WHAT YOU WILL SEE
-Two active rounds and one league, set up by another account. Home shows the newest round, "Demo Scramble — Tørny", as the big card, and the other, "Demo Round — Tørny", under "Flere runder i gang" (More rounds in progress).
+Two active rounds and one league, set up by another account. Home shows "Demo Scramble — Tørny" as the big card and "Demo Round — Tørny" under "Flere runder i gang" (More rounds in progress).
 "Demo Round — Tørny" has three co-players. Open it, continue on hole 4, watch "Resultater" update, and submit with "Lever scorekort".
-"Demo Scramble — Tørny" is team play: Texas scramble, two teams of two, and you are on team 1 with Emma. Each hole asks "Hvem sitt utslag ble brukt?" (whose tee shot was used). A team card can only be submitted once every player has three tee shots, so use this round to look around.
-"Demo League — Tørny" is under "Ligaene dine" (Your leagues) on home. Standings stay empty until a round is delivered. To play the open round: "Spill runden", pick a co-player such as Emma (a regular league needs one), then "Start runden".
+"Demo Scramble — Tørny" is team play: Texas scramble, two teams of two, and you are on team 1 with Emma. Each hole asks "Hvem sitt utslag ble brukt?" (whose tee shot was used). Its team card cannot be submitted yet, so use it to look around.
+"Demo League — Tørny" is under "Ligaene dine" (Your leagues) on home. Standings are empty until a round is delivered. To play the open round: "Spill runden", pick a co-player such as Emma (a regular league needs one), then "Start runden".
 
 ACCOUNT DELETION (5.1.1(v))
-"Profil" > "Personvern og konto" > "Slett konto" (Delete account) > confirm. Please test it last. It goes through and signs you out. This account is for Apple review only, and we restore it before every submission.
+"Profil" > "Personvern og konto" > "Slett konto" (Delete account) > confirm. Please test it last. It signs you out. This account is for Apple review only, and we restore it before every submission.
 If you created a round yourself that is still open, deletion is blocked so its players keep an organiser. Open it, tap "Avslutt runden" (End the round), tick every player under "Mangler kort" and confirm. Please do not use "Åpne Klubbhuset" on the deletion screen: it opens our website, which needs an email code.
 
 OFFLINE
 Enter scores in Airplane Mode. They stay on the phone and sync when it is back online.
 
 NOTIFICATIONS
-The app never asks on its own. The system prompt appears only when the player turns on "Varsler på denne telefonen" under "Profil" > "Varsler og tema". They concern the player's own rounds and leagues.
+The app never asks on its own. The system prompt appears only when the player turns on "Varsler på denne telefonen" under "Profil" > "Varsler og tema".
+
+ENTRY FEE AND PRIZES
+An organiser can set an entry fee for a real golf event and add a Vipps number or payment link. Players pay the organiser directly, outside the app. The app takes no payment and no cut, and only shows who has paid. The prize table lists prizes the organiser hands out at the club, such as a dinner. Tørny does not run, fund or award any contest or prize, and Apple is not a sponsor; the app says so under the prize table. Money settlements between players are not in the app.
 
 NOT IN THE APP
 - No location access.
-- No money: points and results only, no amounts or payments. Skins, Wolf, Nassau and similar are ways of counting points.
+- No money between players: points and results only. Skins, Wolf, Nassau and similar are ways of counting points.
 - No purchases, ads or third-party tracking.
-- The app creates eight formats and plays rounds set up on our website, including scramble and most team formats. Some cup rounds open on our website in Safari.
+- The app creates 15 formats and also plays rounds set up on our website. Some cup rounds open on our website in Safari.
 
 Norway only. The account holds no real player data.
 ```
