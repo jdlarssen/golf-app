@@ -15,7 +15,10 @@
 // The opening mail can carry a summary of the round that closed before it
 // (#2979): a short news story and the numbers, under the button. The summary
 // is the same for everyone, so then the whole league gets the mail. The story
-// is Norwegian for every recipient, like the round report (#1527).
+// is Norwegian for every recipient, like the round report (#1527). Each row
+// of the table shows how far the player moved since the table before the
+// round (#2983): an arrow and the places in HTML, words in the plain text,
+// nothing when the place is the same or there is nothing to move from.
 //
 // Locale-aware (i18n Fase M, #594): user-visible text comes from the `mail`
 // catalog for the recipient's locale, the deadline in Oslo time.
@@ -126,13 +129,24 @@ export async function sendLeagueRoundNotification(
       })
     : '';
   const summaryTableHeading = s ? t('leagueRound.summaryTable', { rounds: s.roundsPlayed }) : '';
+  const moveLabel = (move: number | null, form: 'html' | 'text'): string => {
+    if (move === null || move === 0) return '';
+    const key = move > 0 ? 'Up' : 'Down';
+    return t(`leagueRound.move${key}${form === 'text' ? 'Text' : ''}`, { places: Math.abs(move) });
+  };
   const tableRows = s
     ? s.table.map((r) => ({
         place: `${r.place}.`,
         name: nameOf(r.name),
         value: formatSeasonValue(r.value, s.model, s.pointsBased, formatDecimal),
+        move: r.move,
+        moveHtml: moveLabel(r.move, 'html'),
+        moveText: moveLabel(r.move, 'text'),
       }))
     : [];
+  // The column is there only when someone moved, so the first round's table
+  // looks as it did.
+  const showMoves = tableRows.some((r) => r.moveHtml !== '');
   const summaryHtml = s
     ? `
             <h3 style="font-family:Georgia,'Times New Roman',serif;font-size:18px;line-height:1.2;margin:32px 0 12px;color:#1A2E1F;font-weight:500;border-top:1px solid #E5E0D3;padding-top:24px;">
@@ -162,7 +176,12 @@ export async function sendLeagueRoundNotification(
               <tr>
                 <td style="width:32px;padding:2px 0;color:#4A3F30;">${r.place}</td>
                 <td style="padding:2px 0;">${escapeHtml(r.name)}</td>
-                <td align="right" style="padding:2px 0;font-weight:600;">${escapeHtml(r.value)}</td>
+                <td align="right" style="padding:2px 0;font-weight:600;">${escapeHtml(r.value)}</td>${
+                  showMoves
+                    ? `
+                <td align="right" style="width:44px;padding:2px 0 2px 8px;font-size:13px;font-variant-numeric:tabular-nums;color:${(r.move ?? 0) > 0 ? '#1B4332' : '#4A3F30'};">${escapeHtml(r.moveHtml)}</td>`
+                    : ''
+                }
               </tr>`,
               )
               .join('')}
@@ -173,7 +192,7 @@ export async function sendLeagueRoundNotification(
       (summary?.story ? `${summary.story}\n\n` : '') +
       `${summaryBest}\n\n` +
       `${summaryTableHeading}\n` +
-      tableRows.map((r) => `${r.place} ${r.name} ${r.value}`).join('\n') +
+      tableRows.map((r) => `${r.place} ${r.name} ${r.value}${r.moveText ? ` (${r.moveText})` : ''}`).join('\n') +
       '\n\n'
     : '';
 

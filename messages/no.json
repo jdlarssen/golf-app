@@ -7290,7 +7290,11 @@
       "footerSummary": "Du får denne e-posten fordi du er med i ligaen.",
       "summaryHeading": "Slik gikk {roundLabel}",
       "summaryBest": "Rundens beste: {names} ({value}). {played} av {total} spilte runden.",
-      "summaryTable": "Tabellen etter {rounds, plural, one {# runde} other {# runder}}"
+      "summaryTable": "Tabellen etter {rounds, plural, one {# runde} other {# runder}}",
+      "moveUp": "▲{places}",
+      "moveDown": "▼{places}",
+      "moveUpText": "opp {places}",
+      "moveDownText": "ned {places}"
     },
     "missingScoreReminder": {
       "subject": "Du mangler slag på hull {holes} i {gameName}",

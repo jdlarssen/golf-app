@@ -7290,7 +7290,11 @@
       "footerSummary": "You're receiving this email because you're in the league.",
       "summaryHeading": "How {roundLabel} went",
       "summaryBest": "Best in the round: {names} ({value}). {played} of {total} played the round.",
-      "summaryTable": "The table after {rounds, plural, one {# round} other {# rounds}}"
+      "summaryTable": "The table after {rounds, plural, one {# round} other {# rounds}}",
+      "moveUp": "▲{places}",
+      "moveDown": "▼{places}",
+      "moveUpText": "up {places}",
+      "moveDownText": "down {places}"
     },
     "missingScoreReminder": {
       "subject": "You have no score on {holeCount, plural, one {hole} other {holes}} {holes} in {gameName}",

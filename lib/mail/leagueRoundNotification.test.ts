@@ -81,12 +81,21 @@ const baseParams = {
   payload,
 } satisfies LeagueRoundNotificationParams;
 
-const row = (userId: string, place: number, name: string | null, value: number, behind: number) => ({
+const row = (
+  userId: string,
+  place: number,
+  name: string | null,
+  value: number,
+  behind: number,
+  previousPlace: number | null = null,
+) => ({
   userId,
   place,
   name,
   value,
   behind,
+  previousPlace,
+  move: previousPlace === null ? null : previousPlace - place,
 });
 
 const roundOneRows = [
@@ -121,6 +130,21 @@ const strokeRound: RoundSummary = {
   countingRounds: null,
   round: [row('a', 1, 'Anne A.', -2, 0), row('b', 1, null, -2, 0), row('c', 3, 'Cato C.', 3, 5)],
   table: [row('c', 1, 'Cato C.', 0, 0), row('a', 2, 'Anne A.', 1, 1), row('b', 3, null, 7, 7)],
+};
+// #2983: round 2 has closed. Gard climbed three places, Emil fell one, Dina
+// stayed on top, and Nils is new in the table.
+const roundTwo: RoundSummary = {
+  ...roundOne,
+  roundId: 'r2',
+  roundLabel: 'Runde 2',
+  roundsPlayed: 2,
+  round: [row('gard', 1, 'Gard G.', 41, 0), row('dina', 2, 'Dina D.', 38, 3), row('nils', 3, 'Nils N.', 30, 11)],
+  table: [
+    row('dina', 1, 'Dina D.', 82, 0, 1),
+    row('gard', 2, 'Gard G.', 77, 5, 5),
+    row('emil', 3, 'Emil E.', 43, 39, 2),
+    row('nils', 4, 'Nils N.', 30, 52, null),
+  ],
 };
 const STORY =
   'Ti av elleve spillere tok seg gjennom Byneset North på skjermen, og Dina D. kom ut med 44 poeng. Runde 2 er åpen nå.';
@@ -468,6 +492,89 @@ describe('sendLeagueRoundNotification', () => {
 
       Tørny — fire up your golf tournament in a couple of minutes.
       "
+    `);
+  });
+
+  it('#2983: the table shows who climbed and who fell, an arrow in HTML and words in the text', async () => {
+    const mail = await send({ ...baseParams, summary: { summary: roundTwo, story: null } });
+    expect(mail.text).toMatchInlineSnapshot(`
+      "Runde 3 i Vinterliga 2026-2027 er åpen
+
+      Hei Per!
+
+      Spill den når det passer deg. Fristen er søndag 20. des. kl. 23:59.
+
+      Åpne ligaen: https://tornygolf.no/liga/11111111-1111-1111-1111-111111111111
+
+      Slik gikk Runde 2
+
+      Rundens beste: Gard G. (41). 5 av 6 spilte runden.
+
+      Tabellen etter 2 runder
+      1. Dina D. 82
+      2. Gard G. 77 (opp 3)
+      3. Emil E. 43 (ned 1)
+      4. Nils N. 30
+
+      Du får denne e-posten fordi du er med i ligaen.
+
+      Tørny — fyr opp golfturneringen på et par minutter.
+      "
+    `);
+    expect(summaryHtml(mail.html)).toMatchInlineSnapshot(`
+      "<h3 style="font-family:Georgia,'Times New Roman',serif;font-size:18px;line-height:1.2;margin:32px 0 12px;color:#1A2E1F;font-weight:500;border-top:1px solid #E5E0D3;padding-top:24px;">
+      Slik gikk Runde 2
+      </h3>
+      <p style="font-size:14px;line-height:1.5;margin:0 0 16px;color:#4A3F30;">
+      Rundens beste: Gard G. (41). 5 av 6 spilte runden.
+      </p>
+      <p style="font-size:14px;line-height:1.5;margin:0 0 4px;font-weight:600;">
+      Tabellen etter 2 runder
+      </p>
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="font-size:15px;line-height:1.5;">
+      <tr>
+      <td style="width:32px;padding:2px 0;color:#4A3F30;">1.</td>
+      <td style="padding:2px 0;">Dina D.</td>
+      <td align="right" style="padding:2px 0;font-weight:600;">82</td>
+      <td align="right" style="width:44px;padding:2px 0 2px 8px;font-size:13px;font-variant-numeric:tabular-nums;color:#4A3F30;"></td>
+      </tr>
+      <tr>
+      <td style="width:32px;padding:2px 0;color:#4A3F30;">2.</td>
+      <td style="padding:2px 0;">Gard G.</td>
+      <td align="right" style="padding:2px 0;font-weight:600;">77</td>
+      <td align="right" style="width:44px;padding:2px 0 2px 8px;font-size:13px;font-variant-numeric:tabular-nums;color:#1B4332;">▲3</td>
+      </tr>
+      <tr>
+      <td style="width:32px;padding:2px 0;color:#4A3F30;">3.</td>
+      <td style="padding:2px 0;">Emil E.</td>
+      <td align="right" style="padding:2px 0;font-weight:600;">43</td>
+      <td align="right" style="width:44px;padding:2px 0 2px 8px;font-size:13px;font-variant-numeric:tabular-nums;color:#4A3F30;">▼1</td>
+      </tr>
+      <tr>
+      <td style="width:32px;padding:2px 0;color:#4A3F30;">4.</td>
+      <td style="padding:2px 0;">Nils N.</td>
+      <td align="right" style="padding:2px 0;font-weight:600;">30</td>
+      <td align="right" style="width:44px;padding:2px 0 2px 8px;font-size:13px;font-variant-numeric:tabular-nums;color:#4A3F30;"></td>
+      </tr>
+      </table>"
+    `);
+  });
+
+  it('#2983: English moves', async () => {
+    const mail = await send({ ...baseParams, locale: 'en', summary: { summary: roundTwo, story: null } });
+    expect(mail.text.split('\n').filter((l) => /^\d\./.test(l))).toMatchInlineSnapshot(`
+      [
+        "1. Dina D. 82",
+        "2. Gard G. 77 (up 3)",
+        "3. Emil E. 43 (down 1)",
+        "4. Nils N. 30",
+      ]
+    `);
+    expect(summaryHtml(mail.html).match(/[▲▼]\d+/g)).toMatchInlineSnapshot(`
+      [
+        "▲3",
+        "▼1",
+      ]
     `);
   });
 
