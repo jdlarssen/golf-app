@@ -464,7 +464,7 @@ export type CountbackStamp = 'rulebook';
  *  - `team_size: 2 | 3 | 4` = antall spillere per lag (3-mannslag kom i #2009)
  *  - `teams_count` = antall lag i spillet (fri, 1+)
  *  - `team_handicap_pct` = prosent av summert lag-HCP som blir effektivt
- *    lag-handicap (NGF-konvensjon: 25 for 2-mannslag, 15 for 3-mannslag,
+ *    lag-handicap (startverdien: 25 for 2-mannslag, 15 for 3-mannslag,
  *    10 for 4-mannslag).
  *    0-100 — admin kan justere som i best ball. 0 = gross, 100 = full sum.
  *  - Texas lagrer ÉN score per lag per hull (ikke per spiller). I scoring-
@@ -562,7 +562,7 @@ export type GameModeConfig =
        * scramble (én ball per lag, kaptein eier scores-radene, lavest lag-netto
        * vinner). Eneste forskjell er default-lag-handicapet: standard Ambrose-
        * formel `combinedCH ÷ (2 × team_size)` (2-mann 25 %, 4-mann 12,5 %) i
-       * stedet for Texas' NGF-konvensjon (2-mann 25 %, 4-mann 10 %).
+       * stedet for Texas' startverdi (2-mann 25 %, 4-mann 10 %).
        *
        * `team_handicap_pct` er justerbar (0–100) som i Texas — Ambrose-reglene
        * er en klubb-konvensjon, ikke strengt regelbundet. Kan være fraksjonell
@@ -604,7 +604,7 @@ export type GameModeConfig =
        * Mekanisk identisk med Texas scramble (én ball per lag, kaptein eier
        * scores-radene, lavest lag-netto vinner). Eneste forskjeller:
        *  1. Lagstørrelser: 3 eller 4 (ikke 2 som Texas/Ambrose).
-       *  2. Default-lag-handicap: NGF-fasttabell (3-mann 15 %, 4-mann 10 %).
+       *  2. Default-lag-handicap: fast startverdi (3-mann 15 %, 4-mann 10 %).
        *  3. Step-aside-regel (honor-system, kun UI-påminnelse, ingen tracking).
        *
        * `team_handicap_pct` er justerbar (0–100) som i Texas/Ambrose.
@@ -1491,8 +1491,9 @@ export interface SoloStrokeplayResult {
 //
 // Lagene velger beste slag etter hver runde og slår derfra — én ball per lag,
 // én score per lag per hull. Lag-handicap = round(combinedCourseHandicap ×
-// team_handicap_pct / 100) (NGF-konvensjon: default 25 % for 2-mannslag,
-// 10 % for 4-mannslag). Allokeres per hull via vanlig SI-allokering, så
+// team_handicap_pct / 100) (startverdi 25 % for 2-mannslag, 10 % for
+// 4-mannslag), eller NGFs vekting per spiller med `team_handicap_rule:
+// 'ngf_weighted'` (#3002, `scrambleTeamHandicapFor`). Allokeres per hull via vanlig SI-allokering, så
 // hardeste hull får extra strokes først.
 //
 // Lagring: én utvalgt «kaptein» (lexicographically minste userId) per lag
