@@ -59,6 +59,12 @@ vi.mock('@/lib/ai/consent', () => ({
   readAiAllowedUserIds: (...args: unknown[]) => readAiAllowedUserIdsMock(...args),
 }));
 
+// #2983: the league table, read for a league flight. Default: not read.
+const getLigaSnapshotMock = vi.fn();
+vi.mock('@/lib/league/getLigaSnapshot', () => ({
+  getLigaSnapshot: (...args: unknown[]) => getLigaSnapshotMock(...args),
+}));
+
 import { generateAndPersistRoundReport } from './generateRoundReport';
 
 const GAME_ID = '11111111-1111-1111-1111-111111111111';
@@ -122,7 +128,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   fixtures = {
     courses: { data: { name: 'Oslo GK' }, error: null },
-    games: { data: { ended_at: '2026-07-01T18:00:00.000Z' }, error: null },
+    league_rounds: { data: { league_id: 'league-1' }, error: null },
     'games:update': { data: [{ id: GAME_ID }], error: null },
     course_holes: {
       data: makeHoleRows(18).map((h) => ({ hole_number: h.holeNumber, par_mens: h.par })),
@@ -398,3 +404,165 @@ describe('generateAndPersistRoundReport', () => {
     expect(callArgs.messages[0].content).not.toContain('Carl');
   });
 });
+
+// ---------------------------------------------------------------------------
+// #2983: one more attempt for a dropped draft; a league flight knows the league
+// ---------------------------------------------------------------------------
+describe('generateAndPersistRoundReport: the check and one more attempt (#2983)', () => {
+  const answer = (text: string, stop_reason = 'end_turn') => ({ stop_reason, content: [{ type: 'text', text }] });
+
+  it('a draft with a weekday is dropped, and the second attempt is told why and stored', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    messagesCreateMock
+      .mockResolvedValueOnce(answer('Alice vant på lørdag foran Bob.'))
+      .mockResolvedValueOnce(answer('Alice vant Lørdagscup foran Bob.'));
+
+    const result = await generateAndPersistRoundReport(GAME_ID);
+
+    expect(messagesCreateMock).toHaveBeenCalledTimes(2);
+    expect(messagesCreateMock.mock.calls[1][0].messages[0].content).toContain(
+      'Et tidligere utkast ble forkastet. Utkastet nevnte en ukedag («lørdag»).',
+    );
+    expect(result).toEqual({ status: 'generated', report: 'Alice vant Lørdagscup foran Bob.' });
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('two dropped drafts store nothing', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    messagesCreateMock.mockResolvedValue(answer('Alice vant på søndag.'));
+
+    const result = await generateAndPersistRoundReport(GAME_ID);
+
+    expect(messagesCreateMock).toHaveBeenCalledTimes(2);
+    expect(result).toEqual({ status: 'failed', report: null });
+    expect(updateSpy).not.toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('no second attempt with less than 8 seconds left of the shared deadline', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    let clock = 1_000_000;
+    const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => clock);
+    messagesCreateMock.mockImplementation(async () => {
+      clock += 13_000;
+      return answer('Alice vant på søndag.');
+    });
+
+    const result = await generateAndPersistRoundReport(GAME_ID);
+
+    expect(messagesCreateMock).toHaveBeenCalledTimes(1);
+    // The first call gets the whole deadline as its timeout.
+    expect(messagesCreateMock.mock.calls[0][1]).toEqual({ timeout: 20_000 });
+    expect(result).toEqual({ status: 'failed', report: null });
+    nowSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('the facts hold no date, and the date is not read', async () => {
+    await generateAndPersistRoundReport(GAME_ID);
+    const content = messagesCreateMock.mock.calls[0][0].messages[0].content as string;
+    expect(content).not.toContain('endedAt');
+    expect(content).not.toContain('2026-07-01');
+  });
+});
+
+describe('generateAndPersistRoundReport: a league flight (#2983)', () => {
+  const FLIGHT_GAME = {
+    game: { ...GAME_ROW.game, league_round_id: 'round-2', name: 'Vinterligaen – Runde 2' },
+    players: [{ user_id: 'u1', withdrawn_at: null, users: { name: 'Alice Aas', nickname: 'Ali' } }],
+  };
+  // The table with the flight in it (Alice 2nd) and without it (Alice 5th).
+  const SNAPSHOT = {
+    league: { name: 'Vinterligaen', format: 'stableford' },
+    rounds: [{ id: 'round-2', sequence: 2, label: 'Runde 2' }],
+    participants: [
+      { userId: 'u1', name: 'Alice Aas', nickname: 'Ali' },
+      { userId: 'u9', name: 'Bob Berg', nickname: null },
+    ],
+    standings: {
+      net: {
+        rows: [
+          { userId: 'u9', ranked: true, rank: 1, perRound: [{ roundId: 'round-2', value: 40, penalised: false }] },
+          { userId: 'u1', ranked: true, rank: 2, perRound: [{ roundId: 'round-2', value: 36, penalised: false }] },
+        ],
+      },
+      gross: null,
+    },
+    baseline: {
+      net: {
+        rows: [
+          { userId: 'u9', ranked: true, rank: 1, perRound: [] },
+          { userId: 'u1', ranked: true, rank: 5, perRound: [] },
+        ],
+      },
+      gross: null,
+    },
+  };
+
+  beforeEach(() => {
+    getGameWithPlayersMock.mockResolvedValue(FLIGHT_GAME);
+    const solo = makeSoloStrokeplayResult(18);
+    buildModeResultForGameMock.mockResolvedValue({
+      ...solo,
+      holes: solo.holes.map((h) => ({ ...h, perPlayer: [h.perPlayer[0]!] })),
+      players: [solo.players[0]!],
+    });
+    readAiAllowedUserIdsMock.mockResolvedValue(new Set(['u1', 'u9']));
+    getLigaSnapshotMock.mockResolvedValue(SNAPSHOT);
+    messagesCreateMock.mockResolvedValue({
+      stop_reason: 'end_turn',
+      content: [{ type: 'text', text: 'Alice A. klatret foreløpig til 2. plass.' }],
+    });
+  });
+
+  it('reads the table without this flight, and the facts carry the league, a flight of one and «Alice A.»', async () => {
+    const result = await generateAndPersistRoundReport(GAME_ID);
+
+    expect(getLigaSnapshotMock).toHaveBeenCalledWith('league-1', { baseline: { withoutGameId: GAME_ID } });
+    const content = messagesCreateMock.mock.calls[0][0].messages[0].content as string;
+    const facts = JSON.parse(content.slice(content.indexOf('{')));
+    expect(facts).toMatchObject({
+      leagueFlight: true,
+      soloFlight: true,
+      winnerName: null,
+      league: {
+        leagueName: 'Vinterligaen',
+        players: [{ name: 'Alice A.', roundPlace: 2, tablePlace: 2, tablePlaceBefore: 5, move: 3, passed: [] }],
+      },
+    });
+    expect(content).not.toContain('Ali"');
+    expect(result.status).toBe('generated');
+  });
+
+  it('a failed table read gives the report without the league block', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    getLigaSnapshotMock.mockRejectedValue(new Error('db down'));
+
+    const result = await generateAndPersistRoundReport(GAME_ID);
+
+    const content = messagesCreateMock.mock.calls[0][0].messages[0].content as string;
+    expect(content).not.toContain('"league"');
+    expect(result.status).toBe('generated');
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      '[generateRoundReport] league read failed, the report goes without it',
+      expect.objectContaining({ gameId: GAME_ID }),
+    );
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('a number the league facts do not hold drops the draft', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    messagesCreateMock
+      .mockResolvedValueOnce({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'Alice A. klatret 7 plasser.' }] })
+      .mockResolvedValueOnce({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'Alice A. klatret foreløpig 3 plasser.' }] });
+
+    const result = await generateAndPersistRoundReport(GAME_ID);
+
+    expect(messagesCreateMock.mock.calls[1][0].messages[0].content).toContain(
+      'Utkastet inneholdt tall som ikke står i fakta-objektet: 7.',
+    );
+    expect(result).toEqual({ status: 'generated', report: 'Alice A. klatret foreløpig 3 plasser.' });
+    consoleErrorSpy.mockRestore();
+  });
+});
+

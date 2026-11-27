@@ -24,6 +24,9 @@
 import type { GameMode, ModeResult } from '@/lib/scoring/modes/types';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
 import { runningMatchStatus } from '@/lib/scoring/modes/matchplayRunningStatus';
+import { formatPublicName } from '@/lib/names/formatPublicName';
+import { formatRevealName } from '@/lib/names/formatRevealName';
+import type { FlightLeagueFacts } from '@/lib/league/flightLeagueFacts';
 import { buildShareCardData, type ShareCardBand, type ShareCardRow, type ShareCardScore } from './buildShareCardData';
 import { isUnplacedLeagueCard } from './finishedResultBadge';
 
@@ -84,9 +87,20 @@ export type RoundReportFacts = {
   /** #2561: null when the name mentions a player without «ja» (`lib/ai/gameNameGuard.ts`). */
   gameName: string | null;
   courseName: string | null;
-  endedAt: string | null;
   formatLabel: string;
   band: RoundReportBand;
+  /**
+   * #2983: the game is a league flight. The names are then «Jørgen L.»
+   * (`reportName`), and nobody wins (#2712).
+   */
+  leagueFlight?: true;
+  /**
+   * #2983: one player played the flight; nobody else was in it. Without it
+   * the model filled the gap with the others «hiding their cards» (22.11).
+   */
+  soloFlight?: true;
+  /** #2983: how the flight stands in the league right now (`buildFlightLeagueFacts`). */
+  league?: FlightLeagueFacts;
   winnerName: string | null;
   standings: RoundReportStandingRow[];
   /** Number of holes with at least one recorded score, computed deterministically. */
@@ -114,7 +128,6 @@ export type BuildRoundReportFactsOpts = {
   /** #2561: null when the name mentions a player without «ja» (`lib/ai/gameNameGuard.ts`). */
   gameName: string | null;
   courseName: string | null;
-  endedAt: string | null;
   gameMode: GameMode;
   /**
    * Par per hole (`par_mens`) over the game's scope, passed to the share card
@@ -149,10 +162,24 @@ export type BuildRoundReportFactsOpts = {
    * winnerName null, kårer du ingen vinner») and the row carries no rank.
    */
   leagueFlight?: boolean;
+  /** #2983: the players who did not withdraw. One gives `soloFlight`. */
+  activePlayerCount?: number;
+  /** #2983: the league block of a league flight, when it could be read. */
+  league?: FlightLeagueFacts | null;
 };
 
 // nb-only surface by design (#1527) — rundereferatet skrives på norsk.
 const PLAYER_FALLBACK = 'Ukjent spiller';
+
+/**
+ * The name a player has in the report. A league flight uses the public form
+ * («Jørgen L.»), the same as the league's news story and its mail (the owner
+ * 23.11); every other game keeps the name with the nickname.
+ */
+export function reportName(user: { name: string | null; nickname: string | null }, leagueFlight: boolean): string {
+  if (leagueFlight) return formatPublicName(user) ?? PLAYER_FALLBACK;
+  return formatRevealName(user.name ?? PLAYER_FALLBACK, user.nickname);
+}
 
 // ---------------------------------------------------------------------------
 // Main export
@@ -161,7 +188,7 @@ const PLAYER_FALLBACK = 'Ukjent spiller';
 export function buildRoundReportFacts(
   opts: BuildRoundReportFactsOpts,
 ): RoundReportFacts {
-  const { result, nameByUserId, gameName, courseName, endedAt, gameMode, parByHole } = opts;
+  const { result, nameByUserId, gameName, courseName, gameMode, parByHole } = opts;
   const totalHoles = opts.totalHoles ?? 18;
   const allowed = opts.aiAllowedUserIds;
   const isAllowed = (userId: string) => allowed === undefined || allowed.has(userId);
@@ -211,12 +238,12 @@ export function buildRoundReportFacts(
   const facts: RoundReportFacts = {
     gameName,
     courseName,
-    endedAt,
     formatLabel: MODE_LABELS[gameMode],
     band: card.band,
     winnerName,
     standings,
     scoredHoles: computeScoredHoles(result),
+    ...flightFacts(opts),
   };
 
   if (card.band === 'matchplay') {
@@ -251,6 +278,17 @@ export function buildRoundReportFacts(
   }
 
   return facts;
+}
+
+/** #2983: what the facts say about the flight: a league flight, a flight of one, the league block. */
+function flightFacts(
+  opts: BuildRoundReportFactsOpts,
+): Pick<RoundReportFacts, 'leagueFlight' | 'soloFlight' | 'league'> {
+  return {
+    ...(opts.leagueFlight ? { leagueFlight: true as const } : {}),
+    ...(opts.activePlayerCount === 1 ? { soloFlight: true as const } : {}),
+    ...(opts.leagueFlight && opts.league ? { league: opts.league } : {}),
+  };
 }
 
 /**
