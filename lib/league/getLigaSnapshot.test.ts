@@ -880,3 +880,141 @@ describe('getLigaSnapshot — simulator league (#2638)', () => {
     });
   });
 });
+
+describe('getLigaSnapshot — the table before, the same arithmetic (#2983)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  // Rounds 1 and 2 have closed, round 3 opens. One hole, par 4, CH 0, so a
+  // round value is strokes − 4. Round 1: A +2, B 0, C +1. Round 2: A −1, B +3
+  // in g2, and C 0, D +1 in g2b, a second flight in round 2 (a regular league
+  // needs two in a flight).
+  const STROKES: Record<string, Record<string, number>> = {
+    g1: { A: 6, B: 4, C: 5 },
+    g2: { A: 3, B: 7 },
+    g2b: { C: 4, D: 5 },
+  };
+  const ROUND_OF: Record<string, string> = { g1: 'r1', g2: 'r2', g2b: 'r2' };
+
+  function queue(model: string, gameIds: string[]) {
+    const round = (n: number, closes: string) => ({
+      id: `r${n}`,
+      sequence: n,
+      label: `Runde ${n}`,
+      course_id: 'c1',
+      tee_box_id: 'tb1',
+      opens_at: '2026-10-01T00:00:00Z',
+      closes_at: closes,
+      original_closes_at: closes,
+      window_overridden_at: null,
+    });
+    const players = gameIds.flatMap((g) => Object.keys(STROKES[g]!).map((user_id) => ({ g, user_id })));
+    return [
+      {
+        data: {
+          id: 'l1',
+          name: 'Test-liga',
+          season_start: '2026-10-01',
+          season_end: '2099-01-01',
+          format: 'stroke',
+          scoring: 'both',
+          standings_model: model,
+          missed_round_policy: 'penalty',
+          penalty_kind: 'worst_plus_one',
+          penalty_fixed_over_par: null,
+          best_n_count: model === 'best_n' ? 1 : null,
+          course_scope: 'single_course',
+          course_id: 'c1',
+          tee_box_id: 'tb1',
+          status: 'active',
+          created_by: 'admin',
+          created_at: '2026-10-01T00:00:00Z',
+          started_at: '2026-10-01T00:00:00Z',
+          finished_at: null,
+          group_id: null,
+          is_simulator: false,
+        },
+      },
+      {
+        data: [
+          round(1, '2026-11-01T22:59:00Z'),
+          round(2, '2026-11-15T22:59:00Z'),
+          round(3, '2099-01-01T22:59:00Z'),
+        ],
+      },
+      {
+        data: ['A', 'B', 'C', 'D'].map((u) => ({
+          user_id: u,
+          accepted_at: '2026-10-01T00:00:00Z',
+          users: { name: u, nickname: null },
+        })),
+      },
+      {
+        data: gameIds.map((id, i) => ({
+          id,
+          status: 'finished',
+          course_id: 'c1',
+          tee_box_id: 'tb1',
+          league_round_id: ROUND_OF[id],
+          delivered_outside_window: false,
+          ended_at: `2026-10-1${i}T18:00:00Z`,
+        })),
+      },
+      {
+        data: players.map(({ g, user_id }) => ({
+          game_id: g,
+          user_id,
+          course_handicap: 0,
+          tee_gender: 'mens',
+          submitted_at: '2026-10-10T17:00:00Z',
+          withdrawn_at: null,
+        })),
+      },
+      {
+        data: players.map(({ g, user_id }) => ({
+          game_id: g,
+          user_id,
+          hole_number: 1,
+          strokes: STROKES[g]![user_id],
+        })),
+      },
+      { data: [{ course_id: 'c1', hole_number: 1, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 1 }] },
+      { data: [{ id: 'tb1', par_total_mens: 4, par_total_ladies: 4, par_total_juniors: 4 }] },
+    ];
+  }
+
+  async function snapshotOf(model: string, gameIds: string[], opts?: Parameters<typeof import('./getLigaSnapshot').getLigaSnapshot>[1]) {
+    supabaseMock = buildSupabaseMock(queue(model, gameIds));
+    const { getLigaSnapshot } = await import('@/lib/league/getLigaSnapshot');
+    return (await getLigaSnapshot('l1', opts))!;
+  }
+
+  it.each(['total', 'best_n', 'average', 'points'])(
+    '%s: the table before round 2 is the table from round 1 alone',
+    async (model) => {
+      const withBaseline = await snapshotOf(model, ['g1', 'g2', 'g2b'], { baseline: { beforeRoundBefore: 'r3' } });
+      const roundOneOnly = await snapshotOf(model, ['g1']);
+      expect(withBaseline.baseline).toEqual(roundOneOnly.standings);
+      // Not the same table: round 2 moved it.
+      expect(withBaseline.baseline).not.toEqual(withBaseline.standings);
+      // The table now is untouched by the baseline.
+      const plain = await snapshotOf(model, ['g1', 'g2', 'g2b']);
+      expect(withBaseline.standings).toEqual(plain.standings);
+    },
+  );
+
+  it.each(['total', 'points'])('%s: the table without a flight is the table as if it was never played', async (model) => {
+    const withBaseline = await snapshotOf(model, ['g1', 'g2', 'g2b'], { baseline: { withoutGameId: 'g2b' } });
+    const withoutIt = await snapshotOf(model, ['g1', 'g2']);
+    expect(withBaseline.baseline).toEqual(withoutIt.standings);
+    expect(withBaseline.baseline).not.toEqual(withBaseline.standings);
+  });
+
+  it('without opts the snapshot has no baseline, and the round before an open one gives null', async () => {
+    const plain = await snapshotOf('total', ['g1', 'g2']);
+    const firstRound = await snapshotOf('total', ['g1', 'g2'], { baseline: { beforeRoundBefore: 'r1' } });
+    expect({ plain: 'baseline' in plain, firstRound: firstRound.baseline }).toEqual({ plain: false, firstRound: null });
+  });
+});

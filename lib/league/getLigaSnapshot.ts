@@ -7,6 +7,7 @@ import { computeFlightRoundValues } from './roundScoring';
 import { isPointsBasedFormat } from './flightFormat';
 import { roundPlayerLocks, type RoundFlight } from './roundLocks';
 import { countingCards } from './countingCards';
+import { closedRoundBefore } from './roundSummary';
 import {
   normalizeSimSettings,
   roundSimSettings,
@@ -152,11 +153,30 @@ export type LeagueSnapshot = {
   participants: LeagueParticipant[];
   /** Per scoring; `.net`/`.gross` is null when the league doesn't rank on it. */
   standings: LeagueStandingsByScoring;
+  /**
+   * #2983: the table without some of the results, only when `opts.baseline`
+   * asked for it (see `LigaSnapshotBaseline`). Null when the round it is
+   * measured from does not exist or has not closed.
+   */
+  baseline?: LeagueStandingsByScoring | null;
 };
+
+/**
+ * #2983: which table to work out next to the one now, with the same
+ * arithmetic on the same results, the ones left out removed.
+ *  - `beforeRoundBefore`: the table as it stood before the round that closed
+ *    before this opening round (`closedRoundBefore`), from the rounds with a
+ *    lower sequence than the closed one;
+ *  - `withoutGameId`: the table without the cards of this flight.
+ */
+export type LigaSnapshotBaseline = { beforeRoundBefore: string } | { withoutGameId: string };
 
 type UserRel = { name: string | null; nickname: string | null };
 
-export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot | null> {
+export async function getLigaSnapshot(
+  leagueId: string,
+  opts?: { baseline?: LigaSnapshotBaseline },
+): Promise<LeagueSnapshot | null> {
   const supabase = getAdminClient();
 
   const { data: leagueRow, error: lErr } = await supabase
@@ -515,14 +535,15 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
   };
 
   const playerIds = participants.map((p) => p.userId);
-  const standingsFor = (metric: StandingsMetric) =>
-    computeLeagueStandings(config, roundInputs, playerIds, metric);
+  const standingsFor = (inputs: LeagueRoundInput[], metric: StandingsMetric) =>
+    computeLeagueStandings(config, inputs, playerIds, metric);
 
   // `scoring` decides which tables to compute: net, gross, or both in parallel.
-  const standings: LeagueStandingsByScoring = {
-    net: league.scoring === 'gross' ? null : standingsFor('net'),
-    gross: league.scoring === 'gross' || league.scoring === 'both' ? standingsFor('gross') : null,
-  };
+  const tablesFor = (inputs: LeagueRoundInput[]): LeagueStandingsByScoring => ({
+    net: league.scoring === 'gross' ? null : standingsFor(inputs, 'net'),
+    gross: league.scoring === 'gross' || league.scoring === 'both' ? standingsFor(inputs, 'gross') : null,
+  });
+  const standings = tablesFor(roundInputs);
 
   const roundViews: LeagueRoundView[] = rounds.map((r) => {
     const locks = roundPlayerLocks(flightsByRound.get(r.id) ?? []);
@@ -559,5 +580,30 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     };
   });
 
-  return { league, rounds: roundViews, participants, standings };
+  const snapshot: LeagueSnapshot = { league, rounds: roundViews, participants, standings };
+  if (!opts?.baseline) return snapshot;
+  const inputs = baselineInputs(roundInputs, roundViews, opts.baseline, now);
+  return { ...snapshot, baseline: inputs ? tablesFor(inputs) : null };
+}
+
+/**
+ * #2983: the round inputs of the baseline. The same rounds and windows; only
+ * the results left out are gone (a round without results is ignored by
+ * computeLeagueStandings). Null when the round to measure from does not exist
+ * or has not closed.
+ */
+function baselineInputs(
+  roundInputs: LeagueRoundInput[],
+  rounds: LeagueRoundView[],
+  asked: LigaSnapshotBaseline,
+  now: number,
+): LeagueRoundInput[] | null {
+  if ('withoutGameId' in asked) {
+    return roundInputs.map((r) => ({
+      ...r,
+      scores: r.scores.filter((s) => s.gameId !== asked.withoutGameId),
+    }));
+  }
+  const closed = closedRoundBefore(rounds, asked.beforeRoundBefore, now);
+  return closed ? roundInputs.map((r) => (r.sequence < closed.sequence ? r : { ...r, scores: [] })) : null;
 }

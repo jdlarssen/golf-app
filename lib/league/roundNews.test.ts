@@ -36,6 +36,8 @@ const row = (userId: string, place: number, name: string, value: number, behind:
   name,
   value,
   behind,
+  previousPlace: null,
+  move: null,
 });
 const rows = [row('dina', 1, 'Dina D.', 44, 0), row('nei', 2, 'Nina N.', 43, 1), row('gard', 3, 'Gard G.', 36, 8)];
 const summary: RoundSummary = {
