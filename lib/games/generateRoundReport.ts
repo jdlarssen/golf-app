@@ -1,28 +1,29 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
 import {
+  NARRATIVE_ATTEMPTS,
   NARRATIVE_EFFORT,
   NARRATIVE_MAX_RETRIES,
   NARRATIVE_MAX_TOKENS,
   NARRATIVE_MODEL,
+  NARRATIVE_RETRY_MIN_MS,
   NARRATIVE_TIMEOUT_MS,
 } from '@/lib/ai/narrative';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { buildModeResultForGame } from '@/lib/scoring/buildModeResultForGame';
-import { formatRevealName } from '@/lib/names/formatRevealName';
 import { readAiAllowedUserIds } from '@/lib/ai/consent';
+import { getLigaSnapshot } from '@/lib/league/getLigaSnapshot';
+import { buildFlightLeagueFacts, type FlightLeagueFacts } from '@/lib/league/flightLeagueFacts';
 import { getGameWithPlayers } from './getGameWithPlayers';
-import { buildRoundReportFacts, factsShowAnyPlayer } from './roundReportFacts';
+import { buildRoundReportFacts, factsShowAnyPlayer, reportName } from './roundReportFacts';
 import { gameNameMentions } from '@/lib/ai/gameNameGuard';
-import { buildRoundReportPrompt, sanitizeRoundReport } from './roundReportPrompt';
+import { buildRoundReportPrompt, checkRoundReport } from './roundReportPrompt';
 import { holeCountForSegment, isHoleInSegment } from './holeScope';
 
 // Modell, innsats, token-tak, timeout og retries deles med Kavalkadens
 // innledning (#2128) — `lib/ai/narrative.ts` er hjemmet, så de to AI-tekstene
 // ikke driver fra hverandre neste gang noen bytter modell.
 const MIN_SCORED_HOLES = 6;
-// nb-only surface by design (#1527) — rundereferatet skrives på norsk.
-const PLAYER_FALLBACK = 'Ukjent spiller';
 
 export type RoundReportStatus = 'generated' | 'skipped' | 'failed';
 
@@ -113,10 +114,13 @@ export async function generateAndPersistRoundReport(
 
     // WD-spillere er ute av rankingen (samme filtrering som
     // notifyAchievementUnlocks) — de skal aldri dukke opp i referatet.
+    // #2983: a league flight names players as the league's news story does.
+    const leagueFlight = game.league_round_id != null;
+    const activePlayers = players.filter((p) => p.withdrawn_at == null);
     const nameByUserId = new Map<string, string>();
-    for (const p of players) {
-      if (p.withdrawn_at != null || !p.users) continue;
-      nameByUserId.set(p.user_id, formatRevealName(p.users.name ?? PLAYER_FALLBACK, p.users.nickname));
+    for (const p of activePlayers) {
+      if (!p.users) continue;
+      nameByUserId.set(p.user_id, reportName(p.users, leagueFlight));
     }
 
     // #2561 PR B: only players who said yes reach the model. Nobody → no
@@ -151,24 +155,30 @@ export async function generateAndPersistRoundReport(
     );
     const parByHole = new Map(scopedHoles.map((h) => [h.hole_number, h.par_mens]));
 
-    const gameMetaRes = await admin
-      .from('games')
-      .select('ended_at')
-      .eq('id', gameId)
-      .single<{ ended_at: string | null }>();
-    const endedAt = gameMetaRes.data?.ended_at ?? null;
+    // #2983: how the flight stands in the league right now. Null without it.
+    const league =
+      game.league_round_id != null
+        ? await readFlightLeague(
+            admin,
+            gameId,
+            game.league_round_id,
+            activePlayers.map((p) => p.user_id),
+            aiAllowedUserIds,
+          )
+        : null;
 
     const facts = buildRoundReportFacts({
       result,
       nameByUserId,
       gameName: gameNameMentions(game.name, unconsenting) ? null : game.name,
       courseName,
-      endedAt,
       gameMode: game.game_mode,
       parByHole,
       totalHoles: holeCountForSegment(game.hole_segment),
       // #2712: a league flight crowns nobody.
-      leagueFlight: game.league_round_id != null,
+      leagueFlight,
+      activePlayerCount: activePlayers.length,
+      league,
       aiAllowedUserIds,
     });
 
@@ -179,49 +189,63 @@ export async function generateAndPersistRoundReport(
     );
     if (!factsShowAnyPlayer(facts, shownNames)) return { status: 'skipped', report: null };
 
-    const { system, user } = buildRoundReportPrompt(facts);
-
     const client = new Anthropic({
       apiKey,
       timeout: NARRATIVE_TIMEOUT_MS,
       maxRetries: NARRATIVE_MAX_RETRIES,
     });
-    const response = await client.messages.create({
-      model: NARRATIVE_MODEL,
-      max_tokens: NARRATIVE_MAX_TOKENS,
-      output_config: { effort: NARRATIVE_EFFORT },
-      system,
-      messages: [{ role: 'user', content: user }],
-    });
-    console.log('[generateRoundReport] model call', {
-      gameId,
-      stopReason: response.stop_reason,
-      usage: response.usage,
-    });
+    // #2983: a draft the check drops gets one more attempt, told why, within
+    // the same deadline (as the league's news story, `roundNews.ts`).
+    const deadline = Date.now() + NARRATIVE_TIMEOUT_MS;
+    let fault: string | null = null;
+    let sanitized: string | null = null;
+    for (let attempt = 1; attempt <= NARRATIVE_ATTEMPTS; attempt++) {
+      const timeLeft = deadline - Date.now();
+      if (attempt > 1 && timeLeft < NARRATIVE_RETRY_MIN_MS) break;
 
-    // A stop at the token cap (or a refusal) leaves a cut-off or empty text;
-    // the sanitizer only rejects empty or overlong output, so check here.
-    if (response.stop_reason !== 'end_turn') {
-      console.error('[generateRoundReport] model stopped early', {
+      const { system, user } = buildRoundReportPrompt(facts, fault);
+      const response = await client.messages.create(
+        {
+          model: NARRATIVE_MODEL,
+          max_tokens: NARRATIVE_MAX_TOKENS,
+          output_config: { effort: NARRATIVE_EFFORT },
+          system,
+          messages: [{ role: 'user', content: user }],
+        },
+        { timeout: timeLeft },
+      );
+      console.log('[generateRoundReport] model call', {
         gameId,
+        attempt,
         stopReason: response.stop_reason,
+        usage: response.usage,
       });
-      return { status: 'failed', report: null };
-    }
 
-    const rawText = response.content
-      .filter((block): block is Extract<typeof block, { type: 'text' }> => block.type === 'text')
-      .map((block) => block.text)
-      .join('\n');
+      // A stop at the token cap (or a refusal) leaves a cut-off or empty text;
+      // the check only reads a finished text, so check the stop here.
+      if (response.stop_reason !== 'end_turn') {
+        console.error('[generateRoundReport] model stopped early', {
+          gameId,
+          attempt,
+          stopReason: response.stop_reason,
+        });
+        fault = 'Utkastet ble avbrutt før det var ferdig.';
+        continue;
+      }
 
-    const sanitized = sanitizeRoundReport(rawText);
-    if (sanitized === null) {
-      console.error('[generateRoundReport] sanitizer rejected model output', {
-        gameId,
-        rawLength: rawText.length,
-      });
-      return { status: 'failed', report: null };
+      const rawText = response.content
+        .filter((block): block is Extract<typeof block, { type: 'text' }> => block.type === 'text')
+        .map((block) => block.text)
+        .join('\n');
+      const check = checkRoundReport(rawText, facts);
+      if (check.report !== null) {
+        sanitized = check.report;
+        break;
+      }
+      fault = check.fault;
+      console.error('[generateRoundReport] the draft is dropped', { gameId, attempt, fault });
     }
+    if (sanitized === null) return { status: 'failed', report: null };
 
     const updateRes = await admin
       .from('games')
@@ -246,3 +270,34 @@ export async function generateAndPersistRoundReport(
     return { status: 'failed', report: null };
   }
 }
+
+/**
+ * #2983: the league block for a league flight's report, or null. Reads the
+ * round's league and the league snapshot with a baseline without this
+ * flight's cards (`getLigaSnapshot`). The flight is finished when this runs,
+ * so its cards are in the table «now». Never throws: a failed read is logged
+ * and the report is written as before, without the league.
+ */
+async function readFlightLeague(
+  admin: ReturnType<typeof getAdminClient>,
+  gameId: string,
+  roundId: string,
+  flightUserIds: string[],
+  aiAllowedUserIds: ReadonlySet<string>,
+): Promise<FlightLeagueFacts | null> {
+  try {
+    const { data, error } = await admin
+      .from('league_rounds')
+      .select('league_id')
+      .eq('id', roundId)
+      .single<{ league_id: string }>();
+    if (error || !data) throw error ?? new Error(`league round ${roundId} not found`);
+    const snapshot = await getLigaSnapshot(data.league_id, { baseline: { withoutGameId: gameId } });
+    if (!snapshot) return null;
+    return buildFlightLeagueFacts({ snapshot, roundId, flightUserIds, aiAllowedUserIds });
+  } catch (err) {
+    console.error('[generateRoundReport] league read failed, the report goes without it', { gameId, err });
+    return null;
+  }
+}
+

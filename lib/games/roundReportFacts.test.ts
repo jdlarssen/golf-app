@@ -28,7 +28,14 @@ import type {
 } from '@/lib/scoring/modes/types';
 
 import { FLAGGED_POINTS } from './__fixtures__/flaggedPointsGames';
-import { buildRoundReportFacts, factsShowAnyPlayer, type RoundReportMatchplayFacts } from './roundReportFacts';
+import { formatRevealName } from '@/lib/names/formatRevealName';
+import type { FlightLeagueFacts } from '@/lib/league/flightLeagueFacts';
+import {
+  buildRoundReportFacts,
+  factsShowAnyPlayer,
+  reportName,
+  type RoundReportMatchplayFacts,
+} from './roundReportFacts';
 
 /** Narrows the decided-match branch so tests can read winnerName/margin/momentum directly. */
 function decided(
@@ -45,7 +52,6 @@ function names(...pairs: [string, string][]): Map<string, string> {
 const BASE = {
   gameName: 'Lørdagscup',
   courseName: 'Oslo GK',
-  endedAt: '2026-07-01T18:00:00.000Z',
   // Par 4 on holes 1–18 (par 72).
   parByHole: new Map(Array.from({ length: 18 }, (_, i) => [i + 1, 4] as const)) as ReadonlyMap<
     number,
@@ -1207,6 +1213,73 @@ describe('league flight (#2712, #2850)', () => {
     const facts = buildRoundReportFacts({ result: solo, nameByUserId, gameMode: 'solo_strokeplay', ...BASE });
     expect(facts.winnerName).toBe('Siri');
     expect(facts.standings[0].rank).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #2983: the league block, a flight of one, the name form, and no date
+// ---------------------------------------------------------------------------
+describe('#2983: a league flight knows the league, and no report gets a date', () => {
+  const solo: SoloStrokeplayResult = {
+    kind: 'solo_strokeplay',
+    ranking: 'net_total',
+    holes: [
+      {
+        holeNumber: 1,
+        par: 4,
+        strokeIndex: 1,
+        perPlayer: [{ userId: 'u1', gross: 4, net: 4, par: 4, toPar: 0 }],
+        bestUserIds: ['u1'],
+      },
+    ],
+    players: [
+      { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, netToPar: -2, rank: 1, tiedWith: [] },
+    ],
+  };
+  const league: FlightLeagueFacts = {
+    leagueName: 'Vinterligaen',
+    roundLabel: 'Runde 2',
+    provisional: true,
+    playedThisRound: 4,
+    playersInLeague: 11,
+    tableSize: 10,
+    players: [{ name: 'Kari N.', roundPlace: 1, tablePlace: 2, tablePlaceBefore: 5, move: 3, passed: ['Bo B.'] }],
+  };
+  const nameByUserId = names(['u1', 'Kari N.']);
+
+  it('the facts have no date, in any game (the weekday 22.11 came from one)', () => {
+    const plain = buildRoundReportFacts({ result: solo, nameByUserId, gameMode: 'solo_strokeplay', ...BASE });
+    expect(Object.keys(plain)).not.toContain('endedAt');
+    expect(JSON.stringify(plain)).not.toMatch(/2026-/);
+  });
+
+  it('a flight of one says so; a flight of two does not', () => {
+    const one = buildRoundReportFacts({
+      result: solo, nameByUserId, gameMode: 'solo_strokeplay', ...BASE, leagueFlight: true, activePlayerCount: 1,
+    });
+    const two = buildRoundReportFacts({
+      result: solo, nameByUserId, gameMode: 'solo_strokeplay', ...BASE, leagueFlight: true, activePlayerCount: 2,
+    });
+    expect({ one: one.soloFlight, two: 'soloFlight' in two }).toEqual({ one: true, two: false });
+  });
+
+  it('a league flight carries the league block and says it is a league flight; another game carries neither', () => {
+    const flight = buildRoundReportFacts({
+      result: solo, nameByUserId, gameMode: 'solo_strokeplay', ...BASE, leagueFlight: true, activePlayerCount: 1, league,
+    });
+    expect({ leagueFlight: flight.leagueFlight, league: flight.league }).toEqual({ leagueFlight: true, league });
+    const plain = buildRoundReportFacts({ result: solo, nameByUserId, gameMode: 'solo_strokeplay', ...BASE });
+    expect(['leagueFlight' in plain, 'league' in plain]).toEqual([false, false]);
+  });
+
+  it('a league flight names players as the news story does («Jørgen L.»); other games keep name and nickname', () => {
+    const user = { name: 'Jørgen Larssen', nickname: 'Jøggi' };
+    expect(reportName(user, true)).toBe('Jørgen L.');
+    expect(reportName(user, false)).toBe(formatRevealName('Jørgen Larssen', 'Jøggi'));
+    // Without a name: the nickname in a league flight, the fallback elsewhere.
+    expect(reportName({ name: null, nickname: 'Jøggi' }, true)).toBe('Jøggi');
+    expect(reportName({ name: null, nickname: null }, true)).toBe('Ukjent spiller');
+    expect(reportName({ name: null, nickname: null }, false)).toBe(formatRevealName('Ukjent spiller', null));
   });
 });
 
