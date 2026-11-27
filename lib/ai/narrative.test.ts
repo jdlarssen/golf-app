@@ -86,6 +86,13 @@ describe('findWeekday (#2983)', () => {
     expect(findWeekday('Onsdagsligaen spilte på onsdag.', facts)).toBe('onsdag');
   });
 
+  it('a name from the facts in another inflection is still a name (the evaluator, 27.11)', () => {
+    const facts = JSON.stringify({ leagueName: 'Onsdagsligaen' });
+    expect(findWeekday('Onsdagsligaens leder er Kari N.', facts)).toBeNull();
+    // A bare day in the facts does not make its inflections names.
+    expect(findWeekday('Onsdagen ble lang.', JSON.stringify({ label: 'Onsdag' }))).toBe('Onsdagen');
+  });
+
   it('the list names the seven days, one home for the checks', () => {
     expect(WEEKDAY_WORDS).toEqual(['mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag', 'søndag']);
   });

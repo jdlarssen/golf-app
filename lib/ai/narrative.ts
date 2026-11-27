@@ -71,13 +71,18 @@ const WEEKDAY_PATTERN = new RegExp(`(?<!\\p{L})(?:${WEEKDAY_WORDS.join('|')})\\p
  * Det første ordet i `text` som er en ukedag, slik det står, eller null.
  *
  * Et ord som også står i `known` (fakta modellen fikk), er et navn og ikke en
- * ukedag: «Onsdagsligaen», «Torsdagsgolfen» (evaluatoren 27.11). Ordet må stå
- * helt likt; selve dagen («onsdag») er fortsatt en ukedag.
+ * ukedag: «Onsdagsligaen», «Torsdagsgolfen» (evaluatoren 27.11), også bøyd
+ * («Onsdagsligaens»). Selve dagen («onsdag», «onsdagen») er fortsatt en
+ * ukedag, også når fakta har den alene.
  */
 export function findWeekday(text: string, known = ''): string | null {
-  const names = new Set(Array.from(known.matchAll(WEEKDAY_PATTERN), (m) => m[0].toLowerCase()));
+  const days = new Set<string>(WEEKDAY_WORDS);
+  const names = Array.from(known.matchAll(WEEKDAY_PATTERN), (m) => m[0].toLowerCase()).filter(
+    (word) => !days.has(word),
+  );
   for (const m of text.matchAll(WEEKDAY_PATTERN)) {
-    if (!names.has(m[0].toLowerCase())) return m[0];
+    const word = m[0].toLowerCase();
+    if (!names.some((name) => word.startsWith(name))) return m[0];
   }
   return null;
 }
