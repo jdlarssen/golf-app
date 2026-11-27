@@ -14,7 +14,7 @@
 // 10/20/30 har snitt 20 og får 16, ikke 12.
 //
 // Fullt lag gir nøyaktig det gamle uttrykket, så jevne lag er bit-like med før.
-// Texas' NGF-tabell (15 % av summen à 3) byttes IKKE inn for det korte laget:
+// Texas' startverdi for tre (15 % av summen) byttes IKKE inn for det korte laget:
 // det får arrangørens prosent av snittet, som alle andre lag.
 //
 // Motoren (`computeScramble`), scorekortet og hullsiden leser alle herfra.

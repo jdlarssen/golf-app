@@ -65,7 +65,8 @@ export function defaultTeamSizeForMode(mode: GameMode): FormatTeamSize {
 }
 
 /**
- * NGF-default for Texas-scramble-lag-handicap, prosent av summert spille-HCP.
+ * Startverdien for Texas-scramble-lag-handicap med «Egen prosent», prosent av
+ * summert spille-HCP. NGFs egen regel er vektingen per spiller (#3002).
  * Settes som default i GameForm når admin endrer lagstørrelse — admin kan
  * deretter justere fritt innenfor 0–100 % av lagets snitt (#2566).
  */
