@@ -19,6 +19,13 @@ interface PatsomeSetupProps {
   fourballAllowancePct: number | null;
   onFourballAllowanceChange: (next: number) => void;
   disabled?: boolean;
+  /**
+   * The form posts `patsome_scoring` from an always-mounted hidden mirror
+   * (the wizard's FormDataInputs, GameForm), so the radios carry no name and
+   * the value is posted once (#3002). A locked game's disabled radios post
+   * nothing, which is why the mirror is the one that stays.
+   */
+  serializedExternally?: boolean;
 }
 
 const SEGMENTS = [1, 2, 3] as const;
@@ -49,6 +56,7 @@ export function PatsomeSetup({
   fourballAllowancePct,
   onFourballAllowanceChange,
   disabled = false,
+  serializedExternally = false,
 }: PatsomeSetupProps) {
   const t = useTranslations('wizard.sections.patsome');
   const shownPct = fourballAllowancePct ?? 100;
@@ -72,7 +80,7 @@ export function PatsomeSetup({
       <FormSectionHeading title={t('scoringFromLabel')} />
       <ChoiceCardGrid columns={2} label={t('scoringAriaLabel')}>
         <RadioChoiceCard
-          name="patsome_scoring"
+          name={serializedExternally ? undefined : 'patsome_scoring'}
           value="net"
           checked={scoring === 'net'}
           onChange={() => onScoringChange('net')}
@@ -81,7 +89,7 @@ export function PatsomeSetup({
           hint={t('scoringNetDesc')}
         />
         <RadioChoiceCard
-          name="patsome_scoring"
+          name={serializedExternally ? undefined : 'patsome_scoring'}
           value="gross"
           checked={scoring === 'gross'}
           onChange={() => onScoringChange('gross')}

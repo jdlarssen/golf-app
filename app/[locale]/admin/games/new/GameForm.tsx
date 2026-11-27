@@ -1283,6 +1283,7 @@ export function GameForm({
             fourballAllowancePct={state.patsomeFourballAllowancePct}
             onFourballAllowanceChange={state.setPatsomeFourballAllowancePct}
             disabled={lockGameMode}
+            serializedExternally
           />
         )}
         {state.isShamble && (
