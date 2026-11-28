@@ -313,23 +313,37 @@ describe('likt antall på gjengekortene (#3020)', () => {
     return { ...first, count: 3, tiedWith: rest };
   }
 
+  // In a tie, a no-break space holds each first name and its initial on one
+  // line, so a card never ends a line on «Kari» with «H.» alone below
+  // (orchestrator 28.11).
+  const _ = '\u00a0';
+
   it('joins the names by the owner’s rule', () => {
+    // A lone leader keeps the name exactly as stored: no tie, same card as before.
     expect(gangLeaderNames(tie('Ola N.'), words)).toBe('Ola N.');
-    expect(gangLeaderNames(tie('Ola N.', 'Kari H.'), words)).toBe('Ola N. og Kari H.');
+    expect(gangLeaderNames(tie('Ola N.', 'Kari H.'), words)).toBe(`Ola${_}N. og Kari${_}H.`);
     expect(gangLeaderNames(tie('Ola N.', 'Kari H.', 'Per S.'), words)).toBe(
-      'Ola N., Kari H. og Per S.',
+      `Ola${_}N., Kari${_}H. og Per${_}S.`,
     );
     expect(gangLeaderNames(tie('Ola N.', 'Kari H.', 'Per S.', 'Mia T.'), words)).toBe(
-      'Ola N., Kari H., Per S. og 1 til',
+      `Ola${_}N., Kari${_}H., Per${_}S. og 1 til`,
     );
     expect(gangLeaderNames(tie('Ola N.', 'Kari H.', 'Per S.', 'Mia T.', 'Bo L.'), words)).toBe(
-      'Ola N., Kari H., Per S. og 2 til',
+      `Ola${_}N., Kari${_}H., Per${_}S. og 2 til`,
+    );
+  });
+
+  it('keeps each first name and its initial together, and breaks only between names', () => {
+    const joined = gangLeaderNames(tie('Ola N.', 'Kari H.', 'Per S.'), words);
+    expect(joined.split(' ')).toEqual([`Ola${_}N.,`, `Kari${_}H.`, 'og', `Per${_}S.`]);
+    expect(gangLeaderNames(tie('Maximiliansebastians K.', 'Ola N.'), words)).toBe(
+      `Maximiliansebastians${_}K. og Ola${_}N.`,
     );
   });
 
   it('gives a player without a name the fallback, also inside a tie', () => {
-    expect(gangLeaderNames(tie('Ola N.', null), words)).toBe('Ola N. og Spiller');
-    expect(gangLeaderNames(tie('  ', 'Kari H.'), words)).toBe('Spiller og Kari H.');
+    expect(gangLeaderNames(tie('Ola N.', null), words)).toBe(`Ola${_}N. og Spiller`);
+    expect(gangLeaderNames(tie('  ', 'Kari H.'), words)).toBe(`Spiller og Kari${_}H.`);
   });
 
   it('reads a leader without tiedWith, or with an empty one, as no tie', () => {
@@ -345,7 +359,7 @@ describe('likt antall på gjengekortene (#3020)', () => {
     facts.gang!.topWinner = tie('Ola N.', 'Kari H.');
     expect(model('gang-winner', facts)).toMatchObject({
       title: 'Årets vinnere',
-      hero: { value: 'Ola N. og Kari H.', caption: '3 seire hver' },
+      hero: { value: `Ola${_}N. og Kari${_}H.`, caption: '3 seire hver' },
     });
   });
 
@@ -355,11 +369,11 @@ describe('likt antall på gjengekortene (#3020)', () => {
     facts.gang!.mostSnowmen = { ...tie('Ola N.', 'Kari H.', 'Per S.', 'Mia T.'), count: 1 };
     expect(model('gang-birdies', facts)).toMatchObject({
       title: 'Flest birdier',
-      hero: { value: 'Ola N., Kari H. og Per S.', caption: '8 birdier hver' },
+      hero: { value: `Ola${_}N., Kari${_}H. og Per${_}S.`, caption: '8 birdier hver' },
     });
     expect(model('gang-snowmen', facts)).toMatchObject({
       title: 'Årets snowman',
-      hero: { value: 'Ola N., Kari H., Per S. og 1 til', caption: '1 snowman hver' },
+      hero: { value: `Ola${_}N., Kari${_}H., Per${_}S. og 1 til`, caption: '1 snowman hver' },
     });
   });
 
