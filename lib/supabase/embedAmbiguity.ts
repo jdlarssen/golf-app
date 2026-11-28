@@ -48,6 +48,8 @@ export const MULTI_FK_TO_USERS: readonly string[] = [
   'team_tee_shots', // tee_shot_by, entered_by
   'game_side_claims', // winner_user_id, entered_by
   'game_gir_claims', // user_id, entered_by
+  'content_reports', // reporter_id, target_user_id, handled_by (#3019)
+  'user_blocks', // blocker_id, blocked_id (#3019)
 ] as const;
 
 const MULTI_FK_SET = new Set(MULTI_FK_TO_USERS);
