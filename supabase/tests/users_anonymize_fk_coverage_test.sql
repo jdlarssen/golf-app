@@ -76,8 +76,17 @@ insert into fk_coverage (tbl, col, handling) values
   ('product_update_digest_recipients', 'user_id',                       'deleted'),
   ('push_subscriptions',         'user_id',                             'deleted'),
   ('reactions',                  'user_id',                             'deleted'),
+  -- #3019 (0259): blocks both ways, the accepted terms, and the reports the
+  -- account sent or that were about it.
+  ('content_reports',            'reporter_id',                         'deleted'),
+  ('content_reports',            'target_user_id',                      'deleted'),
+  ('terms_acceptances',          'user_id',                             'deleted'),
+  ('user_blocks',                'blocked_id',                          'deleted'),
+  ('user_blocks',                'blocker_id',                          'deleted'),
   -- Crowd-sourced data kept, attribution removed (0142)
   ('green_pins',                 'user_id',                             'nulled'),
+  -- #3019 (0259): a handled report keeps its row without the admin pointer
+  ('content_reports',            'handled_by',                          'nulled'),
   -- Unfinished participation (#1909, 0174)
   ('cup_lineup_slots',           'user_id',                             'handled_by_withdrawal'),
   ('game_players',               'user_id',                             'handled_by_withdrawal'),
