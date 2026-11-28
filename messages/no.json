@@ -69,6 +69,8 @@
   },
   "onboarding": {
     "errors": {
+      "blocked_word": "Navnet har et ord som ikke er lov i Tørny. Velg et annet.",
+      "text_too_long": "Navnet er for langt. Bruk høyst 60 tegn.",
       "name_required": "Du må fylle inn navn.",
       "hcp_invalid": "Handicapindeks må være et tall mellom 0 og 54. Bruk +-knappen for plusshandicap.",
       "unknown": "Noe gikk galt. Prøv igjen."

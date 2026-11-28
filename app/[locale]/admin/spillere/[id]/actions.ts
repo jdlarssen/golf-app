@@ -18,6 +18,7 @@ import {
   type Level,
 } from '@/lib/users/profileInput';
 import type { TablesUpdate } from '@/lib/database.types';
+import { textGuardError } from '@/lib/moderation/textGuardError';
 
 /**
  * auth.users already carries the new email when the public.users write fails —
@@ -172,20 +173,22 @@ export async function updateUser(formData: FormData) {
 
   // Trap 2 (#2054): a write that matched 0 rows is a failure, not «lagret».
   // Only the write sits in the try — `redirect` throws and must not be caught.
-  let updateFailed = false;
+  let updateFailed: 'update_failed' | 'blocked_word' | 'text_too_long' | null = null;
   try {
     expectOne(
       await supabase.from('users').update(updatePayload).eq('id', id).select('id'),
       'admin/updateUser',
     );
   } catch (err) {
-    console.error('[admin/spillere] updateUser failed', err);
-    updateFailed = true;
+    // #3019: the word filter or the 60-character cap (0259) names its own fix.
+    const guard = textGuardError(err);
+    if (!guard) console.error('[admin/spillere] updateUser failed', err);
+    updateFailed = guard ?? 'update_failed';
   }
 
   if (updateFailed) {
     if (emailChanged && current) await revertAuthEmail(id, current.email);
-    redirect({ href: `/admin/spillere/${id}?error=update_failed`, locale });
+    redirect({ href: `/admin/spillere/${id}?error=${updateFailed}`, locale });
   }
 
   // Samme recompute som `completeProfile` (#1176) og `updateProfile`: retter

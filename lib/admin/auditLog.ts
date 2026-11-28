@@ -23,7 +23,12 @@ export type AdminAuditEventType =
   | 'game.player_reinstated'
   // #1049: arrangøren huker av / fjerner betalt-status på en spiller.
   | 'game.player_marked_paid'
-  | 'game.player_marked_unpaid';
+  | 'game.player_marked_unpaid'
+  // #3019: an admin acts on a player's report from /admin/rapporter. The
+  // payload carries reportId and, for a rename, the old and new name.
+  | 'report.game_renamed'
+  | 'report.prizes_cleared'
+  | 'report.handled';
 
 /**
  * Record an admin action to the audit log. Best-effort: insert failures are

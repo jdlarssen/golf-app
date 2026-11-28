@@ -11,6 +11,8 @@ export type NeedsYouListRow = {
   line?: string;
   /** Amber dot (cards not handed in); green otherwise. */
   warning: boolean;
+  /** Red dot: a player's report waits (#3019). Wins over `warning`. */
+  urgent?: boolean;
   testId: string;
 };
 
@@ -28,7 +30,7 @@ export function NeedsYouList({ rows }: { rows: readonly NeedsYouListRow[] }) {
       href={r.href}
       testId={r.testId}
       minHeight="min-h-[56px]"
-      lead={<Dot warning={r.warning} />}
+      lead={<Dot warning={r.warning} urgent={r.urgent} />}
       name={r.name}
       line={r.line}
       trail={<RowArrow />}
@@ -55,12 +57,8 @@ export function NeedsYouList({ rows }: { rows: readonly NeedsYouListRow[] }) {
   );
 }
 
-/** Amber for cards not handed in, green for everything else. */
-function Dot({ warning }: { warning: boolean }) {
-  return (
-    <span
-      aria-hidden
-      className={`h-2.5 w-2.5 shrink-0 rounded-full ${warning ? 'bg-warning' : 'bg-primary'}`}
-    />
-  );
+/** Red for reports, amber for cards not handed in, green for everything else. */
+function Dot({ warning, urgent }: { warning: boolean; urgent?: boolean }) {
+  const color = urgent ? 'bg-danger' : warning ? 'bg-warning' : 'bg-primary';
+  return <span aria-hidden className={`h-2.5 w-2.5 shrink-0 rounded-full ${color}`} />;
 }

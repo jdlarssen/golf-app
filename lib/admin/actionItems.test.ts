@@ -9,6 +9,7 @@ import {
   type HolesScoreRow,
   type LiveRoundRow,
   type NeedsYouRow,
+  wholeHoursSince,
 } from './actionItems';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -431,5 +432,18 @@ describe('holesFilledByGame', () => {
       ],
     );
     expect(needs).toEqual([]);
+  });
+});
+
+describe('wholeHoursSince (#3019)', () => {
+  const now = new Date('2026-11-28T12:00:00Z');
+  it.each([
+    ['2026-11-28T11:30:00Z', 0],
+    ['2026-11-28T11:00:00Z', 1],
+    ['2026-11-28T08:59:59Z', 3],
+    ['2026-11-27T12:00:00Z', 24],
+    ['2026-11-28T12:05:00Z', 0],
+  ])('%s → %i', (iso, hours) => {
+    expect(wholeHoursSince(iso, now)).toBe(hours);
   });
 });

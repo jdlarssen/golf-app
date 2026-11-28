@@ -69,6 +69,8 @@
   },
   "onboarding": {
     "errors": {
+      "blocked_word": "The name has a word that is not allowed in Tørny. Pick another.",
+      "text_too_long": "The name is too long. Use at most 60 characters.",
       "name_required": "Name is required.",
       "hcp_invalid": "Handicap index must be a number between 0 and 54. Use the + button for a plus handicap.",
       "unknown": "Something went wrong. Please try again."

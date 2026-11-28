@@ -75,6 +75,8 @@ export async function requireCupManager(
 }
 
 const CONFLICT_CODES = new Set([
+  // #3019: the word filter (0259) refused a cup or team name.
+  'blocked_word',
   'wrong_status',
   'no_pending_matches',
   'not_withdrawn',

@@ -13,6 +13,7 @@ import {
 import { getCupCandidatePlayers } from './getCupCandidatePlayers';
 import type { CupDraftValues } from './parseCupDraftForm';
 import type { CupPlanValues } from './planValidation';
+import { textGuardError } from '@/lib/moderation/textGuardError';
 
 /**
  * Oppsettet av en cup, delt av nettets handlinger og appens ruter (#2752). Kjernene
@@ -27,7 +28,10 @@ export function revalidateCupSetup(id: string, groupId: string | null): void {
   if (groupId) revalidatePath(`/klubber/${groupId}/cup/${id}`);
 }
 
-export type CreateDraftResult = { ok: true; id: string } | { ok: false; error: 'cup_insert_failed' };
+export type CreateDraftResult =
+  | { ok: true; id: string }
+  // #3019: 'blocked_word' when the word filter (0259) refuses the cup or a team name.
+  | { ok: false; error: 'cup_insert_failed' | 'blocked_word' };
 
 /**
  * Selve skrivingen av et utkast. `writer` er kallerens egen klient: RLS er backstop
@@ -61,6 +65,7 @@ export async function createTournamentDraftCore(
     .single();
 
   if (error || !data) {
+    if (textGuardError(error) === 'blocked_word') return { ok: false, error: 'blocked_word' };
     console.error('[cup] createTournamentDraft failed', { error });
     return { ok: false, error: 'cup_insert_failed' };
   }
