@@ -26,8 +26,8 @@
 --   16. B reads A's acceptance                            0 rows
 --   word filter
 --   17. «Fitjar Golfklubb» passes, «Kuk» does not
---   18. a signed-in user cannot ask is_blocked_between (0260)    FORBIDDEN
---   19. nor is_invite_eligible, which asks it (0261)              FORBIDDEN
+--   18. a signed-in user cannot ask is_blocked_between           FORBIDDEN
+--   19. nor is_invite_eligible, which asks it                    FORBIDDEN
 -- ─────────────────────────────────────────────────────────────────────────────
 
 begin;

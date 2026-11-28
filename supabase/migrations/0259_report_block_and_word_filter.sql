@@ -13,6 +13,9 @@
 --      and nickname, 120 for round, course and tee names; prod's longest on
 --      28.11.2026: 26, 12, 35, 32 and 21 characters)
 --   7. anonymize_user removes the new personal rows
+--   8. is_blocked_between and is_invite_eligible answer only the database
+--      itself and the service role (first written as 0260 and 0261, merged
+--      here before prod)
 --
 -- The block is symmetric where it matters: neither of the two can add the
 -- other, and no friendship can exist between them. Who blocked whom is only
@@ -823,3 +826,31 @@ as $function$
     delete from public.invitations where invited_by = p_user_id;
   end;
 $function$;
+
+-- ── 8. The block stays private ─────────────────────────────────────────────
+
+-- First written as 0260 and 0261 and applied to staging as two migrations of
+-- their own (20261128145204 is_blocked_between_private, 20261128150721
+-- is_invite_eligible_private); merged here before prod so the owner approves
+-- one file. The end state is the same: execute for the service role (and the
+-- owner) only. Revoking from public and anon too is a no-op where they hold
+-- nothing, and closes the door where an older grant left one.
+
+-- is_blocked_between(a, b) answered any signed-in user for any two ids (the
+-- grant in section 1). That let a blocked person find out, and a third person
+-- see who blocked whom. No RLS policy calls it, and every function that does
+-- is SECURITY DEFINER (guard_friendships_block, friend_request_by_email,
+-- is_invite_eligible, guard_game_players_invite_eligibility,
+-- guard_tournament_participants_block), so they keep working. The service
+-- role keeps it for the web's server code.
+revoke execute on function public.is_blocked_between(uuid, uuid) from public, anon, authenticated;
+grant execute on function public.is_blocked_between(uuid, uuid) to service_role;
+
+-- is_invite_eligible(creator, recipient, group) asks is_blocked_between since
+-- section 3, and any signed-in user could call it with any two ids (granted in
+-- 0115). A third person who had played with both could then see a block
+-- appear as a change from true to false. No client calls it; its callers,
+-- roster_candidates (0181) and guard_game_players_invite_eligibility, are
+-- SECURITY DEFINER.
+revoke execute on function public.is_invite_eligible(uuid, uuid, uuid) from public, anon, authenticated;
+grant execute on function public.is_invite_eligible(uuid, uuid, uuid) to service_role;
