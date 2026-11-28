@@ -38,6 +38,7 @@ It's invite-only: players sign in with a one-time code by mail, with no open sig
 - A fixture list for finding a round. "Finn turneringer" shows every round you can join in one list, split by day, with filters for this weekend and your club; a round with a player cap shows how many places are left, and a full one says so instead of offering a button. Under the clock a round with a tee-off says whether it starts from the first tee or as a shotgun (the organiser ticks it when setting the round up), and a nine-hole round says «9 hull».
 - Open tournaments you can browse before you sign in. Reach Tørny without an account and "Finn turneringer" lists the open rounds anyone can join; tap one to see the details, then log in when you want to sign up. It shows the round itself, never player names or personal details.
 - Installable on your home screen. It opens like a native app, with no browser bar on top.
+- Report and block. Report a player or a round from the app, or block someone so they can't add you to rounds or send you a friend request; an admin hears about every report by mail and looks at it within 24 hours. Names, round names and prizes go through a word filter, and new players accept short terms once before their first round.
 - GDPR self-service. «Dine data» under your profile says what Tørny stores and who can see it, and lets you download or delete your data without emailing anyone, on the website and in the app.
 
 ## Formats
