@@ -21,6 +21,7 @@ import { notifyInvitedToTeam } from '@/lib/notifications/notifyInvitedToTeam';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { effectiveRegistrationCap } from '@/lib/wizard/fitsPlayerCount';
+import { textGuardError } from '@/lib/moderation/textGuardError';
 
 /**
  * Team registration (#199 chunks 8+9), shared by the web actions in
@@ -80,6 +81,8 @@ export type TeamRegistrationError =
   | 'already_registered'
   | 'rate_limited'
   | 'game_full'
+  /** #3019: the word filter (0259) refused the team name. */
+  | 'blocked_word'
   | 'db_error';
 
 export type TeamRegistrationResult =
@@ -281,6 +284,9 @@ export async function submitTeamRegistrationCore(
   if (captainError) {
     if (isDuplicateError(captainError)) {
       return { ok: false, error: 'already_registered' };
+    }
+    if (textGuardError(captainError) === 'blocked_word') {
+      return { ok: false, error: 'blocked_word' };
     }
     console.error('[submitTeamRegistration] captain insert failed', captainError);
     return { ok: false, error: 'db_error' };

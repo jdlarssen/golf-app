@@ -55,5 +55,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry('/finn-turneringer'),
     entry('/legal/privacy'),
     entry('/legal/slett-konto'),
+    entry('/legal/vilkar'),
   ];
 }

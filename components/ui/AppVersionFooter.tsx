@@ -1,10 +1,12 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { CONTACT_EMAIL, TERMS_PATH } from '@/lib/legal/terms';
 
 export function AppVersionFooter() {
   const t = useTranslations('legal.privacy');
   const tCommon = useTranslations('common');
+  const tTerms = useTranslations('legal.terms');
   const version = process.env.NEXT_PUBLIC_APP_VERSION;
   const sha = process.env.NEXT_PUBLIC_APP_SHA;
   if (!version) return null;
@@ -26,6 +28,18 @@ export function AppVersionFooter() {
         className="underline underline-offset-2 hover:text-text transition-colors"
       >
         {t('kicker')}
+      </a>
+      {/* #3019: the terms and a way to reach Tørny (Apple guideline 1.2). */}
+      {' · '}
+      <a href={TERMS_PATH} className="underline underline-offset-2 hover:text-text transition-colors">
+        {tTerms('footerLink')}
+      </a>
+      {' · '}
+      <a
+        href={`mailto:${CONTACT_EMAIL}`}
+        className="underline underline-offset-2 hover:text-text transition-colors"
+      >
+        {tTerms('contactLink')}
       </a>
     </p>
   );

@@ -19,6 +19,9 @@ export const COURSE_FORM_ERROR_CODES = [
   'tee_partial_rating',
   'tee_no_rating',
   'hole_count_locked',
+  // #3019: the word filter or the 120-character cap on a course or tee name.
+  'blocked_word',
+  'text_too_long',
   'db_course',
   'db_load',
 ] as const;

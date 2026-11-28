@@ -6,6 +6,7 @@ import { expectOne } from '@/lib/supabase/affectedRows';
 import { parseProfileInput } from '@/lib/users/profileInput';
 import { recomputeCourseHandicapForUser } from '@/lib/games/recomputeCourseHandicap';
 import { safeInternalPath } from '@/lib/url/safeInternalPath';
+import { textGuardError } from '@/lib/moderation/textGuardError';
 
 export async function completeProfile(formData: FormData) {
   const name = String(formData.get('name') ?? '').trim();
@@ -81,8 +82,10 @@ export async function completeProfile(formData: FormData) {
       'completeProfile',
     );
   } catch (err) {
-    console.error('[completeProfile] profile write failed', err);
-    fail('unknown');
+    // #3019: the word filter or the 60-character cap (0259) said no.
+    const guard = textGuardError(err);
+    if (!guard) console.error('[completeProfile] profile write failed', err);
+    fail(guard ?? 'unknown');
   }
 
   // #1176: the soft profile gate lets an invitee reach a game before their HCP

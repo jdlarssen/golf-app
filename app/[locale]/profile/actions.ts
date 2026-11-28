@@ -9,6 +9,7 @@ import { safeInternalPath } from '@/lib/url/safeInternalPath';
 import { parseProfileInput, type ProfileInputError } from '@/lib/users/profileInput';
 import { recomputeCourseHandicapForUser } from '@/lib/games/recomputeCourseHandicap';
 import { expectAffected, expectOne } from '@/lib/supabase/affectedRows';
+import { textGuardError, type TextGuardError } from '@/lib/moderation/textGuardError';
 
 /**
  * What the profile form gets back when a save is refused: the code for the
@@ -16,7 +17,7 @@ import { expectAffected, expectOne } from '@/lib/supabase/affectedRows';
  * redirected to `?error=` and the form refilled from the stored row.
  */
 export type ProfileFormState = { error: ProfileSaveError | null };
-type ProfileSaveError = ProfileInputError | 'unknown';
+type ProfileSaveError = ProfileInputError | TextGuardError | 'unknown';
 
 export async function updateProfile(
   _prev: ProfileFormState,
@@ -106,6 +107,9 @@ export async function updateProfile(
     // Catches both DB errors (Error) and silent 0-row writes (NoRowsAffectedError)
     // — trap #2 from AGENTS.md. The form shows the message rather than a raw 500.
     if (err instanceof Error) {
+      // #3019: the word filter or the 60-character cap (0259) said no.
+      const guard = textGuardError(err);
+      if (guard) return { error: guard };
       console.error('[updateProfile] save failed', err);
       return { error: 'unknown' };
     }

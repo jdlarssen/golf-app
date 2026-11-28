@@ -27,6 +27,8 @@ type SearchParams = Promise<{
 const KNOWN_ERROR_CODES = new Set([
   'name_required',
   'hcp_invalid',
+  'blocked_word',
+  'text_too_long',
   'unknown',
 ] as const);
 

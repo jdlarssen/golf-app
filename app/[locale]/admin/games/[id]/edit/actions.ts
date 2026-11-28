@@ -50,6 +50,7 @@ import { parseInviteEmailList } from '@/lib/games/inviteEmail';
 import { sendPublishInvites } from '@/lib/games/sendPublishInvites';
 import { sendHeldGameInvites } from '@/lib/games/sendHeldGameInvites';
 import type { Tables } from '@/lib/database.types';
+import { textGuardError } from '@/lib/moderation/textGuardError';
 
 type UpdateMode = 'save_draft' | 'publish' | 'update_scheduled';
 
@@ -465,6 +466,10 @@ async function updateGameInternal(
   // failure. Now a lock miss is a clean 0-row result and keeps the
   // not_editable bounce; a genuine failure throws to the error boundary.
   if (updateError) {
+    // #3019: the word filter or the 120-character cap (0259) is the
+    // organiser's to fix, so it goes back to the form with its message.
+    const guard = textGuardError(updateError);
+    if (guard) redirect({ href: editHref({ error: guard }), locale });
     console.error('[updateGame] game update failed', {
       gameId,
       error: updateError,

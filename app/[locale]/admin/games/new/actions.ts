@@ -27,6 +27,7 @@ import { guestOnlyRoster } from '@/lib/games/guestOnlyRoster';
 import { stampNewGameModeConfig } from '@/lib/games/modeConfigEdit';
 import { parseInviteEmailList } from '@/lib/games/inviteEmail';
 import { sendPublishInvites } from '@/lib/games/sendPublishInvites';
+import { textGuardError, type TextGuardError } from '@/lib/moderation/textGuardError';
 // Course handicap is no longer frozen at create-time: the new flow has the
 // admin press "Start runden nå" (D5) to flip 'scheduled' → 'active' and
 // freeze handicaps then. Until D5 lands, scheduled rows persist with
@@ -47,7 +48,9 @@ export type CreateGameErrorCode =
   | 'bad_side_ld_holes'
   | 'bad_side_ctp_holes'
   | 'db_game'
-  | 'db_players';
+  | 'db_players'
+  // #3019: the word filter or the 120-character cap on the name (0259).
+  | TextGuardError;
 
 /**
  * #1379: feil RETURNERES i stedet for å redirecte. Veiviseren holder all
@@ -312,6 +315,8 @@ async function createGameInternal(
     .single();
 
   if (gameError || !game) {
+    const guard = textGuardError(gameError);
+    if (guard) return { error: guard };
     console.error('[createGameInternal] game insert failed', gameError);
     return { error: 'db_game' };
   }

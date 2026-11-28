@@ -320,3 +320,12 @@ export const getActiveRoundsDelivery = cache(
     return { games, players };
   },
 );
+
+/**
+ * #3019: whole hours from `iso` to `now`, never below 0 — «Den eldste kom for
+ * n timer siden» under «Trenger deg». A clock a little behind the database
+ * gives 0, not a negative age.
+ */
+export function wholeHoursSince(iso: string, now: Date): number {
+  return Math.max(0, Math.floor((now.getTime() - new Date(iso).getTime()) / 3_600_000));
+}

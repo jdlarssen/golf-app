@@ -21,6 +21,7 @@ import { getRoomCups } from '@/lib/cup/getRoomCups';
 //   POST { name, team1Name, team2Name, winPoints, tiePoints } (`CupSetupCreateBody`)
 //        200 { id } · 400 invalid_request · 401 unauthorized
 //        409 cup_name | cup_team_1 | cup_team_2 | cup_team_dup | cup_win_points | cup_tie_points
+//            | blocked_word (#3019, the word filter in 0259)
 //        500 cup_insert_failed
 //
 // POST lager en personlig cup: klubb-cuper lages på nettet (eierens svar). Skapt av

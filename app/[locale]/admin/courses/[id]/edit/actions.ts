@@ -15,6 +15,7 @@ import {
   refuseCourseForm,
   type CourseFormState,
 } from '@/lib/courses/courseFormState';
+import { textGuardError } from '@/lib/moderation/textGuardError';
 
 /**
  * A refused save comes back as `{ error }` so the form keeps the edits
@@ -108,6 +109,8 @@ export async function updateCourse(
     if (rpcError.message?.includes('nine_holes_locked')) {
       return { error: 'hole_count_locked' };
     }
+    const guard = textGuardError(rpcError);
+    if (guard) return { error: guard };
     console.error('[updateCourse] update_course_with_layout failed', rpcError);
     return { error: 'db_course' };
   }

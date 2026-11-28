@@ -12,6 +12,7 @@ import {
   type CourseFormState,
 } from '@/lib/courses/courseFormState';
 import { safeInternalPath } from '@/lib/url/safeInternalPath';
+import { textGuardError } from '@/lib/moderation/textGuardError';
 
 // Open-redirect-guard: success_redirect er klient-kontrollert
 // FormData (CourseForm sender dem som skjulte inputs), så de går gjennom den
@@ -86,6 +87,8 @@ export async function createCourse(
     { p_name: name, p_holes: holes, p_tees: teeBoxes, p_nine_holes: nineHoles },
   );
   if (rpcError || !courseId) {
+    const guard = textGuardError(rpcError);
+    if (guard) return { error: guard };
     console.error('[createCourse] create_course_with_layout failed', rpcError);
     return { error: 'db_course' };
   }
