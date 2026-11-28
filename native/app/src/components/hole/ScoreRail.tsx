@@ -34,7 +34,7 @@ import { MAX_PUTTS, MIN_PUTTS } from '../../../../../lib/scorecard/puttEntry';
 import { scoreTone, type ScoreTone } from '../../../../../lib/scoring/scoreTone';
 import { scoreToneColor } from '../../lib/scoreToneColor';
 import { SHORT_LABELS, termText } from '../../lib/strokeTermText';
-import { FONTS, fraunces, sheetShadowColor, TAP, useTheme, type ThemeColors } from '../../theme';
+import { FONTS, fraunces, sheetShadowColor, TAP, useTheme, withAlpha, type ThemeColors } from '../../theme';
 import { HOLE_TEXT_CAP } from './holeTextCap';
 
 /** Ett tall på skinna, med resultatet regnet ut av kalleren. */
@@ -199,7 +199,7 @@ function Countdown({
         {`Går til hull ${countdown.hole} …`}
       </Text>
       <View
-        style={[styles.countdownTrack, { backgroundColor: colors.border }]}
+        style={[styles.countdownTrack, { backgroundColor: withAlpha(colors.text, 0.15) }]}
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >

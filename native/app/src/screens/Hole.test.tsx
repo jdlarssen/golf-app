@@ -1095,6 +1095,16 @@ describe('Hole', () => {
       strokes: 5,
       enteredBy: 'me',
     });
+    // Rettingen er ført, og skinna står uten aktivt sete igjen. Trykket på
+    // navnet virket som «Bli her», så varselet kommer ikke tilbake og siden
+    // hopper ikke etterpå (skisse A: «Et trykk på et navn virker som «Bli her»»).
+    mockState.scores = [
+      localScore('mate', 5, null, 2),
+      localScore('me', 4, null, 2),
+    ];
+    await wait(2800);
+    expect(screen.queryByTestId('score-rail-countdown-text')).toBeNull();
+    expect(navigation.setParams).not.toHaveBeenCalled();
   }, 10000);
 
   it('sollys med putter på: skinna venter ikke på putter (sollys har ingen putt-rad), og varselet starter', async () => {
@@ -1141,6 +1151,20 @@ describe('Hole', () => {
     expect((writeScore as jest.Mock).mock.calls[0][0]).not.toHaveProperty('putts');
   }, 10000);
 
+  it('et hull som ble ferdig i vanlig modus, hopper ikke når sollys slås på etterpå', async () => {
+    mockState.scores = [localScore('mate', 4, null, 2)];
+    const navigation = await renderHole(2);
+    await waitFor(() => {
+      expect(screen.getByTestId('rail-option-4')).toBeTruthy();
+    });
+    mockState.scores = [localScore('mate', 4, null, 2), localScore('me', 4, null, 2)];
+    await fireEvent.press(screen.getByTestId('rail-option-4'));
+    await act(async () => setSunlight(true));
+    await wait(2800);
+    expect(screen.queryByTestId('score-rail-countdown-text')).toBeNull();
+    expect(navigation.setParams).not.toHaveBeenCalled();
+  }, 10000);
+
   it('sollys med skjermleser på: siden hopper ikke, og «Neste hull» står', async () => {
     // Spionen på RN sin egen jest-mock: `mockRestore` ville tømt den for
     // implementasjon og knekt alle testene etter, så svaret settes tilbake.
@@ -1185,7 +1209,9 @@ describe('Hole', () => {
       await waitFor(() => {
         expect(screen.getByTestId('flight-row-me-score')).toHaveTextContent('4');
       });
-      await act(async () => new Promise((resolve) => setTimeout(resolve, 1200)));
+      // Lenger enn varselet og hoppet (2000 ms), ellers sjekker testen ingenting.
+      await act(async () => new Promise((resolve) => setTimeout(resolve, 2800)));
+      expect(screen.queryByTestId('score-rail-countdown-text')).toBeNull();
       expect(navigation.setParams).not.toHaveBeenCalled();
     } finally {
       listScoresForGame.mockImplementation(async () => mockState.scores);
@@ -1201,9 +1227,11 @@ describe('Hole', () => {
     });
     mockState.scores = [localScore('mate', 4, null, 18), localScore('me', 4, null, 18)];
     await fireEvent.press(screen.getByTestId('rail-option-4'));
-    await act(async () => new Promise((resolve) => setTimeout(resolve, 1200)));
+    // Lenger enn varselet og hoppet (2000 ms), ellers sjekker testen ingenting.
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 2800)));
+    expect(screen.queryByTestId('score-rail-countdown-text')).toBeNull();
     expect(navigation.setParams).not.toHaveBeenCalled();
-  });
+  }, 10000);
 
   // #2735 (eierens svar, snur #2635): mens slagene føres, viser hullsiden bare
   // brutto, også i stableford. Ingen poeng på knappene, radene eller «Stryk».

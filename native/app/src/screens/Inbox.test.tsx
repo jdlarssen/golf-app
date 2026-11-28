@@ -209,11 +209,13 @@ describe('tavla', () => {
     // #2930: `flexGrow: 0` ligger på den ytre viewen rundt rullefeltet (EdgeFadeScrollView).
     const strip = screen.getByTestId('inbox-filters');
     expect(strip).toHaveProp('horizontal', true);
+    // Selve rullefeltet vokser ikke fordi stilen ligger på viewen rundt det.
     let frame = strip.parent;
-    while (frame && !JSON.stringify(frame.props.style ?? null).includes('"flexGrow":0')) {
+    for (let up = 0; up < 3 && frame; up++) {
+      if (JSON.stringify(frame.props.style ?? null).includes('"flexGrow":0')) break;
       frame = frame.parent;
     }
-    expect(frame).toBeTruthy();
+    expect(JSON.stringify(frame?.props.style ?? null)).toContain('"flexGrow":0');
   });
 
   // #2930: med stor tekst i telefonens innstillinger er tre brikker bredere enn

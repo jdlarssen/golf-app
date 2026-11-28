@@ -925,7 +925,9 @@ function HoleView({
   const [jumpArmed, setJumpArmed] = useState(false);
   if (scoresLoaded && scoredBefore !== everyoneScored) {
     setScoredBefore(everyoneScored);
-    if (scoredBefore !== null) setJumpArmed(everyoneScored);
+    // Bare i sollys (#2929): et hull som blir ferdig i vanlig modus, skal ikke
+    // hoppe når sollys slås på etterpå.
+    if (scoredBefore !== null) setJumpArmed(everyoneScored && sunlight);
   }
   const [stayHere, setStayHere] = useState(false);
   const [screenReader, setScreenReader] = useState<boolean | null>(null);
@@ -1136,7 +1138,12 @@ function HoleView({
                 locked={seat.locked}
                 submitted={seat.submitted}
                 note={seat.note}
-                onSelect={rail.selectRow}
+                onSelect={(seatId) => {
+                  // Et trykk på et navn mens varselet står, virker som «Bli her»:
+                  // rettingen lander på hullet du ser, og siden hopper ikke etterpå.
+                  if (countdownOn) setStayHere(true);
+                  rail.selectRow(seatId);
+                }}
               />
             ))}
           </View>
