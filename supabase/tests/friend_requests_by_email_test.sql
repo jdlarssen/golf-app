@@ -217,7 +217,7 @@ select is(
     where addressee_id = torny_rls.outsider_id()),
   array['pending:false'],
   '28: the sender now reads the request');
--- 0261 (#3019): only the service role may ask is_invite_eligible directly.
+-- 0259 (#3019): only the service role may ask is_invite_eligible directly.
 select torny_rls.as_service();
 select ok(not public.is_invite_eligible(torny_rls.active_id(), torny_rls.outsider_id(), null),
   '29: a request the sender reads is still not invite-eligible');
