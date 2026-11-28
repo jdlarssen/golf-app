@@ -11,8 +11,15 @@
 import type { ParsedCourseForm } from '../../../../lib/courses/parseCourseForm';
 import { supabase } from '../supabase';
 import { isNetworkFailureMessage } from './timedFetch';
+import { textGuardError, type TextGuardError } from '../../../../lib/moderation/textGuardError';
 
-export type CreateCourseFailure = 'network' | 'not_authenticated' | 'db' | 'no_row';
+export type CreateCourseFailure =
+  | 'network'
+  | 'not_authenticated'
+  | 'db'
+  | 'no_row'
+  /** #3019: ordfilteret eller lengdetaket (0259) avviste banenavnet eller et teenavn. */
+  | TextGuardError;
 
 export type CreateCourseResult =
   | { ok: true; courseId: string }
@@ -32,6 +39,8 @@ export async function createCourse(parsed: ParsedCourseForm): Promise<CreateCour
   });
   if (error) {
     if (isNetworkFailureMessage(error.message)) return { ok: false, code: 'network' };
+    const guard = textGuardError(error);
+    if (guard) return { ok: false, code: guard };
     console.error('[createCourse] create_course_with_layout feilet', error);
     return {
       ok: false,

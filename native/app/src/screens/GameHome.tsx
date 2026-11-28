@@ -121,6 +121,9 @@ import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData
 import { useScoreCatchUp } from '../lib/useScoreCatchUp';
 import { KEYBOARD_SCROLL_PROPS, useBottomInsetUnlessKeyboard } from '../components/KeyboardInset';
 import type { ScreenProps } from '../navigation';
+import { ModerationLink } from '../components/moderation/ModerationLink';
+import { ReportOrBlockSheet } from '../components/moderation/ReportOrBlockSheet';
+import { MODERATION_TEXT } from '../lib/moderationCopy';
 import { useSession } from '../session';
 import { FONTS, useTheme } from '../theme';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
@@ -130,6 +133,8 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const bottomInset = useBottomInsetUnlessKeyboard();
   const { gameId } = route.params;
   const { userId } = useSession();
+  // #3019 (tegning 9 og 10): «Rapporter eller blokker» under reglene.
+  const [moderating, setModerating] = useState(false);
   // #2201: det du åpner, er lest.
   useMarkVisitRead('gameHome', gameId);
   const { bundle, errorText, notFound, loading, refresh } = useGameBundle(gameId);
@@ -611,6 +616,29 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
         }}
       />
 
+      <View style={styles.moderationSlot}>
+        <ModerationLink
+          label={MODERATION_TEXT.entryGame}
+          onPress={() => setModerating(true)}
+          testID="game-home-moderation"
+        />
+      </View>
+      {moderating ? (
+        <ReportOrBlockSheet
+          subject={{
+            kind: 'round',
+            target: { kind: 'game', gameId },
+            roundName: game.name,
+            // Spillerne du kan si fra om: ikke deg selv, og ikke gjester, som
+            // ikke har egen konto.
+            players: bundle.players
+              .filter((p) => p.userId !== userId && !p.isGuest)
+              .map((p) => ({ userId: p.userId, name: displayName(p) })),
+          }}
+          onClose={() => setModerating(false)}
+        />
+      ) : null}
+
       {withdrawKind ? (
         <PlayerWithdraw
           gameId={gameId}
@@ -746,6 +774,8 @@ export function RosterRow({
 }
 
 const styles = StyleSheet.create({
+  // #3019 (tegning 9): 12 under reglene.
+  moderationSlot: { marginTop: 12 },
   headerButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   /**
    * Designets marger: 16 pt fra kantene, og billetten 8 pt under toppen. Den

@@ -153,6 +153,11 @@ export function describeHandicapSaveFailure(reason: ProfileSaveFailure): string 
       return HANDICAP_TEXT.needsNetwork;
     case 'unauthorized':
       return describeProfileSaveFailure('unauthorized');
+    // #3019: arket sender navnet som står; ordfilteret slår bare til når navnet
+    // endres, men skjer det, er profilens setning den som peker riktig.
+    case 'blocked_word':
+    case 'text_too_long':
+      return describeProfileSaveFailure(reason);
     case 'no-web-base-url':
     case 'name_required':
     case 'hcp_invalid':

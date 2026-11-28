@@ -62,6 +62,9 @@ import {
   roundWhenLine,
 } from '../lib/roundInviteCopy';
 import type { ScreenProps } from '../navigation';
+import { ModerationLink } from '../components/moderation/ModerationLink';
+import { ReportOrBlockSheet } from '../components/moderation/ReportOrBlockSheet';
+import { MODERATION_TEXT } from '../lib/moderationCopy';
 import { FONTS, fraunces, interLine, useTheme, withAlpha } from '../theme';
 
 /**
@@ -74,6 +77,9 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
   const { colors, ui } = useTheme();
   const bottomInset = useBottomInsetUnlessKeyboard();
   const { shortId, src } = route.params;
+  // #3019 (tegning 7 og 8): «Rapporter runden» under kortet. Påmeldingen viser
+  // ikke hvem som arrangerer, så arket har ingen blokkering her.
+  const [reporting, setReporting] = useState(false);
   const [view, setView] = useState<AppRoundInviteView | null>(null);
   const [failure, setFailure] = useState<RoundInviteLoadFailure | null>(null);
   const [loading, setLoading] = useState(false);
@@ -258,6 +264,24 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
   const errorText = error === null ? null : describeRoundInviteFailure(error);
   const retryable = error === 'network' || error === 'offline' || error === 'db_error';
 
+  const reportRound = (
+    <>
+      <View style={styles.reportSlot}>
+        <ModerationLink
+          label={MODERATION_TEXT.entryRound}
+          onPress={() => setReporting(true)}
+          testID="round-invite-report"
+        />
+      </View>
+      {reporting ? (
+        <ReportOrBlockSheet
+          subject={{ kind: 'round', target: { kind: 'gameShortId', shortId }, roundName: round.name, players: [] }}
+          onClose={() => setReporting(false)}
+        />
+      ) : null}
+    </>
+  );
+
   const head = (
     <View style={styles.head}>
       <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header" testID="round-invite-name">
@@ -343,6 +367,7 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
             </Text>
           ) : null}
         </View>
+        {reportRound}
       </ScrollView>
     );
   }
@@ -409,6 +434,7 @@ export function RoundInvite({ navigation, route }: ScreenProps<'RoundInvite'>) {
       </View>
       {/* #2840 del 3: «Laget ditt», når du er kaptein eller medspiller på et lag her. */}
       {view.hasTeamPage ? <TeamLink shortId={shortId} onOpen={openTeam} /> : null}
+      {reportRound}
     </ScrollView>
   );
 }
@@ -463,6 +489,8 @@ function Facts({ view, color }: { view: AppRoundInviteView; color: string }) {
 // Målene er «Bli med i liga»: 6 under toppen og 20 fra kanten, kortene 16 fra kanten
 // og 16 inni, knappen 52 pt høy.
 const styles = StyleSheet.create({
+  // #3019 (tegning 7): 16 under kortet, 16 på sidene.
+  reportSlot: { marginTop: 16, marginHorizontal: 16 },
   scroll: { flexGrow: 1 },
   head: { paddingTop: 6, paddingHorizontal: 20 },
   title: { ...fraunces(500, 28, 34, { multiline: true }) },

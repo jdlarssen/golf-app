@@ -311,6 +311,22 @@ export const BetaltHakeIcon = ({ size = 18, strokeWidth = 2.2, ...props }: IconP
   </LineIcon>
 );
 
+/** #3019: «Rapporter» i arket (tegning 2), et flagg på stang, strek 1,8. */
+export const RapportIcon = ({ size = 20, strokeWidth = 1.8, ...props }: IconProps) => (
+  <LineIcon size={size} strokeWidth={strokeWidth} {...props}>
+    <Path d="M5 21V4" />
+    <Path d="M5 4h11l-2 4 2 4H5" />
+  </LineIcon>
+);
+
+/** #3019: «Blokker» i arket (tegning 2), en ring med skråstrek, strek 1,8. */
+export const BlokkerIcon = ({ size = 20, strokeWidth = 1.8, ...props }: IconProps) => (
+  <LineIcon size={size} strokeWidth={strokeWidth} {...props}>
+    <Circle cx="12" cy="12" r="8.5" />
+    <Path d="M6 6l12 12" />
+  </LineIcon>
+);
+
 /** #2749: pila ut av appen på «Betal her» (`Venterom-forslag-kort`), strek 2. */
 export const PilUtIcon = ({ size = 16, strokeWidth = 2, ...props }: IconProps) => (
   <LineIcon size={size} strokeWidth={strokeWidth} {...props}>

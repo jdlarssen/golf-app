@@ -81,6 +81,9 @@ const SAVE_FAILURE_MAP = {
   // Ruta svarer `update_failed`; webbens copy-nøkkel for samme utfall heter
   // `unknown`. Kartet står her, ikke i datalaget.
   update_failed: 'unknown',
+  // #3019: ordfilteret og lengdetaket (0259).
+  blocked_word: 'blocked_word',
+  text_too_long: 'text_too_long',
 } as const satisfies Record<ProfileSaveFailure, WebErrorKey | null>;
 
 const SAVE_FAILURES = Object.keys(SAVE_FAILURE_MAP) as readonly ProfileSaveFailure[];
@@ -93,12 +96,7 @@ const MIRRORED_SAVE_FAILURES = Object.entries(SAVE_FAILURE_MAP).filter(
 );
 
 /** Nøkler under `profile.errors` appen med vilje IKKE viser. Ingen i dag. */
-const WEB_ONLY_ERRORS: Partial<Record<WebErrorKey, string>> = {
-  // #3019 PR A: ordfilteret og lengdetaket i databasen (0259). Appens tekst for
-  // dem kommer i PR B, som flytter dem over i appens kart.
-  blocked_word: '#3019 PR B gir appen ordfilter-teksten',
-  text_too_long: '#3019 PR B gir appen teksten for lengdetaket',
-};
+const WEB_ONLY_ERRORS: Partial<Record<WebErrorKey, string>> = {};
 
 describe('PROFILE_TEXT', () => {
   it.each(Object.entries(PROFILE_TEXT))('«%s» er en ferdig tekst', (_key, text) => {

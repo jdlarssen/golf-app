@@ -21,6 +21,7 @@
 import { supabase } from '../supabase';
 import { callWebRoute, type WebApiFailure } from './webApi';
 import type { ProfileInputError } from '../../../../lib/users/profileInput';
+import type { TextGuardError } from '../../../../lib/moderation/textGuardError';
 
 /**
  * Feltene profil-rommet viser. Alle er nullbare her, også de kolonnene som er
@@ -143,6 +144,8 @@ export type ProfileSaveFailure =
   // uten at noen test ble rød. `import type` slettes av Babel, så parseren
   // følger aldri med inn i bundelen.
   | ProfileInputError
+  // #3019: ordfilteret og lengdetaket i databasen (0259); ruta svarer 400 med koden.
+  | TextGuardError
   | 'update_failed';
 
 /**
@@ -181,19 +184,21 @@ export type ProfileSaveResult =
  * som setning på skjermen. Kalleren oversetter derfor `undefined` til sin egen
  * «dette gikk ikke»-kode. Samme vakt som `readBlockReason` i `account.ts`.
  */
-const VALIDATION_ERRORS: Record<ProfileInputError, true> = {
+const VALIDATION_ERRORS: Record<ProfileInputError | TextGuardError, true> = {
   name_required: true,
   hcp_invalid: true,
   gender_required: true,
   level_invalid: true,
+  blocked_word: true,
+  text_too_long: true,
 };
 
-function readValidationError(value: unknown): ProfileInputError | undefined {
+function readValidationError(value: unknown): ProfileInputError | TextGuardError | undefined {
   // `Record<ProfileInputError, true>` er porten: får parseren en femte kode og
   // ingen legger den til her, faller `tsc` på den manglende nøkkelen i stedet
   // for at koden stille blir til «Noe gikk galt».
   return typeof value === 'string' && Object.hasOwn(VALIDATION_ERRORS, value)
-    ? (value as ProfileInputError)
+    ? (value as ProfileInputError | TextGuardError)
     : undefined;
 }
 

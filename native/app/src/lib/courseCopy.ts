@@ -12,6 +12,7 @@ import { TEE_BOUNDS } from '../../../../lib/courses/coursePayload';
 import { addAnywayName } from '../../../../lib/courses/similarCoursesPanel';
 import type { CourseDraftProblem } from './courseDraft';
 import { formatNameList } from './display';
+import type { CreateCourseFailure } from '../data/createCourse';
 
 export const COURSE_TEXT = {
   newCourseLink: 'Finner du ikke banen? Legg den inn',
@@ -117,7 +118,14 @@ export function describeMissingCount(count: number): string {
   return `Mangler ${count} indekser. Hvert tall fra 1 til 18 brukes én gang.`;
 }
 
-export function describeCourseSaveFailure(code: 'network' | 'not_authenticated' | 'db' | 'no_row'): string {
+export function describeCourseSaveFailure(code: CreateCourseFailure): string {
+  // = courseForm.errors.blocked_word / text_too_long (#3019, 0259)
+  if (code === 'blocked_word') {
+    return 'Banenavnet eller et teenavn har et ord som ikke er lov i Tørny. Velg et annet.';
+  }
+  if (code === 'text_too_long') {
+    return 'Banenavnet eller et teenavn er for langt. Bruk høyst 120 tegn.';
+  }
   return code === 'network' ? COURSE_TEXT.saveOffline : COURSE_TEXT.saveFailed;
 }
 

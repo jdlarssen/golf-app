@@ -45,6 +45,7 @@ const VARIANT_BY_ROUTE = {
   EditProfile: 'default',
   DeleteAccount: 'default',
   AccountSettings: 'default',
+  BlockedUsers: 'default',
   NotificationsAndTheme: 'default',
   Toppliste: 'default',
   Aeresliste: 'default',

@@ -77,6 +77,11 @@ export function describeCreateGameFailure(error: CreateGameFailure): string {
       return 'Nærmest pinnen må spilles på et hull fra 1 til 18, og ikke på samme hull to ganger.';
     case 'db_game':
       return 'Klarte ikke å lagre spillet. Prøv igjen om litt.';
+    // = wizard.errors.blocked_word / text_too_long (#3019, 0259)
+    case 'blocked_word':
+      return 'Rundenavnet eller en premie har et ord som ikke er lov i Tørny. Velg et annet.';
+    case 'text_too_long':
+      return 'Rundenavnet er for langt. Bruk høyst 120 tegn.';
     case 'db_players':
       return 'Klarte ikke å lagre spillerne. Prøv igjen om litt.';
 

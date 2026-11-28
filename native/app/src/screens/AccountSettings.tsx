@@ -29,6 +29,7 @@ import {
   AccessibilityInfo,
   Alert,
   AppState,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -63,6 +64,10 @@ import {
 import { isStagingBuild } from '../lib/stagingGate';
 import { PRIVACY_PATH, describeWebLinkFailure, openWeb } from '../lib/webLink';
 import type { ScreenProps } from '../navigation';
+import { useFocusEffect } from '@react-navigation/native';
+import { listBlocks } from '../data/blocks';
+import { MODERATION_TEXT, blockedCountLabel } from '../lib/moderationCopy';
+import { CONTACT_EMAIL } from '../../../../lib/legal/terms';
 import { useSession } from '../session';
 import { FONTS, interLine, useTheme } from '../theme';
 
@@ -78,6 +83,29 @@ export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) 
   // «du er fortsatt logget inn» (sesjonen overlevde, `signout-failed`) eller
   // den generelle når kallet kastet. To ulike årsaker, to ulike setninger.
   const [logoutNote, setLogoutNote] = useState<string | null>(null);
+
+  // #3019 (tegning 11): «Blokkerte» viser hvor mange, lest hver gang skjermen
+  // får fokus (lista kan ha endret seg). Feiler lesingen, står raden uten tall.
+  const [blockedCount, setBlockedCount] = useState<number | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      void listBlocks().then((result) => {
+        if (!cancelled) setBlockedCount(result.ok ? result.blocks.length : null);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
+
+  // #3019 (tegning 11): «Kontakt oss» åpner e-postappen. Åpner den ikke, står
+  // adressen i linja under, så spilleren kan skrive selv.
+  const [contactNote, setContactNote] = useState<string | null>(null);
+  const onContact = useCallback(() => {
+    setContactNote(null);
+    Linking.openURL(`mailto:${CONTACT_EMAIL}`).catch(() => setContactNote(MODERATION_TEXT.contactFailed));
+  }, []);
 
   // `openWeb` kaster aldri — den svarer typet — så det finnes ingen
   // catch-gren å skrive her.
@@ -228,6 +256,13 @@ export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) 
           onPress={onOpenPrivacy}
           testID="account-privacy"
         />
+        <SettingRow
+          label={MODERATION_TEXT.blockedRow}
+          sublabel={blockedCount === null ? undefined : blockedCountLabel(blockedCount)}
+          chevron
+          onPress={() => navigation.navigate('BlockedUsers')}
+          testID="account-blocked"
+        />
       </SettingList>
 
       {exportNote ? (
@@ -238,6 +273,24 @@ export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) 
       {privacyNote ? (
         <Text style={[ui.error, styles.note]} testID="account-privacy-error">
           {privacyNote}
+        </Text>
+      ) : null}
+
+      <Text style={[ui.kicker, styles.label]} testID="account-section-help">
+        {MODERATION_TEXT.helpSection}
+      </Text>
+      <SettingList testID="account-help" style={styles.list}>
+        <SettingRow
+          label={MODERATION_TEXT.contactRow}
+          sublabel={CONTACT_EMAIL}
+          external
+          onPress={onContact}
+          testID="account-contact"
+        />
+      </SettingList>
+      {contactNote ? (
+        <Text style={[ui.error, styles.note]} testID="account-contact-error">
+          {contactNote}
         </Text>
       ) : null}
 

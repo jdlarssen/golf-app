@@ -66,6 +66,9 @@ const FAILURE_MAP = {
   bad_side_ld_holes: 'bad_side_ld_holes',
   bad_side_ctp_holes: 'bad_side_ctp_holes',
   db_game: 'db_game',
+  // #3019: ordfilteret og lengdetaket (0259).
+  blocked_word: 'blocked_word',
+  text_too_long: 'text_too_long',
   db_players: 'db_players',
   // #1858 og #1882: webbens tekster for disse fem navnga ett format under en
   // kode som fyrer for mange — nå er de format-agnostiske, og appen speiler
@@ -101,8 +104,6 @@ const WEB_ONLY: Partial<Record<WizardErrorKey, string>> = {
   cup_roster_locked: 'cup-låsen i redigerings-flyten på web (#2210); appen oppretter bare',
   unexpected: 'webbens fallback med rå kode for ukjente koder; appen har en setning per kode',
   only_guests: 'gjestesperren (#2570) bor i webbens publiser-actions (CreateGameErrorCode), ikke i gamePayload.ts — appen bygger sin egen payload og går ikke via den sperren',
-  blocked_word: '#3019 PR A: ordfilteret i databasen (0259); PR B gir appen teksten',
-  text_too_long: '#3019 PR A: lengdetaket på rundenavnet (0259); PR B gir appen teksten',
   registration_cap_below_held: '#2482: rediger-eneste (U12, `edit/actions.ts`); appen har ingen rediger-flyt og når aldri dette steget, og webbens tekst har et spillertall-plural appen ikke kan fylle ut',
 };
 

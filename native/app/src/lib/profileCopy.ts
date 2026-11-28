@@ -718,6 +718,12 @@ export function describeProfileSaveFailure(reason: ProfileSaveFailure): string {
     // = profile.errors.level_invalid
     case 'level_invalid':
       return 'Ugyldig spillerklasse.';
+    // = profile.errors.blocked_word (#3019, ordfilteret i 0259)
+    case 'blocked_word':
+      return 'Navnet eller kallenavnet har et ord som ikke er lov i Tørny. Velg et annet.';
+    // = profile.errors.text_too_long (#3019, lengdetaket i 0259)
+    case 'text_too_long':
+      return 'Navnet eller kallenavnet er for langt. Bruk høyst 60 tegn.';
     // = profile.errors.unknown. Catch-all for alt ruta ikke navnga, inkludert
     // en 0-rads skriving (AGENTS trap 2) som ruta melder som 500.
     case 'update_failed':

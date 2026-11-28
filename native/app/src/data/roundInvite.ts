@@ -252,7 +252,9 @@ export type TeamSignupRefusal =
   | 'wrong_mode'
   | 'mode_does_not_support_teams'
   | 'profile_incomplete'
-  | 'rate_limited';
+  | 'rate_limited'
+  /** #3019: ordfilteret (0259) sa nei til lagnavnet. */
+  | 'blocked_word';
 
 export type TeamSignupFailure = TeamSignupRefusal | WebApiFailure | 'not_found' | 'db_error';
 
@@ -276,6 +278,7 @@ const TEAM_REFUSALS: Record<TeamSignupRefusal, true> = {
   mode_does_not_support_teams: true,
   profile_incomplete: true,
   rate_limited: true,
+  blocked_word: true,
 };
 
 const TEAM_REFUSAL_CODES: ReadonlySet<unknown> = new Set(Object.keys(TEAM_REFUSALS));

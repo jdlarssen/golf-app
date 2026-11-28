@@ -62,6 +62,8 @@ import { PROFILE_TEXT } from './lib/profileCopy';
 import { SCORECARD_TEXT } from './lib/scorecardHeader';
 import { TICKET_TEXT } from './lib/ticketCopy';
 import { AccountSettings } from './screens/AccountSettings';
+import { MODERATION_TEXT } from './lib/moderationCopy';
+import { BlockedUsers } from './screens/BlockedUsers';
 import { Approve } from './screens/Approve';
 import { CreateCourse } from './screens/CreateCourse';
 import { CreateGame } from './screens/CreateGame';
@@ -180,6 +182,8 @@ export type RootStackParamList = {
   DeleteAccount: undefined;
   /** «Personvern og konto» (#2256): e-post, personvernerklæring, «Slett konto». */
   AccountSettings: undefined;
+  /** #3019: «Blokkerte» under «Personvern og konto». */
+  BlockedUsers: undefined;
   /** «Varsler og tema» (#2256): temavalget; varslene kommer i PR 4. */
   NotificationsAndTheme: undefined;
   /**
@@ -567,6 +571,13 @@ export function RootNavigator() {
           component={AccountSettings}
           options={kickerHeader(PROFILE_TEXT.heading, PROFILE_TEXT.menuAccount, {
             backLabel: PROFILE_TEXT.backToProfile,
+          })}
+        />
+        <Stack.Screen
+          name="BlockedUsers"
+          component={BlockedUsers}
+          options={kickerHeader(PROFILE_TEXT.menuAccount, MODERATION_TEXT.blockedTitle, {
+            backLabel: MODERATION_TEXT.blockedBack,
           })}
         />
         {/* Rommene under profilen (#2256, designet): «PROFIL» i toppen, og

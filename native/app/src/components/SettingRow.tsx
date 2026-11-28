@@ -28,7 +28,7 @@ import { Children, Fragment, type ReactNode } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Tap } from './Tap';
 import { FONTS, useTheme } from '../theme';
-import { ChevronIcon } from './icons/Icons';
+import { ChevronIcon, PilUtIcon } from './icons/Icons';
 
 type Tone = 'default' | 'danger';
 
@@ -41,6 +41,8 @@ interface SettingRowProps {
   onPress: () => void;
   /** Pila «→» — kun på rader som navigerer videre. */
   chevron?: boolean;
+  /** Pila «↗» — raden åpner noe utenfor appen (#3019, «Kontakt oss»). */
+  external?: boolean;
   /**
    * Raden er ett av flere valg (#2256, temavalget). `true` tegner «✓» og sier
    * «valgt» til skjermleseren; utelatt betyr at raden ikke er et valg.
@@ -61,6 +63,7 @@ export function SettingRow({
   tone = 'default',
   onPress,
   chevron = false,
+  external = false,
   selected,
   dense = false,
   disabled = false,
@@ -103,6 +106,7 @@ export function SettingRow({
           ✓
         </Text>
       ) : null}
+      {external ? <PilUtIcon color={colors.primary} size={16} /> : null}
       {chevron ? (
         <View style={tone === 'danger' ? styles.chevronDim : null}>
           <ChevronIcon direction="right" color={chevronColor} size={16} strokeWidth={2} />

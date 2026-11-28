@@ -37,6 +37,7 @@
 import type { AccountDeleteFailure, DeleteBlockReason } from '../lib/accountCopy';
 import { supabase } from '../supabase';
 import { forgetAiConsentAnswers } from './aiConsentGate';
+import { forgetTermsAnswers } from './termsGate';
 import { clearDataExportFiles } from './dataExport';
 import { wipeLocalData } from './db';
 import { forgetPushAfterAccountDeletion } from './pushDevice';
@@ -175,6 +176,8 @@ export async function deleteAccount(): Promise<AccountDeleteResult> {
     // #2561: svaret på AI-spørsmålet husket i AsyncStorage går med kontoen.
     // Kaster aldri.
     await forgetAiConsentAnswers();
+    // #3019: det samme for ja-et til vilkårene. Kaster aldri.
+    await forgetTermsAnswers();
     // En eksportfil som ble liggende etter «Last ned dataene dine», og tokenet
     // telefonen husker for varsler, går også med kontoen. Ingen av dem kaster.
     clearDataExportFiles();

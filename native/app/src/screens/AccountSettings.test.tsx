@@ -67,6 +67,19 @@ jest.mock('../lib/webLink', () => ({
   openWeb: jest.fn(),
 }));
 jest.mock('../data/logout', () => ({ logOut: jest.fn() }));
+// #3019: «Blokkerte» reads the list when the screen gets focus; «Kontakt oss» opens mail.
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
+}));
+jest.mock('../data/blocks', () => ({
+  listBlocks: jest.fn(async () => ({
+    ok: true,
+    blocks: [
+      { userId: 'kh', name: 'Kristian Holm', blockedAt: '2026-11-28T10:00:00Z' },
+      { userId: 'jb', name: 'Jonas Berg', blockedAt: '2026-11-03T10:00:00Z' },
+    ],
+  })),
+}));
 // #2561: the AI consent row reads and writes its own row.
 jest.mock('../data/aiConsent', () => ({ fetchOwnAiConsent: jest.fn(), saveAiConsent: jest.fn() }));
 jest.mock('../data/aiConsentGate', () => ({ rememberAiConsentAnswered: jest.fn() }));

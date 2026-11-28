@@ -183,6 +183,8 @@ const FIELD_COMPONENTS: Record<string, { host: string; scrollTestID: string } | 
   'components/course/TeeTable.tsx': { host: 'screens/CreateCourse.tsx', scrollTestID: 'create-course-screen' },
   // Arket ligger i en Modal (eget vindu) med KeyboardAvoidingView rundt seg.
   'components/approve/RejectSheet.tsx': 'modal',
+  // #3019: grunnfeltet i «Rapporter eller blokker».
+  'components/moderation/ReportOrBlockSheet.tsx': 'modal',
   // #2297: «Skriv inn tallet» i handicaparket, samme oppbygning.
   'components/game/HandicapSheet.tsx': 'modal',
   // #2283: «Hvor nær?» i arket for nærmest pinnen på hullet, samme oppbygning.

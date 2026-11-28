@@ -39,11 +39,13 @@ export function RowsCard({ children }: { children: ReactNode }) {
 }
 
 /** Sirkelens størrelser: 36 i lister, 44 i «Mot hverandre» og 56 øverst på vennesiden. */
-type AvatarSize = 36 | 44 | 56;
+type AvatarSize = 36 | 40 | 44 | 56;
 
 /** 36 er sirkelen fra Venner, uendret; de to nye har designets linjehøyder. */
 const AVATAR_TEXT: Record<AvatarSize, { fontSize: number; lineHeight?: number }> = {
   36: { fontSize: 12 },
+  // #3019: lista «Blokkerte» (tegning 12) har 40-sirkelen med 14-tekst.
+  40: { fontSize: 14, lineHeight: 18 },
   44: { fontSize: 14, lineHeight: 18 },
   56: { fontSize: 20, lineHeight: 24 },
 };

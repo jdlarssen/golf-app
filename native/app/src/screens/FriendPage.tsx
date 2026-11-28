@@ -58,6 +58,9 @@ import {
   showAllRounds,
 } from '../lib/friendsCopy';
 import type { ScreenProps } from '../navigation';
+import { ModerationLink } from '../components/moderation/ModerationLink';
+import { ReportOrBlockSheet, type ModerationOutcome } from '../components/moderation/ReportOrBlockSheet';
+import { MODERATION_TEXT } from '../lib/moderationCopy';
 import { FONTS, fraunces, useTheme } from '../theme';
 
 /** Forholdet slik siden tegner det. `outgoing` er også «sendt nå». */
@@ -165,6 +168,17 @@ export function FriendPage({ navigation, route }: ScreenProps<'FriendPage'>) {
     }
   }, [navigation, userId]);
 
+  // #3019 (tegning 1A): «Rapporter eller blokker» under «Fjern venn». En
+  // blokkering fjerner vennskapet, så siden går tilbake til Venner etterpå.
+  const [moderating, setModerating] = useState(false);
+  const onModerationClose = useCallback(
+    (outcome: ModerationOutcome) => {
+      setModerating(false);
+      if (outcome === 'blocked' && navigation.isFocused()) navigation.goBack();
+    },
+    [navigation],
+  );
+
   const onRemove = useCallback(() => {
     // To knapper, og dialogen kan ikke avvises: svaret skal komme fra en av dem.
     Alert.alert(
@@ -244,6 +258,13 @@ export function FriendPage({ navigation, route }: ScreenProps<'FriendPage'>) {
               testID="friend-page-remove"
             />
           </View>
+          <View style={styles.moderationSlot}>
+            <ModerationLink
+              label={MODERATION_TEXT.entryPerson}
+              onPress={() => setModerating(true)}
+              testID="friend-page-moderation"
+            />
+          </View>
         </>
       ) : kind === null ? (
         friendsLoad.state === 'failed' ? (
@@ -300,6 +321,21 @@ export function FriendPage({ navigation, route }: ScreenProps<'FriendPage'>) {
           }
         />
       )}
+      {kind !== null && kind !== 'friend' ? (
+        <View style={styles.moderationSlot}>
+          <ModerationLink
+            label={MODERATION_TEXT.entryPerson}
+            onPress={() => setModerating(true)}
+            testID="friend-page-moderation"
+          />
+        </View>
+      ) : null}
+      {moderating ? (
+        <ReportOrBlockSheet
+          subject={{ kind: 'person', person: { userId, name: name || FRIENDS_TEXT.someoneFallback } }}
+          onClose={onModerationClose}
+        />
+      ) : null}
     </ScrollView>
   );
 }
@@ -680,6 +716,8 @@ const styles = StyleSheet.create({
   showAllText: { fontSize: 15, lineHeight: 20, fontFamily: FONTS.sansSemiBold },
 
   removeSlot: { marginTop: 24, marginHorizontal: 16 },
+  // #3019 (tegning 1A): 8 under «Fjern venn», samme 16 på sidene.
+  moderationSlot: { marginTop: 8, marginHorizontal: 16 },
   rowsSlot: { marginTop: 18, marginHorizontal: 16 },
   actionSlot: { marginTop: 18, marginHorizontal: 16 },
   // Med en feillinje over står knappen 12 under den (tegning 7).

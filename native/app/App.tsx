@@ -45,6 +45,7 @@ import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
 import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import type { Session } from '@supabase/supabase-js';
 import { AiConsentGate } from './src/components/AiConsentGate';
+import { TermsGate } from './src/components/TermsGate';
 import { AppLockGate } from './src/components/AppLockGate';
 import { OwnerGate } from './src/components/OwnerGate';
 import { ProfileGate } from './src/components/ProfileGate';
@@ -199,10 +200,13 @@ function ReadyApp({ session }: { session: Session | null }) {
                 {/* #2216: steget for navn og handicap står foran stacken når
                     profilen ikke er fullført, samme regel som nettsidens `/`. */}
                 <ProfileGate userId={session.user.id}>
-                  {/* #2561: spørsmålet om AI-tekster, én gang, etter profilen. */}
-                  <AiConsentGate userId={session.user.id}>
-                    <RootNavigator />
-                  </AiConsentGate>
+                  {/* #3019: vilkårene, én gang, etter profilen. */}
+                  <TermsGate userId={session.user.id}>
+                    {/* #2561: spørsmålet om AI-tekster, én gang, etter vilkårene. */}
+                    <AiConsentGate userId={session.user.id}>
+                      <RootNavigator />
+                    </AiConsentGate>
+                  </TermsGate>
                 </ProfileGate>
               </SessionProvider>
             </OwnerGate>

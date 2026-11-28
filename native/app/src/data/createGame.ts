@@ -58,6 +58,7 @@ import { currentDeviceUserId, supabase } from '../supabase';
 import type { Database } from '../../../../lib/database.types';
 import { bestEffortCall } from './bestEffortCall';
 import { isNetworkFailureMessage, unlessNetwork } from './timedFetch';
+import { textGuardError, type TextGuardError } from '../../../../lib/moderation/textGuardError';
 
 // -----------------------------------------------------------------------------
 // Lesninger — kandidater, baner og teer
@@ -275,6 +276,8 @@ export type CreateGameFailure =
   | 'no_rows'
   | 'db_game'
   | 'db_players'
+  /** #3019: ordfilteret eller lengdetaket i databasen (0259) avviste navnet eller en premie. */
+  | TextGuardError
   /** Spiller-inserten feilet OG kompensasjonen feilet. Raden kan stå igjen. */
   | 'orphan_game';
 
@@ -289,7 +292,12 @@ export type CreateGameResult =
  */
 const failed = (error: CreateGameFailure, message?: string): CreateGameResult => ({
   ok: false,
-  error: error === 'db_game' || error === 'db_players' ? unlessNetwork(error, message) : error,
+  error:
+    error === 'db_game' && textGuardError({ message })
+      ? (textGuardError({ message }) as TextGuardError)
+      : error === 'db_game' || error === 'db_players'
+        ? unlessNetwork(error, message)
+        : error,
 });
 
 /** PostgRESTs kode for «insufficient_privilege» — RLS avviste raden. */

@@ -206,6 +206,9 @@ export function describeTeamSignupFailure(reason: TeamSignupFailureWithText): st
       return TEAM_SIGNUP_TEXT.gameFull;
     case 'team_name_invalid':
       return TEAM_SIGNUP_TEXT.teamNameInvalid;
+    // = signup.errors.blocked_word (#3019, ordfilteret i 0259)
+    case 'blocked_word':
+      return 'Lagnavnet har et ord som ikke er lov i Tørny. Velg et annet.';
     case 'slots_count_wrong':
       return TEAM_SIGNUP_TEXT.slotsCountWrong;
     case 'self_in_slots':

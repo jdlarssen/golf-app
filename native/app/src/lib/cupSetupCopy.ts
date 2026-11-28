@@ -69,6 +69,8 @@ const DETAILS_ERRORS: Record<string, string> = {
   cup_win_points: 'Poeng for seier må være et tall over 0, med høyst én desimal.',
   cup_tie_points: 'Poeng ved delt må være 0 eller mer, med høyst én desimal.',
   cup_insert_failed: 'Klarte ikke å opprette cupen. Prøv igjen.',
+  // = cup.create.errors.blocked_word (#3019, ordfilteret i 0259)
+  blocked_word: 'Cupnavnet eller et lagnavn har et ord som ikke er lov i Tørny. Velg et annet.',
 };
 
 /** `cup.plan`. */
