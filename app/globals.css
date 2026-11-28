@@ -43,7 +43,7 @@
   /* Light mode palette */
   --bg: #f8f6f0;          /* warm linen */
   --surface: #ffffff;
-  --surface-2: #f0ede5;    /* slightly inset surface (used in tables, summary rows) */
+  --surface-2: #f0ede5;    /* secondary panel, one step from --surface (darker by day, lighter by night) */
   --border: #e5e0d3;       /* warm beige */
   --text: #1a2e1f;         /* deep forest */
   --text-muted: #4a3f30;   /* warm taupe — darkened from #5c5347 for
@@ -332,7 +332,7 @@
   :root:not([data-theme='light']) {
     --bg: #14201a;           /* clubhouse-night forest-black */
     --surface: #1c2a22;      /* one step lighter for cards */
-    --surface-2: #243429;    /* two steps for elevated surfaces (menus) */
+    --surface-2: #243429;    /* secondary panel, one step from --surface (darker by day, lighter by night) */
     --border: #2f3f34;       /* warm hairline, not grey */
     --text: #ece5d2;         /* warm linen, never pure white */
     --text-muted: #9a9180;   /* taupe at night */

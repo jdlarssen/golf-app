@@ -59,7 +59,11 @@ export function SoloBoard({ model }: { model: SoloBoardModel }) {
         style={[
           styles.slab,
           { backgroundColor: colors.boardSlab, boxShadow: boardSlabShadow(scheme) },
-          !live && { borderWidth: 1, borderColor: colors.boardSlabBorder },
+          // #2931: natta er ikke tegnet for den levende tavla, så den følger
+          // `Tavle-ferdig-forslag-natt`. Uten kant glir flaten inn i skjermen bak.
+          // I lys står den levende uten kant, som `Tavle-forslag`: kanten
+          // flytter innholdet 1 pt inn.
+          (!live || scheme === 'dark') && { borderWidth: 1, borderColor: colors.boardSlabBorder },
         ]}
         testID="leaderboard-table"
       >

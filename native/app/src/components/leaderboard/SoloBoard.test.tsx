@@ -3,12 +3,19 @@
 // rekkefølge, gullskiva bare på lederen, prikkene og tegnforklaringen live,
 // likt-linja og ingen hull-kolonne ferdig, «Vis alle» over seks rader, og
 // stripas knapp.
+import { StyleSheet } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import type { SoloBoardModel, SoloBoardRow } from '../../lib/soloBoard';
 import type { ReactionRowState } from '../../lib/useGameReactions';
 import { ReactionsContext, type ReactionsContextValue } from './ReactionsProvider';
 import { BoardStrip, SoloBoard } from './SoloBoard';
 import { RESULT_TEXT_CAP } from './resultTextCap';
+
+let mockScheme: 'light' | 'dark' = 'light';
+jest.mock('react-native/Libraries/Utilities/useColorScheme', () => ({
+  __esModule: true,
+  default: () => mockScheme,
+}));
 
 const row = (userId: string, rank: number, extra: Partial<SoloBoardRow> = {}): SoloBoardRow => ({
   userId,
@@ -175,4 +182,46 @@ it('kolonnetitlene har tak bare på den ferdige tavla', async () => {
   for (const title of ['Plass', 'Spiller', 'total']) {
     expect(screen.getByText(title, { includeHiddenElements: true }).props.maxFontSizeMultiplier).toBe(RESULT_TEXT_CAP);
   }
+});
+
+// #2931: den levende tavla har samme tynne kant som den ferdige om natta, ellers
+// glir flaten (`#14201A`) inn i skjermen bak. I lys står den uten kant, som
+// `Tavle-forslag`: kanten flytter innholdet 1 pt inn.
+describe('kanten rundt tavla (#2931)', () => {
+  const finished: SoloBoardModel = {
+    ...live,
+    variant: 'finished',
+    showHoles: false,
+    rows: [row('a', 1), row('b', 2)].map((r) => ({ ...r, movement: null, recent: [] })),
+    viewerId: 'a',
+  };
+  const slab = () => StyleSheet.flatten(screen.getByTestId('leaderboard-table').props.style);
+
+  afterEach(() => {
+    mockScheme = 'light';
+  });
+
+  it('live tavle har ingen kant i lys', async () => {
+    mockScheme = 'light';
+    await render(<SoloBoard model={live} />);
+    expect(slab().borderWidth).toBeUndefined();
+  });
+
+  it('live tavle har kanten fra den ferdige tavla om natta', async () => {
+    mockScheme = 'dark';
+    await render(<SoloBoard model={live} />);
+    expect(slab()).toMatchObject({ borderWidth: 1, borderColor: '#2F3F34' });
+  });
+
+  it('ferdig tavle har kanten i begge draktene', async () => {
+    for (const scheme of ['light', 'dark'] as const) {
+      mockScheme = scheme;
+      const { unmount } = await render(<SoloBoard model={finished} />);
+      expect(slab().borderWidth).toBe(1);
+      await unmount();
+    }
+    mockScheme = 'dark';
+    await render(<SoloBoard model={finished} />);
+    expect(slab().borderColor).toBe('#2F3F34');
+  });
 });

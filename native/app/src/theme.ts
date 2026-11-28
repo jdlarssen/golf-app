@@ -131,8 +131,9 @@ export type ThemeColors = {
    */
   onStrongWarm: string;
   /**
-   * Den litt nedsenkede flaten (#2255, deuce-raden i Acey Deucey «Hull for
-   * hull») — webbens `--surface-2`.
+   * Neste trinn fra `surface`, en flate inne i et kort (#2255, deuce-raden i
+   * Acey Deucey «Hull for hull») — webbens `--surface-2`. Mørkere enn kortet i
+   * lys, lysere i natt.
    */
   surface2: string;
   /**
@@ -149,7 +150,10 @@ export type ThemeColors = {
    * lik i begge draktene. Ingen lys rolle har den.
    */
   boardSlab: string;
-  /** Kanten rundt den ferdige tavla (`--slabline`): usynlig i lys, synlig i natt. */
+  /**
+   * Kanten rundt den ferdige tavla, og rundt den levende om natta (#2931)
+   * (`--slabline`): usynlig i lys, synlig i natt.
+   */
   boardSlabBorder: string;
   /**
    * Din rad på tavla (#2579, `--you`). Ikke `primarySoft`: natt-verdien der er
