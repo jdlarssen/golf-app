@@ -171,8 +171,10 @@ const ALLOWED: Record<string, Allowed> = {
     reason: 'gjeste-kravet (#1009): kallerne er gatet; bare id-en går videre',
   },
   'lib/games/inviteToGame.ts': {
-    receivers: ['getAdminClient()'],
-    reason: 'oppslag på adressen arrangøren skrev; synligheten sjekkes med kallerens klient',
+    receivers: ['getAdminClient()', 'getAdminClient()'],
+    reason:
+      'oppslag på adressen arrangøren skrev; synligheten sjekkes med kallerens klient. ' +
+      '#3019: det andre oppslaget finner kontoen bak en adresse arrangøren ikke ser, bare for å sjekke blokkering; id-en forlater ikke serveren',
   },
   'lib/games/newGameFormData.ts': {
     receivers: ['getAdminClient()'],
