@@ -137,6 +137,7 @@ describe('every service-role script checks its target', () => {
     ['e2e/_helpers/games.ts', 'testDatabaseRefusal('],
     ['e2e/global-setup.ts', 'e2eTargetFailure('],
     ['scripts/backfillResultSummaries.ts', 'scriptTargetRefusal('],
+    ['scripts/kavalkade-generalproeve.ts', 'scriptTargetRefusal('],
     ['scripts/provision-review-account.mjs', 'assertTarget('],
     ['scripts/dev-login-users.mjs', '${STAGING_REF}.supabase.co'],
   ])('%s', (path, marker) => {
