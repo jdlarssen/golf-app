@@ -226,6 +226,7 @@ type LookupOutcome =
   | 'unknown'
   | 'self'
   | 'already_sent'
+  | 'blocked'
   | 'already_friends'
   | 'accepted'
   | 'requested'
@@ -235,6 +236,7 @@ const LOOKUP_OUTCOMES: readonly string[] = [
   'unknown',
   'self',
   'already_sent',
+  'blocked',
   'already_friends',
   'accepted',
   'requested',
@@ -327,6 +329,9 @@ export async function addByEmail(
     // Asked this address already, and the receipt is still open: the answer
     // is the same and nothing is sent twice.
     if (outcome === 'already_sent') return 'requested';
+    // #3019 (0259): one of the two blocked the other. Nothing was written,
+    // and the answer is the one every address gets, so the block stays hidden.
+    if (outcome === 'blocked') return 'requested';
 
     // null → «En venn» in the recipient's language (the mail fills it in).
     const inviterName = profile.name?.trim() || null;

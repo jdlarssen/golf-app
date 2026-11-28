@@ -25,12 +25,20 @@ const fake = createAdminClientMock({
 vi.mock('@/lib/supabase/admin', () => ({ getAdminClient: () => fake.client }));
 vi.mock('@/lib/users/getCoPlayerIds', () => ({ getCoPlayerIds: async () => coPlayers }));
 vi.mock('@/lib/friends/getFriendIds', () => ({ getFriendIds: async () => ['venn-1'] }));
+let blocked: Set<string> | Error = new Set();
+vi.mock('@/lib/moderation/blockedPairs', () => ({
+  getBlockedPairIds: async () => {
+    if (blocked instanceof Error) throw blocked;
+    return blocked;
+  },
+}));
 
 import { getInviteEligibleIds } from './inviteEligibility';
 
 beforeEach(() => {
   fake.reset();
   failSlice = false;
+  blocked = new Set();
 });
 
 describe('getInviteEligibleIds — the deleted-account filter', () => {
@@ -55,6 +63,23 @@ describe('getInviteEligibleIds — the deleted-account filter', () => {
 
     expect((await getInviteEligibleIds('arrangor', null)).size).toBe(0);
     expect(log).toHaveBeenCalled();
+    log.mockRestore();
+  });
+});
+
+describe('getInviteEligibleIds — blocks (#3019)', () => {
+  it('drops everyone the creator has a block with', async () => {
+    blocked = new Set(['u7', 'venn-1']);
+    const ids = await getInviteEligibleIds('arrangor', null);
+    expect(ids.has('u7')).toBe(false);
+    expect(ids.has('venn-1')).toBe(false);
+    expect(ids.has('u8')).toBe(true);
+  });
+
+  it('a failed block lookup fails safe: an empty set', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    blocked = new Error('nede');
+    expect((await getInviteEligibleIds('arrangor', null)).size).toBe(0);
     log.mockRestore();
   });
 });

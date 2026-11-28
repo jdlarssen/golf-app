@@ -3,6 +3,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
 import { getCoPlayerIds } from '@/lib/users/getCoPlayerIds';
 import { readInChunks } from '@/lib/notifications/inboxReads';
+import { getBlockedPairIds } from '@/lib/moderation/blockedPairs';
 
 /**
  * Bruker-ider en IKKE-admin oppretter har lov til å legge til på et spill-roster
@@ -11,6 +12,7 @@ import { readInChunks } from '@/lib/notifications/inboxReads';
  *     eligible = venner (godkjente vennskap, begge retninger)
  *              ∪ co-players (delt minst ett spill)
  *              ∪ klubbmedlemmer av spillets group (når `groupId` er satt)
+ *              minus dem oppretteren har en blokkering med (#3019)
  *
  * Regelen har to hjem som endres sammen: `is_invite_eligible` i databasen
  * (0252) og denne funksjonen. `lib/friends/inviteEligibilityRule.test.ts`
@@ -34,12 +36,22 @@ export async function getInviteEligibleIds(
   creatorUserId: string,
   groupId: string | null,
 ): Promise<Set<string>> {
-  const [friendIds, coPlayerIds, clubMemberIds] = await Promise.all([
+  const [friendIds, coPlayerIds, clubMemberIds, blockedIds] = await Promise.all([
     getFriendIds(creatorUserId),
     getCoPlayerIds(creatorUserId),
     groupId ? getGroupMemberIds(groupId) : Promise.resolve<string[]>([]),
+    // #3019 (0259): a blocked pair is never eligible, like `not
+    // is_blocked_between(...)` in the SQL rule. A failed read empties the set
+    // (fail-safe, as below).
+    getBlockedPairIds(creatorUserId).catch((error: unknown) => {
+      console.error('[getInviteEligibleIds] block lookup failed', error);
+      return null;
+    }),
   ]);
-  const union = [...new Set([...friendIds, ...coPlayerIds, ...clubMemberIds])];
+  if (blockedIds === null) return new Set();
+  const union = [...new Set([...friendIds, ...coPlayerIds, ...clubMemberIds])].filter(
+    (id) => !blockedIds.has(id),
+  );
   if (union.length === 0) return new Set();
 
   // #1012: anonymiserte kontoer er aldri kvalifiserte. Venne-/klubb-bena tømmes

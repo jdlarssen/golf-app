@@ -9,8 +9,12 @@ vi.mock('@/lib/clubs/getClubMemberOptionsForClub', () => ({
 vi.mock('@/lib/friends/getFriendPlayerOptions', () => ({
   getFriendPlayerOptions: vi.fn(),
 }));
+vi.mock('@/lib/moderation/blockedPairs', () => ({
+  getBlockedPairIds: vi.fn(async () => new Set(['blokkert'])),
+}));
 
 import { getCupCandidatePlayers } from './getCupCandidatePlayers';
+import { getClubMemberOptionsForClub } from '@/lib/clubs/getClubMemberOptionsForClub';
 
 /**
  * #2323: a deleted account keeps its `users` row (0131 anonymises it to
@@ -34,5 +38,23 @@ describe('getCupCandidatePlayers, personal cup as global admin (#2323)', () => {
       method: 'is',
       args: ['deleted_at', null],
     });
+  });
+});
+
+describe('getCupCandidatePlayers, club cup (#3019)', () => {
+  it('leaves out a member the caller has a block with', async () => {
+    vi.mocked(getClubMemberOptionsForClub).mockResolvedValueOnce([
+      { id: 'venn', name: 'Kari', nickname: null, hcp_index: 10, gender: null, pending: false },
+      { id: 'blokkert', name: 'Ola', nickname: null, hcp_index: 12, gender: null, pending: false },
+    ] as never);
+
+    const players = await getCupCandidatePlayers(buildSupabaseMock([]) as never, {
+      groupId: 'klubb-1',
+      userId: 'arrangor',
+      isAdmin: false,
+      unknownLabel: 'Ukjent',
+    });
+
+    expect(players.map((p) => p.id)).toEqual(['venn']);
   });
 });

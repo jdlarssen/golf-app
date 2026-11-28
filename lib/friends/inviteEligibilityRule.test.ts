@@ -38,3 +38,16 @@ describe('invite eligibility: accepted friendships only, in both homes', () => {
     expect(friendIdsFromRows(rows, 'me')).toEqual(['friend']);
   });
 });
+
+describe('invite eligibility: a blocked pair is never eligible, in both homes (#3019)', () => {
+  it('the SQL rule starts with not is_blocked_between', () => {
+    const { match } = lastMigrationMatch(
+      /function public\.is_invite_eligible\([\s\S]*?as \$\$([\s\S]*?)\$\$;/i,
+    );
+    expect(match[1]).toMatch(/not public\.is_blocked_between\(p_creator, p_recipient\)/);
+  });
+
+  it('the TypeScript mirror drops the creator\'s blocked pairs', () => {
+    expect(read('lib/games/inviteEligibility.ts')).toMatch(/getBlockedPairIds\(creatorUserId\)/);
+  });
+});
