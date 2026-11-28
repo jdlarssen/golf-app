@@ -30,6 +30,24 @@ export async function submitReportCore(
 ): Promise<{ ok: true } | { ok: false; error: SubmitReportError }> {
   if (input.targetUserId === reporterId) return { ok: false, error: 'invalid' };
 
+  // A round named by its link id: the service role finds its uuid. An unknown
+  // link answers like any other target that no longer exists.
+  let targetGameId = input.targetGameId;
+  if (input.targetGameShortId) {
+    const { data: game, error: gameError } = await getAdminClient()
+      .from('games')
+      .select('id')
+      .eq('short_id', input.targetGameShortId)
+      .maybeSingle();
+    if (gameError) {
+      console.error('[reports] short id lookup failed', gameError);
+      return { ok: false, error: 'db_error' };
+    }
+    if (!game) return { ok: false, error: 'invalid' };
+    targetGameId = game.id;
+  }
+  const target: ReportInput = { ...input, targetGameId, targetGameShortId: null };
+
   // The reporter cannot read reports back, so the count is the service role's.
   // A failed count lets the report through: a report that never lands is
   // worse than one extra.
@@ -50,7 +68,7 @@ export async function submitReportCore(
   const { error } = await caller.from('content_reports').insert({
     reporter_id: reporterId,
     target_user_id: input.targetUserId,
-    target_game_id: input.targetGameId,
+    target_game_id: target.targetGameId,
     reason: input.reason,
     note: input.note,
   });
@@ -61,7 +79,7 @@ export async function submitReportCore(
     return { ok: false, error: 'db_error' };
   }
 
-  defer(() => notifyAdmins(reporterId, input));
+  defer(() => notifyAdmins(reporterId, target));
   return { ok: true };
 }
 

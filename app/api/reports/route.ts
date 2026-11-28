@@ -11,10 +11,10 @@ import { submitReportCore } from '@/lib/moderation/submitReport';
 // client, so RLS («content_reports insert own», 0259) refuses a forged one.
 //
 // WIRE (frozen — the app mirrors it):
-//   POST { targetUserId?: uuid, targetGameId?: uuid,
+//   POST { targetUserId?: uuid, targetGameId?: uuid, targetGameShortId?: string (8, the link id),
 //          reason: 'offensive' | 'harassment' | 'other', note?: string (≤ 500) }
 //        200 { ok: true }
-//        400 { error: 'invalid' }        not one target, unknown reason, long note,
+//        400 { error: 'invalid' }        not exactly one target, unknown reason, long note,
 //                                        a target that no longer exists, or yourself
 //        401 { error: 'unauthorized' }
 //        429 { error: 'rate_limited' }   10 reports in the last 24 hours

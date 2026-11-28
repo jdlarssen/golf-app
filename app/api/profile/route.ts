@@ -3,6 +3,7 @@ import { authenticatedUserId } from '@/lib/api/appAuth';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { expectOne } from '@/lib/supabase/affectedRows';
 import { recomputeCourseHandicapForUser } from '@/lib/games/recomputeCourseHandicap';
+import { textGuardError, type TextGuardError } from '@/lib/moderation/textGuardError';
 import {
   parseProfileInput,
   type ProfileInputError,
@@ -34,7 +35,8 @@ import {
 // WIRE (frosset — appen speiler den):
 //   PUT  200 { ok: true }
 //        400 { error: 'name_required' | 'hcp_invalid'
-//                   | 'gender_required' | 'level_invalid' }
+//                   | 'gender_required' | 'level_invalid'
+//                   | 'blocked_word' | 'text_too_long' }   (#3019, 0259's guards)
 //        401 { error: 'unauthorized' }
 //        500 { error: 'update_failed' }
 //
@@ -53,7 +55,9 @@ export const maxDuration = 60;
 
 const LOG_PREFIX = 'api/profile';
 
-type ErrorBody = { error: ProfileInputError | 'unauthorized' | 'update_failed' };
+type ErrorBody = {
+  error: ProfileInputError | TextGuardError | 'unauthorized' | 'update_failed';
+};
 
 /**
  * Kroppen, eller tomme felter når den ikke lar seg lese.
@@ -131,6 +135,13 @@ export async function PUT(request: NextRequest) {
     // Fanger både DB-feil, den stille 0-rads-skrivingen fra `expectOne`
     // (AGENTS trap 2 — PostgREST svarer `error == null` for en update som traff
     // ingenting) og `getAdminClient()`-kastet ved manglende service-nøkkel.
+    // #3019: the word filter or the 60-character cap (0259) is the player's to
+    // fix, so it answers 400 with its own code, like the web form.
+    const guard = textGuardError(err);
+    if (guard) {
+      const body: ErrorBody = { error: guard };
+      return NextResponse.json(body, { status: 400 });
+    }
     console.error(`[${LOG_PREFIX}] update failed`, err);
     const body: ErrorBody = { error: 'update_failed' };
     return NextResponse.json(body, { status: 500 });

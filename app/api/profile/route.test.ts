@@ -34,11 +34,14 @@ let db: {
   updated: { id: string }[];
   /** Settes for å bevise at et DB-kast blir 500, ikke en halv 200. */
   updateThrows: boolean;
+  /** #3019: the guard trigger's refusal, as PostgREST hands it back. */
+  updateError?: { code: string; message: string };
 };
 
 function respond(op: QueryOp): QueryResponse {
   if (op.table === 'users' && op.kind === 'update') {
     if (db.updateThrows) throw new Error('connection reset');
+    if (db.updateError) return { data: null, error: db.updateError };
     return { data: db.updated };
   }
   throw new Error(`uventet spørring: ${op.kind} ${op.table}`);
@@ -218,6 +221,19 @@ describe('lagringen', () => {
     // Ingen recompute på en rad som aldri ble skrevet.
     expect(recomputeMock).not.toHaveBeenCalled();
   });
+
+  it.each(['blocked_word', 'text_too_long'])(
+    'the guard refuses the name (#3019): 400 %s, nothing recomputed',
+    async (code) => {
+      db.updateError = { code: 'P0001', message: code };
+
+      const res = await PUT(request({ token: `Bearer ${TOKEN}` }));
+
+      expect(res.status).toBe(400);
+      await expect(res.json()).resolves.toEqual({ error: code });
+      expect(recomputeMock).not.toHaveBeenCalled();
+    },
+  );
 
   it('DB-en kaster: 500 update_failed', async () => {
     db.updateThrows = true;

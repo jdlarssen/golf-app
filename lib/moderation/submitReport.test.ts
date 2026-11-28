@@ -13,6 +13,9 @@ const fake = createAdminClientMock({
       return { data: [{ id: 'admin-1', name: 'Sara Aune', locale: 'no' }] };
     }
     if (op.table === 'users') return { data: { name: 'Marte Lien', nickname: null } };
+    if (op.table === 'games' && op.filters.some((f) => f.column === 'short_id')) {
+      return { data: op.filters.some((f) => f.value === 'k7m3p9qx') ? { id: GAME } : null };
+    }
     if (op.table === 'games') return { data: { name: 'Lørdagsrunden' } };
     throw new Error(`uventet tabell ${op.table}`);
   },
@@ -53,7 +56,7 @@ beforeEach(() => {
   sendMock.mockClear();
 });
 
-const input = { targetUserId: null, targetGameId: GAME, reason: 'offensive' as const, note: 'Stygt' };
+const input = { targetUserId: null, targetGameId: GAME, targetGameShortId: null, reason: 'offensive' as const, note: 'Stygt' };
 
 describe('submitReportCore', () => {
   it('writes the report as the caller and mails the admins afterwards', async () => {
@@ -93,5 +96,30 @@ describe('submitReportCore', () => {
     expect(await submitReportCore(caller as never, 'me', input, later.defer)).toEqual({ ok: false, error });
     expect(later.tasks).toHaveLength(0);
     log.mockRestore();
+  });
+});
+
+describe('submitReportCore — a round by its link id', () => {
+  it('finds the round and writes its uuid', async () => {
+    const later = deferred();
+    const r = await submitReportCore(
+      caller as never,
+      'me',
+      { ...input, targetGameId: null, targetGameShortId: 'k7m3p9qx' },
+      later.defer,
+    );
+    expect(r).toEqual({ ok: true });
+    expect((inserted[0] as { target_game_id: string }).target_game_id).toBe(GAME);
+  });
+
+  it('an unknown link id writes nothing', async () => {
+    const r = await submitReportCore(
+      caller as never,
+      'me',
+      { ...input, targetGameId: null, targetGameShortId: 'zzzzzzzz' },
+      deferred().defer,
+    );
+    expect(r).toEqual({ ok: false, error: 'invalid' });
+    expect(inserted).toHaveLength(0);
   });
 });
