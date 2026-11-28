@@ -84,6 +84,7 @@ const STORES = {
     demoGameName: 'Demo Round — Tørny',
     scrambleGameName: 'Demo Scramble — Tørny',
     leagueName: 'Demo League — Tørny',
+    demoPlayerEmail: 'review-demo-player@example.test',
     signIn: '/en/review-login, eller langtrykk på tittelen i appen',
   },
   google: {
@@ -93,6 +94,7 @@ const STORES = {
     demoGameName: 'Demo Round (Google Play) — Tørny',
     scrambleGameName: 'Demo Scramble (Google Play) — Tørny',
     leagueName: 'Demo League (Google Play) — Tørny',
+    demoPlayerEmail: 'review-demo-player-google@example.test',
     signIn: 'langtrykk på tittelen i appen',
   },
 };
@@ -130,6 +132,17 @@ const CO_PLAYERS = [
 ];
 
 /**
+ * Demo-spilleren (#3019): en ekte konto, ikke en gjest, i stableford-runden og
+ * på vennelista til review-kontoen. Apple (1.2) og Google vil se at en spiller
+ * kan blokkeres, og appen tilbyr bare det for ekte kontoer; gjestene over har
+ * ingen. Hver butikk har sin egen (`demoPlayerEmail`), så en blokkering i den
+ * ene vurderingen aldri treffer den andre. Adressen er på `example.test` (RFC 2606):
+ * ingen e-post kan nå en ekte person. Kontoen får ikke passord og kan ikke
+ * logge inn. Den står i flight 2, så flighten til revieweren er som før.
+ */
+const DEMO_PLAYER = { name: 'Sam Parker', hcpIndex: 12.3, courseHandicap: 14, flight: 2 };
+
+/**
  * Demo-tilstanden revieweren møter: medspillerne har spilt hull 1–6, kontoen
  * selv hull 1–3. Da står «fortsett på hull 4» klart, og leaderboardet har
  * ekte tall i seg. Tallene er avvik fra par per hull — par + offset gir slag.
@@ -139,6 +152,7 @@ const SCORE_OFFSETS = {
   Emma: [0, 1, 0, 2, 0, -1],
   Jonas: [1, 0, 2, 1, 0, 1],
   Nora: [0, -1, 1, 0, 1, 2],
+  demoPlayer: [1, 0, 1, 0, -1, 1],
 };
 
 /**
@@ -179,6 +193,7 @@ function demoRounds(store) {
       mode: DEMO_GAME_MODE,
       modeConfig: DEMO_MODE_CONFIG,
       guests: CO_PLAYERS,
+      demoPlayer: true,
       teams: null,
       scoreOffsets: SCORE_OFFSETS,
       teeShots: null,
@@ -188,6 +203,7 @@ function demoRounds(store) {
       mode: SCRAMBLE_GAME_MODE,
       modeConfig: SCRAMBLE_MODE_CONFIG,
       guests: CO_PLAYERS,
+      demoPlayer: false,
       teams: SCRAMBLE_TEAMS,
       scoreOffsets: SCRAMBLE_TEAM_OFFSETS,
       teeShots: SCRAMBLE_TEE_SHOTS,
@@ -380,6 +396,92 @@ async function createGuest(db, profile) {
     `oppdater gjesteprofil ${profile.name}`,
   );
   return userId;
+}
+
+/**
+ * Demo-spilleren (#3019): finn kontoen på adressen, eller lag den, og sett
+ * profilen. Samme vei som review-kontoen, uten passord. En konto admin har
+ * slettet, har fått adressen obfuskert, så oppslaget finner den ikke, og en ny
+ * lages.
+ */
+async function ensureDemoPlayer(db, store) {
+  let userId = await findAuthUserId(db, store.demoPlayerEmail);
+  if (!userId) {
+    const { data, error } = await db.auth.admin.createUser({
+      email: store.demoPlayerEmail,
+      email_confirm: true,
+    });
+    if (error || !data?.user) {
+      throw new Error(`createUser (demo-spilleren): ${error?.message ?? 'ingen bruker'}`);
+    }
+    userId = data.user.id;
+  }
+  if (!(await waitForUsersRow(db, userId))) {
+    throw new Error('users-raden for demo-spilleren dukket aldri opp');
+  }
+  const stamp = nowIso();
+  await updateUserRow(
+    db,
+    userId,
+    {
+      name: DEMO_PLAYER.name,
+      hcp_index: DEMO_PLAYER.hcpIndex,
+      handicap_updated_at: stamp,
+      profile_completed_at: stamp,
+      gender: 'mens',
+      level: 'normal',
+      locale: 'en',
+      is_guest: false,
+      deleted_at: null,
+    },
+    'oppdater demo-spilleren',
+  );
+  return userId;
+}
+
+/**
+ * Review-kontoen og demo-spilleren er venner (#3019), så «Rapporter eller
+ * blokker» står på vennesiden (plassering 1A). Blokkeringene er alt slettet
+ * (steg 2c): vakta `guard_friendships_block` (0259) stopper ellers raden.
+ */
+async function ensureFriendship(db, reviewUserId, demoPlayerId) {
+  const existing = ok(
+    'les vennskapet',
+    await db
+      .from('friendships')
+      .select('id, status')
+      .or(
+        `and(requester_id.eq.${reviewUserId},addressee_id.eq.${demoPlayerId}),` +
+          `and(requester_id.eq.${demoPlayerId},addressee_id.eq.${reviewUserId})`,
+      ),
+  );
+  if (existing.length > 0) {
+    if (existing[0].status === 'accepted') return 'fantes';
+    const rows = ok(
+      'godta vennskapet',
+      await db
+        .from('friendships')
+        .update({ status: 'accepted', responded_at: nowIso() })
+        .eq('id', existing[0].id)
+        .select('id'),
+    );
+    if (rows.length !== 1) throw new Error(`godta vennskapet: traff ${rows.length} rader, forventet 1`);
+    return 'godtatt';
+  }
+  const rows = ok(
+    'lag vennskapet',
+    await db
+      .from('friendships')
+      .insert({
+        requester_id: demoPlayerId,
+        addressee_id: reviewUserId,
+        status: 'accepted',
+        responded_at: nowIso(),
+      })
+      .select('id'),
+  );
+  if (rows.length !== 1) throw new Error(`lag vennskapet: traff ${rows.length} rader, forventet 1`);
+  return 'laget';
 }
 
 /**
@@ -665,6 +767,20 @@ async function main() {
       : '2b. Ikke noe AI-svar å slette.',
   );
 
+  // ---------------------------------- 2c. blokkeringene og demo-spilleren (#3019)
+  // Revieweren skal kunne prøve «Blokker» fra start, så blokkeringer fra en
+  // tidligere vurdering slettes. Null rader er ingen feil. Rapportene står: de
+  // er admins kø, og admin behandler dem som andre rapporter.
+  const blockRows = ok(
+    'slett blokkeringene',
+    await db.from('user_blocks').delete().eq('blocker_id', reviewUserId).select('blocked_id'),
+  );
+  const demoPlayerId = await ensureDemoPlayer(db, store);
+  const friendship = await ensureFriendship(db, reviewUserId, demoPlayerId);
+  console.log(
+    `2c. ${blockRows.length} blokkering(er) slettet. Demo-spilleren ${DEMO_PLAYER.name} <${maskEmail(store.demoPlayerEmail)}> er klar; vennskapet ${friendship}.`,
+  );
+
   // ----------------------------------------------------------- 3–5. rundene
   // Hver butikk får to runder (#2561): stableford og scramble. Hver runde har
   // eget navn, så en gjenkjøring finner akkurat sine egne rader.
@@ -859,6 +975,7 @@ async function main() {
     // reviewer slettet seg, står den gamle raden igjen som «Slettet bruker» — og
     // en kjøring fra før #1909 kan ha lagt arrangøren i rosteret. Begge ut.
     const keepIds = [reviewUserId];
+    if (round.demoPlayer) keepIds.push(demoPlayerId);
     for (const profile of round.guests) {
       const known = rosterNames.get(profile.name);
       if (known) keepIds.push(known);
@@ -956,8 +1073,39 @@ async function main() {
       if (rows.length !== 1) throw new Error(`Roster-insert for ${profile.name} traff 0 rader`);
     }
     leagueGuestIds ??= Object.values(coPlayerIds);
+
+    // Demo-spilleren (#3019): en ekte konto i flight 2. Den er ikke gjest, så
+    // appen lar revieweren rapportere OG blokkere den fra startbilletten.
+    if (round.demoPlayer) {
+      const demoRow = {
+        flight_number: DEMO_PLAYER.flight,
+        team_number: null,
+        course_handicap: DEMO_PLAYER.courseHandicap,
+        tee_gender: 'mens',
+        accepted_at: acceptedAt,
+      };
+      const rows = rosterIds.includes(demoPlayerId)
+        ? ok(
+            'oppdater demo-spilleren i roster',
+            await db
+              .from('game_players')
+              .update(demoRow)
+              .eq('game_id', game.id)
+              .eq('user_id', demoPlayerId)
+              .select('user_id'),
+          )
+        : ok(
+            'legg demo-spilleren i roster',
+            await db
+              .from('game_players')
+              .insert({ game_id: game.id, user_id: demoPlayerId, ...demoRow })
+              .select('user_id'),
+          );
+      if (rows.length !== 1) throw new Error(`Roster-raden for demo-spilleren traff ${rows.length} rader`);
+    }
     console.log(
-      `4. Roster: review-kontoen (deltaker) + ${round.guests.map((p) => p.name).join(', ')}.`,
+      `4. Roster: review-kontoen (deltaker) + ${round.guests.map((p) => p.name).join(', ')}` +
+        (round.demoPlayer ? ` + ${DEMO_PLAYER.name} (ekte konto, flight ${DEMO_PLAYER.flight}).` : '.'),
     );
 
     // --------------------------------------------------- 5. scores + tilstand
@@ -1022,6 +1170,7 @@ async function main() {
       for (const profile of round.guests) {
         pushScores(coPlayerIds[profile.name], round.scoreOffsets[profile.name]);
       }
+      if (round.demoPlayer) pushScores(demoPlayerId, round.scoreOffsets.demoPlayer);
     }
     if (scoreRows.length > 0) {
       ok('sett demo-scores', await db.from('scores').insert(scoreRows));

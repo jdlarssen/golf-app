@@ -245,7 +245,11 @@ Kjøringen rydder opp etter alt revieweren kan ha gjort:
   kjøringen lager kontoen på nytt med samme adresse og passordet fra nøkkelringen,
   altså det som står i butikken.
 - **Står det en «Slettet bruker» igjen i en runde?** Den raden fjernes. Etterpå er
-  rosteret i hver runde nøyaktig fire: review-kontoen, Emma, Jonas og Nora.
+  rosteret i scramble-runden nøyaktig fire: review-kontoen, Emma, Jonas og Nora.
+  Stableford-runden har i tillegg demo-spilleren Sam Parker.
+- **Blokkert eller rapportert demo-spilleren (#3019)?** Review-kontoens blokkeringer
+  slettes, og Sam Parker er venn med kontoen og med i stableford-runden igjen.
+  Rapportene står i køen på `/admin/rapporter`. Behandle dem der som andre rapporter.
 - **Spilt, levert eller trukket seg?** Scorene og utslagene slettes og legges inn
   på nytt, rundene settes tilbake til «pågår», og alle leveringer nullstilles.
 - **Spilt en liga-runde?** Flightene i ligaen slettes, rundevinduene settes om
@@ -295,6 +299,17 @@ Connect eller Play Console, fordi de husker det gamle.
 - **Medspillere:** Emma, Jonas og Nora — gjestespillere uten innlogging, på et
   plassholder-domene uten MX. De kan aldri motta mail. Hver runde har sine egne
   tre gjester.
+- **Demo-spilleren (#3019):** «Sam Parker», en ekte konto (ikke gjest) uten passord,
+  på adressen `review-demo-player@example.test` (Google:
+  `review-demo-player-google@example.test`). `example.test` kan aldri motta e-post.
+  Han er venn med review-kontoen og spiller stableford-runden i flight 2. Appen lar
+  bare ekte kontoer blokkeres, så det er ham revieweren prøver «Rapporter eller
+  blokker» på (Apple 1.2). Skriptet lager ham ved første kjøring. **Ingenting er
+  skrevet til prod før du selv kjører skriptet før innsending.**
+- **Fjerne demo-spilleren:** han forsvinner ikke når review-kontoen slettes, og det
+  er meningen: neste kjøring trenger ham. Skal han ut for godt, slett kontoen hans
+  som en vanlig spiller under «Spillere» i Sekretariatet. Neste kjøring av skriptet
+  lager ham på nytt, så fjern ham bare når review-kontoen ikke skal brukes mer.
 - **Scores (stableford):** medspillerne har spilt hull 1–6, kontoen selv hull
   1–3. Revieweren fortsetter på hull 4 og ser et levende leaderboard med en
   gang.
@@ -317,7 +332,7 @@ inn som den er, med adressen og passordet til **Apple-kontoen** i feltene over �
 notatet nevner ingen av delene selv. Google Play har sin egen konto og sin egen
 tekst (`play-store-metadata.md`, «App-tilgang»).
 
-**Lengden:** Apples Notes-felt tar maks 4 000 byte. Malen er 3 948 byte, målt med
+**Lengden:** Apples Notes-felt tar maks 4 000 byte. Malen er 3 946 byte, målt med
 `wc -c` på teksten i blokka (med linjeskift til slutt). Linjene er ikke brutt, så det du
 limer inn, er det som er målt. Mål på nytt med `wc -c` hvis du endrer noe, og hold den
 under 3 950.
@@ -364,7 +379,7 @@ NOTIFICATIONS
 The app never asks on its own; the prompt appears when the player turns on "Varsler på denne telefonen" under "Profil" > "Varsler og tema".
 
 USER CONTENT (1.2)
-Report or block: on home tap "Demo Round — Tørny", then "Rapporter eller blokker" at the bottom. On a friend: under "Fjern venn". Unblock: "Profil" > "Personvern og konto" > "Blokkerte". Offensive words in names are refused. Reports email us at once; we act within 24 hours. "Kontakt oss" is there too.
+Report or block the demo player Sam Parker: "Profil" > "Venner" > "Sam Parker" > "Rapporter eller blokker", or in "Demo Round — Tørny". Unblock: "Profil" > "Personvern og konto" > "Blokkerte". Offensive words in names are refused. Reports email us; we act within 24 hours. "Kontakt oss" is there too.
 
 ENTRY FEE AND PRIZES
 An organiser can set an entry fee for a real golf event with a Vipps number or payment link. Players pay the organiser outside the app; the app takes no payment or cut and only shows who has paid. Prizes are handed out at the club, such as a dinner. Tørny does not run, fund or award any contest or prize, and Apple is not a sponsor; the app says so under the prize table.
