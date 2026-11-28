@@ -8302,11 +8302,17 @@
     "gangGames": "{count, plural, one {# runde sammen} other {# runder sammen}}",
     "gangSummaryBody": "Alle du fullførte minst én runde med i år.",
     "gangTopWinnerKicker": "Årets vinner",
+    "gangTopWinnersKicker": "Årets vinnere",
     "gangWins": "{count, plural, one {# seier} other {# seire}}",
+    "gangWinsEach": "{count, plural, one {# seier hver} other {# seire hver}}",
     "gangMostBirdiesKicker": "Flest birdier",
     "gangBirdies": "{count, plural, one {# birdie} other {# birdier}}",
+    "gangBirdiesEach": "{count, plural, one {# birdie hver} other {# birdier hver}}",
     "gangMostSnowmenKicker": "Årets snowman",
     "gangSnowmen": "{count} snowman",
+    "gangSnowmenEach": "{count} snowman hver",
+    "and": "og",
+    "andMore": "og {count} til",
     "gangTightestKicker": "Tetteste oppgjør",
     "gangTightestMargin": "Skilt av {margin} slag",
     "gangTightestShared": "Delt ledelse",
@@ -8374,16 +8380,21 @@
     },
     "gangWinner": {
       "title": "Årets vinner",
-      "count": "{n, plural, one {# seier} other {# seire}}"
+      "titleShared": "Årets vinnere",
+      "count": "{n, plural, one {# seier} other {# seire}}",
+      "countEach": "{n, plural, one {# seier hver} other {# seire hver}}"
     },
     "gangBirdies": {
       "title": "Flest birdier",
-      "count": "{n, plural, one {# birdie} other {# birdier}}"
+      "count": "{n, plural, one {# birdie} other {# birdier}}",
+      "countEach": "{n, plural, one {# birdie hver} other {# birdier hver}}"
     },
     "gangSnowmen": {
       "title": "Årets snowman",
-      "count": "{n, plural, one {# snowman} other {# snowman}}"
+      "count": "{n, plural, one {# snowman} other {# snowman}}",
+      "countEach": "{n} snowman hver"
     },
+    "andMore": "og {n} til",
     "gangTightest": {
       "title": "Tetteste oppgjør",
       "margin": "{n} slag",

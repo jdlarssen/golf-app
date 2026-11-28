@@ -4,12 +4,15 @@ import messages from '@/messages/no.json';
 import {
   KAVALKADE_CARD_KINDS,
   buildKavalkadeCardModel,
+  gangLeaderNames,
   isKavalkadeCardKind,
+  isSharedLead,
   kavalkadeCardImageUrl,
+  type GangLeaderWords,
   type KavalkadeCardKind,
   type KavalkadeCardStrings,
 } from './cardModel';
-import type { KavalkadeFacts } from './buildKavalkadeFacts';
+import type { GangLeaderFact, KavalkadeFacts } from './buildKavalkadeFacts';
 
 /**
  * Type A: hvilke tall som havner på hvilket kort, og hva som skjer når faktumet
@@ -293,6 +296,82 @@ describe('navn', () => {
     facts.personal!.rival!.name = '   ';
     expect(model('gang-winner', facts)?.hero.value).toBe('Spiller');
     expect(model('rival', facts)?.title).toBe('Regnskapet mot Spiller');
+  });
+});
+
+describe('likt antall på gjengekortene (#3020)', () => {
+  // Owner 28.11: two tied → «X og Y», three → «X, Y og Z», from four the first
+  // three and «og N til». The order is the facts' order (the viewer first).
+  const words: GangLeaderWords = {
+    and: 'og',
+    andMore: (n) => `og ${n} til`,
+    playerFallback: 'Spiller',
+  };
+  const ref = (name: string | null, i: number) => ({ userId: `u${i}`, name });
+  function tie(...names: (string | null)[]): GangLeaderFact {
+    const [first, ...rest] = names.map(ref);
+    return { ...first, count: 3, tiedWith: rest };
+  }
+
+  it('joins the names by the owner’s rule', () => {
+    expect(gangLeaderNames(tie('Ola N.'), words)).toBe('Ola N.');
+    expect(gangLeaderNames(tie('Ola N.', 'Kari H.'), words)).toBe('Ola N. og Kari H.');
+    expect(gangLeaderNames(tie('Ola N.', 'Kari H.', 'Per S.'), words)).toBe(
+      'Ola N., Kari H. og Per S.',
+    );
+    expect(gangLeaderNames(tie('Ola N.', 'Kari H.', 'Per S.', 'Mia T.'), words)).toBe(
+      'Ola N., Kari H., Per S. og 1 til',
+    );
+    expect(gangLeaderNames(tie('Ola N.', 'Kari H.', 'Per S.', 'Mia T.', 'Bo L.'), words)).toBe(
+      'Ola N., Kari H., Per S. og 2 til',
+    );
+  });
+
+  it('gives a player without a name the fallback, also inside a tie', () => {
+    expect(gangLeaderNames(tie('Ola N.', null), words)).toBe('Ola N. og Spiller');
+    expect(gangLeaderNames(tie('  ', 'Kari H.'), words)).toBe('Spiller og Kari H.');
+  });
+
+  it('reads a leader without tiedWith, or with an empty one, as no tie', () => {
+    const alone = { userId: 'u0', name: 'Ola N.', count: 3 };
+    expect(isSharedLead(alone)).toBe(false);
+    expect(isSharedLead({ ...alone, tiedWith: [] })).toBe(false);
+    expect(isSharedLead(tie('Ola N.', 'Kari H.'))).toBe(true);
+    expect(gangLeaderNames({ ...alone, tiedWith: [] }, words)).toBe('Ola N.');
+  });
+
+  it('names everyone tied on the winner card, in the plural title, with «hver»', () => {
+    const facts = fullFacts();
+    facts.gang!.topWinner = tie('Ola N.', 'Kari H.');
+    expect(model('gang-winner', facts)).toMatchObject({
+      title: 'Årets vinnere',
+      hero: { value: 'Ola N. og Kari H.', caption: '3 seire hver' },
+    });
+  });
+
+  it('keeps the birdie and snowman titles and says «hver» under the names', () => {
+    const facts = fullFacts();
+    facts.gang!.mostBirdies = { ...tie('Ola N.', 'Kari H.', 'Per S.'), count: 8 };
+    facts.gang!.mostSnowmen = { ...tie('Ola N.', 'Kari H.', 'Per S.', 'Mia T.'), count: 1 };
+    expect(model('gang-birdies', facts)).toMatchObject({
+      title: 'Flest birdier',
+      hero: { value: 'Ola N., Kari H. og Per S.', caption: '8 birdier hver' },
+    });
+    expect(model('gang-snowmen', facts)).toMatchObject({
+      title: 'Årets snowman',
+      hero: { value: 'Ola N., Kari H., Per S. og 1 til', caption: '1 snowman hver' },
+    });
+  });
+
+  it('draws the same card as before for facts without tiedWith', () => {
+    const before = fullFacts();
+    const withEmpty = fullFacts();
+    withEmpty.gang!.topWinner = { ...withEmpty.gang!.topWinner!, tiedWith: [] };
+    expect(model('gang-winner', withEmpty)).toEqual(model('gang-winner', before));
+    expect(model('gang-winner', before)).toMatchObject({
+      title: 'Årets vinner',
+      hero: { value: 'Bo Dahl', caption: '5 seire' },
+    });
   });
 });
 

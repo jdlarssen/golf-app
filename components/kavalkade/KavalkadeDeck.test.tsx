@@ -153,6 +153,58 @@ describe('KavalkadeDeck', () => {
     expect(screen.queryByTestId('kavalkade-card-year')).not.toBeInTheDocument();
   });
 
+  // #3020 (owner 28.11): a shared top number names everyone, three at most and
+  // then «og N til», with «hver» under the names and «Årets vinnere» on top.
+  it('names everyone who shares the top number on the gang cards', () => {
+    const tied: KavalkadeCard[] = [
+      {
+        id: 'gang-winner',
+        fact: {
+          userId: 'u1',
+          name: 'Ola N.',
+          count: 3,
+          tiedWith: [{ userId: 'u2', name: 'Kari H.' }],
+        },
+      },
+      {
+        id: 'gang-birdies',
+        fact: {
+          userId: 'u1',
+          name: 'Ola N.',
+          count: 8,
+          tiedWith: [
+            { userId: 'u2', name: 'Kari H.' },
+            { userId: 'u3', name: 'Per S.' },
+          ],
+        },
+      },
+      {
+        id: 'gang-snowmen',
+        fact: {
+          userId: 'u1',
+          name: 'Ola N.',
+          count: 1,
+          tiedWith: [
+            { userId: 'u2', name: 'Kari H.' },
+            { userId: 'u3', name: null },
+            { userId: 'u4', name: 'Mia T.' },
+          ],
+        },
+      },
+    ];
+    render(<KavalkadeDeck deck={{ personal: [], gang: tied, defaultTab: 'gang' }} locale="no" />);
+
+    expect(screen.getByTestId('kavalkade-card-gang-winner')).toHaveTextContent(
+      /^Årets vinnereOla N\. og Kari H\.3 seire hver$/,
+    );
+    expect(screen.getByTestId('kavalkade-card-gang-birdies')).toHaveTextContent(
+      /^Flest birdierOla N\., Kari H\. og Per S\.8 birdier hver$/,
+    );
+    expect(screen.getByTestId('kavalkade-card-gang-snowmen')).toHaveTextContent(
+      /^Årets snowmanOla N\., Kari H\., Ukjent spiller og 1 til1 snowman hver$/,
+    );
+  });
+
   it('opens on the tab the deck asks for, and says so when a tab is empty', () => {
     render(
       <KavalkadeDeck

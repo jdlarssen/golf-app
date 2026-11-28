@@ -6,7 +6,7 @@ import {
   buildKavalkadeDeck,
   type KavalkadeCard as Card,
 } from '../../../../../lib/kavalkade/kavalkadeCards';
-import { makeKavalkadeFacts } from '../../test/kavalkadeFixtures';
+import { makeKavalkadeFacts, makeTiedGang } from '../../test/kavalkadeFixtures';
 import { KavalkadeCard, kavalkadeCardBody, kavalkadeCardLabel } from './KavalkadeCard';
 
 const deck = buildKavalkadeDeck(makeKavalkadeFacts(), 'Et år å huske.');
@@ -60,6 +60,23 @@ describe('kavalkadeCardBody', () => {
       null,
       'Jørgen 84 mot Ola 85',
       'Tirsdagsrunden · Losby · 5. mai',
+    ]);
+  });
+
+  // #3020 (owner 28.11): everyone who shares the top number, three at most and
+  // then «og N til», as the web card and the share image write it.
+  it('names everyone who shares the top number, as the web does', () => {
+    const tied = buildKavalkadeDeck(makeKavalkadeFacts({ gang: makeTiedGang() })).gang;
+    const body = (id: Card['id']) => {
+      const b = kavalkadeCardBody(tied.find((c) => c.id === id) as Card);
+      return [b.kicker, b.headline, ...b.lines];
+    };
+    expect(body('gang-winner')).toEqual(['Årets vinnere', 'Ola N. og Kari H.', '3 seire hver']);
+    expect(body('gang-birdies')).toEqual(['Flest birdier', 'Ola N., Kari H. og Per S.', '8 birdier hver']);
+    expect(body('gang-snowmen')).toEqual([
+      'Årets snowman',
+      'Maximiliansebastians K., Ola N., Kari H. og 1 til',
+      '1 snowman hver',
     ]);
   });
 
