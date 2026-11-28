@@ -47,13 +47,18 @@ describe('blockUser', () => {
 
 describe('unblockUser', () => {
   it('sletter bare min egen rad for den personen', async () => {
-    const del = queryStub({ data: [], error: null });
+    const del = queryStub({ data: [{ blocked_id: 'kari' }], error: null });
     routeFrom({ user_blocks: [del] });
     expect(await unblockUser('kari')).toEqual({ ok: true });
     expect(stepArgs(del, 'eq')).toEqual([
       ['blocker_id', 'me'],
       ['blocked_id', 'kari'],
     ]);
+  });
+
+  it('0 rader slettet er en feil, ikke en oppheving (felle 2)', async () => {
+    routeFrom({ user_blocks: [queryStub({ data: [], error: null })] });
+    expect(await unblockUser('kari')).toEqual({ ok: false, reason: 'failed' });
   });
 });
 

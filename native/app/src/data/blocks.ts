@@ -53,7 +53,7 @@ export async function unblockUser(userId: string): Promise<BlockResult> {
   const me = await currentDeviceUserId();
   if (!me) return { ok: false, reason: 'failed' };
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('user_blocks')
       .delete()
       .eq('blocker_id', me)
@@ -63,6 +63,9 @@ export async function unblockUser(userId: string): Promise<BlockResult> {
       console.error('[blocks] opphevingen feilet', error);
       return { ok: false, reason: 'failed' };
     }
+    // 0 rader slettet er ingen oppheving (felle 2). Lista henter seg selv
+    // etterpå, så en rad som alt var borte, forsvinner derfra uansett.
+    if (!data || data.length === 0) return { ok: false, reason: 'failed' };
     return { ok: true };
   } catch (err) {
     console.error('[blocks] opphevingen feilet', err);

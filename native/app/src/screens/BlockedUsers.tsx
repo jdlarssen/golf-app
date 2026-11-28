@@ -54,10 +54,7 @@ export function BlockedUsers(_props: ScreenProps<'BlockedUsers'>) {
       const result = await unblockUser(person.userId);
       inFlight.current = false;
       setBusyId(null);
-      if (!result.ok) {
-        setLine(describeBlockFailure(result.reason));
-        return;
-      }
+      if (!result.ok) setLine(describeBlockFailure(result.reason));
       await reload();
     },
     [reload],
@@ -83,7 +80,9 @@ export function BlockedUsers(_props: ScreenProps<'BlockedUsers'>) {
       contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24, backgroundColor: colors.bg }]}
       testID="blocked-users-screen"
     >
-      <PageTitle size="settings" title={MODERATION_TEXT.blockedTitle} subtitle={MODERATION_TEXT.blockedLede} />
+      <View style={styles.head}>
+        <PageTitle size="settings" title={MODERATION_TEXT.blockedTitle} subtitle={MODERATION_TEXT.blockedLede} />
+      </View>
 
       {load.state === 'loading' ? (
         <View style={styles.centered}>
@@ -166,6 +165,9 @@ export function BlockedUsers(_props: ScreenProps<'BlockedUsers'>) {
 
 const styles = StyleSheet.create({
   scroll: { flexGrow: 1 },
+  // «Personvern og konto» får kanten fra rullefeltet (16 + PageTitles 4); her
+  // står kortet med egen kant, så tittelen får sin egen.
+  head: { marginHorizontal: 16 },
   centered: { paddingVertical: 32, alignItems: 'center' },
   failed: { marginTop: 18, marginHorizontal: 20, gap: 12 },
   retry: { minHeight: 44, borderRadius: 999, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },

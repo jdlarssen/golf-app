@@ -287,6 +287,11 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   }
 
   const { game } = bundle;
+  // Spillerne du kan si fra om (#3019): ikke deg selv, og ikke gjester, som
+  // ikke har egen konto.
+  const moderationPlayers = bundle.players
+    .filter((p) => p.userId !== userId && !p.isGuest)
+    .map((p) => ({ userId: p.userId, name: displayName(p) }));
   const roster = toRoster(bundle.players);
   const me = findInRoster(roster, userId);
   const mode = game.gameMode as GameMode;
@@ -618,7 +623,9 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
 
       <View style={styles.moderationSlot}>
         <ModerationLink
-          label={MODERATION_TEXT.entryGame}
+          // Bare gjester med deg: arket har ingen å blokkere, så lenka lover
+          // bare det den gjør.
+          label={moderationPlayers.length > 0 ? MODERATION_TEXT.entryGame : MODERATION_TEXT.entryRound}
           onPress={() => setModerating(true)}
           testID="game-home-moderation"
         />
@@ -629,11 +636,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
             kind: 'round',
             target: { kind: 'game', gameId },
             roundName: game.name,
-            // Spillerne du kan si fra om: ikke deg selv, og ikke gjester, som
-            // ikke har egen konto.
-            players: bundle.players
-              .filter((p) => p.userId !== userId && !p.isGuest)
-              .map((p) => ({ userId: p.userId, name: displayName(p) })),
+            players: moderationPlayers,
           }}
           onClose={() => setModerating(false)}
         />

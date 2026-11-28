@@ -552,6 +552,29 @@ describe('GameHome — startbilletten (#2255)', () => {
     expect(screen.getByTestId('rules-heading')).toHaveTextContent('Regler: Stableford');
   });
 
+  it.each([
+    ['en ekte medspiller', false, 'Rapporter eller blokker'],
+    ['bare gjester med deg', true, 'Rapporter runden'],
+  ])('lenka under reglene med %s (#3019)', async (_case, guest, label) => {
+    mockState.bundle = homeBundle({
+      game: { id: 'game-1', status: 'scheduled', modeConfig: { kind: 'stableford', team_size: 1 } },
+      players: [homePlayer({ userId: 'me' }), homePlayer({ userId: 'ola', isGuest: guest })],
+    });
+    mockState.scores = [];
+
+    await render(
+      <GameHome
+        {...({
+          route: { params: { gameId: 'game-1' } },
+          navigation: { navigate: jest.fn(), setOptions: jest.fn() },
+        } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('game-home-moderation')).toBeTruthy());
+    expect(screen.getByTestId('game-home-moderation')).toHaveTextContent(label);
+  });
+
   it('pågående runde: Tavla og Scorekort går til sine skjermer, og Regler står', async () => {
     mockState.bundle = homeBundle({
       game: { id: 'game-1', modeConfig: { kind: 'stableford', team_size: 1 } },

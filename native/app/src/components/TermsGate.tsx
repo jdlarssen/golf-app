@@ -4,11 +4,12 @@
 // spørsmålet kommer da neste gang appen starter med nett. Den står etter
 // «Fullfør profilen» og før spørsmålet om AI-tekster.
 import { useEffect, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, ActivityIndicator, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Alert, View } from 'react-native';
 import { saveTermsAccepted } from '../data/terms';
 import { rememberTermsAccepted, termsStepFor } from '../data/termsGate';
 import { logOut } from '../data/logout';
 import { MODERATION_TEXT } from '../lib/moderationCopy';
+import { PROFILE_TEXT, unsentStrokesWarning } from '../lib/profileCopy';
 import { describeWebLinkFailure, openWeb } from '../lib/webLink';
 import { TermsQuestion, type TermsAnswer } from '../screens/TermsQuestion';
 import { useTheme } from '../theme';
@@ -43,11 +44,16 @@ export function TermsGate({ userId, children }: { userId: string; children: Reac
     setLine(null);
     if (answer === 'decline') {
       // Utloggingen bytter til innloggingsskjermen, og porten forsvinner med
-      // resten. Står det slag som ikke er sendt, logges spilleren ikke ut her:
-      // svaret står til hen har godtatt eller tømt køen fra appen.
+      // resten. Slag som ikke er sendt, får samme spørsmål som «Logg ut» i
+      // «Personvern og konto».
       const result = await logOut();
+      if (result.ok) return;
+      if (result.reason === 'unsent') {
+        askLogOutWithUnsent(result.pending);
+        return;
+      }
       setPending(null);
-      if (!result.ok) fail(MODERATION_TEXT.termsSaveFailed);
+      fail(PROFILE_TEXT.logoutOfflineNote);
       return;
     }
     const result = await saveTermsAccepted(userId);
@@ -58,6 +64,28 @@ export function TermsGate({ userId, children }: { userId: string; children: Reac
     }
     await rememberTermsAccepted(userId);
     setState({ kind: 'open' });
+  };
+
+  const askLogOutWithUnsent = (count: number) => {
+    Alert.alert(
+      PROFILE_TEXT.unsentStrokesTitle,
+      unsentStrokesWarning(count),
+      [
+        { text: PROFILE_TEXT.unsentStrokesCancel, style: 'cancel', onPress: () => setPending(null) },
+        {
+          text: PROFILE_TEXT.unsentStrokesConfirm,
+          style: 'destructive',
+          onPress: () => {
+            void logOut({ keepUnsent: true }).then((result) => {
+              if (result.ok) return;
+              setPending(null);
+              fail(PROFILE_TEXT.logoutOfflineNote);
+            });
+          },
+        },
+      ],
+      { cancelable: false },
+    );
   };
 
   const onRead = () => {
