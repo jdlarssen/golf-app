@@ -26,13 +26,14 @@
 --   16. B reads A's acceptance                            0 rows
 --   word filter
 --   17. «Fitjar Golfklubb» passes, «Kuk» does not
+--   18. a signed-in user cannot ask is_blocked_between (0260)    FORBIDDEN
 -- ─────────────────────────────────────────────────────────────────────────────
 
 begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(17);
+select plan(18);
 
 \ir fixtures/rls_helpers.psql
 
@@ -222,6 +223,12 @@ select ok(
   not public.contains_blocked_word('Fitjar Golfklubb')
   and public.contains_blocked_word('Kuk'),
   '17. whole words only: a place name passes, the word does not'
+);
+
+select torny_rls.as_user(torny_rls.flightmate_id());
+select ok(
+  not has_function_privilege('authenticated', 'public.is_blocked_between(uuid, uuid)', 'execute'),
+  '18. a signed-in user cannot ask whether two people have a block'
 );
 
 select * from finish();
