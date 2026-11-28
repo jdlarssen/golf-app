@@ -52,6 +52,12 @@ vi.mock('@/lib/games/guestOwnership', () => ({
 // Frist-forlengelsen på en åpen invitasjon går gjennom admin-klienten uansett
 // hvilken klient kalleren sendte inn — egen kø, så skrivingen kan skilles fra
 // lesingene.
+// #3019: the inviter's blocks. Default: none, so no address lookup runs.
+let blockedPairIds = new Set<string>();
+vi.mock('@/lib/moderation/blockedPairs', () => ({
+  getBlockedPairIds: async () => blockedPairIds,
+}));
+
 let adminSupabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => adminSupabaseMock,
@@ -114,6 +120,7 @@ async function invite(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  blockedPairIds = new Set();
   adminSupabaseMock = buildSupabaseMock([]);
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
@@ -723,5 +730,22 @@ describe('addExistingPlayerToGameCore', () => {
 
     expect(result).toEqual({ ok: true, alreadyOnRoster: false });
     expect(inviteEligibleIdsMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('an address of someone with a block (#3019)', () => {
+  it('writes nothing, sends nothing, and answers like a sent invitation', async () => {
+    blockedPairIds = new Set([RECIPIENT_ID]);
+    // The inviter cannot see the account (no friendship left), so the viewer
+    // lookup finds nothing; the service role's lookup finds the account.
+    adminSupabaseMock = buildSupabaseMock([
+      { data: { id: RECIPIENT_ID }, error: null }, // findVisibleUserByEmail: the account
+      { data: { id: RECIPIENT_ID }, error: null }, // isBlockedAddress: the same account
+    ]);
+    // The viewer's read of that account finds nothing (the queue's default).
+    const { result, client } = await invite([gameRow()]);
+    expect(result).toEqual({ ok: true, kind: 'sent', email: 'ny@example.com' });
+    expect(client.__fromCalls.some((c) => c.table === 'invitations')).toBe(false);
+    expect(sendInviteNotificationMock).not.toHaveBeenCalled();
   });
 });

@@ -8,6 +8,7 @@ import { distinctInviterIds } from '@/lib/friends/friendGraph';
 import { isRosterLocked } from '@/lib/games/status';
 import { withoutReceiptInvitations } from './invitationConsume';
 import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
+import { getBlockedPairIds } from '@/lib/moderation/blockedPairs';
 
 // Det som skjer etter en vellykket innlogging — ett hjem (#2216).
 //
@@ -200,10 +201,20 @@ export async function afterLogin(
             }),
         );
 
+        // #3019: an invitation from someone the invitee has a block with
+        // never puts them on that roster (the service role here skips the
+        // game_players guard). A failed read counts as no block, so a
+        // login never loses its seats to a lookup error.
+        const blockedIds = await getBlockedPairIds(userRow.id).catch((err: unknown) => {
+          console.error('[afterLogin] block lookup failed', err);
+          return new Set<string>();
+        });
+
         await Promise.allSettled(
           resolvedGameScoped
             .filter((r) => !r.isLocked)
             .map(async ({ inv, isTeamScoped }) => {
+              if (!isTeamScoped && blockedIds.has(inv.invited_by)) return;
               if (!isTeamScoped) {
                 // #2209: the invitee's tee category from the profile, clamped
                 // to this game's tee. joinTeeGenders never throws.

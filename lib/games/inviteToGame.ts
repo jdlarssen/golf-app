@@ -19,6 +19,7 @@ import { expireGameCache } from '@/lib/games/expireGameCache';
 import { isRosterLocked } from '@/lib/games/status';
 import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 import { isPlausibleInviteEmail, normalizeInviteEmail } from '@/lib/games/inviteEmail';
+import { getBlockedPairIds } from '@/lib/moderation/blockedPairs';
 
 // E-post-invitasjons-kjernen (#1919): ett hjem for «arrangøren inviterer en
 // e-post inn i en runde».
@@ -191,6 +192,15 @@ export async function inviteEmailToGameCore(params: {
     });
   }
 
+  // #3019: an address the inviter cannot see may still belong to someone
+  // they have a block with (the block ended the friendship that made the row
+  // visible). Then nothing is written and no mail goes out, and the answer is
+  // the one a sent invitation gets, so the block stays hidden. afterLogin
+  // skips such an invitation too, so an older one never lands on the roster.
+  if (!isAdmin && (await isBlockedAddress(inviterUserId, email))) {
+    return { ok: true, kind: game.status === 'draft' ? 'held' : 'sent', email };
+  }
+
   return inviteUnknownEmail({
     client,
     gameId,
@@ -200,6 +210,30 @@ export async function inviteEmailToGameCore(params: {
     email,
     game,
   });
+}
+
+/**
+ * #3019: true when `email` belongs to an account that has a block with the
+ * inviter. A failed read counts as no block: it must never stop every
+ * invitation, and the rare miss is a mail the blocker can ignore.
+ */
+async function isBlockedAddress(inviterUserId: string, email: string): Promise<boolean> {
+  try {
+    // The blocks first: most inviters have none, and then no address lookup runs.
+    const blocked = await getBlockedPairIds(inviterUserId);
+    if (blocked.size === 0) return false;
+    const { data, error } = await getAdminClient()
+      .from('users')
+      .select('id')
+      .filter('email', 'imatch', emailMatchPattern(email))
+      .is('deleted_at', null)
+      .maybeSingle<{ id: string }>();
+    if (error) throw new Error(error.message);
+    return data ? blocked.has(data.id) : false;
+  } catch (err) {
+    console.error('[inviteEmailToGameCore] block lookup failed', err);
+    return false;
+  }
 }
 
 /**
