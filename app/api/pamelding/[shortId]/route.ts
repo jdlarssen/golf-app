@@ -85,6 +85,7 @@ import { isUuid } from '@/lib/url/isUuid';
 //   Feilene (kjernenes koder, uendret):
 //        400 bad_request (kroppen) | team_name_invalid | slots_count_wrong
 //            | duplicate_members | self_in_slots              — rett skjemaet
+//            | blocked_word (#3019: ordfilteret i 0259 sa nei til lagnavnet)
 //        401 unauthorized                                     — not_authed
 //        403 teammate_not_friend                              — en du ikke er venn med
 //        404 game_not_found (runden) | not_found (forespørselen er ikke din / borte)
@@ -279,6 +280,7 @@ function teamFailure(error: TeamRegistrationError | AcceptDeclineError) {
     case 'slots_count_wrong':
     case 'duplicate_members':
     case 'self_in_slots':
+    case 'blocked_word':
       return NextResponse.json({ error }, { status: 400 });
     case 'not_authed':
       return NextResponse.json(UNAUTHORIZED, { status: 401 });
