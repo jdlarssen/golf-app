@@ -1031,8 +1031,135 @@ describe('Hole', () => {
     expect(names).toEqual(['nextHole']);
   });
 
-  it('sollys: siste score i flighten går videre til neste hull', async () => {
+  // #2929: siden sier fra i 2 sekunder før den går videre, og kan stoppes.
+  async function lastScoreInSunlight(holeNumber = 2) {
     await act(async () => setSunlight(true));
+    mockState.scores = [localScore('mate', 4, null, holeNumber)];
+    const navigation = await renderHole(holeNumber);
+    await waitFor(() => {
+      expect(screen.getByTestId('rail-option-4')).toBeTruthy();
+    });
+    mockState.scores = [
+      localScore('mate', 4, null, holeNumber),
+      localScore('me', 4, null, holeNumber),
+    ];
+    await fireEvent.press(screen.getByTestId('rail-option-4'));
+    return navigation;
+  }
+  const wait = (ms: number) => act(async () => new Promise((resolve) => setTimeout(resolve, ms)));
+
+  it('sollys: siste score i flighten viser «Går til hull 3 …» og går videre etter 2 sekunder', async () => {
+    const navigation = await lastScoreInSunlight();
+    await waitFor(() => {
+      expect(screen.getByTestId('score-rail-countdown-text')).toHaveTextContent('Går til hull 3 …');
+    });
+    expect(screen.getByTestId('score-rail-stay')).toBeTruthy();
+    expect(navigation.setParams).not.toHaveBeenCalled();
+    await waitFor(
+      () => {
+        expect(navigation.setParams).toHaveBeenCalledWith({ holeNumber: 3 });
+      },
+      { timeout: 3500 },
+    );
+  }, 10000);
+
+  it('sollys: «Bli her» stopper hoppet, og «Neste hull» går videre etterpå', async () => {
+    const navigation = await lastScoreInSunlight();
+    await waitFor(() => {
+      expect(screen.getByTestId('score-rail-stay')).toBeTruthy();
+    });
+    await fireEvent.press(screen.getByTestId('score-rail-stay'));
+    expect(screen.queryByTestId('score-rail-countdown-text')).toBeNull();
+    await wait(2800);
+    expect(navigation.setParams).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('score-rail-next-hole'));
+    expect(navigation.setParams).toHaveBeenCalledWith({ holeNumber: 3 });
+  }, 10000);
+
+  it('sollys: et trykk på et navn under varselet stopper hoppet, og rettingen lander på hull 2', async () => {
+    const navigation = await lastScoreInSunlight();
+    await waitFor(() => {
+      expect(screen.getByTestId('score-rail-countdown-text')).toBeTruthy();
+    });
+    await fireEvent.press(screen.getByTestId('flight-row-mate'));
+    expect(screen.queryByTestId('score-rail-countdown-text')).toBeNull();
+    await wait(2800);
+    expect(navigation.setParams).not.toHaveBeenCalled();
+
+    (writeScore as jest.Mock).mockClear();
+    await fireEvent.press(screen.getByTestId('rail-option-5'));
+    expect(writeScore).toHaveBeenCalledWith({
+      gameId: GAME_ID,
+      userId: 'mate',
+      holeNumber: 2,
+      strokes: 5,
+      enteredBy: 'me',
+    });
+  }, 10000);
+
+  it('sollys med putter på: skinna venter ikke på putter (sollys har ingen putt-rad), og varselet starter', async () => {
+    await AsyncStorage.setItem(`torny:putts:${GAME_ID}`, '1');
+    const navigation = await lastScoreInSunlight();
+    await waitFor(() => {
+      expect(screen.getByTestId('score-rail-countdown-text')).toHaveTextContent('Går til hull 3 …');
+    });
+    await waitFor(
+      () => {
+        expect(navigation.setParams).toHaveBeenCalledWith({ holeNumber: 3 });
+      },
+      { timeout: 3500 },
+    );
+  }, 10000);
+
+  it('sollys midt i hullet rører ikke puttene som alt er lagret, verken på og av eller ved et nytt slag', async () => {
+    await AsyncStorage.setItem(`torny:putts:${GAME_ID}`, '1');
+    mockState.scores = [localScore('mate', 4, 2, 2)];
+    await renderHole(2);
+    await waitFor(() => {
+      expect(screen.getByTestId('rail-putts')).toBeTruthy();
+    });
+
+    await act(async () => setSunlight(true));
+    await waitFor(() => {
+      expect(screen.queryByTestId('rail-putts')).toBeNull();
+    });
+    await act(async () => setSunlight(false));
+    await waitFor(() => {
+      expect(screen.getByTestId('rail-putts')).toBeTruthy();
+    });
+    // Å slå sollys på og av skriver ingenting.
+    expect(writeScore).not.toHaveBeenCalled();
+
+    // Et slag i sollys sender bare slaget: `putts` er utelatt, så mergen i
+    // `writeScore` beholder de 2 puttene (#939).
+    await act(async () => setSunlight(true));
+    await waitFor(() => {
+      expect(screen.getByTestId('rail-option-4')).toBeTruthy();
+    });
+    await fireEvent.press(screen.getByTestId('rail-option-4'));
+    expect(writeScore).toHaveBeenCalledTimes(1);
+    expect((writeScore as jest.Mock).mock.calls[0][0]).not.toHaveProperty('putts');
+  }, 10000);
+
+  it('sollys med skjermleser på: siden hopper ikke, og «Neste hull» står', async () => {
+    // Spionen på RN sin egen jest-mock: `mockRestore` ville tømt den for
+    // implementasjon og knekt alle testene etter, så svaret settes tilbake.
+    const reader = AccessibilityInfo.isScreenReaderEnabled as jest.Mock;
+    reader.mockResolvedValue(true);
+    try {
+      const navigation = await lastScoreInSunlight();
+      await waitFor(() => {
+        expect(screen.getByTestId('score-rail-next-hole')).toBeTruthy();
+      });
+      await wait(2800);
+      expect(screen.queryByTestId('score-rail-countdown-text')).toBeNull();
+      expect(navigation.setParams).not.toHaveBeenCalled();
+    } finally {
+      reader.mockResolvedValue(false);
+    }
+  }, 10000);
+
+  it('uten sollys: ingen varsel og ingen hopp etter siste score', async () => {
     mockState.scores = [localScore('mate', 4, null, 2)];
     const navigation = await renderHole(2);
     await waitFor(() => {
@@ -1040,13 +1167,10 @@ describe('Hole', () => {
     });
     mockState.scores = [localScore('mate', 4, null, 2), localScore('me', 4, null, 2)];
     await fireEvent.press(screen.getByTestId('rail-option-4'));
-    await waitFor(
-      () => {
-        expect(navigation.setParams).toHaveBeenCalledWith({ holeNumber: 3 });
-      },
-      { timeout: 2000 },
-    );
-  });
+    await wait(2800);
+    expect(screen.queryByTestId('score-rail-countdown-text')).toBeNull();
+    expect(navigation.setParams).not.toHaveBeenCalled();
+  }, 10000);
 
   it('sollys: et hull som alt er ferdig når det åpnes, blir stående', async () => {
     await act(async () => setSunlight(true));

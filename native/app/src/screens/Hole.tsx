@@ -204,10 +204,11 @@ const TAP_INSTRUCTION = 'Trykk kort = par. Bruk − / +.';
  */
 const SUBMITTED_BADGE = 'Levert';
 /**
- * Sollys (eierens svar, #2385): så lenge siden venter etter siste score på
- * hullet før den går videre, så tallet rekker å synes.
+ * Sollys (eierens svar, #2385): så lenge siden viser varselet «Går til hull n …»
+ * etter siste score på hullet før den går videre. 2 sekunder (#2929): nok til
+ * å lese teksten og treffe «Bli her».
  */
-const AUTO_NEXT_MS = 800;
+const AUTO_NEXT_MS = 2000;
 /** Så langt sidelengs et sveip på hullnummeret må gå for å bytte hull. */
 const SWIPE_DISTANCE = 40;
 /** Hvor ofte skjermen leser SQLite på nytt. Samme takt som Sync-laben. */
@@ -848,11 +849,14 @@ function HoleView({
     );
   };
 
+  // #2929: sollys har ingen putt-rad (`Hull-sollys`). Ventet skinna på putter
+  // der, sto den fast på setet uten noe å trykke på, og siden gikk aldri videre.
+  const railPutts = capturesPutts && putts.enabled && !sunlight;
   const rail = useScoreRail({
     seats,
     mySeatId: collapsed ? (myCard?.captainId ?? null) : userId,
     par,
-    puttsTracking: capturesPutts && putts.enabled,
+    puttsTracking: railPutts,
     onSetScore: setSeatScore,
     onSetPutts: setSeatPutts,
     clearScoreFor: clearSeatScore,
@@ -907,17 +911,49 @@ function HoleView({
   // et hull som alt er ferdig. Utgangspunktet settes derfor først når scorene
   // er lest fra SQLite (før det er lista tom fordi den ikke er lest), og hvert
   // hull har sin egen `HoleView` (`key`).
+  //
+  // #2929: siden sier fra i 2 sekunder først («Går til hull n …», «Bli her»),
+  // og venter til skinna står uten aktivt sete. Da er puttene for siste sete
+  // ført (putter på), og et trykk på et navn (setet festes) eller et slag som
+  // ikke ble lagret (rullet tilbake) stopper hoppet, så en retting aldri
+  // lander på neste hull. «Bli her» stopper det for resten av besøket.
+  // Skjermleseren hopper ikke: to sekunder rekker ikke å nå en knapp med den.
   const everyoneScored = usesRail && seats.length > 0 && seats.every((seat) => seat.score != null);
-  const scoredBefore = useRef<boolean | null>(scoresLoaded ? everyoneScored : null);
+  const [scoredBefore, setScoredBefore] = useState<boolean | null>(
+    scoresLoaded ? everyoneScored : null,
+  );
+  const [jumpArmed, setJumpArmed] = useState(false);
+  if (scoresLoaded && scoredBefore !== everyoneScored) {
+    setScoredBefore(everyoneScored);
+    if (scoredBefore !== null) setJumpArmed(everyoneScored);
+  }
+  const [stayHere, setStayHere] = useState(false);
+  const [screenReader, setScreenReader] = useState<boolean | null>(null);
   useEffect(() => {
-    if (!scoresLoaded) return;
-    const before = scoredBefore.current;
-    scoredBefore.current = everyoneScored;
-    if (before === null) return;
-    if (!sunlight || before || !everyoneScored || !hasNext) return;
+    let alive = true;
+    void AccessibilityInfo.isScreenReaderEnabled()
+      .then((value) => {
+        if (alive) setScreenReader(value);
+      })
+      .catch(() => undefined);
+    const sub = AccessibilityInfo.addEventListener('screenReaderChanged', setScreenReader);
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, []);
+  const countdownOn =
+    sunlight &&
+    jumpArmed &&
+    rail.activeSeatId == null &&
+    !stayHere &&
+    hasNext &&
+    screenReader === false;
+  useEffect(() => {
+    if (!countdownOn) return;
     const timer = setTimeout(() => goToHole(holeNumber + 1), AUTO_NEXT_MS);
     return () => clearTimeout(timer);
-  }, [everyoneScored, scoresLoaded, sunlight, holeNumber, hasNext, goToHole]);
+  }, [countdownOn, holeNumber, goToHole]);
 
   const allHolesFilled = ownHoles.every((n) => myFilled.includes(n));
   // Telleren over radene: seter på skinna, spillere i kortformatene.
@@ -1219,7 +1255,7 @@ function HoleView({
             }
             par={par}
             options={railOptions}
-            puttsTracking={capturesPutts && putts.enabled}
+            puttsTracking={railPutts}
             puttsAvailable={capturesPutts}
             skipTo={railSkipSeat ? railSkipSeat.shortName : null}
             otherTop={`${par + 4}+`}
@@ -1246,6 +1282,8 @@ function HoleView({
                     ? 'Lever lagets kort'
                     : 'Lever scorekort'
             }
+            countdown={countdownOn ? { hole: holeNumber + 1, ms: AUTO_NEXT_MS } : null}
+            onStay={() => setStayHere(true)}
             onNext={() =>
               holeNumber < lastOwnHole
                 ? goToHole(holeNumber + 1)

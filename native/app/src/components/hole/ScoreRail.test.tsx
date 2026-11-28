@@ -41,6 +41,8 @@ function props(over: Partial<ScoreRailProps> = {}): ScoreRailProps {
     onPuttsToggle: jest.fn(),
     nextLabel: 'Neste hull',
     onNext: jest.fn(),
+    countdown: null,
+    onStay: jest.fn(),
     ...over,
   };
 }
@@ -106,6 +108,36 @@ it('alle har score: «Neste hull» er knappen videre, og siste hull sier «Lever
     <ScoreRail {...props({ active: null, options: [], onNext, nextLabel: 'Lever scorekort' })} />,
   );
   expect(screen.getByTestId('score-rail-next-hole')).toHaveTextContent('Lever scorekort');
+});
+
+// #2929: i sollys går siden selv til neste hull. Varselet sier fra i
+// 2 sekunder, med en strek som fylles og en «Bli her» som stopper hoppet.
+describe('varselet før hullsiden går videre (#2929)', () => {
+  it('viser «Går til hull n …» og «Bli her», og «Neste hull» står som før', async () => {
+    const onStay = jest.fn();
+    const onNext = jest.fn();
+    await render(
+      <ScoreRail
+        {...props({ active: null, options: [], countdown: { hole: 3, ms: 2000 }, onStay, onNext })}
+      />,
+    );
+    expect(screen.getByTestId('score-rail-countdown-text')).toHaveTextContent('Går til hull 3 …');
+    expect(screen.getByTestId('score-rail-countdown-bar', { hidden: true })).toBeTruthy();
+    expect(screen.queryByTestId('score-rail-all-scored')).toBeNull();
+    expect(screen.getByTestId('score-rail-next-hole')).toHaveTextContent('Neste hull');
+
+    await fireEvent.press(screen.getByTestId('score-rail-stay'));
+    expect(onStay).toHaveBeenCalledTimes(1);
+    await fireEvent.press(screen.getByTestId('score-rail-next-hole'));
+    expect(onNext).toHaveBeenCalledTimes(1);
+  });
+
+  it('uten varsel står dagens tekst, og ingen «Bli her»', async () => {
+    await render(<ScoreRail {...props({ active: null, options: [] })} />);
+    expect(screen.getByTestId('score-rail-all-scored')).toBeTruthy();
+    expect(screen.queryByTestId('score-rail-countdown-text')).toBeNull();
+    expect(screen.queryByTestId('score-rail-stay')).toBeNull();
+  });
 });
 
 it('en seat som mangler score: ingen «Neste hull»-knapp', async () => {

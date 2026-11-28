@@ -26,7 +26,7 @@
 //   svart strek på 3, og bare navnet på resultatet. Par foreslås som svart
 //   flate. Ingen overskrift og ingen nederste rad.
 import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { Tap } from '../Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { strokesOnHole, type StrokeTerm } from '../../../../../lib/scorecard/scoreRail';
@@ -84,6 +84,14 @@ export type ScoreRailProps = {
    */
   nextLabel: string;
   onNext: () => void;
+  /**
+   * #2929: sollys går selv til neste hull. Mens det står en nedtelling, viser
+   * skinna «Går til hull n …», en strek som fylles på `ms` og «Bli her».
+   * `null` når siden ikke er på vei videre.
+   */
+  countdown: { hole: number; ms: number } | null;
+  /** «Bli her»: stopper hoppet. */
+  onStay: () => void;
 };
 
 /** Flaten bak en tone. */
@@ -136,6 +144,87 @@ export function railStrokesLine(
     : { text: `Får ${n} slag`, label: `får ${n} slag på hullet` };
 }
 
+/**
+ * #2929: varselet i den krympede skinna. Streken fylles på `ms`, så den viser
+ * hvor lenge det er til siden går videre. Med redusert bevegelse står den
+ * fylt fra start; teksten og ventetiden er de samme.
+ */
+function Countdown({
+  countdown,
+  onStay,
+}: {
+  countdown: { hole: number; ms: number };
+  onStay: () => void;
+}) {
+  const { colors, hole } = useTheme();
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const [progress] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    let alive = true;
+    void AccessibilityInfo.isReduceMotionEnabled()
+      .then((value) => {
+        if (alive) setReduceMotion(value);
+      })
+      .catch(() => undefined);
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, []);
+  useEffect(() => {
+    if (reduceMotion) {
+      progress.setValue(1);
+      return;
+    }
+    progress.setValue(0);
+    const run = Animated.timing(progress, {
+      toValue: 1,
+      duration: countdown.ms,
+      easing: Easing.linear,
+      useNativeDriver: false,
+    });
+    run.start();
+    return () => run.stop();
+  }, [reduceMotion, countdown.ms, progress]);
+  const width = progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
+
+  return (
+    <View style={styles.countdown}>
+      <Text
+        maxFontSizeMultiplier={HOLE_TEXT_CAP}
+        style={[styles.countdownText, { color: colors.text }]}
+        testID="score-rail-countdown-text"
+      >
+        {`Går til hull ${countdown.hole} …`}
+      </Text>
+      <View
+        style={[styles.countdownTrack, { backgroundColor: colors.border }]}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        <Animated.View
+          style={[styles.countdownBar, { width, backgroundColor: colors.primary }]}
+          testID="score-rail-countdown-bar"
+        />
+      </View>
+      <Tap
+        style={[
+          styles.stay,
+          { borderWidth: hole.borderW, borderColor: colors.text, backgroundColor: colors.bg },
+        ]}
+        onPress={onStay}
+        accessibilityRole="button"
+        testID="score-rail-stay"
+      >
+        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.stayText, { color: colors.text }]}>
+          Bli her
+        </Text>
+      </Tap>
+    </View>
+  );
+}
+
 export function ScoreRail({
   active,
   par,
@@ -154,6 +243,8 @@ export function ScoreRail({
   onPuttsToggle,
   nextLabel,
   onNext,
+  countdown,
+  onStay,
 }: ScoreRailProps) {
   const { colors, hole, scheme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -196,9 +287,13 @@ export function ScoreRail({
     return (
       <View style={section} testID="score-rail">
         {handle}
-        <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.allScored, { color: colors.muted }]} testID="score-rail-all-scored">
-          {ALL_SCORED}
-        </Text>
+        {countdown ? (
+          <Countdown countdown={countdown} onStay={onStay} />
+        ) : (
+          <Text maxFontSizeMultiplier={HOLE_TEXT_CAP} style={[styles.allScored, { color: colors.muted }]} testID="score-rail-all-scored">
+            {ALL_SCORED}
+          </Text>
+        )}
         <Tap
           style={[styles.nextHole, { backgroundColor: colors.primary }]}
           onPress={onNext}
@@ -619,4 +714,10 @@ const styles = StyleSheet.create({
   allScored: { fontSize: 14, fontFamily: FONTS.sans, textAlign: 'center', paddingVertical: 8 },
   nextHole: { minHeight: 52, borderRadius: 999, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   nextHoleText: { fontSize: 16, fontFamily: FONTS.sansSemiBold },
+  countdown: { gap: 8 },
+  countdownText: { fontSize: 16, fontFamily: FONTS.sansSemiBold, textAlign: 'center', paddingTop: 4 },
+  countdownTrack: { height: 4, borderRadius: 2, overflow: 'hidden' },
+  countdownBar: { height: 4, borderRadius: 2 },
+  stay: { minHeight: 52, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  stayText: { fontSize: 16, fontFamily: FONTS.sansSemiBold },
 });
