@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { FollowView } from './FollowView';
@@ -89,6 +91,23 @@ describe('FollowView', () => {
 
     expect(screen.getByTestId('cta-slot')).toBeInTheDocument();
     expect(document.querySelector('[data-follow-view]')).not.toBeNull();
+  });
+});
+
+// #2930 (Type B): the flight row scrolls sideways when there are many players, so
+// its right edge fades out instead of cutting a chip with no hint.
+describe('FollowView — the flight row fades at the edge (#2930)', () => {
+  it('puts .edge-fade-x on the flight nav, and the class masks the right 24px', () => {
+    render(<FollowView token="tok" board={board} view={view} subtitle="x" cta={null} />);
+    const nav = screen.getByRole('navigation');
+    expect(nav).toHaveClass('edge-fade-x', 'overflow-x-auto', 'pr-6');
+    expect(nav).not.toHaveClass('px-4');
+
+    const css = readFileSync(join(process.cwd(), 'app/globals.css'), 'utf8');
+    const rule = css.match(/\.edge-fade-x\s*{([^}]*)}/)?.[1] ?? '';
+    const mask = 'linear-gradient(to right, #000 calc(100% - 24px), transparent)';
+    expect(rule).toContain(`mask-image: ${mask}`);
+    expect(rule).toContain(`-webkit-mask-image: ${mask}`);
   });
 });
 

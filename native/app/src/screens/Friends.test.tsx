@@ -118,6 +118,20 @@ describe('Friends', () => {
     }
   });
 
+  // #2930: tre forslag er bredere enn skjermen. Kanten toner, så det synes at
+  // raden kan rulles, og fire pt av kort 2 er ikke lenger det eneste hintet.
+  it('venneforslagene toner ut i høyre kant når det er flere enn som får plass', async () => {
+    const many = ['siri', 'jon', 'eva'].map((id) => ({ id, name: id, stats: NONE }));
+    fetchFriendsMock.mockResolvedValue({ ok: true, data: { ...FULL, suggestions: many } });
+    await renderScreen();
+    const row = await screen.findByTestId('friends-suggestion-row');
+    await fireEvent(row, 'layout', { nativeEvent: { layout: { width: 358, height: 150 } } });
+    await fireEvent(row, 'contentSizeChange', 548, 150);
+    expect(screen.getByTestId('edge-fade-right', { hidden: true })).toBeTruthy();
+    expect(screen.queryByTestId('edge-fade-left', { hidden: true })).toBeNull();
+    expect(screen.getByTestId('friends-open-eva')).toBeTruthy();
+  });
+
   it('viser seksjonene, godtar, trekker tilbake og deler lenka', async () => {
     fetchFriendsMock.mockResolvedValue({ ok: true, data: FULL });
     respondMock.mockResolvedValue({ ok: true, status: 'accepted' });

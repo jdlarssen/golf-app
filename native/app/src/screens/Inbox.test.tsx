@@ -206,7 +206,26 @@ describe('tavla', () => {
 
   it('brikkeraden er bare så høy som brikkene, også når innboksen er kort', async () => {
     await renderInbox(ONLY_WAITING);
-    expect(screen.getByTestId('inbox-filters')).toHaveStyle({ flexGrow: 0 });
+    // #2930: `flexGrow: 0` ligger på den ytre viewen rundt rullefeltet (EdgeFadeScrollView).
+    const strip = screen.getByTestId('inbox-filters');
+    expect(strip).toHaveProp('horizontal', true);
+    let frame = strip.parent;
+    while (frame && !JSON.stringify(frame.props.style ?? null).includes('"flexGrow":0')) {
+      frame = frame.parent;
+    }
+    expect(frame).toBeTruthy();
+  });
+
+  // #2930: med stor tekst i telefonens innstillinger er tre brikker bredere enn
+  // raden. Da toner høyre kant; på vanlig tekst står ingen kant.
+  it('brikkeraden toner bare når brikkene ikke får plass', async () => {
+    await renderInbox();
+    const strip = screen.getByTestId('inbox-filters');
+    await fireEvent(strip, 'layout', { nativeEvent: { layout: { width: 390, height: 60 } } });
+    await fireEvent(strip, 'contentSizeChange', 330, 60);
+    expect(screen.queryByTestId('edge-fade-right', { hidden: true })).toBeNull();
+    await fireEvent(strip, 'contentSizeChange', 520, 60);
+    expect(screen.getByTestId('edge-fade-right', { hidden: true })).toBeTruthy();
   });
 
   it('tap-flatene er minst 44 pt', async () => {

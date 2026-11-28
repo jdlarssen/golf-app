@@ -8,7 +8,8 @@
 // 22 over en liten etikett), og tekstene er webbens (`historyCopy.ts`).
 // Tallene er regnet i `historyStats` (Type A), og hver seksjon viser dem bare.
 import { useState, type ReactNode } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { EdgeFadeScrollView } from '../EdgeFadeScrollView';
 import { Tap } from '../Tap';
 import type { Achievements } from '../../../../../lib/stats/achievements';
 import { ACHIEVEMENT_MARKS, WALL_BADGE_ORDER } from '../../../../../lib/stats/achievementMarks';
@@ -157,12 +158,13 @@ export function SeasonSection({ seasons }: { seasons: readonly SeasonSummary[] }
       testID="stats-season"
     >
       {seasons.length > 1 ? (
-        <ScrollView
-          horizontal
+        <EdgeFadeScrollView
+          fadeColor={colors.surface}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.years}
           accessibilityRole="tablist"
           accessibilityLabel={HISTORY_TEXT.seasonYearAriaLabel}
+          testID="stats-season-years"
         >
           {seasons.map((s) => {
             const active = s.year === selected.year;
@@ -188,7 +190,7 @@ export function SeasonSection({ seasons }: { seasons: readonly SeasonSummary[] }
               </Tap>
             );
           })}
-        </ScrollView>
+        </EdgeFadeScrollView>
       ) : null}
       <NumberRow
         testID="stats-season-numbers"

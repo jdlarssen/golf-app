@@ -973,6 +973,16 @@ body:has([data-follow-view]:not([style*='display: none'], [style*='display:none'
   text-wrap: balance;
 }
 
+/* #2930: a row that scrolls sideways fades out at its right edge, so a chip cut
+ * by the edge reads as «more this way», not as a bug. CSS cannot know how far the
+ * row is scrolled, so only the right edge fades; give the row `pr-6` so the last
+ * item stands clear of the fade when scrolled to the end. The app has the same
+ * hint on both edges (`EdgeFadeScrollView`). */
+.edge-fade-x {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+}
+
 /* Tabular numerals helper for numeric columns and big totals. */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
