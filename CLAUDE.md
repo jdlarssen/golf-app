@@ -134,6 +134,7 @@ Utløsertabellen står i `core.md` (lastet øverst). Les fila når utløseren in
 - `docs/forge-workflow.md` — kontrakt-først for `/forge:auto`
 - `docs/hva-er-nok.md` — ferdiggrensen: fryst, parkert, vekke-triggere
 - `docs/issue-workflow.md` — milestone, flyt-forankring, closing-kommentar, null-vekst
+- `docs/kavalkade-gjenoppbygging.md` — slette og bygge Kavalkadens rader på nytt etter en regnefeil (prod krever eierens ja)
 - `docs/archive/` — arkiverte sjekklister fra mai (launch, UAT); ferdige planer i `docs/plans/` og `docs/superpowers/`
 - `docs/pr-workflow.md` — PR-form, draft-først, auto-merge, produktvalg-markøren
 - `docs/regelbok-gjennomgang.md` — poengmotoren mot handicapreglene, ett F-nummer per funn (#2927)
