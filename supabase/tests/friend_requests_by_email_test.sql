@@ -217,8 +217,11 @@ select is(
     where addressee_id = torny_rls.outsider_id()),
   array['pending:false'],
   '28: the sender now reads the request');
+-- 0261 (#3019): only the service role may ask is_invite_eligible directly.
+select torny_rls.as_service();
 select ok(not public.is_invite_eligible(torny_rls.active_id(), torny_rls.outsider_id(), null),
   '29: a request the sender reads is still not invite-eligible');
+select torny_rls.as_user(torny_rls.active_id());
 select is(public.remove_friend(torny_rls.outsider_id()), 'removed',
   '30: the sender withdraws a request the sender reads');
 
