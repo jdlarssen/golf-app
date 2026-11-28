@@ -212,6 +212,42 @@ describe('buildKavalkadeNarrativePrompt', () => {
   });
 });
 
+describe('likt antall på gjengekortene (#3020)', () => {
+  const gang = makeFacts().gang as NonNullable<KavalkadeFacts['gang']>;
+  const tied = () =>
+    makeFacts({
+      gang: {
+        ...gang,
+        topWinner: {
+          userId: 'u2',
+          name: 'Ola',
+          count: 5,
+          tiedWith: [
+            { userId: 'u5', name: 'Eva' },
+            { userId: 'u6', name: 'Siv' },
+          ],
+        },
+      },
+    });
+
+  it('tells the model that a shared place crowns nobody alone, only when there is a tie', () => {
+    expect(buildKavalkadeNarrativePrompt(tied(), ALL, NO_GAMES).system).toContain('tiedWith');
+    expect(buildKavalkadeNarrativePrompt(makeFacts(), ALL, NO_GAMES).system).not.toContain(
+      'tiedWith',
+    );
+  });
+
+  it('strips the ids inside tiedWith and hides the name of a tied player without «ja»', () => {
+    const allowed = new Set([...ALL].filter((id) => id !== 'u6'));
+    const stripped = factsForModel(tied(), allowed, NO_GAMES) as {
+      gang: { topWinner: { tiedWith: { name: string | null }[] } };
+    };
+    expect(stripped.gang.topWinner.tiedWith).toEqual([{ name: 'Eva' }, { name: null }]);
+    expect(JSON.stringify(stripped)).not.toContain('Siv');
+    expect(JSON.stringify(stripped)).not.toContain('userId');
+  });
+});
+
 describe('sanitizeKavalkadeNarrative', () => {
   it('slipper gjennom en kort innledning', () => {
     expect(sanitizeKavalkadeNarrative('  Året ditt ble langt.  ')).toBe(
