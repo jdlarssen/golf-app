@@ -211,7 +211,7 @@ export function FollowView({ token, board, view, subtitle, cta, footerSlot }: Fo
           </div>
           <nav
             aria-label={tf('othersKicker')}
-            className="flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="edge-fade-x flex gap-2 overflow-x-auto pl-4 pr-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             {others.map(({ row: other, fullName }) => {
               const selected = other.userId === row.userId;

@@ -44,6 +44,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { EdgeFadeScrollView } from '../components/EdgeFadeScrollView';
 import { Tap } from '../components/Tap';
 import {
   addFriendByEmail,
@@ -449,10 +450,10 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
         {suggestions.length > 0 ? (
           <View style={styles.section} testID="friends-suggestions">
             <Text style={[ui.kicker, styles.label]}>{FRIENDS_TEXT.suggestionsSection}</Text>
-            <ScrollView
-              horizontal
+            <EdgeFadeScrollView
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.suggestionRow}
+              testID="friends-suggestion-row"
             >
               {suggestions.map((s) => {
                 const sub = roundsSubline(s.stats);
@@ -503,7 +504,7 @@ export function Friends({ navigation, route }: ScreenProps<'Friends'>) {
                   </View>
                 );
               })}
-            </ScrollView>
+            </EdgeFadeScrollView>
           </View>
         ) : null}
 

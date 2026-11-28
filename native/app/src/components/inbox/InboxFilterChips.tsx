@@ -2,7 +2,8 @@
 // #2759: «Alle», «Krever handling · N» og «Venner», som webbens `InboxFilterChips`.
 // Tallet teller rader under «Krever handling» og står ikke ved 0, der brikka
 // fortsatt virker.
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
+import { EdgeFadeScrollView } from '../EdgeFadeScrollView';
 import { Tap } from '../Tap';
 import type { InboxFilter } from '../../data/inbox';
 import { INBOX_TEXT, actionChipLabel } from '../../lib/inboxCopy';
@@ -24,8 +25,7 @@ export function InboxFilterChips({
     { key: 'friends', label: INBOX_TEXT.filterFriends },
   ];
   return (
-    <ScrollView
-      horizontal
+    <EdgeFadeScrollView
       showsHorizontalScrollIndicator={false}
       style={styles.strip}
       contentContainerStyle={styles.row}
@@ -52,7 +52,7 @@ export function InboxFilterChips({
           </Tap>
         );
       })}
-    </ScrollView>
+    </EdgeFadeScrollView>
   );
 }
 

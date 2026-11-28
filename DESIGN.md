@@ -264,6 +264,9 @@ felt ved siden av dem.
 - **Seier og ledelse:** `Medallion`, `ChampagneMedallion`, lederkortet med gull-hårlinje
   (`.leader-card`).
 - **Skall:** `AppShell`, `AdminShell`, `TopBar`, `BottomNav`, `PageHeader`, `BackLink`.
+- **Rader som ruller sidelengs:** kanten toner mot bakgrunnen der raden stopper, så det
+  synes at det er mer. Nett: `.edge-fade-x` (bare høyre kant). App: `EdgeFadeScrollView`
+  (begge kanter, og bare der det er mer å se).
 - **Venting:** `Skeleton`, `HomeSkeleton`, `LeaderboardSkeleton`, `Spinner`.
 - **Merket:** `BrandMark` og `BrandHero` tegner ordmerket med ballen på T-en.
 
