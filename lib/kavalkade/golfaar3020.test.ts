@@ -149,6 +149,12 @@ describe.each(Object.keys(GOLFAAR_FASIT) as GolfaarPlayerKey[])(
       const p = facts.personal!;
       const want = fasit.personal;
       expect({ game: p.bestRound?.gameName, brutto: p.bestRound?.brutto }).toEqual(want.bestRound);
+      // The card's «Vårslippet · Generalprøvebanen · 15. mar» line: course and date too.
+      const bestGame = GOLFAAR_GAMES.find((g) => g.name === want.bestRound.game)!;
+      expect({ course: p.bestRound?.courseName, playedAt: p.bestRound?.playedAt }).toEqual({
+        course: GOLFAAR_COURSE.name,
+        playedAt: bestGame.teeOffAt,
+      });
       expect(p.nemesisHole).toEqual({
         holeNumber: want.nemesisHole.hole,
         courseName: GOLFAAR_COURSE.name,
@@ -210,6 +216,13 @@ describe.each(Object.keys(GOLFAAR_FASIT) as GolfaarPlayerKey[])(
           runnerUp: [t.runnerUp.name, t.runnerUp.brutto],
         },
       ).toEqual(fasit.gang.tightest);
+      if (t && fasit.gang.tightest) {
+        const game = GOLFAAR_GAMES.find((x) => x.name === fasit.gang!.tightest!.game)!;
+        expect({ course: t.courseName, playedAt: t.playedAt }).toEqual({
+          course: GOLFAAR_COURSE.name,
+          playedAt: game.teeOffAt,
+        });
+      }
     });
   },
 );
