@@ -27,13 +27,14 @@
 --   word filter
 --   17. «Fitjar Golfklubb» passes, «Kuk» does not
 --   18. a signed-in user cannot ask is_blocked_between (0260)    FORBIDDEN
+--   19. nor is_invite_eligible, which asks it (0261)              FORBIDDEN
 -- ─────────────────────────────────────────────────────────────────────────────
 
 begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(18);
+select plan(19);
 
 \ir fixtures/rls_helpers.psql
 
@@ -229,6 +230,10 @@ select torny_rls.as_user(torny_rls.flightmate_id());
 select ok(
   not has_function_privilege('authenticated', 'public.is_blocked_between(uuid, uuid)', 'execute'),
   '18. a signed-in user cannot ask whether two people have a block'
+);
+select ok(
+  not has_function_privilege('authenticated', 'public.is_invite_eligible(uuid, uuid, uuid)', 'execute'),
+  '19. nor ask is_invite_eligible, which would show the same thing'
 );
 
 select * from finish();
