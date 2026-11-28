@@ -90,7 +90,12 @@ const MIRRORED_SAVE_FAILURES = Object.entries(SAVE_FAILURE_MAP).filter(
 );
 
 /** Nøkler under `profile.errors` appen med vilje IKKE viser. Ingen i dag. */
-const WEB_ONLY_ERRORS: Partial<Record<WebErrorKey, string>> = {};
+const WEB_ONLY_ERRORS: Partial<Record<WebErrorKey, string>> = {
+  // #3019 PR A: ordfilteret og lengdetaket i databasen (0259). Appens tekst for
+  // dem kommer i PR B, som flytter dem over i appens kart.
+  blocked_word: '#3019 PR B gir appen ordfilter-teksten',
+  text_too_long: '#3019 PR B gir appen teksten for lengdetaket',
+};
 
 describe('PROFILE_TEXT', () => {
   it.each(Object.entries(PROFILE_TEXT))('«%s» er en ferdig tekst', (_key, text) => {
