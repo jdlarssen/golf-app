@@ -227,6 +227,13 @@ describe('addByEmail (0252)', () => {
     },
   );
 
+  it('answers «requested» and sends nothing when the two have a block (#3019)', async () => {
+    lookupFinds('blocked', null);
+    const later = deferred();
+    expect(await addByEmail(callerClient() as never, ME, 'kari@example.com', later.defer)).toBe('requested');
+    expect(later.count()).toBe(0);
+  });
+
   it('answers «requested» and sends nothing when the caller already asked this address', async () => {
     lookupFinds('already_sent', null);
     const later = deferred();

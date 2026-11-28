@@ -101,6 +101,12 @@ vi.mock('@/lib/friends/getFriendIds', () => ({
   readFriendIds: (userId: string) => mockGetFriendIds(userId),
 }));
 
+// #3019: the viewer's blocked pairs; empty unless a test sets them.
+let blockedPairIds = new Set<string>();
+vi.mock('@/lib/moderation/blockedPairs', () => ({
+  getBlockedPairIds: async () => blockedPairIds,
+}));
+
 // #2276: a games row passes the per-row gate only when its signup window is
 // open and the viewer did not organise it. Rows a test expects to see go
 // through this helper; the gate fields are never mapped out (AK8).
@@ -132,6 +138,7 @@ beforeEach(() => {
   clubGamesRows.mockReturnValue({ data: [] });
   friendGamesRows.mockReturnValue({ data: [] });
   mockGetFriendIds.mockResolvedValue([]);
+  blockedPairIds = new Set();
 });
 
 describe('getDiscoverableGames', () => {
@@ -891,5 +898,24 @@ describe('getDiscoverableGames', () => {
     await getDiscoverableGames('u1');
 
     expect(orArg.mock.calls).toEqual([['created_by.is.null,created_by.neq.u1']]);
+  });
+});
+
+describe('getDiscoverableGames — blocks (#3019)', () => {
+  it('leaves out rounds made by someone the viewer has a block with', async () => {
+    playerRows.mockReturnValue({ data: [] });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({
+      data: [
+        visibleRow({ id: 'g-ok', name: 'Lørdag', registration_mode: 'open', courses: { name: 'Hauger' } }),
+        visibleRow({ id: 'g-blokk', name: 'Søndag', registration_mode: 'open', created_by: 'blokkert', courses: { name: 'Hauger' } }),
+      ],
+    });
+    blockedPairIds = new Set(['blokkert']);
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    const result = await getDiscoverableGames('u1');
+
+    expect(result.openGames.map((g) => g.id)).toEqual(['g-ok']);
   });
 });

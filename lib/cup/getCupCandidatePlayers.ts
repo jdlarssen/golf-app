@@ -5,6 +5,7 @@ import { selectAllRows } from '@/lib/supabase/selectAllRows';
 import { getClubMemberOptionsForClub } from '@/lib/clubs/getClubMemberOptionsForClub';
 import { getFriendPlayerOptions } from '@/lib/friends/getFriendPlayerOptions';
 import { playerName } from '@/lib/names/playerName';
+import { getBlockedPairIds } from '@/lib/moderation/blockedPairs';
 
 type ServerSupabase = Awaited<ReturnType<typeof getServerClient>>;
 
@@ -52,10 +53,19 @@ export async function getCupCandidatePlayers(
   const { groupId, userId, isAdmin, unknownLabel } = opts;
 
   if (groupId) {
-    // Klubb-cup → kun medlemmer.
-    const members = await getClubMemberOptionsForClub(groupId);
+    // Klubb-cup → kun medlemmer. #3019: minus dem kalleren har en blokkering
+    // med. En personlig cup trenger ikke filteret: blokkeringen fjerner
+    // vennskapet, og venner er hele lista der. Feiler oppslaget, vises lista
+    // ufiltrert; databasen avviser fortsatt paret (0259).
+    const [members, blocked] = await Promise.all([
+      getClubMemberOptionsForClub(groupId),
+      getBlockedPairIds(userId).catch((error: unknown) => {
+        console.error('[getCupCandidatePlayers] block lookup failed', error);
+        return new Set<string>();
+      }),
+    ]);
     return members
-      .filter((m) => !m.pending)
+      .filter((m) => !m.pending && !blocked.has(m.id))
       .map((m) => ({
         id: m.id,
         displayName: playerName(m) ?? unknownLabel,

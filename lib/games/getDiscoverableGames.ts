@@ -12,6 +12,7 @@ import type {
 } from './discoverableGameTypes';
 import type { RegistrationMode } from './registration';
 import { isOrganisedBy, isPubliclyViewable, isSignupWindowOpen } from './publicSignupVisibility';
+import { getBlockedPairIds } from '@/lib/moderation/blockedPairs';
 
 /**
  * Hjem-sidens «Funn turneringer»-seksjon (#257) henter listene via
@@ -48,7 +49,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
 }> {
   const admin = getAdminClient();
 
-  const [playerRowsRes, requestRowsRes, myClubsRes, friendIds] =
+  const [playerRowsRes, requestRowsRes, myClubsRes, friendIds, blockedIds] =
     await Promise.all([
       // The game's status rides along so only scheduled rounds go into the
       // NOT IN lists below (audit 2026-11-20, URL length).
@@ -68,6 +69,13 @@ export async function getDiscoverableGames(userId: string): Promise<{
         .select('group_id, groups(valid_until)')
         .eq('user_id', userId),
       readFriendIds(userId),
+      // #3019: rounds made by someone the viewer has a block with stay out of
+      // all three lists. A failed read shows the lists unfiltered: hiding is a
+      // courtesy here, the adds themselves are refused in the database.
+      getBlockedPairIds(userId).catch((error: unknown) => {
+        console.error('[getDiscoverableGames] block lookup failed', error);
+        return new Set<string>();
+      }),
     ]);
 
   // Audit 2026-11-20: a failed read throws instead of looking like «no
@@ -119,7 +127,12 @@ export async function getDiscoverableGames(userId: string): Promise<{
     // closed club game is closed for members too.
     if (clubRes.error) throw clubRes.error;
     clubGames = (clubRes.data ?? [])
-      .filter((row) => isSignupWindowOpen(row) && !isOrganisedBy(row, userId))
+      .filter(
+        (row) =>
+          isSignupWindowOpen(row) &&
+          !isOrganisedBy(row, userId) &&
+          !madeByBlocked(row, blockedIds),
+      )
       .map((row) => {
         const course = row.courses;
         const group = row.groups;
@@ -176,7 +189,12 @@ export async function getDiscoverableGames(userId: string): Promise<{
     const friendRes = await friendQuery.overrideTypes<Array<DiscoverableFormat>>();
     if (friendRes.error) throw friendRes.error;
     friendGames = (friendRes.data ?? [])
-      .filter((row) => isPubliclyViewable(row) && !isOrganisedBy(row, userId))
+      .filter(
+        (row) =>
+          isPubliclyViewable(row) &&
+          !isOrganisedBy(row, userId) &&
+          !madeByBlocked(row, blockedIds),
+      )
       .map((row) => {
         const course = row.courses;
         const regMode = row.registration_mode as 'open' | 'manual_approval';
@@ -234,7 +252,12 @@ export async function getDiscoverableGames(userId: string): Promise<{
 
   if (openGamesRes.error) throw openGamesRes.error;
   const openGames: DiscoverableOpenGame[] = (openGamesRes.data ?? [])
-    .filter((row) => isPubliclyViewable(row) && !isOrganisedBy(row, userId))
+    .filter(
+        (row) =>
+          isPubliclyViewable(row) &&
+          !isOrganisedBy(row, userId) &&
+          !madeByBlocked(row, blockedIds),
+      )
     .map((row) => {
       const course = row.courses;
       return {
@@ -284,4 +307,9 @@ export async function getDiscoverableGames(userId: string): Promise<{
     });
 
   return { clubGames, openGames, friendGames, pendingRequests };
+}
+
+/** #3019: the round was made by someone the viewer has a block with. */
+function madeByBlocked(row: { created_by: string | null }, blockedIds: Set<string>): boolean {
+  return row.created_by !== null && blockedIds.has(row.created_by);
 }
