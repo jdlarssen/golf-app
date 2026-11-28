@@ -10,6 +10,7 @@ import {
   type WeeklyRepeatPlayer,
   type WeeklyRepeatSource,
 } from '@/lib/games/weeklyRepeat';
+import { getBlockedPairIds } from '@/lib/moderation/blockedPairs';
 
 /**
  * #2460 «Gjenta hver uke»: create the next round when a round with the switch
@@ -119,7 +120,17 @@ export async function spawnWeeklyRepeat(
     return { spawned: false, reason: 'read_failed' };
   }
 
-  const roster = players ?? [];
+  // #3019: the service role skips the game_players guard, so the block is
+  // checked here. Someone who has a block with the organiser is left out of
+  // next week's round. A failed read stops the spawn rather than risk it.
+  let blockedIds: Set<string>;
+  try {
+    blockedIds = await getBlockedPairIds(organiserId);
+  } catch (error) {
+    console.error('[spawnWeeklyRepeat] block read failed', { gameId, error });
+    return { spawned: false, reason: 'read_failed' };
+  }
+  const roster = (players ?? []).filter((p) => !blockedIds.has(p.user_id));
   const guestIds = await findGuestIds(
     roster.filter((p) => p.withdrawn_at === null).map((p) => p.user_id),
   );

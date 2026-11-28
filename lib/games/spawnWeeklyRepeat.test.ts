@@ -27,6 +27,14 @@ vi.mock('@/lib/games/expireGameCache', () => ({
   expireGameCache: (id: string) => expireGameCacheMock(id),
 }));
 
+let blockedPairIds: Set<string> | Error = new Set();
+vi.mock('@/lib/moderation/blockedPairs', () => ({
+  getBlockedPairIds: async () => {
+    if (blockedPairIds instanceof Error) throw blockedPairIds;
+    return blockedPairIds;
+  },
+}));
+
 import { spawnWeeklyRepeat } from './spawnWeeklyRepeat';
 
 const NOW = '2026-11-21T13:00:00.000Z';
@@ -102,6 +110,7 @@ function calls(table: string, method: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  blockedPairIds = new Set();
   findGuestIdsMock.mockResolvedValue(new Set());
   notifyRosterInvitesMock.mockResolvedValue({ ok: true, invited: 1 });
 });
@@ -244,5 +253,28 @@ describe('spawnWeeklyRepeat', () => {
     });
     expect(calls('games', 'insert')).toEqual([]);
     error.mockRestore();
+  });
+});
+
+describe('spawnWeeklyRepeat and blocks (#3019)', () => {
+  it('leaves out a player who has a block with the organiser', async () => {
+    setup({});
+    blockedPairIds = new Set(['u-2']);
+
+    const result = await spawnWeeklyRepeat('g-1', NOW);
+
+    expect(result.spawned).toBe(true);
+    const rows = calls('game_players', 'insert')[0].args[0] as Array<Record<string, unknown>>;
+    expect(rows.map((r) => r.user_id)).toEqual(['org']);
+  });
+
+  it('spawns nothing when the blocks cannot be read', async () => {
+    setup({});
+    blockedPairIds = new Error('nede');
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(await spawnWeeklyRepeat('g-1', NOW)).toEqual({ spawned: false, reason: 'read_failed' });
+    expect(calls('games', 'insert')).toEqual([]);
+    log.mockRestore();
   });
 });
