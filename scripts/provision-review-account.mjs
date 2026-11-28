@@ -767,6 +767,19 @@ async function main() {
       : '2b. Ikke noe AI-svar å slette.',
   );
 
+  // ------------------------------------------------ 2b2. vilkårene (#3019)
+  // Notatet lover vilkårene først, så et ja fra en tidligere review slettes,
+  // som AI-svaret over. Null rader er ingen feil.
+  const termsRows = ok(
+    'slett vilkårs-svaret',
+    await db.from('terms_acceptances').delete().eq('user_id', reviewUserId).select('user_id'),
+  );
+  console.log(
+    termsRows.length > 0
+      ? '2b2. Vilkårs-svaret slettet, så revieweren får vilkårene igjen.'
+      : '2b2. Ikke noe vilkårs-svar å slette.',
+  );
+
   // ---------------------------------- 2c. blokkeringene og demo-spilleren (#3019)
   // Revieweren skal kunne prøve «Blokker» fra start, så blokkeringer fra en
   // tidligere vurdering slettes. Null rader er ingen feil. Rapportene står: de

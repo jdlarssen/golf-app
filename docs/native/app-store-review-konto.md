@@ -247,6 +247,9 @@ Kjøringen rydder opp etter alt revieweren kan ha gjort:
 - **Står det en «Slettet bruker» igjen i en runde?** Den raden fjernes. Etterpå er
   rosteret i scramble-runden nøyaktig fire: review-kontoen, Emma, Jonas og Nora.
   Stableford-runden har i tillegg demo-spilleren Sam Parker.
+- **Godtatt vilkårene (#3019)?** Svaret slettes, så neste reviewer får «Før første
+  utslag» først, slik notatet sier. Som med AI-svaret husker en telefon som alt har
+  sett et ja, svaret til appen er installert på nytt.
 - **Blokkert eller rapportert demo-spilleren (#3019)?** Review-kontoens blokkeringer
   slettes, og Sam Parker er venn med kontoen og med i stableford-runden igjen.
   Rapportene står i køen på `/admin/rapporter`. Behandle dem der som andre rapporter.
@@ -332,7 +335,7 @@ inn som den er, med adressen og passordet til **Apple-kontoen** i feltene over �
 notatet nevner ingen av delene selv. Google Play har sin egen konto og sin egen
 tekst (`play-store-metadata.md`, «App-tilgang»).
 
-**Lengden:** Apples Notes-felt tar maks 4 000 byte. Malen er 3 946 byte, målt med
+**Lengden:** Apples Notes-felt tar maks 4 000 byte. Malen er 3 945 byte, målt med
 `wc -c` på teksten i blokka (med linjeskift til slutt). Linjene er ikke brutt, så det du
 limer inn, er det som er målt. Mål på nytt med `wc -c` hvis du endrer noe, og hold den
 under 3 950.
@@ -364,7 +367,7 @@ WORDS YOU WILL NEED
 
 WHAT YOU WILL SEE
 Two active rounds and a league, set up by another account. Home shows "Demo Scramble — Tørny" as the big card and "Demo Round — Tørny" under "Flere runder i gang" (More rounds in progress).
-"Demo Round — Tørny" has three co-players. Open it, continue on hole 4, watch "Resultater" update, and submit with "Lever scorekort".
+"Demo Round — Tørny" has four co-players. Open it, continue on hole 4, watch "Resultater" update, and submit with "Lever scorekort".
 "Demo Scramble — Tørny" is team play: Texas scramble, two teams of two, and you are on team 1 with Emma. Each hole asks "Hvem sitt utslag ble brukt?" (whose tee shot was used). Its team card cannot be submitted yet.
 "Demo League — Tørny" is under "Ligaene dine" (Your leagues) on home. To play the open round: "Spill runden", pick a co-player such as Emma (a regular league needs one), then "Start runden".
 

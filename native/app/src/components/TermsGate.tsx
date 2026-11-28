@@ -46,7 +46,10 @@ export function TermsGate({ userId, children }: { userId: string; children: Reac
       // Utloggingen bytter til innloggingsskjermen, og porten forsvinner med
       // resten. Slag som ikke er sendt, får samme spørsmål som «Logg ut» i
       // «Personvern og konto».
-      const result = await logOut();
+      const result = await logOut().catch((err: unknown) => {
+        console.error('[TermsGate] utlogging kastet', err);
+        return { ok: false as const, reason: 'signout-failed' as const };
+      });
       if (result.ok) return;
       if (result.reason === 'unsent') {
         askLogOutWithUnsent(result.pending);
@@ -76,11 +79,17 @@ export function TermsGate({ userId, children }: { userId: string; children: Reac
           text: PROFILE_TEXT.unsentStrokesConfirm,
           style: 'destructive',
           onPress: () => {
-            void logOut({ keepUnsent: true }).then((result) => {
-              if (result.ok) return;
-              setPending(null);
-              fail(PROFILE_TEXT.logoutOfflineNote);
-            });
+            void logOut({ keepUnsent: true })
+              .then((result) => {
+                if (result.ok) return;
+                setPending(null);
+                fail(PROFILE_TEXT.logoutOfflineNote);
+              })
+              .catch((err: unknown) => {
+                console.error('[TermsGate] utlogging kastet', err);
+                setPending(null);
+                fail(PROFILE_TEXT.logoutFailedNote);
+              });
           },
         },
       ],

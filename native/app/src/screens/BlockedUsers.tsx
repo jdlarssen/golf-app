@@ -55,7 +55,8 @@ export function BlockedUsers(_props: ScreenProps<'BlockedUsers'>) {
       inFlight.current = false;
       setBusyId(null);
       if (!result.ok) setLine(describeBlockFailure(result.reason));
-      await reload();
+      // Uten nett ville en ny lesing også feilet og byttet lista mot feilboksen.
+      if (result.ok || result.reason !== 'offline') await reload();
     },
     [reload],
   );

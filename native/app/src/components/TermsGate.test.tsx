@@ -69,6 +69,15 @@ describe('TermsGate', () => {
     alert.mockRestore();
   });
 
+  it('en utlogging som kaster, slipper knappen og sier fra', async () => {
+    stepMock.mockResolvedValue(true);
+    (logOut as jest.Mock).mockRejectedValue(new Error('boom'));
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    await render(<TermsGate userId="me">{app}</TermsGate>);
+    await fireEvent.press(await screen.findByTestId('terms-decline'));
+    expect(await screen.findByTestId('terms-error')).toBeTruthy();
+  });
+
   it('en utlogging som ikke gikk, sier det, ikke at svaret ikke ble lagret', async () => {
     stepMock.mockResolvedValue(true);
     (logOut as jest.Mock).mockResolvedValue({ ok: false, reason: 'signout-failed' });
