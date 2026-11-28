@@ -242,8 +242,15 @@ export type TeamFacts = {
   bestTeammates: TeammateFact[];
 };
 
-/** Én rad på et «mest av noe»-kort. */
-export type GangLeaderFact = KavalkadePlayerRef & { count: number };
+/**
+ * Én rad på et «mest av noe»-kort. Spilleren i `userId`/`name` står først;
+ * resten som deler tallet står i `tiedWith` (#3020).
+ */
+export type GangLeaderFact = KavalkadePlayerRef & {
+  count: number;
+  /** Andre med samme tall, i visningsrekkefølge. Mangler eller tom ⇒ ingen likhet. */
+  tiedWith?: KavalkadePlayerRef[];
+};
 
 /** Tetteste oppgjør — minste brutto-gap mellom de to beste i samme runde. */
 export type TightestFinishFact = {
@@ -331,7 +338,7 @@ export function buildKavalkadeFacts(input: KavalkadeInput): KavalkadeFacts {
         ? buildPersonalFacts(solo, mine, viewerUserId)
         : null,
     team: asTeam.length > 0 ? buildTeamFacts(asTeam, viewerUserId) : null,
-    gang: mine.length > 0 ? buildGangFacts(mine.map((row) => row.game)) : null,
+    gang: mine.length > 0 ? buildGangFacts(mine.map((row) => row.game), viewerUserId) : null,
   };
 }
 
@@ -902,7 +909,7 @@ function byTeammateQuality(a: TeammateFact, b: TeammateFact): number {
  * medspillernes ANDRE runder: et ferdig spill er ikke world-read (#1542), og
  * kavalkaden skal ikke bli en bakvei inn i tall spilleren ellers ikke ser.
  */
-function buildGangFacts(games: KavalkadeGame[]): GangFacts {
+function buildGangFacts(games: KavalkadeGame[], viewerUserId: string): GangFacts {
   const names = new Map<string, string | null>();
   const wins = new Map<string, number>();
   const birdies = new Map<string, number>();
@@ -934,9 +941,9 @@ function buildGangFacts(games: KavalkadeGame[]): GangFacts {
   return {
     members: names.size,
     games: games.length,
-    topWinner: pickLeader(wins, played, names),
-    mostBirdies: pickLeader(birdies, played, names),
-    mostSnowmen: pickLeader(snowmen, played, names),
+    topWinner: pickLeader(wins, played, names, viewerUserId),
+    mostBirdies: pickLeader(birdies, played, names, viewerUserId),
+    mostSnowmen: pickLeader(snowmen, played, names, viewerUserId),
     tightestFinish: findTightestFinish(games.filter((g) => !isTeamBallRound(g))),
   };
 }
@@ -947,38 +954,43 @@ function bump(counts: Map<string, number>, userId: string, by: number): void {
 }
 
 /**
- * Den med høyest tall. Ved likhet vinner den som spilte flest av rundene, så
- * laveste `userId`. `null` når ingen har mer enn null — et tomt kort er bedre enn
- * et kort som kårer en tilfeldig «vinner» med 0.
+ * Alle med høyest tall (#3020, eieren 28.11: likt tall gir alle navnene). Den
+ * første står i `userId`/`name`, resten i `tiedWith`, så et appbygg som bare
+ * leser `name` fortsatt viser ett gyldig navn.
+ *
+ * Rekkefølgen er visningsrekkefølgen: den som åpner kavalkaden først når hen er
+ * med, så flest spilte runder, så navnet (uten navn sist), så `userId`. Da står
+ * spilleren selv alltid blant de tre navnene kortet viser.
+ *
+ * `null` når ingen har mer enn null — et tomt kort er bedre enn et kort som
+ * kårer en tilfeldig «vinner» med 0.
  */
 function pickLeader(
   counts: Map<string, number>,
   played: Map<string, number>,
   names: Map<string, string | null>,
+  viewerUserId: string,
 ): GangLeaderFact | null {
-  let bestUserId: string | null = null;
-  let bestCount = 0;
-  for (const [userId, count] of counts) {
-    if (count <= 0) continue;
-    if (bestUserId == null || count > bestCount) {
-      bestUserId = userId;
-      bestCount = count;
-      continue;
-    }
-    if (count === bestCount) {
-      const bestPlayed = played.get(bestUserId) ?? 0;
-      const thisPlayed = played.get(userId) ?? 0;
-      if (thisPlayed > bestPlayed || (thisPlayed === bestPlayed && userId < bestUserId)) {
-        bestUserId = userId;
+  const top = Math.max(0, ...counts.values());
+  if (top <= 0) return null;
+
+  const tied: KavalkadePlayerRef[] = [...counts]
+    .filter(([, count]) => count === top)
+    .map(([userId]) => ({ userId, name: names.get(userId) ?? null }))
+    .sort((a, b) => {
+      if ((a.userId === viewerUserId) !== (b.userId === viewerUserId)) {
+        return a.userId === viewerUserId ? -1 : 1;
       }
-    }
-  }
-  if (bestUserId == null) return null;
-  return {
-    userId: bestUserId,
-    name: names.get(bestUserId) ?? null,
-    count: bestCount,
-  };
+      const byPlayed = (played.get(b.userId) ?? 0) - (played.get(a.userId) ?? 0);
+      if (byPlayed !== 0) return byPlayed;
+      if ((a.name == null) !== (b.name == null)) return a.name == null ? 1 : -1;
+      const byName = a.name != null && b.name != null ? a.name.localeCompare(b.name, 'nb') : 0;
+      if (byName !== 0) return byName;
+      return a.userId < b.userId ? -1 : a.userId > b.userId ? 1 : 0;
+    });
+
+  const [first, ...rest] = tied;
+  return rest.length > 0 ? { ...first, count: top, tiedWith: rest } : { ...first, count: top };
 }
 
 /**

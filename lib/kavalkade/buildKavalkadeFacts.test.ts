@@ -947,8 +947,13 @@ describe('lagrunder — som lag, aldri på kapteinen', () => {
         ],
       }),
     ]);
-    // Begge vant; kapteinen tar kortet på lex-min tiebreak, men begge er telt.
-    expect(facts.gang?.topWinner?.count).toBe(1);
+    // Begge vant, så begge står på kortet (#3020). Den som åpner, står først.
+    expect(facts.gang?.topWinner).toEqual({
+      userId: ME,
+      name: ME,
+      count: 1,
+      tiedWith: [{ userId: CAPTAIN, name: CAPTAIN }],
+    });
   });
 
   it('treats a patsome round as a team round — it ends as foursomes', () => {
@@ -1123,7 +1128,7 @@ describe('gjengen', () => {
     expect(facts.gang?.members).toBe(1);
   });
 
-  it('breaks a birdie tie on rounds played, then on the lower id', () => {
+  it('names both players in a birdie tie, the one with more rounds first', () => {
     // user-a og user-b har én birdie hver; user-a spilte begge rundene.
     const birdie = holes({ 1: 3 });
     const facts = build([
@@ -1138,7 +1143,12 @@ describe('gjengen', () => {
         ],
       }),
     ]);
-    expect(facts.gang?.mostBirdies).toMatchObject({ userId: 'user-a', count: 1 });
+    expect(facts.gang?.mostBirdies).toEqual({
+      userId: 'user-a',
+      name: 'user-a',
+      count: 1,
+      tiedWith: [{ userId: 'user-b', name: 'user-b' }],
+    });
   });
 
   it('breaks an equal-margin tie with the more recent round', () => {
@@ -1183,6 +1193,115 @@ describe('gjengen', () => {
     ]);
     expect(facts.rounds).toBe(0);
     expect(facts.gang).toBeNull();
+  });
+});
+
+describe('likt antall på gjengekortene (#3020)', () => {
+  // Owner 28.11: when several share the top number, the card names them all.
+  // The order: the viewer first when they are in the tie, then most rounds
+  // played, then the name, then the id. Nobody ties at 0.
+  const winner = (userId: string, name: string | null) =>
+    player(userId, { name, resultSummary: placement(1) });
+  const loser = (userId: string, name: string | null) =>
+    player(userId, { name, resultSummary: placement(2) });
+
+  it('names two players with the same number of wins', () => {
+    const facts = build([
+      game({ players: [loser(ME, 'Meg'), winner('user-a', 'Ola Nordmann'), loser('user-b', 'Kari Hansen')] }),
+      game({ players: [loser(ME, 'Meg'), loser('user-a', 'Ola Nordmann'), winner('user-b', 'Kari Hansen')] }),
+    ]);
+    // Both played two rounds, so the name decides: «Kari H.» before «Ola N.».
+    expect(facts.gang?.topWinner).toEqual({
+      userId: 'user-b',
+      name: 'Kari H.',
+      count: 1,
+      tiedWith: [{ userId: 'user-a', name: 'Ola N.' }],
+    });
+  });
+
+  it('names three tied players, most rounds first and then by name', () => {
+    const birdie = holes({ 1: 3 });
+    const facts = build([
+      game({
+        players: [
+          player(ME),
+          player('user-c', { name: 'Aase', holes: birdie }),
+          player('user-b', { name: 'Bo' }),
+          player('user-a', { name: 'Ada' }),
+        ],
+      }),
+      game({
+        players: [
+          player(ME),
+          player('user-b', { name: 'Bo', holes: birdie }),
+          player('user-a', { name: 'Ada', holes: birdie }),
+        ],
+      }),
+    ]);
+    // Aase sorts first by name, but played one round to the others' two.
+    expect(facts.gang?.mostBirdies).toEqual({
+      userId: 'user-a',
+      name: 'Ada',
+      count: 1,
+      tiedWith: [
+        { userId: 'user-b', name: 'Bo' },
+        { userId: 'user-c', name: 'Aase' },
+      ],
+    });
+  });
+
+  it('keeps all four in the facts and puts the viewer first, even when their name sorts last', () => {
+    const snowman = holes({ 4: 8 });
+    const facts = build([
+      game({
+        players: [
+          player(ME, { name: 'Åse', holes: snowman }),
+          player('user-c', { name: 'Cato', holes: snowman }),
+          player('user-a', { name: 'Ada', holes: snowman }),
+          player('user-b', { name: 'Bo', holes: snowman }),
+        ],
+      }),
+    ]);
+    expect(facts.gang?.mostSnowmen).toEqual({
+      userId: ME,
+      name: 'Åse',
+      count: 1,
+      tiedWith: [
+        { userId: 'user-a', name: 'Ada' },
+        { userId: 'user-b', name: 'Bo' },
+        { userId: 'user-c', name: 'Cato' },
+      ],
+    });
+  });
+
+  it('sorts a player without a name after the named ones', () => {
+    const birdie = holes({ 1: 3 });
+    const facts = build([
+      game({
+        players: [
+          player(ME),
+          player('user-a', { name: null, nickname: null, holes: birdie }),
+          player('user-b', { name: 'Bo', holes: birdie }),
+        ],
+      }),
+    ]);
+    expect(facts.gang?.mostBirdies).toEqual({
+      userId: 'user-b',
+      name: 'Bo',
+      count: 1,
+      tiedWith: [{ userId: 'user-a', name: null }],
+    });
+  });
+
+  it('leaves tiedWith out when one player is alone at the top', () => {
+    const facts = build([game({ players: [loser(ME, 'Meg'), winner('user-a', 'Ada')] })]);
+    expect(facts.gang?.topWinner).toEqual({ userId: 'user-a', name: 'Ada', count: 1 });
+    expect(facts.gang?.topWinner).not.toHaveProperty('tiedWith');
+  });
+
+  it('gives no card when everyone is tied at 0', () => {
+    const facts = build([game({ players: [player(ME), player('user-a'), player('user-b')] })]);
+    expect(facts.gang?.mostSnowmen).toBeNull();
   });
 });
 
