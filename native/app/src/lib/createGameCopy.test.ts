@@ -101,6 +101,8 @@ const WEB_ONLY: Partial<Record<WizardErrorKey, string>> = {
   cup_roster_locked: 'cup-låsen i redigerings-flyten på web (#2210); appen oppretter bare',
   unexpected: 'webbens fallback med rå kode for ukjente koder; appen har en setning per kode',
   only_guests: 'gjestesperren (#2570) bor i webbens publiser-actions (CreateGameErrorCode), ikke i gamePayload.ts — appen bygger sin egen payload og går ikke via den sperren',
+  blocked_word: '#3019 PR A: ordfilteret i databasen (0259); PR B gir appen teksten',
+  text_too_long: '#3019 PR A: lengdetaket på rundenavnet (0259); PR B gir appen teksten',
   registration_cap_below_held: '#2482: rediger-eneste (U12, `edit/actions.ts`); appen har ingen rediger-flyt og når aldri dette steget, og webbens tekst har et spillertall-plural appen ikke kan fylle ut',
 };
 
