@@ -1,4 +1,46 @@
 {
+  "adminRapporter": {
+    "backLabel": "Admin",
+    "pageTitle": "Reports",
+    "pageSubtitle": "What the players have reported. Look at every report within 24 hours.",
+    "openHeading": "Open · {count}",
+    "handledHeading": "Handled · {count}",
+    "empty": "No open reports.",
+    "kindUser": "Player",
+    "kindGame": "Round",
+    "reason": {
+      "offensive": "Offensive name or text",
+      "harassment": "Harassment",
+      "other": "Something else"
+    },
+    "shownGameName": "Round name: “{text}”",
+    "shownPrize": "Prize text: “{text}”",
+    "shownName": "Name: “{text}”",
+    "shownNickname": "Nickname: “{text}”",
+    "goneTarget": "No longer exists",
+    "from": "From {name} · {when}",
+    "unknownReporter": "Unknown player",
+    "handledAt": "Handled {when}",
+    "renameGame": "Rename the round",
+    "newNameLabel": "New round name",
+    "saveName": "Save the name",
+    "saving": "Saving …",
+    "clearPrizes": "Remove the prize text",
+    "openPlayer": "Open the player",
+    "markHandled": "Mark as handled",
+    "notices": {
+      "renamed": "The round name is changed.",
+      "prizes_cleared": "The prize text is removed.",
+      "handled": "The report is marked as handled."
+    },
+    "errors": {
+      "invalid": "Something is missing. Try again.",
+      "not_found": "Could not find the report.",
+      "blocked_word": "The name has a word that is not allowed in Tørny. Pick another.",
+      "text_too_long": "The name is too long. Use at most 120 characters.",
+      "db": "Could not save. Try again."
+    }
+  },
   "common": {
     "appName": "Tørny",
     "back": "Back",
@@ -383,6 +425,8 @@
     "logoutButton": "Log out",
     "logoutPending": "Logging out …",
     "errors": {
+      "blocked_word": "The name or nickname has a word that is not allowed in Tørny. Pick another.",
+      "text_too_long": "The name or nickname is too long. Use at most 60 characters.",
       "name_required": "Name is required.",
       "hcp_invalid": "Handicap index must be a number between 0 and 54. Use the + button for a plus handicap.",
       "gender_required": "Please choose a gender.",
@@ -1654,6 +1698,8 @@
       }
     },
     "errors": {
+      "blocked_word": "The round name or a prize has a word that is not allowed in Tørny. Pick another.",
+      "text_too_long": "The round name is too long. Use at most 120 characters.",
       "name_required": "The game must have a name.",
       "course_required": "Choose a course.",
       "tee_required": "Choose a tee box.",
@@ -4149,6 +4195,8 @@
   },
   "courseForm": {
     "errors": {
+      "blocked_word": "The course name or a tee name has a word that is not allowed in Tørny. Pick another.",
+      "text_too_long": "The course name or a tee name is too long. Use at most 120 characters.",
       "name_required": "The course must have a name.",
       "bad_par": "Par must be a whole number between 3 and 6 for each hole.",
       "bad_si": "Stroke index must be a whole number between 1 and 18 for each hole.",
@@ -4162,6 +4210,8 @@
       "db_tees": "Something went wrong while saving. Please try again."
     },
     "adminErrors": {
+      "blocked_word": "The course name or a tee name has a word that is not allowed in Tørny. Pick another.",
+      "text_too_long": "The course name or a tee name is too long. Use at most 120 characters.",
       "tee_required": "At least one tee box must be added.",
       "tee_no_rating": "Each tee must have at least one complete rating set per gender (Men / Ladies / Juniors).",
       "db_course": "Failed to save the course. Please try again in a moment.",
@@ -4398,6 +4448,8 @@
       "keyMetricsPublicSignups": "Signed up via public page",
       "keyMetricsKavalkadeShares": "Players who shared the cavalcade",
       "morning": {
+        "needsYouReports": "{n, plural, one {# report from the players} other {# reports from the players}}",
+        "needsYouReportsAge": "{hours, plural, =0 {The oldest came less than an hour ago} one {The oldest came # hour ago} other {The oldest came # hours ago}}",
         "kicker": "Secretariat · week {week}",
         "weekHeading": "This week",
         "weekFinished": "{n, plural, one {round finished} other {rounds finished}}",
@@ -5090,6 +5142,8 @@
           "yearsAgo": "{count} years ago"
         },
         "errors": {
+          "blocked_word": "The name or nickname has a word that is not allowed in Tørny. Pick another.",
+          "text_too_long": "The name or nickname is too long. Use at most 60 characters.",
           "name_required": "Name is required.",
           "hcp_out_of_range": "Handicap must be between -10 and 54.",
           "gender_required": "Please select a gender.",
@@ -5174,6 +5228,8 @@
         "kickerAdded": "Added {date}",
         "statusRestored": "Tee reopened. It is visible in the list again and can be selected for new games.",
         "errors": {
+          "blocked_word": "The course name or a tee name has a word that is not allowed in Tørny. Pick another.",
+          "text_too_long": "The course name or a tee name is too long. Use at most 120 characters.",
           "name_required": "The course must have a name.",
           "bad_par": "Par must be a whole number between 3 and 6 for each hole.",
           "bad_si": "Stroke index must be a whole number between 1 and 18 for each hole.",
@@ -6591,6 +6647,7 @@
       "pageTitle": "Create cup",
       "pageSubtitle": "Set up a team-vs-team cup for {clubName}. Add fixtures afterwards.",
       "errors": {
+        "blocked_word": "The cup name or a team name has a word that is not allowed in Tørny. Pick another.",
         "cup_name": "Cup name must be between 1 and 80 characters.",
         "cup_team_1": "Team 1 name must be between 1 and 40 characters.",
         "cup_team_2": "Team 2 name must be between 1 and 40 characters.",
@@ -6966,6 +7023,7 @@
       "withdrawn": "Said no"
     },
     "errors": {
+      "blocked_word": "The team name has a word that is not allowed in Tørny. Pick another.",
       "not_authed": "You must log in to sign up.",
       "profile_incomplete": "Please complete your profile first.",
       "game_not_found": "Game not found. The link may be wrong.",
@@ -7098,6 +7156,25 @@
     "toggleFailed": "Could not save. Try again."
   },
   "legal": {
+    "terms": {
+      "metaTitle": "Terms of use",
+      "backLabel": "Back",
+      "kicker": "Terms",
+      "title": "Terms of use for Tørny",
+      "updated": "Last changed 28 November 2026.",
+      "s1Heading": "In short",
+      "s1Body": "Tørny is for golf with people you know. When you use the app or the website, you accept these terms.",
+      "s2Heading": "Not allowed",
+      "s2Body": "Do not write anything offensive in names, nicknames, round names, team names, prizes or course names. Do not bother, threaten or harass other players, and do not pretend to be someone else.",
+      "s3Heading": "What Tørny does",
+      "s3Body": "Tørny stops some offensive words automatically. If someone breaks the terms, Tørny can change or remove what they wrote, or delete their account.",
+      "s4Heading": "Speak up",
+      "s4Body": "If you see something that does not belong here, you can report the person or the round in the app. You can also block a player. We look at every report within 24 hours.",
+      "s5Heading": "Contact",
+      "s5Body": "Send questions about the terms to <mailto>personvern@tornygolf.no</mailto>.",
+      "footerLink": "Terms",
+      "contactLink": "Contact us"
+    },
     "privacy": {
       "metaTitle": "Privacy",
       "backLabel": "Back",
@@ -7208,6 +7285,20 @@
     }
   },
   "mail": {
+    "contentReport": {
+      "subject": "New report: {target}",
+      "heading": "A player has reported something",
+      "salutationNamed": "Hi {name}!",
+      "salutationGeneric": "Hi!",
+      "body": "<strong>{reporterName}</strong> has reported {kind, select, user {the player} other {the round}} <strong>{target}</strong>.",
+      "bodyText": "{reporterName} has reported {kind, select, user {the player} other {the round}} {target}.",
+      "reason": "Reason: {reason, select, offensive {offensive name or text} harassment {harassment} other {something else}}",
+      "quote": "“{text}”",
+      "promise": "We have promised to look at the report within 24 hours.",
+      "openAdmin": "View the report in admin",
+      "openAdminText": "View the report in admin: {url}",
+      "footer": "You receive this because you are an admin. Log in at <link>tornygolf.no</link> for a full overview."
+    },
     "common": {
       "tagline": "Fire up your golf tournament in a couple of minutes.",
       "footerTagline": "Tørny — fire up your golf tournament in a couple of minutes.",

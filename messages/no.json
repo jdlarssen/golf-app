@@ -1,4 +1,46 @@
 {
+  "adminRapporter": {
+    "backLabel": "Admin",
+    "pageTitle": "Rapporter",
+    "pageSubtitle": "Det spillerne har sagt fra om. Se på hver rapport innen 24 timer.",
+    "openHeading": "Åpne · {count}",
+    "handledHeading": "Behandlet · {count}",
+    "empty": "Ingen åpne rapporter.",
+    "kindUser": "Spiller",
+    "kindGame": "Runde",
+    "reason": {
+      "offensive": "Støtende navn eller tekst",
+      "harassment": "Trakassering",
+      "other": "Noe annet"
+    },
+    "shownGameName": "Rundenavn: «{text}»",
+    "shownPrize": "Premietekst: «{text}»",
+    "shownName": "Navn: «{text}»",
+    "shownNickname": "Kallenavn: «{text}»",
+    "goneTarget": "Finnes ikke lenger",
+    "from": "Fra {name} · {when}",
+    "unknownReporter": "Ukjent spiller",
+    "handledAt": "Behandlet {when}",
+    "renameGame": "Endre rundenavn",
+    "newNameLabel": "Nytt rundenavn",
+    "saveName": "Lagre navnet",
+    "saving": "Lagrer …",
+    "clearPrizes": "Fjern premieteksten",
+    "openPlayer": "Åpne spilleren",
+    "markHandled": "Merk som behandlet",
+    "notices": {
+      "renamed": "Rundenavnet er endret.",
+      "prizes_cleared": "Premieteksten er fjernet.",
+      "handled": "Rapporten er merket som behandlet."
+    },
+    "errors": {
+      "invalid": "Noe mangler. Prøv igjen.",
+      "not_found": "Fant ikke rapporten.",
+      "blocked_word": "Navnet har et ord som ikke er lov i Tørny. Velg et annet.",
+      "text_too_long": "Navnet er for langt. Bruk høyst 120 tegn.",
+      "db": "Fikk ikke lagret. Prøv igjen."
+    }
+  },
   "common": {
     "appName": "Tørny",
     "back": "Tilbake",
@@ -383,6 +425,8 @@
     "logoutButton": "Logg ut",
     "logoutPending": "Logger ut …",
     "errors": {
+      "blocked_word": "Navnet eller kallenavnet har et ord som ikke er lov i Tørny. Velg et annet.",
+      "text_too_long": "Navnet eller kallenavnet er for langt. Bruk høyst 60 tegn.",
       "name_required": "Du må fylle inn navn.",
       "hcp_invalid": "Handicapindeks må være et tall mellom 0 og 54. Bruk +-knappen for plusshandicap.",
       "gender_required": "Velg kjønn.",
@@ -1654,6 +1698,8 @@
       }
     },
     "errors": {
+      "blocked_word": "Rundenavnet eller en premie har et ord som ikke er lov i Tørny. Velg et annet.",
+      "text_too_long": "Rundenavnet er for langt. Bruk høyst 120 tegn.",
       "name_required": "Spillet må ha et navn.",
       "course_required": "Velg en bane.",
       "tee_required": "Velg en tee-boks.",
@@ -4149,6 +4195,8 @@
   },
   "courseForm": {
     "errors": {
+      "blocked_word": "Banenavnet eller et teenavn har et ord som ikke er lov i Tørny. Velg et annet.",
+      "text_too_long": "Banenavnet eller et teenavn er for langt. Bruk høyst 120 tegn.",
       "name_required": "Banen må ha et navn.",
       "bad_par": "Par må være et helt tall mellom 3 og 6 på hvert hull.",
       "bad_si": "Stroke-indeks må være et helt tall mellom 1 og 18 på hvert hull.",
@@ -4162,6 +4210,8 @@
       "db_tees": "Noe gikk galt under lagring. Prøv igjen."
     },
     "adminErrors": {
+      "blocked_word": "Banenavnet eller et teenavn har et ord som ikke er lov i Tørny. Velg et annet.",
+      "text_too_long": "Banenavnet eller et teenavn er for langt. Bruk høyst 120 tegn.",
       "tee_required": "Minst én tee-boks må legges til.",
       "tee_no_rating": "Hver tee må ha minst ett komplett rating-sett per kjønn (Herrer / Damer / Junior).",
       "db_course": "Klarte ikke å lagre banen. Prøv igjen om litt.",
@@ -4398,6 +4448,8 @@
       "keyMetricsPublicSignups": "Påmeldt via offentlig side",
       "keyMetricsKavalkadeShares": "Spillere som har delt Kavalkaden",
       "morning": {
+        "needsYouReports": "{n, plural, one {# rapport fra spillerne} other {# rapporter fra spillerne}}",
+        "needsYouReportsAge": "{hours, plural, =0 {Den eldste kom for under en time siden} one {Den eldste kom for # time siden} other {Den eldste kom for # timer siden}}",
         "kicker": "Sekretariatet · uke {week}",
         "weekHeading": "Denne uka",
         "weekFinished": "{n, plural, one {runde ferdig} other {runder ferdig}}",
@@ -5090,6 +5142,8 @@
           "yearsAgo": "{count} år siden"
         },
         "errors": {
+          "blocked_word": "Navnet eller kallenavnet har et ord som ikke er lov i Tørny. Velg et annet.",
+          "text_too_long": "Navnet eller kallenavnet er for langt. Bruk høyst 60 tegn.",
           "name_required": "Navn må fylles ut.",
           "hcp_out_of_range": "Handicap må være mellom -10 og 54.",
           "gender_required": "Velg kjønn.",
@@ -5174,6 +5228,8 @@
         "kickerAdded": "Lagt til {date}",
         "statusRestored": "Tee gjenåpnet. Den vises i listen igjen og kan velges for nye spill.",
         "errors": {
+          "blocked_word": "Banenavnet eller et teenavn har et ord som ikke er lov i Tørny. Velg et annet.",
+          "text_too_long": "Banenavnet eller et teenavn er for langt. Bruk høyst 120 tegn.",
           "name_required": "Banen må ha et navn.",
           "bad_par": "Par må være et helt tall mellom 3 og 6 på hvert hull.",
           "bad_si": "Stroke-indeks må være et helt tall mellom 1 og 18 på hvert hull.",
@@ -6591,6 +6647,7 @@
       "pageTitle": "Opprett cup",
       "pageSubtitle": "Sett opp en lag-mot-lag-cup for {clubName}. Kampene legger du til etterpå.",
       "errors": {
+        "blocked_word": "Cupnavnet eller et lagnavn har et ord som ikke er lov i Tørny. Velg et annet.",
         "cup_name": "Cupnavnet må være mellom 1 og 80 tegn.",
         "cup_team_1": "Navn på lag 1 må være mellom 1 og 40 tegn.",
         "cup_team_2": "Navn på lag 2 må være mellom 1 og 40 tegn.",
@@ -6966,6 +7023,7 @@
       "withdrawn": "Takket nei"
     },
     "errors": {
+      "blocked_word": "Lagnavnet har et ord som ikke er lov i Tørny. Velg et annet.",
       "not_authed": "Du må logge inn for å melde deg på.",
       "profile_incomplete": "Du må fylle inn profilen din først.",
       "game_not_found": "Fant ikke spillet. Lenken kan være feil.",
@@ -7098,6 +7156,25 @@
     "toggleFailed": "Fikk ikke lagret. Prøv igjen."
   },
   "legal": {
+    "terms": {
+      "metaTitle": "Brukervilkår",
+      "backLabel": "Tilbake",
+      "kicker": "Vilkår",
+      "title": "Brukervilkår for Tørny",
+      "updated": "Sist endret 28. november 2026.",
+      "s1Heading": "Kort fortalt",
+      "s1Body": "Tørny er for golf med folk du kjenner. Når du bruker appen eller nettsiden, godtar du disse vilkårene.",
+      "s2Heading": "Dette er ikke lov",
+      "s2Body": "Ikke skriv noe støtende i navn, kallenavn, rundenavn, lagnavn, premier eller banenavn. Ikke plag, true eller trakasser andre spillere, og ikke utgi deg for å være en annen.",
+      "s3Heading": "Dette gjør Tørny",
+      "s3Body": "Tørny stopper noen stygge ord automatisk. Bryter noen vilkårene, kan Tørny endre eller fjerne det de har skrevet, eller slette kontoen deres.",
+      "s4Heading": "Si fra",
+      "s4Body": "Ser du noe som ikke hører hjemme her, kan du rapportere personen eller runden i appen. Du kan også blokkere en spiller. Vi ser på alle rapporter innen 24 timer.",
+      "s5Heading": "Kontakt",
+      "s5Body": "Spørsmål om vilkårene sender du til <mailto>personvern@tornygolf.no</mailto>.",
+      "footerLink": "Vilkår",
+      "contactLink": "Kontakt oss"
+    },
     "privacy": {
       "metaTitle": "Personvern",
       "backLabel": "Tilbake",
@@ -7208,6 +7285,20 @@
     }
   },
   "mail": {
+    "contentReport": {
+      "subject": "Ny rapport: {target}",
+      "heading": "En spiller har sagt fra",
+      "salutationNamed": "Hei {name}!",
+      "salutationGeneric": "Hei!",
+      "body": "<strong>{reporterName}</strong> har rapportert {kind, select, user {spilleren} other {runden}} <strong>{target}</strong>.",
+      "bodyText": "{reporterName} har rapportert {kind, select, user {spilleren} other {runden}} {target}.",
+      "reason": "Grunn: {reason, select, offensive {støtende navn eller tekst} harassment {trakassering} other {noe annet}}",
+      "quote": "«{text}»",
+      "promise": "Vi har lovet å se på rapporten innen 24 timer.",
+      "openAdmin": "Se rapporten i admin",
+      "openAdminText": "Se rapporten i admin: {url}",
+      "footer": "Du får denne meldingen fordi du er admin. Logg inn på <link>tornygolf.no</link> for full oversikt."
+    },
     "common": {
       "tagline": "Fyr opp golfturneringen på et par minutter.",
       "footerTagline": "Tørny — fyr opp golfturneringen på et par minutter.",
