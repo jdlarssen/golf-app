@@ -12,6 +12,7 @@
 import { gameNameMentions } from '@/lib/ai/gameNameGuard';
 import { sanitizeNarrative } from '@/lib/ai/narrative';
 import type { KavalkadeFacts, KavalkadeGame } from './buildKavalkadeFacts';
+import { isSharedLead } from './cardModel';
 
 export type KavalkadeNarrativePrompt = {
   system: string;
@@ -181,6 +182,17 @@ function buildSystemPrompt(facts: KavalkadeFacts): string {
   if (facts.team !== null) {
     lines.push(
       'Kortene under `team` er runder der hele laget delte én ball. De tallene tilhører laget, aldri spilleren alene, så skriv dem som «dere» og ikke som «du».',
+    );
+  }
+
+  // #3020: a shared top number names everyone; the text must not pick one.
+  const gang = facts.gang;
+  const tied = gang
+    ? [gang.topWinner, gang.mostBirdies, gang.mostSnowmen].some((l) => l != null && isSharedLead(l))
+    : false;
+  if (tied) {
+    lines.push(
+      'Står det flere spillere i `tiedWith` på et gjengekort, delte de plassen med den som står først. Da kårer du ingen av dem alene.',
     );
   }
 
