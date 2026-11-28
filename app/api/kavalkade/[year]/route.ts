@@ -29,7 +29,9 @@ import { KAVALKADE_YEAR } from '@/lib/kavalkade/release';
 //
 // `facts` er `KavalkadeFacts` (`lib/kavalkade/buildKavalkadeFacts.ts`), samme
 // form som lagres i `kavalkades.facts`. Feil-bodyene er faste koder, aldri
-// `err.message`.
+// `err.message`. Nye felt kommer bare som valgfrie tillegg, så et eldre appbygg
+// leser svaret som før: `gang.*.tiedWith` (#3020) står ved siden av `name` og
+// `count`, og bygg 15 viser da bare det første navnet.
 
 // Første åpning venter på språkmodellen FØR raden skrives (advarselen i
 // `getOrCreateKavalkade`). Uten denne kan plattformen kutte kallet midtveis, og

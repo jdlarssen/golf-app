@@ -15,13 +15,49 @@ import type { KavalkadeCardModel } from './cardModel';
 export const KAVALKADE_CARD_IMAGE_WIDTH = 1080;
 
 /**
+ * Tekstbredden i tallboksen: bildet minus sidenes 72, boksens 48 og rammens 2
+ * på hver side.
+ */
+const HERO_TEXT_WIDTH = KAVALKADE_CARD_IMAGE_WIDTH - 2 * (72 + 48 + 2);
+
+/**
+ * Snittbredden på et tegn i Fraunces 600, i em. Målt på navnene i Satori
+ * (#3020: 0,50–0,51), og satt litt raust så anslaget heller gir en linje for
+ * mye enn for lite.
+ */
+const HERO_CHAR_EM = 0.53;
+
+/** Flere linjer enn dette i tallboksen, og navnene krymper ett hakk til (#3020). */
+const HERO_MAX_LINES = 3;
+
+/**
+ * Hvor mange linjer teksten brytes på i tallboksen. Satori bryter på
+ * mellomrom, så ordene legges på linja ett for ett, som i ruta.
+ */
+export function heroLineCount(value: string, fontSize: number): number {
+  const perLine = Math.floor(HERO_TEXT_WIDTH / (HERO_CHAR_EM * fontSize));
+  let lines = 1;
+  let used = 0;
+  for (const word of value.split(/\s+/).filter(Boolean)) {
+    if (used === 0) used = word.length;
+    else if (used + 1 + word.length <= perLine) used += 1 + word.length;
+    else {
+      lines += 1;
+      used = word.length;
+    }
+  }
+  return lines;
+}
+
+/**
  * Det store tallet krymper når det er et navn og ikke to sifre, så «Dina
- * Fossum» får plass på samme kort som «79». Satori bryter på mellomrom.
+ * Fossum» får plass på samme kort som «79». Flere navn ved likt antall (#3020)
+ * får 60, og krymper til 48 bare når de ellers ville brukt mer enn tre linjer.
  */
 export function heroFontSize(value: string): number {
   if (value.length <= 8) return 116;
   if (value.length <= 14) return 84;
-  return 60;
+  return heroLineCount(value, 60) <= HERO_MAX_LINES ? 60 : 48;
 }
 
 /**
@@ -32,7 +68,7 @@ export function heroFontSize(value: string): number {
 export function computeCardHeight(model: KavalkadeCardModel): number {
   const titleLines = model.title.length > 26 ? 2 : 1;
   const heroSize = heroFontSize(model.hero.value);
-  const heroLines = model.hero.value.length > 26 ? 2 : 1;
+  const heroLines = heroLineCount(model.hero.value, heroSize);
 
   let h = 72 /* topp-pad */ + 76 /* header */;
   h += 36 + titleLines * 80; // tittel

@@ -312,11 +312,58 @@ function buildGangLeaderCard(
 ): KavalkadeCardModel | null {
   if (!leader) return null;
   const { t } = strings;
+  const shared = isSharedLead(leader);
+  const names = gangLeaderNames(leader, {
+    and: t('and'),
+    andMore: (n) => t('andMore', { n }),
+    playerFallback: strings.playerFallback,
+  });
   return card(
-    t(`${key}.title`),
-    { value: playerName(leader, strings), caption: t(`${key}.count`, { n: leader.count }) },
+    // Bare vinnerkortet har en egen tittel i flertall (#3020).
+    shared && key === 'gangWinner' ? t('gangWinner.titleShared') : t(`${key}.title`),
+    { value: names, caption: t(shared ? `${key}.countEach` : `${key}.count`, { n: leader.count }) },
     [],
   );
+}
+
+/** Navn et «mest av noe»-kort viser før resten blir «og N til» (eieren, 28.11). */
+export const GANG_LEADER_NAMES_SHOWN = 3;
+
+/** Ordene navnefeltet trenger, fra navnerommet til kortet som tegnes. */
+export type GangLeaderWords = {
+  /** «og» */
+  and: string;
+  /** «og 2 til» */
+  andMore: (n: number) => string;
+  /** Navnet en spiller uten registrert navn får. */
+  playerFallback: string;
+};
+
+/** Deler flere toppen? En `tiedWith` som mangler eller er tom, er ingen likhet. */
+export function isSharedLead(leader: GangLeaderFact): boolean {
+  return (leader.tiedWith?.length ?? 0) > 0;
+}
+
+/**
+ * Navnefeltet på «Årets vinner», «Flest birdier» og «Årets snowman» (#3020).
+ * Eierens regel, 28.11: «Ola N. og Kari H.», «Ola N., Kari H. og Per S.», og
+ * fra fire like de tre første og «og N til». Rekkefølgen er faktaenes, der den
+ * som åpner kavalkaden står først når hen er med.
+ *
+ * Kortet på nett, kortet i appen og delebildet i begge bruker denne, så regelen
+ * har ett hjem (felle 4, `docs/bug-prevention.md`).
+ */
+export function gangLeaderNames(leader: GangLeaderFact, words: GangLeaderWords): string {
+  const names = [leader, ...(leader.tiedWith ?? [])].map((player) => {
+    const name = player.name?.trim() ?? '';
+    return name.length > 0 ? name : words.playerFallback;
+  });
+  if (names.length === 1) return names[0];
+  if (names.length <= GANG_LEADER_NAMES_SHOWN) {
+    return `${names.slice(0, -1).join(', ')} ${words.and} ${names[names.length - 1]}`;
+  }
+  const shown = names.slice(0, GANG_LEADER_NAMES_SHOWN).join(', ');
+  return `${shown} ${words.andMore(names.length - GANG_LEADER_NAMES_SHOWN)}`;
 }
 
 function buildTightestCard(

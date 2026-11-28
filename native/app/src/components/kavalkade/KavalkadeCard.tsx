@@ -14,7 +14,8 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { formatShortDateNb } from '../../../../../lib/format/date';
-import type { KavalkadePlayerRef } from '../../../../../lib/kavalkade/buildKavalkadeFacts';
+import type { GangLeaderFact, KavalkadePlayerRef } from '../../../../../lib/kavalkade/buildKavalkadeFacts';
+import { gangLeaderNames, isSharedLead } from '../../../../../lib/kavalkade/cardModel';
 import type { KavalkadeCard as Card } from '../../../../../lib/kavalkade/kavalkadeCards';
 import { formatNumberNb, kavalkadeT as t } from '../../lib/kavalkadeCopy';
 import { FONTS, browserBaseline, fraunces, interLine, useTheme, type Scheme } from '../../theme';
@@ -172,25 +173,43 @@ export function kavalkadeCardBody(card: Card): Body {
           where(card.fact.gameName, card.fact.courseName, card.fact.playedAt),
         ],
       };
-    case 'gang-winner':
+    // De tre «mest av noe»-kortene: navnene og én telling. Deler flere toppen,
+    // står alle (tre, så «og N til») med «hver» i linja (#3020).
+    case 'gang-winner': {
+      const shared = isSharedLead(card.fact);
+      const { count } = card.fact;
       return {
-        kicker: t('gangTopWinnerKicker'),
-        headline: playerName(card.fact),
-        lines: [t('gangWins', { count: card.fact.count })],
+        kicker: shared ? t('gangTopWinnersKicker') : t('gangTopWinnerKicker'),
+        headline: leaderNames(card.fact),
+        lines: [shared ? t('gangWinsEach', { count }) : t('gangWins', { count })],
       };
-    case 'gang-birdies':
+    }
+    case 'gang-birdies': {
+      const { count } = card.fact;
       return {
         kicker: t('gangMostBirdiesKicker'),
-        headline: playerName(card.fact),
-        lines: [t('gangBirdies', { count: card.fact.count })],
+        headline: leaderNames(card.fact),
+        lines: [isSharedLead(card.fact) ? t('gangBirdiesEach', { count }) : t('gangBirdies', { count })],
       };
-    case 'gang-snowmen':
+    }
+    case 'gang-snowmen': {
+      const { count } = card.fact;
       return {
         kicker: t('gangMostSnowmenKicker'),
-        headline: playerName(card.fact),
-        lines: [t('gangSnowmen', { count: card.fact.count })],
+        headline: leaderNames(card.fact),
+        lines: [isSharedLead(card.fact) ? t('gangSnowmenEach', { count }) : t('gangSnowmen', { count })],
       };
+    }
   }
+}
+
+/** Navnefeltet etter webbens regel (`gangLeaderNames`, #3020). */
+function leaderNames(fact: GangLeaderFact): string {
+  return gangLeaderNames(fact, {
+    and: t('and'),
+    andMore: (n) => t('andMore', { count: n }),
+    playerFallback: t('unknownPlayer'),
+  });
 }
 
 /** Det skjermleseren leser for kortet, i samme rekkefølge som det står. */

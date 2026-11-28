@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { formatNumber, formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import type { KavalkadePlayerRef } from '@/lib/kavalkade/buildKavalkadeFacts';
+import { gangLeaderNames, isSharedLead } from '@/lib/kavalkade/cardModel';
 import type { KavalkadeCard } from '@/lib/kavalkade/kavalkadeCards';
 import type { AppLocale } from '@/i18n/routing';
 
@@ -268,29 +269,35 @@ function GangCardBody({ card, locale }: { card: GangCard; locale: AppLocale }) {
     );
   }
 
-  // De tre «mest av noe»-kortene har samme form: ett navn, én telling.
+  // De tre «mest av noe»-kortene har samme form: navnene, én telling. Deler
+  // flere toppen, står alle (tre, så «og N til») med «hver» i linja (#3020).
+  const shared = isSharedLead(card.fact);
+  const { count } = card.fact;
   const leader: Record<'gang-winner' | 'gang-birdies' | 'gang-snowmen', {
     kicker: string;
     line: string;
   }> = {
     'gang-winner': {
-      kicker: t('gangTopWinnerKicker'),
-      line: t('gangWins', { count: card.fact.count }),
+      kicker: shared ? t('gangTopWinnersKicker') : t('gangTopWinnerKicker'),
+      line: shared ? t('gangWinsEach', { count }) : t('gangWins', { count }),
     },
     'gang-birdies': {
       kicker: t('gangMostBirdiesKicker'),
-      line: t('gangBirdies', { count: card.fact.count }),
+      line: shared ? t('gangBirdiesEach', { count }) : t('gangBirdies', { count }),
     },
     'gang-snowmen': {
       kicker: t('gangMostSnowmenKicker'),
-      line: t('gangSnowmen', { count: card.fact.count }),
+      line: shared ? t('gangSnowmenEach', { count }) : t('gangSnowmen', { count }),
     },
   };
   const { kicker, line } = leader[card.id];
+  const names = gangLeaderNames(card.fact, {
+    and: t('and'),
+    andMore: (n) => t('andMore', { count: n }),
+    playerFallback: t('unknownPlayer'),
+  });
 
-  return (
-    <CardBody kicker={kicker} headline={playerName(card.fact)} lines={[line]} />
-  );
+  return <CardBody kicker={kicker} headline={names} lines={[line]} />;
 }
 
 /** Tegnet som står der et tall mangler, samme som i «Sesongen din». */
@@ -340,8 +347,9 @@ function CardBody({
   return (
     <div>
       <Kicker>{kicker}</Kicker>
+      {/* `break-words`: et fornavn på 20 tegn er bredere enn kortet (#3020). */}
       <p
-        className={`mt-2 font-serif font-medium tabular-nums leading-tight text-text ${
+        className={`mt-2 break-words font-serif font-medium tabular-nums leading-tight text-text ${
           headlineSize === 'large' ? 'text-4xl' : 'text-2xl'
         }`}
       >

@@ -8301,11 +8301,17 @@
     "gangGames": "{count, plural, one {# round together} other {# rounds together}}",
     "gangSummaryBody": "Everyone you finished at least one round with this year.",
     "gangTopWinnerKicker": "Winner of the year",
+    "gangTopWinnersKicker": "Winners of the year",
     "gangWins": "{count, plural, one {# win} other {# wins}}",
+    "gangWinsEach": "{count, plural, one {# win each} other {# wins each}}",
     "gangMostBirdiesKicker": "Most birdies",
     "gangBirdies": "{count, plural, one {# birdie} other {# birdies}}",
+    "gangBirdiesEach": "{count, plural, one {# birdie each} other {# birdies each}}",
     "gangMostSnowmenKicker": "Snowman of the year",
     "gangSnowmen": "{count} snowman",
+    "gangSnowmenEach": "{count} snowman each",
+    "and": "and",
+    "andMore": "and {count} more",
     "gangTightestKicker": "Tightest finish",
     "gangTightestMargin": "{margin, plural, one {Separated by # stroke} other {Separated by # strokes}}",
     "gangTightestShared": "Shared lead",
@@ -8373,16 +8379,21 @@
     },
     "gangWinner": {
       "title": "Winner of the year",
-      "count": "{n, plural, one {# win} other {# wins}}"
+      "titleShared": "Winners of the year",
+      "count": "{n, plural, one {# win} other {# wins}}",
+      "countEach": "{n, plural, one {# win each} other {# wins each}}"
     },
     "gangBirdies": {
       "title": "Most birdies",
-      "count": "{n, plural, one {# birdie} other {# birdies}}"
+      "count": "{n, plural, one {# birdie} other {# birdies}}",
+      "countEach": "{n, plural, one {# birdie each} other {# birdies each}}"
     },
     "gangSnowmen": {
       "title": "Snowman of the year",
-      "count": "{n, plural, one {# snowman} other {# snowmen}}"
+      "count": "{n, plural, one {# snowman} other {# snowmen}}",
+      "countEach": "{n, plural, one {# snowman each} other {# snowmen each}}"
     },
+    "andMore": "and {n} more",
     "gangTightest": {
       "title": "Tightest finish",
       "margin": "{n, plural, one {# stroke} other {# strokes}}",

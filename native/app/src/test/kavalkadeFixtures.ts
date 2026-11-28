@@ -1,7 +1,39 @@
 // #2265 PR 2: en full kavalkade til testene av Kavalkaden i appen. Samme tall
 // som webbens `makeFacts` (`lib/kavalkade/kavalkadeCards.test.ts`), med
 // sesong-raden på formtoppen i tillegg, så start/nå/beste også tegnes.
-import type { KavalkadeFacts } from '../../../../lib/kavalkade/buildKavalkadeFacts';
+import type { GangFacts, KavalkadeFacts } from '../../../../lib/kavalkade/buildKavalkadeFacts';
+
+/**
+ * #3020: gjengen der flere deler toppen — to om seirene, tre om birdiene og
+ * fire om snømennene. Fornavnet på 20 tegn står i snømann-likheten.
+ */
+export function makeTiedGang(): GangFacts {
+  return {
+    members: 7,
+    games: 10,
+    topWinner: { userId: 'u1', name: 'Ola N.', count: 3, tiedWith: [{ userId: 'u2', name: 'Kari H.' }] },
+    mostBirdies: {
+      userId: 'u1',
+      name: 'Ola N.',
+      count: 8,
+      tiedWith: [
+        { userId: 'u2', name: 'Kari H.' },
+        { userId: 'u3', name: 'Per S.' },
+      ],
+    },
+    mostSnowmen: {
+      userId: 'u5',
+      name: 'Maximiliansebastians K.',
+      count: 1,
+      tiedWith: [
+        { userId: 'u1', name: 'Ola N.' },
+        { userId: 'u2', name: 'Kari H.' },
+        { userId: 'u3', name: 'Per S.' },
+      ],
+    },
+    tightestFinish: null,
+  };
+}
 
 export function makeKavalkadeFacts(overrides: Partial<KavalkadeFacts> = {}): KavalkadeFacts {
   return {

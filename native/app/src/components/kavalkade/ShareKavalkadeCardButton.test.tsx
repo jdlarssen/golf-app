@@ -7,7 +7,7 @@ import { logKavalkadeShare } from '../../data/kavalkade';
 import { formatDayMonthLong } from '../../lib/homeDates';
 import { KAVALKADE_SHARE_TEXT, kavalkadeShareT } from '../../lib/kavalkadeCopy';
 import { canShareImage, shareViewImage } from '../../lib/shareImage';
-import { makeKavalkadeFacts } from '../../test/kavalkadeFixtures';
+import { makeKavalkadeFacts, makeTiedGang } from '../../test/kavalkadeFixtures';
 import { ShareKavalkadeCardButton } from './ShareKavalkadeCardButton';
 
 jest.mock('../../lib/shareImage', () => ({ canShareImage: jest.fn(), shareViewImage: jest.fn() }));
@@ -32,6 +32,18 @@ it('draws the share version with the web’s image text, out of sight', async ()
   expect(image).toHaveTextContent(/TørnyKavalkaden 2026Årets beste runde82slag brutto/);
   expect(image).toHaveTextContent(/SpillLørdagscupBaneLosbyDato14\. juni/);
   expect(image).toHaveTextContent(/tornygolf\.noFyr opp golfturneringen på et par minutter/);
+});
+
+// #3020: a shared top number puts every name on the image, as on the web's PNG.
+it('draws every name in a tie on the share version', async () => {
+  const tied = buildKavalkadeCardModel(makeKavalkadeFacts({ gang: makeTiedGang() }), 'gang-winner', {
+    t: kavalkadeShareT,
+    formatDate: formatDayMonthLong,
+    playerFallback: KAVALKADE_SHARE_TEXT.playerFallback,
+  })!;
+  await render(<ShareKavalkadeCardButton year={2026} model={tied} />);
+  const image = screen.getByTestId('kavalkade-share-gang-winner', { includeHiddenElements: true });
+  expect(image).toHaveTextContent(/Årets vinnereOla N\. og Kari H\.3 seire hver/);
 });
 
 it('shares the picture and counts the share when the player shared it', async () => {
