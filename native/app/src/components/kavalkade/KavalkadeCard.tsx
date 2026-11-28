@@ -81,6 +81,8 @@ export function kavalkadeCardBody(card: Card): Body {
         kicker: t('nemesisKicker'),
         headline: t('nemesisHeading', { hole: card.fact.holeNumber }),
         lines: [
+          // One hole on one course (audit 20.11): name the course, as the web does.
+          ...(card.fact.courseName ? [card.fact.courseName] : []),
           t('nemesisAverage', { value: formatNumberNb(card.fact.averageToPar, 2) }),
           t('nemesisPlayed', { count: card.fact.played }),
           t('nemesisWorst', { strokes: card.fact.worstStrokes }),

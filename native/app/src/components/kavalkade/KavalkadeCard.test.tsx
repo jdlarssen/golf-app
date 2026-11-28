@@ -82,6 +82,20 @@ describe('kavalkadeCardBody', () => {
     ]);
   });
 
+  // #3020 generalprøven: the worst hole is one hole on one course (audit 20.11),
+  // and the web card names the course. The app card left it out.
+  it('names the course on the nemesis card, as the web does', () => {
+    const facts = makeKavalkadeFacts();
+    facts.personal!.nemesisHole = { ...facts.personal!.nemesisHole!, courseName: 'Losby' };
+    const nemesis = buildKavalkadeDeck(facts).personal.find((c) => c.id === 'nemesis-hole') as Card;
+    expect(kavalkadeCardBody(nemesis).lines).toEqual([
+      'Losby',
+      '1,44 over par i snitt',
+      'Spilt 9 ganger',
+      'Flest slag på hullet: 8',
+    ]);
+  });
+
   it('says the message under the threshold, and names a player without a name', () => {
     const below = buildKavalkadeDeck(makeKavalkadeFacts({ personal: null, team: null })).personal;
     expect(kavalkadeCardBody(below[1])).toMatchObject({
