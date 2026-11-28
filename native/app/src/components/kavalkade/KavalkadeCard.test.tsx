@@ -71,11 +71,13 @@ describe('kavalkadeCardBody', () => {
       const b = kavalkadeCardBody(tied.find((c) => c.id === id) as Card);
       return [b.kicker, b.headline, ...b.lines];
     };
-    expect(body('gang-winner')).toEqual(['Årets vinnere', 'Ola N. og Kari H.', '3 seire hver']);
-    expect(body('gang-birdies')).toEqual(['Flest birdier', 'Ola N., Kari H. og Per S.', '8 birdier hver']);
+    // U+00A0 keeps each first name and its initial on one line (`gangLeaderNames`).
+    const _ = '\u00a0';
+    expect(body('gang-winner')).toEqual(['Årets vinnere', `Ola${_}N. og Kari${_}H.`, '3 seire hver']);
+    expect(body('gang-birdies')).toEqual(['Flest birdier', `Ola${_}N., Kari${_}H. og Per${_}S.`, '8 birdier hver']);
     expect(body('gang-snowmen')).toEqual([
       'Årets snowman',
-      'Maximiliansebastians K., Ola N., Kari H. og 1 til',
+      `Maximiliansebastians${_}K., Ola${_}N., Kari${_}H. og 1 til`,
       '1 snowman hver',
     ]);
   });

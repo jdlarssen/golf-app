@@ -66,6 +66,16 @@ describe('cardImageLayout', () => {
     expect(computeCardHeight(hero(LONG_TIE))).toBe(823 - 137 + 3 * 71);
   });
 
+  it('counts a first name and its initial as one word when a no-break space joins them', () => {
+    // gangLeaderNames joins tied names with U+00A0 inside each name, and Satori
+    // does not break there, so the estimate must not either.
+    const nb = (s: string) => s.replace(/(\S) (\S+\.)/g, '$1 $2');
+    expect(nb(TIE_13)).toBe('Aleksander B., Maximilian K., Kristoffer H. og 2 til');
+    expect(heroLineCount(nb(TIE_13), 60)).toBe(3);
+    expect(heroLineCount(nb(LONG_TIE), 60)).toBe(3);
+    expect(heroLineCount(nb('Ola N. og Kari H.'), 60)).toBe(1);
+  });
+
   it('shrinks the names once more rather than run past three lines', () => {
     const three20 =
       'Maximiliansebastians K., Bartholomeusinianus L., Constantinopolitan M. og 2 til';

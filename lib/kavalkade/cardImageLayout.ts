@@ -32,13 +32,15 @@ const HERO_MAX_LINES = 3;
 
 /**
  * Hvor mange linjer teksten brytes på i tallboksen. Satori bryter på
- * mellomrom, så ordene legges på linja ett for ett, som i ruta.
+ * mellomrom, så ordene legges på linja ett for ett, som i ruta. Et hardt
+ * mellomrom (U+00A0, fornavn og initial ved likhet) bryter ikke, så bare
+ * vanlige mellomrom deler ordene her.
  */
 export function heroLineCount(value: string, fontSize: number): number {
   const perLine = Math.floor(HERO_TEXT_WIDTH / (HERO_CHAR_EM * fontSize));
   let lines = 1;
   let used = 0;
-  for (const word of value.split(/\s+/).filter(Boolean)) {
+  for (const word of value.split(/[ \t\n]+/).filter(Boolean)) {
     if (used === 0) used = word.length;
     else if (used + 1 + word.length <= perLine) used += 1 + word.length;
     else {

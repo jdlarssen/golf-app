@@ -329,6 +329,9 @@ function buildGangLeaderCard(
 /** Navn et «mest av noe»-kort viser før resten blir «og N til» (eieren, 28.11). */
 export const GANG_LEADER_NAMES_SHOWN = 3;
 
+/** Holder fornavn og initial på samme linje ved likhet (#3020). */
+const NO_BREAK_SPACE = ' ';
+
 /** Ordene navnefeltet trenger, fra navnerommet til kortet som tegnes. */
 export type GangLeaderWords = {
   /** «og» */
@@ -352,6 +355,10 @@ export function isSharedLead(leader: GangLeaderFact): boolean {
  *
  * Kortet på nett, kortet i appen og delebildet i begge bruker denne, så regelen
  * har ett hjem (felle 4, `docs/bug-prevention.md`).
+ *
+ * Ved likhet holder et hardt mellomrom (U+00A0) fornavnet og initialen sammen,
+ * så linja aldri slutter på «Kari» med «H.» alene under. Bruddene faller da
+ * bare mellom navnene. Uten likhet står navnet som lagret, og kortet er som før.
  */
 export function gangLeaderNames(leader: GangLeaderFact, words: GangLeaderWords): string {
   const names = [leader, ...(leader.tiedWith ?? [])].map((player) => {
@@ -359,6 +366,7 @@ export function gangLeaderNames(leader: GangLeaderFact, words: GangLeaderWords):
     return name.length > 0 ? name : words.playerFallback;
   });
   if (names.length === 1) return names[0];
+  for (let i = 0; i < names.length; i += 1) names[i] = names[i].replace(/ +/g, NO_BREAK_SPACE);
   if (names.length <= GANG_LEADER_NAMES_SHOWN) {
     return `${names.slice(0, -1).join(', ')} ${words.and} ${names[names.length - 1]}`;
   }
