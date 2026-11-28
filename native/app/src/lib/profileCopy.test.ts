@@ -85,8 +85,11 @@ const SAVE_FAILURE_MAP = {
 
 const SAVE_FAILURES = Object.keys(SAVE_FAILURE_MAP) as readonly ProfileSaveFailure[];
 
+/** The web keys the map really uses (not every key under `profile.errors`). */
+type MirroredWebKey = NonNullable<(typeof SAVE_FAILURE_MAP)[ProfileSaveFailure]>;
+
 const MIRRORED_SAVE_FAILURES = Object.entries(SAVE_FAILURE_MAP).filter(
-  (entry): entry is [ProfileSaveFailure, WebErrorKey] => entry[1] !== null,
+  (entry): entry is [ProfileSaveFailure, MirroredWebKey] => entry[1] !== null,
 );
 
 /** Nøkler under `profile.errors` appen med vilje IKKE viser. Ingen i dag. */
